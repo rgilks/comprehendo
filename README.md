@@ -18,12 +18,25 @@ Comprehend is an AI-powered language learning application designed to help users
 - **Text Highlighting**: See the relevant portion of text highlighted after answering
 - **Responsive Design**: Optimized for both desktop and mobile devices
 - **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback
+- **Cost-Control System**: Intelligent rate limiting and caching to manage API costs
+- **Smooth Loading Experience**: Enhanced loading indicators and transitions
 
 ## How It Works
 
 1. **Select your settings**: Choose your CEFR level (A1-C2) and preferred reading language
 2. **Generate a passage**: The application creates a reading passage tailored to your proficiency level
 3. **Test your comprehension**: Answer the multiple-choice question and receive instant feedback with explanations
+4. **Review explanations**: After answering, see why each option was correct or incorrect
+5. **Try again or generate new**: Practice with the same content or generate a new passage
+
+## API Cost Management
+
+Comprehend implements several strategies to manage OpenAI API costs:
+
+- **Rate Limiting**: Users are limited to 20 requests per hour to prevent excessive API usage
+- **Response Caching**: Successful API responses are cached for 24 hours to reduce duplicate calls
+- **Intelligent Seed System**: Random seeds create variety in cached responses to avoid repetitive content
+- **Graceful Error Handling**: User-friendly messages when rate limits are reached
 
 ## CEFR Levels Explained
 
@@ -35,6 +48,12 @@ Comprehend is an AI-powered language learning application designed to help users
 - **C2 (Proficiency)**: Virtually everything, nuanced expression
 
 ## Getting Started
+
+### Prerequisites
+
+- Node.js (version 14 or higher)
+- npm or yarn
+- OpenAI API key
 
 ### Development
 
@@ -58,9 +77,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Technology Stack
 
-- **Framework**: Next.js (React)
-- **Styling**: Tailwind CSS
-- **AI Integration**: OpenAI API (GPT models)
+- **Framework**: Next.js 14 (React)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS with custom animations
+- **AI Integration**: OpenAI API (GPT-3.5-turbo)
 - **Deployment**: Configured for Fly.io
 
 ## API Configuration
@@ -72,6 +92,8 @@ Add your API key to a `.env.local` file in the root directory:
 ```
 OPENAI_API_KEY=your-openai-api-key
 ```
+
+For production deployment, set the environment variable securely in your hosting provider.
 
 ## Deployment
 
@@ -92,13 +114,40 @@ This project is configured for continuous deployment to Fly.io from GitHub. Here
 
 After setting up these steps, every push to the `main` branch will automatically deploy to Fly.io.
 
+## Production Considerations
+
+When deploying to production, consider the following:
+
+- **API Usage Monitoring**: Set up a dashboard to monitor OpenAI API usage and costs
+- **Persistent Cache**: Replace the in-memory cache with Redis or a database for a multi-server setup
+- **Rate Limit Adjustments**: Fine-tune the rate limits based on your user base and budget
+- **Security**: Implement additional security measures like CORS and request validation
+
+## User Experience Features
+
+- **Animated Feedback**: Visual cues and animations provide immediate feedback on user actions
+- **Progressive Loading**: Enhanced loading states with contextual information about what's being generated
+- **Highlighted Answers**: Correct text portions are highlighted in the reading passage after answering
+- **Adaptive Difficulty**: Content complexity automatically matches the selected CEFR level
+- **Mobile-Optimized**: Responsive design works on phones, tablets, and desktops
+
 ## Customization
 
 You can customize various aspects of the application:
 
-- Add more languages by extending the `LANGUAGES` object in `app/components/TextGenerator.tsx`
-- Modify the visual design by editing the Tailwind classes
-- Adjust the AI prompt in the `generateText` function to change the type of content generated
+- **Add More Languages**: Extend the `LANGUAGES` object in `app/components/TextGenerator.tsx`
+- **Visual Design**: Modify the Tailwind classes and gradients in component files
+- **API Prompt**: Adjust the prompt in the `generateText` function to change the content style
+- **Rate Limits**: Configure the `MAX_REQUESTS_PER_HOUR` value in `app/api/chat/route.ts`
+- **Cache Duration**: Change the `CACHE_TTL` value in `app/api/chat/route.ts`
+
+## Code Structure
+
+- `/app`: Main application code (Next.js App Router)
+  - `/api`: API routes for OpenAI integration
+  - `/components`: React components
+  - `/globals.css`: Global styles and animations
+- `/public`: Static assets
 
 ## Contributing
 
@@ -109,6 +158,12 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Troubleshooting
+
+- **API Key Issues**: Ensure your OpenAI API key is correctly set in the `.env.local` file
+- **Rate Limit Errors**: If you see "rate limit exceeded" errors, wait for the cool-down period (1 hour)
+- **Loading Indefinitely**: If content generation seems stuck, refresh the page and try with a different CEFR level
 
 ## License
 
