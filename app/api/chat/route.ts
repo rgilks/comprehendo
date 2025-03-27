@@ -16,7 +16,7 @@ const CACHE_TTL = 60 * 60 * 24; // 24 hours in seconds
 // Simple in-memory rate limiter
 // Maps IP addresses to timestamps of their requests
 const rateLimits = new Map();
-const MAX_REQUESTS_PER_HOUR = 20; // Adjust as needed
+const MAX_REQUESTS_PER_HOUR = 100; // Adjust as needed
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
 
 export async function POST(request: Request) {
