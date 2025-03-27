@@ -24,12 +24,12 @@ export async function POST(request: Request) {
     const openai = getOpenAIClient();
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful English language tutor for an English comprehension game.",
+            "You are a helpful English language tutor for an English comprehension game. Create varied, diverse content on different topics. Avoid repetition of themes or subjects. Focus on the specific topic requested and avoid mentioning unrelated topics.",
         },
         {
           role: "user",
