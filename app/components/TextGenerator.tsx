@@ -55,8 +55,10 @@ export default function TextGenerator() {
 
       {text && (
         <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-2">Generated Text:</h2>
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded shadow-sm">
+          <h2 className="text-xl font-semibold mb-2 text-white">
+            Generated Text:
+          </h2>
+          <div className="p-4 bg-gray-800 border border-gray-700 rounded shadow-sm text-white">
             <p className="leading-relaxed">{text}</p>
           </div>
         </div>
