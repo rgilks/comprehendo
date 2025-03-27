@@ -24,6 +24,7 @@ type QuizData = {
 };
 
 type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+type Language = "English" | "Italian" | "Spanish" | "French" | "German";
 
 const CEFR_LEVELS = {
   A1: "Beginner",
@@ -32,6 +33,14 @@ const CEFR_LEVELS = {
   B2: "Upper Intermediate",
   C1: "Advanced",
   C2: "Proficiency",
+};
+
+const LANGUAGES = {
+  English: "English",
+  Italian: "Italiano",
+  Spanish: "Español",
+  French: "Français",
+  German: "Deutsch",
 };
 
 export default function TextGenerator() {
@@ -43,6 +52,7 @@ export default function TextGenerator() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState<boolean>(false);
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>("B1");
+  const [language, setLanguage] = useState<Language>("English");
   const [highlightedParagraph, setHighlightedParagraph] = useState<
     string | null
   >(null);
@@ -90,7 +100,7 @@ export default function TextGenerator() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: `Generate a reading comprehension paragraph with a multiple choice question for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) English learners.`,
+          prompt: `Generate a reading comprehension paragraph in ${language} with multiple choice questions in English for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
         }),
       });
 
@@ -161,8 +171,8 @@ export default function TextGenerator() {
 
   return (
     <div className="w-full max-w-2xl mx-auto my-8">
-      <div className="mb-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
-        <div className="w-full md:w-auto">
+      <div className="mb-6 space-y-4">
+        <div>
           <label className="block text-sm font-medium text-white mb-1">
             CEFR Level:
           </label>
@@ -171,7 +181,7 @@ export default function TextGenerator() {
               <button
                 key={level}
                 onClick={() => setCefrLevel(level)}
-                className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
                   cefrLevel === level
                     ? "bg-blue-600 text-white"
                     : "bg-gray-700 text-gray-200 hover:bg-gray-600"
@@ -182,12 +192,34 @@ export default function TextGenerator() {
             ))}
           </div>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-1">
+            Reading Passage Language:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                  language === lang
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                }`}
+              >
+                {LANGUAGES[lang]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           onClick={generateText}
           disabled={loading}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed w-full md:w-auto"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed w-full"
         >
-          {loading ? "Generating..." : "Generate English Text"}
+          {loading ? "Generating..." : `Generate ${language} Reading Practice`}
         </button>
       </div>
 
@@ -201,11 +233,17 @@ export default function TextGenerator() {
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl font-semibold text-white">
-              Reading Passage:
+              Reading Passage{" "}
+              {language !== "English" && `(${LANGUAGES[language]})`}:
             </h2>
-            <span className="text-sm bg-blue-600 text-white px-2 py-1 rounded-full">
-              Level: {cefrLevel}
-            </span>
+            <div className="flex space-x-2">
+              <span className="text-sm bg-blue-600 text-white px-2 py-1 rounded-full">
+                Level: {cefrLevel}
+              </span>
+              <span className="text-sm bg-green-600 text-white px-2 py-1 rounded-full">
+                {LANGUAGES[language]}
+              </span>
+            </div>
           </div>
 
           {(imageLoading || imageUrl) && (
@@ -239,7 +277,7 @@ export default function TextGenerator() {
           </div>
 
           <div className="bg-gray-800 border border-gray-700 rounded shadow-sm p-4 text-white">
-            <h3 className="text-lg font-medium mb-3">Question:</h3>
+            <h3 className="text-lg font-medium mb-3">Question (English):</h3>
             <p className="mb-4">{quizData.question}</p>
 
             <div className="space-y-2">
