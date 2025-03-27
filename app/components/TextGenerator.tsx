@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 
 type QuizData = {
   paragraph: string;
@@ -49,8 +48,6 @@ export default function TextGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageLoading, setImageLoading] = useState<boolean>(false);
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>("B1");
   const [language, setLanguage] = useState<Language>("English");
   const [highlightedParagraph, setHighlightedParagraph] = useState<
@@ -90,7 +87,6 @@ export default function TextGenerator() {
     setError(null);
     setSelectedAnswer(null);
     setIsAnswered(false);
-    setImageUrl(null);
     setHighlightedParagraph(null);
 
     try {
@@ -114,9 +110,6 @@ export default function TextGenerator() {
         const jsonString = data.result.replace(/```json|```/g, "").trim();
         const parsedData = JSON.parse(jsonString);
         setQuizData(parsedData);
-
-        // Generate image based on the topic
-        generateImage(parsedData.topic);
       } catch (parseErr) {
         console.error("Error parsing JSON:", parseErr);
         setError("Failed to parse the generated quiz. Please try again.");
@@ -126,34 +119,6 @@ export default function TextGenerator() {
       setError("Failed to generate text. Please try again.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const generateImage = async (topic: string) => {
-    setImageLoading(true);
-    try {
-      const response = await fetch("/api/image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: topic,
-          level: cefrLevel,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate image");
-      }
-
-      const data = await response.json();
-      setImageUrl(data.imageUrl);
-    } catch (err) {
-      console.error("Error generating image:", err);
-      // We don't set an error here since the text content is still valuable
-    } finally {
-      setImageLoading(false);
     }
   };
 
@@ -245,25 +210,6 @@ export default function TextGenerator() {
               </span>
             </div>
           </div>
-
-          {(imageLoading || imageUrl) && (
-            <div className="mb-4 flex justify-center relative">
-              {imageLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-70 z-10">
-                  <div className="text-white">Loading image...</div>
-                </div>
-              )}
-              {imageUrl && (
-                <div className="w-full h-64 relative rounded overflow-hidden">
-                  <img
-                    src={imageUrl}
-                    alt={quizData.topic}
-                    className="object-contain w-full h-full"
-                  />
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="p-4 bg-gray-800 border border-gray-700 rounded shadow-sm text-white mb-4">
             {highlightedParagraph ? (
