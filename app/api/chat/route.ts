@@ -57,8 +57,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create a cache key from the prompt + seed for variety
-    const cacheKey = `${prompt}-${seed || 0}`;
+    // Extract CEFR level and language from the prompt for better caching
+    const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
+    const languageMatch = prompt.match(/paragraph in ([A-Za-z]+)/);
+
+    const cefrLevel = cefrLevelMatch ? cefrLevelMatch[1] : "unknown";
+    const language = languageMatch ? languageMatch[1] : "unknown";
+
+    // Create a cache key from the CEFR level, language, and seed for better variety
+    const cacheKey = `${language}-${cefrLevel}-${seed || 0}`;
 
     // Check cache
     if (cache.has(cacheKey)) {
