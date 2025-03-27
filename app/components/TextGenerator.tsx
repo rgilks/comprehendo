@@ -266,7 +266,11 @@ export default function TextGenerator() {
                           : "text-red-300"
                       }`}
                     >
-                      {quizData.explanations[key]}
+                      {
+                        quizData.explanations[
+                          key as keyof typeof quizData.explanations
+                        ]
+                      }
                     </div>
                   )}
                 </div>
