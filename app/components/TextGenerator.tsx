@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 type QuizData = {
@@ -12,7 +12,14 @@ type QuizData = {
     C: string;
     D: string;
   };
+  explanations: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
   correctAnswer: string;
+  relevantText: string;
   topic: string;
 };
 
@@ -36,6 +43,37 @@ export default function TextGenerator() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState<boolean>(false);
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>("B1");
+  const [highlightedParagraph, setHighlightedParagraph] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (quizData && isAnswered) {
+      highlightRelevantText();
+    } else {
+      setHighlightedParagraph(null);
+    }
+  }, [isAnswered, quizData]);
+
+  const highlightRelevantText = () => {
+    if (!quizData || !quizData.relevantText) return;
+
+    const { paragraph, relevantText } = quizData;
+
+    // Escape special regex characters in the relevant text
+    const escapedText = relevantText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Create a regular expression to find the text to highlight
+    const regex = new RegExp(`(${escapedText})`, "gi");
+
+    // Replace the matched text with highlighted version
+    const highlighted = paragraph.replace(
+      regex,
+      '<span class="bg-yellow-300 text-black px-1 rounded">$1</span>'
+    );
+
+    setHighlightedParagraph(highlighted);
+  };
 
   const generateText = async () => {
     setLoading(true);
@@ -43,6 +81,7 @@ export default function TextGenerator() {
     setSelectedAnswer(null);
     setIsAnswered(false);
     setImageUrl(null);
+    setHighlightedParagraph(null);
 
     try {
       const response = await fetch("/api/chat", {
@@ -189,7 +228,14 @@ export default function TextGenerator() {
           )}
 
           <div className="p-4 bg-gray-800 border border-gray-700 rounded shadow-sm text-white mb-4">
-            <p className="leading-relaxed">{quizData.paragraph}</p>
+            {highlightedParagraph ? (
+              <p
+                className="leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: highlightedParagraph }}
+              />
+            ) : (
+              <p className="leading-relaxed">{quizData.paragraph}</p>
+            )}
           </div>
 
           <div className="bg-gray-800 border border-gray-700 rounded shadow-sm p-4 text-white">
@@ -212,6 +258,17 @@ export default function TextGenerator() {
                   onClick={() => !isAnswered && handleAnswerSelect(key)}
                 >
                   <span className="font-bold mr-2">{key}:</span> {value}
+                  {isAnswered && (
+                    <div
+                      className={`mt-1 text-sm ${
+                        key === quizData.correctAnswer
+                          ? "text-green-300"
+                          : "text-red-300"
+                      }`}
+                    >
+                      {quizData.explanations[key]}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -237,6 +294,13 @@ export default function TextGenerator() {
                     ? "Correct! Well done!"
                     : `Incorrect. The correct answer is ${quizData.correctAnswer}.`}
                 </p>
+                {!isCorrect && (
+                  <p className="mt-2 text-sm">
+                    <span className="font-medium">
+                      Look at the highlighted text in the passage.
+                    </span>
+                  </p>
+                )}
               </div>
             )}
           </div>
