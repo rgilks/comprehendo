@@ -101,7 +101,13 @@ export default function TextGenerator() {
     setHighlightedParagraph(null);
     setShowExplanation(false);
 
+    // Clear previous quiz data when starting to load a new one
+    setQuizData(null);
+
     try {
+      // Generate a random seed to get different cached responses
+      const seed = Math.floor(Math.random() * 3);
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -109,8 +115,15 @@ export default function TextGenerator() {
         },
         body: JSON.stringify({
           prompt: `Generate a reading comprehension paragraph in ${language} with multiple choice questions in English for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
+          seed: seed,
         }),
       });
+
+      if (response.status === 429) {
+        setError("You've reached the usage limit. Please try again later.");
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to generate text");
@@ -294,6 +307,44 @@ export default function TextGenerator() {
         </div>
       </div>
 
+      {loading && (
+        <div className="bg-gradient-to-r from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-xl p-12 border border-gray-700 shadow-lg mb-8 fade-in">
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-16 h-16 mb-6 relative">
+              <svg
+                className="animate-spin w-16 h-16 text-blue-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-ping"></div>
+              </div>
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Generating Your Quiz
+            </h3>
+            <p className="text-gray-400 text-center">
+              Creating a {cefrLevel} level reading passage in {language}...
+            </p>
+          </div>
+        </div>
+      )}
+
       {!quizData && !loading && (
         <div className="bg-gradient-to-r from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-lg mb-8 fade-in">
           <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
@@ -387,7 +438,7 @@ export default function TextGenerator() {
         </div>
       )}
 
-      {quizData && (
+      {quizData && !loading && (
         <div className="space-y-6 fade-in">
           <div className="bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-xl shadow-lg overflow-hidden">
             <div className="bg-gradient-to-r from-gray-900 to-indigo-900/40 p-4 flex justify-between items-center">
