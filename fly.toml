@@ -1,0 +1,20 @@
+app = "comprehend"
+primary_region = "lhr" # London - changed from Silicon Valley
+
+[build]
+
+[http_service]
+internal_port = 3000
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 0
+processes = ["app"]
+
+[env]
+PORT = "3000"
+
+[http_service.concurrency]
+type = "connections"
+hard_limit = 1000
+soft_limit = 500
