@@ -8,16 +8,65 @@ const getOpenAIClient = () => {
   });
 };
 
+// Simple in-memory cache
+// In production you might want to use Redis or another persistent store
+const cache = new Map();
+const CACHE_TTL = 60 * 60 * 24; // 24 hours in seconds
+
+// Simple in-memory rate limiter
+// Maps IP addresses to timestamps of their requests
+const rateLimits = new Map();
+const MAX_REQUESTS_PER_HOUR = 20; // Adjust as needed
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+
 export async function POST(request: Request) {
   try {
+    // Get IP address from headers
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown-ip";
+
+    // Check rate limit
+    const now = Date.now();
+    const userRequests: number[] = rateLimits.get(ip) || [];
+
+    // Filter out requests older than the rate limit window
+    const recentRequests = userRequests.filter(
+      (timestamp: number) => now - timestamp < RATE_LIMIT_WINDOW
+    );
+
+    // Check if user has exceeded rate limit
+    if (recentRequests.length >= MAX_REQUESTS_PER_HOUR) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    // Update rate limit tracking
+    rateLimits.set(ip, [...recentRequests, now]);
+
     const body = await request.json();
-    const { prompt } = body;
+    const { prompt, seed } = body;
 
     if (!prompt) {
       return NextResponse.json(
         { error: "Prompt is required" },
         { status: 400 }
       );
+    }
+
+    // Create a cache key from the prompt + seed for variety
+    const cacheKey = `${prompt}-${seed || 0}`;
+
+    // Check cache
+    if (cache.has(cacheKey)) {
+      const { data, timestamp } = cache.get(cacheKey);
+      // Check if cache is still valid
+      if (now - timestamp < CACHE_TTL * 1000) {
+        return NextResponse.json({ result: data });
+      }
     }
 
     // Initialize OpenAI only when the route is called
@@ -39,7 +88,15 @@ export async function POST(request: Request) {
       max_tokens: 500,
     });
 
-    return NextResponse.json({ result: completion.choices[0].message.content });
+    const result = completion.choices[0].message.content;
+
+    // Cache the result
+    cache.set(cacheKey, {
+      data: result,
+      timestamp: now,
+    });
+
+    return NextResponse.json({ result });
   } catch (error) {
     console.error("Error in chat API:", error);
     return NextResponse.json(
