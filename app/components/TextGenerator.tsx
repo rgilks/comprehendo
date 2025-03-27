@@ -16,6 +16,17 @@ type QuizData = {
   topic: string;
 };
 
+type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+
+const CEFR_LEVELS = {
+  A1: "Beginner",
+  A2: "Elementary",
+  B1: "Intermediate",
+  B2: "Upper Intermediate",
+  C1: "Advanced",
+  C2: "Proficiency",
+};
+
 export default function TextGenerator() {
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -24,6 +35,7 @@ export default function TextGenerator() {
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState<boolean>(false);
+  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>("B1");
 
   const generateText = async () => {
     setLoading(true);
@@ -39,8 +51,7 @@ export default function TextGenerator() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt:
-            "Generate a reading comprehension paragraph with a multiple choice question.",
+          prompt: `Generate a reading comprehension paragraph with a multiple choice question for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) English learners.`,
         }),
       });
 
@@ -79,6 +90,7 @@ export default function TextGenerator() {
         },
         body: JSON.stringify({
           prompt: topic,
+          level: cefrLevel,
         }),
       });
 
@@ -110,13 +122,35 @@ export default function TextGenerator() {
 
   return (
     <div className="w-full max-w-2xl mx-auto my-8">
-      <button
-        onClick={generateText}
-        disabled={loading}
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed"
-      >
-        {loading ? "Generating..." : "Generate English Text"}
-      </button>
+      <div className="mb-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="w-full md:w-auto">
+          <label className="block text-sm font-medium text-white mb-1">
+            CEFR Level:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(CEFR_LEVELS) as CEFRLevel[]).map((level) => (
+              <button
+                key={level}
+                onClick={() => setCefrLevel(level)}
+                className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                  cefrLevel === level
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                }`}
+              >
+                {level} - {CEFR_LEVELS[level]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={generateText}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed w-full md:w-auto"
+        >
+          {loading ? "Generating..." : "Generate English Text"}
+        </button>
+      </div>
 
       {error && (
         <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -126,9 +160,14 @@ export default function TextGenerator() {
 
       {quizData && (
         <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-2 text-white">
-            Reading Passage:
-          </h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-semibold text-white">
+              Reading Passage:
+            </h2>
+            <span className="text-sm bg-blue-600 text-white px-2 py-1 rounded-full">
+              Level: {cefrLevel}
+            </span>
+          </div>
 
           {(imageLoading || imageUrl) && (
             <div className="mb-4 flex justify-center relative">
