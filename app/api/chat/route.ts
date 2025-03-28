@@ -32,6 +32,7 @@ interface GeneratedContentRow {
 }
 
 // Initialize rate limiting table
+console.log("[API] Initializing rate limiting table...");
 db.exec(`
   CREATE TABLE IF NOT EXISTS rate_limits (
     ip_address TEXT PRIMARY KEY,
@@ -39,6 +40,7 @@ db.exec(`
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 `);
+console.log("[API] Rate limiting table initialized");
 
 export async function POST(request: Request) {
   try {
@@ -47,12 +49,14 @@ export async function POST(request: Request) {
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
       "unknown-ip";
+    console.log(`[API] Request from IP: ${ip}`);
 
     // Check rate limit
     const now = Date.now();
     let userRequests: number[] = [];
 
     // Get rate limit data from database
+    console.log(`[API] Checking rate limit for IP: ${ip}`);
     const rateLimitRow = db
       .prepare(
         "SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?"
@@ -61,6 +65,9 @@ export async function POST(request: Request) {
 
     if (rateLimitRow) {
       userRequests = JSON.parse(rateLimitRow.requests);
+      console.log(
+        `[API] Found ${userRequests.length} previous requests for IP: ${ip}`
+      );
 
       // Update last updated timestamp
       db.prepare(
@@ -72,9 +79,11 @@ export async function POST(request: Request) {
     const recentRequests = userRequests.filter(
       (timestamp: number) => now - timestamp < RATE_LIMIT_WINDOW
     );
+    console.log(`[API] ${recentRequests.length} recent requests for IP: ${ip}`);
 
     // Check if user has exceeded rate limit
     if (recentRequests.length >= MAX_REQUESTS_PER_HOUR) {
+      console.log(`[API] Rate limit exceeded for IP: ${ip}`);
       return NextResponse.json(
         { error: "Rate limit exceeded. Please try again later." },
         { status: 429 }
@@ -83,6 +92,9 @@ export async function POST(request: Request) {
 
     // Update rate limit tracking in database
     const updatedRequests = [...recentRequests, now];
+    console.log(
+      `[API] Updating rate limit for IP: ${ip} with ${updatedRequests.length} requests`
+    );
 
     // Use upsert pattern to either insert or update
     db.prepare(
@@ -96,8 +108,12 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { prompt, seed } = body;
+    console.log(
+      `[API] Received request with prompt: ${prompt.substring(0, 50)}...`
+    );
 
     if (!prompt) {
+      console.log("[API] Error: No prompt provided");
       return NextResponse.json(
         { error: "Prompt is required" },
         { status: 400 }
@@ -110,9 +126,11 @@ export async function POST(request: Request) {
 
     const cefrLevel = cefrLevelMatch ? cefrLevelMatch[1] : "unknown";
     const language = languageMatch ? languageMatch[1] : "unknown";
+    console.log(`[API] Extracted language: ${language}, level: ${cefrLevel}`);
 
     // Create a cache key from the CEFR level, language, and seed for better variety
     const cacheKey = `${language}-${cefrLevel}-${seed || 0}`;
+    console.log(`[API] Checking cache for key: ${cacheKey}`);
 
     // Check cache in database
     const cachedContent = db
@@ -131,13 +149,19 @@ export async function POST(request: Request) {
       const timestamp = new Date(cachedContent.created_at).getTime();
       // Check if cache is still valid (less than CACHE_TTL old)
       if (now - timestamp < CACHE_TTL * 1000) {
+        console.log(`[API] Cache hit for key: ${cacheKey}`);
         return NextResponse.json({ result: cachedContent.content });
       }
+      console.log(`[API] Cache expired for key: ${cacheKey}`);
+    } else {
+      console.log(`[API] Cache miss for key: ${cacheKey}`);
     }
 
     // Initialize OpenAI only when the route is called
+    console.log("[API] Initializing OpenAI client");
     const openai = getOpenAIClient();
 
+    console.log("[API] Sending request to OpenAI");
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -155,8 +179,12 @@ export async function POST(request: Request) {
     });
 
     const result = completion.choices[0].message.content;
+    console.log("[API] Received response from OpenAI");
 
     // Store the result in database
+    console.log(
+      `[API] Storing generated content in database for language: ${language}, level: ${cefrLevel}`
+    );
     db.prepare(
       `
       INSERT INTO generated_content (language, level, content, questions, created_at)
@@ -165,6 +193,9 @@ export async function POST(request: Request) {
     ).run(language, cefrLevel, result, JSON.stringify({ prompt }));
 
     // Track usage statistics
+    console.log(
+      `[API] Recording usage statistics for language: ${language}, level: ${cefrLevel}`
+    );
     db.prepare(
       `
       INSERT INTO usage_stats (ip_address, language, level)
@@ -172,9 +203,10 @@ export async function POST(request: Request) {
     `
     ).run(ip, language, cefrLevel);
 
+    console.log("[API] Request completed successfully");
     return NextResponse.json({ result });
   } catch (error) {
-    console.error("Error in chat API:", error);
+    console.error("[API] Error in chat API:", error);
     return NextResponse.json(
       { error: "An error occurred while processing your request" },
       { status: 500 }
