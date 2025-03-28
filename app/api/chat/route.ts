@@ -1,5 +1,7 @@
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
+import db from "../../../lib/db";
+import Database from "better-sqlite3";
 
 // Don't initialize OpenAI at build time
 const getOpenAIClient = () => {
@@ -8,16 +10,35 @@ const getOpenAIClient = () => {
   });
 };
 
-// Simple in-memory cache
-// In production you might want to use Redis or another persistent store
-const cache = new Map();
-const CACHE_TTL = 60 * 60 * 24; // 24 hours in seconds
-
 // Simple in-memory rate limiter
 // Maps IP addresses to timestamps of their requests
 const rateLimits = new Map();
 const MAX_REQUESTS_PER_HOUR = 100; // Adjust as needed
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+const CACHE_TTL = 60 * 60 * 24; // 24 hours in seconds
+
+interface RateLimitRow {
+  requests: string;
+  updated_at: string;
+}
+
+interface GeneratedContentRow {
+  id: number;
+  language: string;
+  level: string;
+  content: string;
+  questions: string;
+  created_at: string;
+}
+
+// Initialize rate limiting table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS rate_limits (
+    ip_address TEXT PRIMARY KEY,
+    requests TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+`);
 
 export async function POST(request: Request) {
   try {
@@ -29,7 +50,23 @@ export async function POST(request: Request) {
 
     // Check rate limit
     const now = Date.now();
-    const userRequests: number[] = rateLimits.get(ip) || [];
+    let userRequests: number[] = [];
+
+    // Get rate limit data from database
+    const rateLimitRow = db
+      .prepare(
+        "SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?"
+      )
+      .get(ip) as RateLimitRow | undefined;
+
+    if (rateLimitRow) {
+      userRequests = JSON.parse(rateLimitRow.requests);
+
+      // Update last updated timestamp
+      db.prepare(
+        "UPDATE rate_limits SET updated_at = CURRENT_TIMESTAMP WHERE ip_address = ?"
+      ).run(ip);
+    }
 
     // Filter out requests older than the rate limit window
     const recentRequests = userRequests.filter(
@@ -44,8 +81,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Update rate limit tracking
-    rateLimits.set(ip, [...recentRequests, now]);
+    // Update rate limit tracking in database
+    const updatedRequests = [...recentRequests, now];
+
+    // Use upsert pattern to either insert or update
+    db.prepare(
+      `
+      INSERT INTO rate_limits (ip_address, requests, updated_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(ip_address) DO UPDATE SET
+      requests = ?, updated_at = CURRENT_TIMESTAMP
+    `
+    ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
 
     const body = await request.json();
     const { prompt, seed } = body;
@@ -67,12 +114,24 @@ export async function POST(request: Request) {
     // Create a cache key from the CEFR level, language, and seed for better variety
     const cacheKey = `${language}-${cefrLevel}-${seed || 0}`;
 
-    // Check cache
-    if (cache.has(cacheKey)) {
-      const { data, timestamp } = cache.get(cacheKey);
-      // Check if cache is still valid
+    // Check cache in database
+    const cachedContent = db
+      .prepare(
+        `
+      SELECT content, created_at FROM generated_content 
+      WHERE language = ? AND level = ? AND id % 100 = ?
+      ORDER BY created_at DESC LIMIT 1
+    `
+      )
+      .get(language, cefrLevel, seed % 100 || 0) as
+      | GeneratedContentRow
+      | undefined;
+
+    if (cachedContent) {
+      const timestamp = new Date(cachedContent.created_at).getTime();
+      // Check if cache is still valid (less than CACHE_TTL old)
       if (now - timestamp < CACHE_TTL * 1000) {
-        return NextResponse.json({ result: data });
+        return NextResponse.json({ result: cachedContent.content });
       }
     }
 
@@ -97,11 +156,21 @@ export async function POST(request: Request) {
 
     const result = completion.choices[0].message.content;
 
-    // Cache the result
-    cache.set(cacheKey, {
-      data: result,
-      timestamp: now,
-    });
+    // Store the result in database
+    db.prepare(
+      `
+      INSERT INTO generated_content (language, level, content, questions, created_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `
+    ).run(language, cefrLevel, result, JSON.stringify({ prompt }));
+
+    // Track usage statistics
+    db.prepare(
+      `
+      INSERT INTO usage_stats (ip_address, language, level)
+      VALUES (?, ?, ?)
+    `
+    ).run(ip, language, cefrLevel);
 
     return NextResponse.json({ result });
   } catch (error) {
