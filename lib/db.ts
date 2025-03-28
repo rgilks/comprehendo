@@ -65,7 +65,6 @@ try {
     get(target, prop) {
       if (prop === "prepare") {
         return function (sql: string) {
-          console.log(`[DB] Preparing SQL: ${sql}`);
           const stmt = target.prepare(sql);
 
           return new Proxy(stmt, {
@@ -75,13 +74,10 @@ try {
                   console.log(
                     `[DB] ${
                       stmtProp === "run" ? "Executing" : "Querying"
-                    } SQL: ${sql}`,
-                    { args }
+                    } with params:`,
+                    args
                   );
                   const result = (stmtTarget as any)[stmtProp](...args);
-                  if (stmtProp === "get") {
-                    console.log(`[DB] Query result:`, result);
-                  }
                   return result;
                 };
               }
