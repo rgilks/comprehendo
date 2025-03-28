@@ -22,4 +22,7 @@ jobs:
           # Add build-time environment variables for GitHub OAuth
           GITHUB_ID: ${{ secrets.GITHUB_OAUTH_ID }}
           GITHUB_SECRET: ${{ secrets.GITHUB_OAUTH_SECRET }}
+          # Add Google OAuth credentials
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           NEXTAUTH_URL: https://comprehend.fly.dev
