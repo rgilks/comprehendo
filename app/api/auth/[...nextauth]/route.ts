@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
+import db from "../../../../lib/db";
 
 // Only check for environment variables during runtime, not during build
 const providers = [];
@@ -33,6 +34,42 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 const handler = NextAuth({
   providers,
+  callbacks: {
+    async signIn({ user, account }) {
+      // Store user in DB when they sign in
+      try {
+        if (user && account) {
+          // Update or insert user data
+          db.prepare(
+            `
+            INSERT INTO users (provider_id, provider, name, email, image, last_login)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(provider_id, provider) 
+            DO UPDATE SET name = ?, email = ?, image = ?, last_login = CURRENT_TIMESTAMP
+          `
+          ).run(
+            user.id,
+            account.provider,
+            user.name || null,
+            user.email || null,
+            user.image || null,
+            user.name || null,
+            user.email || null,
+            user.image || null
+          );
+          console.log(
+            `[AUTH] User ${user.name || user.email || user.id} logged in via ${
+              account.provider
+            }`
+          );
+        }
+      } catch (error) {
+        console.error("[AUTH] Error storing user data:", error);
+        // Don't block sign-in if DB storage fails
+      }
+      return true;
+    },
+  },
   // Add trust host configuration for production
   cookies: {
     sessionToken: {
