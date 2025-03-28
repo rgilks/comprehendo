@@ -73,11 +73,22 @@ try {
 
   // Check if user_id column exists in usage_stats and add it if missing
   try {
+    // Define the type for SQLite column info
+    interface ColumnInfo {
+      cid: number;
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }
+
     // Check if user_id column exists by querying the table info
-    const hasUserIdColumn = db
+    const columns = db
       .prepare("PRAGMA table_info(usage_stats)")
-      .all()
-      .some((column) => column.name === "user_id");
+      .all() as ColumnInfo[];
+
+    const hasUserIdColumn = columns.some((column) => column.name === "user_id");
 
     if (!hasUserIdColumn) {
       console.log("[DB] Adding user_id column to usage_stats table");
