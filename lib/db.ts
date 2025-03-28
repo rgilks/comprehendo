@@ -49,20 +49,23 @@ try {
 
   // Add logging for all database operations
   const originalPrepare = db.prepare.bind(db);
-  db.prepare = function (sql: string) {
+  db.prepare = function <
+    BindParameters extends unknown[] | {} = unknown[],
+    Result = unknown
+  >(sql: string): Database.Statement<BindParameters, Result> {
     console.log(`[DB] Preparing SQL: ${sql}`);
-    const stmt = originalPrepare(sql);
+    const stmt = originalPrepare<BindParameters, Result>(sql);
 
     // Log when the statement is executed
     const originalRun = stmt.run.bind(stmt);
-    stmt.run = function (...args: any[]) {
+    stmt.run = function (...args: BindParameters) {
       console.log(`[DB] Executing SQL: ${sql}`, { args });
       return originalRun(...args);
     };
 
     // Log when the statement is queried
     const originalGet = stmt.get.bind(stmt);
-    stmt.get = function (...args: any[]) {
+    stmt.get = function (...args: BindParameters) {
       console.log(`[DB] Querying SQL: ${sql}`, { args });
       const result = originalGet(...args);
       console.log(`[DB] Query result:`, result);
