@@ -12,17 +12,21 @@ const DB_PATH = path.join(DB_DIR, "comprehend.sqlite");
 // Ensure the database directory exists
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
+  console.log(`[DB] Created database directory at ${DB_DIR}`);
 }
 
 // Initialize database connection
 let db: Database.Database;
 try {
   db = new Database(DB_PATH);
+  console.log(`[DB] Connected to database at ${DB_PATH}`);
 
   // Enable foreign keys
   db.pragma("foreign_keys = ON");
+  console.log("[DB] Enabled foreign key constraints");
 
   // Initialize database schema if needed
+  console.log("[DB] Initializing database schema...");
   db.exec(`
     CREATE TABLE IF NOT EXISTS generated_content (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,10 +45,36 @@ try {
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  console.log("[DB] Schema initialization complete");
 
-  console.log("Database initialized successfully at", DB_PATH);
+  // Add logging for all database operations
+  const originalPrepare = db.prepare.bind(db);
+  db.prepare = function (sql: string) {
+    console.log(`[DB] Preparing SQL: ${sql}`);
+    const stmt = originalPrepare(sql);
+
+    // Log when the statement is executed
+    const originalRun = stmt.run.bind(stmt);
+    stmt.run = function (...args: any[]) {
+      console.log(`[DB] Executing SQL: ${sql}`, { args });
+      return originalRun(...args);
+    };
+
+    // Log when the statement is queried
+    const originalGet = stmt.get.bind(stmt);
+    stmt.get = function (...args: any[]) {
+      console.log(`[DB] Querying SQL: ${sql}`, { args });
+      const result = originalGet(...args);
+      console.log(`[DB] Query result:`, result);
+      return result;
+    };
+
+    return stmt;
+  };
+
+  console.log("[DB] Database initialized successfully");
 } catch (error) {
-  console.error("Database initialization error:", error);
+  console.error("[DB] Database initialization error:", error);
 
   // In production, we want to fail hard if database setup fails
   if (process.env.NODE_ENV === "production") {
@@ -53,7 +83,7 @@ try {
 
   // In development, create an in-memory database as fallback
   db = new Database(":memory:");
-  console.warn("Using in-memory database as fallback");
+  console.warn("[DB] Using in-memory database as fallback");
 }
 
 export default db;
