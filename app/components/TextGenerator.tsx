@@ -106,7 +106,7 @@ export default function TextGenerator() {
 
     try {
       // Generate a random seed to get different cached responses
-      const seed = Math.floor(Math.random() * 1000);
+      const seed = Math.floor(Math.random() * 100);
 
       const response = await fetch("/api/chat", {
         method: "POST",
