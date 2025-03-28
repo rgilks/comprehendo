@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import AuthProvider from "./AuthProvider";
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     "Improve your language skills with AI-powered reading comprehension exercises",
   keywords: "language learning, reading comprehension, CEFR, AI, education",
   authors: [{ name: "Comprehend Team" }],
+  metadataBase: new URL("http://localhost:3000"),
   openGraph: {
     title: "Comprehend - AI-Powered Language Learning",
     description:
@@ -28,7 +30,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={poppins.className}>{children}</body>
+      <body className={poppins.className}>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
