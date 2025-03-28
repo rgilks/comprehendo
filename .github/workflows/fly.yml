@@ -19,3 +19,7 @@ jobs:
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          # Add build-time environment variables for GitHub OAuth
+          GITHUB_ID: ${{ secrets.GITHUB_OAUTH_ID }}
+          GITHUB_SECRET: ${{ secrets.GITHUB_OAUTH_SECRET }}
+          NEXTAUTH_URL: https://comprehend.fly.dev
