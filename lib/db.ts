@@ -57,7 +57,41 @@ try {
       level TEXT NOT NULL,
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      name TEXT,
+      email TEXT,
+      image TEXT,
+      first_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(provider_id, provider)
+    );
   `);
+
+  // Check if user_id column exists in usage_stats and add it if missing
+  try {
+    // Check if user_id column exists by querying the table info
+    const hasUserIdColumn = db
+      .prepare("PRAGMA table_info(usage_stats)")
+      .all()
+      .some((column) => column.name === "user_id");
+
+    if (!hasUserIdColumn) {
+      console.log("[DB] Adding user_id column to usage_stats table");
+      // SQLite ALTER TABLE is limited, but we can add a column
+      db.exec(`
+        ALTER TABLE usage_stats 
+        ADD COLUMN user_id INTEGER REFERENCES users(id)
+      `);
+      console.log("[DB] Column added successfully");
+    }
+  } catch (error) {
+    console.error("[DB] Error checking or adding column:", error);
+  }
+
   console.log("[DB] Schema initialization complete");
 
   // Create a proxy to intercept and log database operations

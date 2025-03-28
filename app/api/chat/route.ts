@@ -2,6 +2,7 @@ import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
 import db from "../../../lib/db";
 import Database from "better-sqlite3";
+import { getServerSession } from "next-auth";
 
 // Don't initialize OpenAI at build time
 const getOpenAIClient = () => {
@@ -44,6 +45,35 @@ console.log("[API] Rate limiting table initialized");
 
 export async function POST(request: Request) {
   try {
+    // Get user session if available
+    const session = await getServerSession();
+    let userId = null;
+
+    // Get user ID from database if logged in
+    if (session?.user) {
+      const userEmail = session.user.email as string | undefined;
+
+      interface UserRecord {
+        id: number;
+      }
+
+      const userRecord = db
+        .prepare(
+          `
+        SELECT id FROM users 
+        WHERE (email = ? AND email IS NOT NULL)
+        ORDER BY last_login DESC
+        LIMIT 1
+      `
+        )
+        .get(userEmail || "") as UserRecord | undefined;
+
+      if (userRecord) {
+        userId = userRecord.id;
+        console.log(`[API] Request from authenticated user ID: ${userId}`);
+      }
+    }
+
     // Get IP address from headers
     const ip =
       request.headers.get("x-forwarded-for") ||
@@ -192,16 +222,38 @@ export async function POST(request: Request) {
     `
     ).run(language, cefrLevel, result, JSON.stringify({ prompt }));
 
-    // Track usage statistics
+    // Track usage statistics with user ID when available
     console.log(
-      `[API] Recording usage statistics for language: ${language}, level: ${cefrLevel}`
+      `[API] Recording usage statistics for language: ${language}, level: ${cefrLevel}${
+        userId ? ", user: " + userId : ""
+      }`
     );
-    db.prepare(
+
+    try {
+      db.prepare(
+        `
+        INSERT INTO usage_stats (ip_address, user_id, language, level)
+        VALUES (?, ?, ?, ?)
       `
-      INSERT INTO usage_stats (ip_address, language, level)
-      VALUES (?, ?, ?)
-    `
-    ).run(ip, language, cefrLevel);
+      ).run(ip, userId, language, cefrLevel);
+    } catch (error) {
+      // Fallback to the original query without user_id if there's an error
+      console.error(
+        "[API] Error recording usage stats with user_id, trying without:",
+        error
+      );
+      try {
+        db.prepare(
+          `
+          INSERT INTO usage_stats (ip_address, language, level)
+          VALUES (?, ?, ?)
+        `
+        ).run(ip, language, cefrLevel);
+      } catch (fallbackError) {
+        console.error("[API] Error recording usage stats:", fallbackError);
+        // Continue execution - don't fail the request just because stats recording failed
+      }
+    }
 
     console.log("[API] Request completed successfully");
     return NextResponse.json({ result });
