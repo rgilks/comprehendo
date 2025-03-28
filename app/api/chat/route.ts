@@ -1,7 +1,6 @@
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
 import db from "../../../lib/db";
-import Database from "better-sqlite3";
 import { getServerSession } from "next-auth";
 
 // Don't initialize OpenAI at build time

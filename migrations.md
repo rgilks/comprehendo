@@ -11,7 +11,7 @@ This document tracks the migration of Comprehend to newer versions of its core d
 
 ## Current State (March 28, 2025)
 
-- Next.js: 14.2.26
+- Next.js: 15.3.0 ✅
 - React/React DOM: 19.0.0 ✅
 - Tailwind CSS: 3.4.1
 - next-auth: 4.24.11
@@ -62,15 +62,18 @@ export default {
 - [x] Fix any deprecated API usage
   - **RESULT**: No changes needed, codebase is already compatible with React 19
 
-### Phase 4: Update Next.js to v15 🔄
+### Phase 4: Update Next.js to v15 ✅
 
-- [ ] Read Next.js 15 migration guide: https://nextjs.org/docs/app/building-your-application/upgrading/version-15
-- [ ] Update Next.js: `npm install next@latest`
-- [ ] Remove deprecated options from next.config.js
-- [ ] Test API routes
-- [ ] Run build and deployment tests
+- [x] Read Next.js 15 migration guide: https://nextjs.org/docs/app/building-your-application/upgrading/version-15
+- [x] Update Next.js: `npm install next@latest eslint-config-next@latest`
+- [x] Remove deprecated options from next.config.js
+  - **RESULT**: No changes needed, config is already compatible with Next.js 15
+- [x] Test API routes
+  - **RESULT**: API routes work correctly with Next.js 15
+- [x] Run build and deployment tests
+  - **RESULT**: Application builds successfully with Next.js 15
 
-### Phase 5: Update next-auth (if needed)
+### Phase 5: Update next-auth (if needed) 🔄
 
 - [ ] Check for compatibility with Next.js 15
 - [ ] Update if necessary: `npm install next-auth@latest`
@@ -84,9 +87,9 @@ export default {
 
 ## Testing Checklist
 
-- [x] Authentication flows (tested with React 19)
-- [x] API routes (tested with React 19)
-- [x] Page navigation (tested with React 19)
-- [x] UI components (tested with React 19)
-- [ ] Build process
+- [x] Authentication flows (tested with React 19 and Next.js 15)
+- [x] API routes (tested with React 19 and Next.js 15)
+- [x] Page navigation (tested with React 19 and Next.js 15)
+- [x] UI components (tested with React 19 and Next.js 15)
+- [x] Build process (tested with Next.js 15)
 - [ ] Deployment
