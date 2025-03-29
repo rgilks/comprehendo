@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import TextGenerator from "./components/TextGenerator";
-import Link from "next/link";
-import AuthButton from "./components/AuthButton";
+import TextGenerator from './components/TextGenerator';
+import Link from 'next/link';
+import AuthButton from './components/AuthButton';
 
 export default function Home() {
   return (
@@ -20,21 +20,20 @@ export default function Home() {
             Comprehend
           </h1>
           <p className="text-xl mb-3 text-gray-300 max-w-2xl mx-auto">
-            An AI-powered language learning tool to improve your reading
-            comprehension
+            An AI-powered language learning tool to improve your reading comprehension
           </p>
         </div>
 
-        <div className="fade-in" style={{ animationDelay: "0.2s" }}>
+        <div className="fade-in" style={{ animationDelay: '0.2s' }}>
           <TextGenerator />
         </div>
 
         <footer
           className="mt-16 text-center text-sm text-gray-500 fade-in"
-          style={{ animationDelay: "0.3s" }}
+          style={{ animationDelay: '0.3s' }}
         >
           <p>
-            Powered by OpenAI & Google Gemini |{" "}
+            Powered by OpenAI & Google Gemini |{' '}
             <Link
               href="https://github.com/rgilks/comprehend"
               className="underline hover:text-blue-400"

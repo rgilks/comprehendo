@@ -1,4 +1,4 @@
-import { getServerSession } from "next-auth";
+import { getServerSession } from 'next-auth';
 
 // Use the getServerSession helper for server components
 export const getSession = async () => {
@@ -7,4 +7,4 @@ export const getSession = async () => {
 };
 
 // Re-export everything from next-auth/react for client components
-export { useSession, signIn, signOut } from "next-auth/react";
+export { useSession, signIn, signOut } from 'next-auth/react';

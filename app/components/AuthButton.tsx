@@ -1,15 +1,13 @@
-"use client";
+'use client';
 
-import { signIn, signOut, useSession } from "next-auth/react";
-import Image from "next/image";
+import { signIn, signOut, useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 export default function AuthButton() {
   const { data: session, status } = useSession();
 
-  if (status === "loading") {
-    return (
-      <div className="animate-pulse bg-gray-700 h-10 w-32 rounded-lg"></div>
-    );
+  if (status === 'loading') {
+    return <div className="animate-pulse bg-gray-700 h-10 w-32 rounded-lg"></div>;
   }
 
   if (session) {
@@ -19,7 +17,7 @@ export default function AuthButton() {
           {session.user?.image && (
             <Image
               src={session.user.image}
-              alt={session.user?.name || "User"}
+              alt={session.user?.name || 'User'}
               width={32}
               height={32}
               className="rounded-full"
@@ -40,7 +38,7 @@ export default function AuthButton() {
   return (
     <div className="flex flex-col sm:flex-row gap-3">
       <button
-        onClick={() => signIn("github")}
+        onClick={() => signIn('github')}
         className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 justify-center"
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -49,7 +47,7 @@ export default function AuthButton() {
         Sign in with GitHub
       </button>
       <button
-        onClick={() => signIn("google")}
+        onClick={() => signIn('google')}
         className="px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 justify-center"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">

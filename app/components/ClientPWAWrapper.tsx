@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
+import dynamic from 'next/dynamic';
 
-const PWAInstall = dynamic(() => import("./PWAInstall"), {
+const PWAInstall = dynamic(() => import('./PWAInstall'), {
   ssr: false,
 });
 

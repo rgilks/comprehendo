@@ -3,3 +3,4 @@
 
 echo "Running pre-push checks..."
 npm run check
+npm run verify

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 let deferredPrompt: any;
 
@@ -9,12 +9,12 @@ export default function PWAInstall() {
 
   useEffect(() => {
     // Check if the app is already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
       return;
     }
 
     // Listen for the beforeinstallprompt event
-    window.addEventListener("beforeinstallprompt", (e) => {
+    window.addEventListener('beforeinstallprompt', (e) => {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
       // Store the event so it can be triggered later
@@ -24,7 +24,7 @@ export default function PWAInstall() {
     });
 
     // Hide the button if the app is installed
-    window.addEventListener("appinstalled", () => {
+    window.addEventListener('appinstalled', () => {
       setShowInstallButton(false);
       deferredPrompt = null;
     });

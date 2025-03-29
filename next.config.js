@@ -1,30 +1,30 @@
-const withPWA = require("next-pwa")({
-  dest: "public",
+const withPWA = require('next-pwa')({
+  dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === "development",
+  disable: process.env.NODE_ENV === 'development',
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  output: 'standalone',
   reactStrictMode: true,
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "avatars.githubusercontent.com",
-        pathname: "**",
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+        pathname: '**',
       },
       {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-        pathname: "**",
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '**',
       },
       {
-        protocol: "https",
-        hostname: "github.com",
-        pathname: "**",
+        protocol: 'https',
+        hostname: 'github.com',
+        pathname: '**',
       },
     ],
   },

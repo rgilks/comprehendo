@@ -34,7 +34,7 @@ This document tracks the migration of Comprehend to newer versions of its core d
 // postcss.config.js
 module.exports = {
   plugins: {
-    "@tailwindcss/postcss": {},
+    '@tailwindcss/postcss': {},
     autoprefixer: {},
   },
 };
