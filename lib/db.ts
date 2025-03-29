@@ -116,11 +116,18 @@ try {
             get(stmtTarget, stmtProp) {
               if (stmtProp === "run" || stmtProp === "get") {
                 return function (...args: any[]) {
+                  // Format parameters to be more compact
+                  const formattedParams = args.map((param) => {
+                    if (typeof param === "string" && param.length > 50) {
+                      return param.substring(0, 47) + "...";
+                    }
+                    return param;
+                  });
+
                   console.log(
                     `[DB] ${
                       stmtProp === "run" ? "Executing" : "Querying"
-                    } with params:`,
-                    args
+                    } with params: ${JSON.stringify(formattedParams)}`
                   );
                   const result = (stmtTarget as any)[stmtProp](...args);
                   return result;
