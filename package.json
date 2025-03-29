@@ -12,6 +12,7 @@
     "deps:update": "npx npm-check-updates -u && npm install"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.0",
     "better-sqlite3": "^11.9.1",
     "next": "15.2.4",
     "next-auth": "^4.24.11",

@@ -1,6 +1,6 @@
 # Comprehend
 
-A multi-language reading comprehension practice tool powered by Next.js and OpenAI
+A multi-language reading comprehension practice tool powered by Next.js, OpenAI, and Google Gemini
 
 ![Comprehend Screenshot](public/screenshot.png)
 
@@ -13,6 +13,7 @@ Comprehend is an AI-powered language learning application designed to help users
 - **Multi-language Support**: Practice reading comprehension in English, Italian, Spanish, French, or German
 - **CEFR Level Selection**: Choose from six proficiency levels (A1-C2) to match your current language skills
 - **AI-Generated Content**: Fresh, unique reading passages generated for each practice session
+- **Multiple AI Model Support**: Switch between OpenAI's GPT-3.5 Turbo and Google's Gemini 2.0 Flash-Lite via environment variables
 - **Interactive Quiz Format**: Answer multiple-choice questions and receive immediate feedback
 - **Detailed Explanations**: Learn why answers are correct or incorrect with thorough explanations
 - **Text Highlighting**: See the relevant portion of text highlighted after answering
@@ -80,20 +81,32 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Framework**: Next.js 14 (React)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS with custom animations
-- **AI Integration**: OpenAI API (GPT-3.5-turbo)
+- **AI Integration**:
+  - OpenAI API (GPT-3.5-turbo)
+  - Google Generative AI (Gemini 2.0 Flash-Lite)
 - **Deployment**: Configured for Fly.io
 
 ## API Configuration
 
-The application requires an OpenAI API key to function. You can obtain an API key by signing up at [OpenAI's website](https://openai.com).
+The application requires API keys to function:
 
-Add your API key to a `.env.local` file in the root directory:
+1. **OpenAI API Key**: You can obtain an API key by signing up at [OpenAI's website](https://openai.com).
+2. **Google AI API Key**: Sign up for Gemini access at [Google AI Studio](https://makersuite.google.com/app/apikey).
+
+Add your API keys to a `.env.local` file in the root directory:
 
 ```
 OPENAI_API_KEY=your-openai-api-key
+GOOGLE_AI_API_KEY=your-google-ai-key
+# Optional: ACTIVE_MODEL=gemini-2.0-flash-lite (this is the default)
 ```
 
-For production deployment, set the environment variable securely in your hosting provider.
+To switch between models, set the `ACTIVE_MODEL` environment variable:
+
+- `gpt-3.5-turbo` - OpenAI's GPT-3.5 Turbo
+- `gemini-2.0-flash-lite` - Google's Gemini 2.0 Flash-Lite (default if not specified)
+
+For production deployment, set the environment variables securely in your hosting provider.
 
 ## Deployment
 
@@ -110,9 +123,24 @@ This project is configured for continuous deployment to Fly.io from GitHub. Here
 4. Create a new Fly app (if you haven't already): `fly apps create comprehend`
 5. Generate a Fly.io API token: `fly auth token`
 6. Add the token as a GitHub repository secret named `FLY_API_TOKEN`
-7. Add your OpenAI API key to Fly.io: `fly secrets set OPENAI_API_KEY="your-api-key-here"`
+7. Add your API keys to Fly.io:
+   ```
+   fly secrets set OPENAI_API_KEY="your-openai-api-key"
+   fly secrets set GOOGLE_AI_API_KEY="your-google-ai-key"
+   fly secrets set ACTIVE_MODEL="gpt-3.5-turbo"
+   ```
 
-After setting up these steps, every push to the `main` branch will automatically deploy to Fly.io.
+To switch between models in production, update the ACTIVE_MODEL secret:
+
+```
+fly secrets set ACTIVE_MODEL="gemini-2.0-flash-lite"
+```
+
+After updating the secret, restart your Fly.io app to apply the changes:
+
+```
+fly app restart
+```
 
 ## Production Considerations
 
