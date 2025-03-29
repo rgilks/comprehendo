@@ -1,3 +1,4 @@
+// TextGenerator component - Provides reading comprehension quiz functionality
 "use client";
 
 import { useState, useEffect } from "react";
@@ -534,8 +535,8 @@ export default function TextGenerator() {
                           selectedAnswer === key
                             ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
                             : isAnswered && key === quizData.correctAnswer
-                            ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
-                            : "bg-gray-700 text-white"
+                              ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
+                              : "bg-gray-700 text-white"
                         }`}
                       >
                         {key}
