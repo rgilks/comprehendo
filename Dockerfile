@@ -12,16 +12,8 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Copy only necessary files for build
-COPY next.config.js ./
-COPY tsconfig.json ./
-COPY package.json ./
-COPY public ./public
-COPY app ./app
-COPY components ./components
-COPY lib ./lib
-COPY styles ./styles
-COPY middleware.ts ./
+# Copy everything instead of individual directories
+COPY . .
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
