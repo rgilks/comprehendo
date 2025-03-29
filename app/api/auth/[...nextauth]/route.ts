@@ -1,7 +1,7 @@
-import NextAuth from "next-auth";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
-import db from "../../../../lib/db";
+import NextAuth from 'next-auth';
+import GitHub from 'next-auth/providers/github';
+import Google from 'next-auth/providers/google';
+import db from '../../../../lib/db';
 
 // Only check for environment variables during runtime, not during build
 const providers = [];
@@ -14,9 +14,9 @@ if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
       clientSecret: process.env.GITHUB_SECRET as string,
     })
   );
-} else if (process.env.NODE_ENV === "production") {
+} else if (process.env.NODE_ENV === 'production') {
   // Only throw in production, not during build
-  console.warn("GitHub OAuth credentials missing");
+  console.warn('GitHub OAuth credentials missing');
 }
 
 // Add Google provider
@@ -27,9 +27,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     })
   );
-} else if (process.env.NODE_ENV === "production") {
+} else if (process.env.NODE_ENV === 'production') {
   // Only throw in production, not during build
-  console.warn("Google OAuth credentials missing");
+  console.warn('Google OAuth credentials missing');
 }
 
 const handler = NextAuth({
@@ -59,18 +59,14 @@ const handler = NextAuth({
           );
 
           // Mask email for privacy in logs
-          const maskedEmail = user.email
-            ? user.email.replace(/(.{2})(.*)(@.*)/, "$1***$3")
-            : null;
+          const maskedEmail = user.email ? user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : null;
 
           console.log(
-            `[AUTH] User ${user.name || maskedEmail || user.id} logged in via ${
-              account.provider
-            }`
+            `[AUTH] User ${user.name || maskedEmail || user.id} logged in via ${account.provider}`
           );
         }
       } catch (error) {
-        console.error("[AUTH] Error storing user data:", error);
+        console.error('[AUTH] Error storing user data:', error);
         // Don't block sign-in if DB storage fails
       }
       return true;
@@ -82,9 +78,9 @@ const handler = NextAuth({
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
       },
     },
   },

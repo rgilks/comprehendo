@@ -90,6 +90,34 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
+### Development Workflow
+
+Comprehend uses a modern development workflow with several tools to ensure code quality:
+
+```bash
+# Format code using Prettier
+npm run format
+
+# Check formatting without making changes
+npm run format:check
+
+# Run tests
+npm run test
+
+# Run ESLint
+npm run lint
+
+# Verify code (format + lint + build checks)
+npm run verify
+```
+
+Git hooks (powered by Husky) automatically run on commit and push:
+
+- **Pre-commit**: Formats staged files and runs tests related to changed files
+- **Pre-push**: Runs full formatting, linting, and build verification
+
+This approach allows for fast local development while ensuring that code pushed to the repository meets quality standards.
+
 ## Technology Stack
 
 - **Framework**: Next.js 15 (React 19)

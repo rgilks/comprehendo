@@ -1,5 +1,5 @@
-import { ReadonlyHeaders } from "next/dist/server/web/spec-extension/adapters/headers";
-import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
+import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 // NextResponse mock
 export class MockNextResponse {
@@ -14,7 +14,7 @@ export class MockNextResponse {
     this.headers = new Headers(init.headers);
     this.cookies = {};
     this.status = init.status || 200;
-    this.statusText = init.statusText || "";
+    this.statusText = init.statusText || '';
     this.body = body;
     this.responseInit = init;
   }
@@ -96,28 +96,21 @@ export class MockNextRequest {
   private bodyContent: any;
 
   constructor(input: string | Request | URL, init?: RequestInit) {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     this.url = url;
-    this.method = init?.method || "GET";
+    this.method = init?.method || 'GET';
     this.headers = new MockHeaders(init?.headers);
     this.cookies = {} as ReadonlyRequestCookies;
     this.bodyContent = init?.body || null;
   }
 
   json() {
-    return Promise.resolve(
-      this.bodyContent ? JSON.parse(this.bodyContent.toString()) : {}
-    );
+    return Promise.resolve(this.bodyContent ? JSON.parse(this.bodyContent.toString()) : {});
   }
 
   nextUrl = {
     searchParams: new URLSearchParams(),
-    pathname: "/",
+    pathname: '/',
     href: this.url,
   };
 }

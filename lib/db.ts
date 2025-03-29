@@ -1,28 +1,24 @@
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
 
 // Define database directory and path
-const DB_DIR =
-  process.env.NODE_ENV === "production"
-    ? "/data"
-    : path.join(process.cwd(), "data");
-const DB_PATH = path.join(DB_DIR, "comprehend.sqlite");
+const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data');
+const DB_PATH = path.join(DB_DIR, 'comprehend.sqlite');
 
 // Initialize database connection
 let db: Database.Database;
 
 // Check if we're in the build phase
 const isBuildPhase =
-  process.env.NODE_ENV === "production" &&
-  (!process.env.NEXT_PHASE ||
-    process.env.NEXT_PHASE === "phase-production-build");
+  process.env.NODE_ENV === 'production' &&
+  (!process.env.NEXT_PHASE || process.env.NEXT_PHASE === 'phase-production-build');
 
 try {
   // During build phase or if we can't access the filesystem, use in-memory database
   if (isBuildPhase || !fs.existsSync(process.cwd())) {
-    db = new Database(":memory:");
-    console.log("[DB] Using in-memory database for build phase");
+    db = new Database(':memory:');
+    console.log('[DB] Using in-memory database for build phase');
   } else {
     // Only create directory in development or when running the actual server
     if (!fs.existsSync(DB_DIR)) {
@@ -35,11 +31,11 @@ try {
   }
 
   // Enable foreign keys
-  db.pragma("foreign_keys = ON");
-  console.log("[DB] Enabled foreign key constraints");
+  db.pragma('foreign_keys = ON');
+  console.log('[DB] Enabled foreign key constraints');
 
   // Initialize database schema if needed
-  console.log("[DB] Initializing database schema...");
+  console.log('[DB] Initializing database schema...');
   db.exec(`
     CREATE TABLE IF NOT EXISTS generated_content (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,49 +80,47 @@ try {
     }
 
     // Check if user_id column exists by querying the table info
-    const columns = db
-      .prepare("PRAGMA table_info(usage_stats)")
-      .all() as ColumnInfo[];
+    const columns = db.prepare('PRAGMA table_info(usage_stats)').all() as ColumnInfo[];
 
-    const hasUserIdColumn = columns.some((column) => column.name === "user_id");
+    const hasUserIdColumn = columns.some((column) => column.name === 'user_id');
 
     if (!hasUserIdColumn) {
-      console.log("[DB] Adding user_id column to usage_stats table");
+      console.log('[DB] Adding user_id column to usage_stats table');
       // SQLite ALTER TABLE is limited, but we can add a column
       db.exec(`
         ALTER TABLE usage_stats 
         ADD COLUMN user_id INTEGER REFERENCES users(id)
       `);
-      console.log("[DB] Column added successfully");
+      console.log('[DB] Column added successfully');
     }
   } catch (error) {
-    console.error("[DB] Error checking or adding column:", error);
+    console.error('[DB] Error checking or adding column:', error);
   }
 
-  console.log("[DB] Schema initialization complete");
+  console.log('[DB] Schema initialization complete');
 
   // Create a proxy to intercept and log database operations
   const dbProxy = new Proxy(db, {
     get(target, prop) {
-      if (prop === "prepare") {
+      if (prop === 'prepare') {
         return function (sql: string) {
           const stmt = target.prepare(sql);
 
           return new Proxy(stmt, {
             get(stmtTarget, stmtProp) {
-              if (stmtProp === "run" || stmtProp === "get") {
+              if (stmtProp === 'run' || stmtProp === 'get') {
                 return function (...args: any[]) {
                   // Format parameters to be more compact
                   const formattedParams = args.map((param) => {
-                    if (typeof param === "string" && param.length > 50) {
-                      return param.substring(0, 47) + "...";
+                    if (typeof param === 'string' && param.length > 50) {
+                      return param.substring(0, 47) + '...';
                     }
                     return param;
                   });
 
                   console.log(
                     `[DB] ${
-                      stmtProp === "run" ? "Executing" : "Querying"
+                      stmtProp === 'run' ? 'Executing' : 'Querying'
                     } with params: ${JSON.stringify(formattedParams)}`
                   );
                   const result = (stmtTarget as any)[stmtProp](...args);
@@ -143,18 +137,18 @@ try {
   });
 
   db = dbProxy;
-  console.log("[DB] Database initialized successfully");
+  console.log('[DB] Database initialized successfully');
 } catch (error) {
-  console.error("[DB] Database initialization error:", error);
+  console.error('[DB] Database initialization error:', error);
 
   // In production server, we want to fail hard if database setup fails
-  if (process.env.NODE_ENV === "production" && !isBuildPhase) {
+  if (process.env.NODE_ENV === 'production' && !isBuildPhase) {
     throw error;
   }
 
   // In development or build phase, create an in-memory database as fallback
-  db = new Database(":memory:");
-  console.warn("[DB] Using in-memory database as fallback");
+  db = new Database(':memory:');
+  console.warn('[DB] Using in-memory database as fallback');
 }
 
 export default db;

@@ -1,10 +1,10 @@
 // Language model configuration
-import { OpenAI } from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Models available for use
-export type ModelProvider = "openai" | "google";
-export type ModelName = "gpt-3.5-turbo" | "gemini-2.0-flash-lite";
+export type ModelProvider = 'openai' | 'google';
+export type ModelName = 'gpt-3.5-turbo' | 'gemini-2.0-flash-lite';
 
 export interface ModelConfig {
   provider: ModelProvider;
@@ -15,16 +15,16 @@ export interface ModelConfig {
 
 // Available models
 export const MODELS: Record<ModelName, ModelConfig> = {
-  "gpt-3.5-turbo": {
-    provider: "openai",
-    name: "gpt-3.5-turbo",
-    displayName: "GPT-3.5 Turbo",
+  'gpt-3.5-turbo': {
+    provider: 'openai',
+    name: 'gpt-3.5-turbo',
+    displayName: 'GPT-3.5 Turbo',
     maxTokens: 500,
   },
-  "gemini-2.0-flash-lite": {
-    provider: "google",
-    name: "gemini-2.0-flash-lite",
-    displayName: "Gemini 2.0 Flash-Lite",
+  'gemini-2.0-flash-lite': {
+    provider: 'google',
+    name: 'gemini-2.0-flash-lite',
+    displayName: 'Gemini 2.0 Flash-Lite',
     maxTokens: 500,
   },
 };
@@ -41,10 +41,10 @@ export const getGoogleAIClient = () => {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
 
   if (!apiKey) {
-    console.warn("Warning: GOOGLE_AI_API_KEY is not set");
+    console.warn('Warning: GOOGLE_AI_API_KEY is not set');
   }
 
-  return new GoogleGenerativeAI(apiKey || "");
+  return new GoogleGenerativeAI(apiKey || '');
 };
 
 // Get the currently active model from environment variable or default to Gemini 2.0 Flash-Lite
@@ -57,5 +57,5 @@ export const getActiveModel = (): ModelConfig => {
   }
 
   // Default to Gemini 2.0 Flash-Lite as it's cheaper
-  return MODELS["gemini-2.0-flash-lite"];
+  return MODELS['gemini-2.0-flash-lite'];
 };
