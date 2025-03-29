@@ -84,14 +84,17 @@ export async function POST(request: Request) {
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
       "unknown-ip";
-    console.log(`[API] Request from IP: ${ip}`);
+
+    // Truncate IP or mask it for privacy in logs
+    const logSafeIp = ip.length > 20 ? ip.substring(0, 20) + "..." : ip;
+    console.log(`[API] Request from IP: ${logSafeIp}`);
 
     // Check rate limit
     const now = Date.now();
     let userRequests: number[] = [];
 
     // Get rate limit data from database
-    console.log(`[API] Checking rate limit for IP: ${ip}`);
+    console.log(`[API] Checking rate limit for IP: ${logSafeIp}`);
     const rateLimitRow = db
       .prepare(
         "SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?"
@@ -101,7 +104,7 @@ export async function POST(request: Request) {
     if (rateLimitRow) {
       userRequests = JSON.parse(rateLimitRow.requests);
       console.log(
-        `[API] Found ${userRequests.length} previous requests for IP: ${ip}`
+        `[API] Found ${userRequests.length} previous requests for IP: ${logSafeIp}`
       );
 
       // Update last updated timestamp
@@ -114,11 +117,13 @@ export async function POST(request: Request) {
     const recentRequests = userRequests.filter(
       (timestamp: number) => now - timestamp < RATE_LIMIT_WINDOW
     );
-    console.log(`[API] ${recentRequests.length} recent requests for IP: ${ip}`);
+    console.log(
+      `[API] ${recentRequests.length} recent requests for IP: ${logSafeIp}`
+    );
 
     // Check if user has exceeded rate limit
     if (recentRequests.length >= MAX_REQUESTS_PER_HOUR) {
-      console.log(`[API] Rate limit exceeded for IP: ${ip}`);
+      console.log(`[API] Rate limit exceeded for IP: ${logSafeIp}`);
       return NextResponse.json(
         { error: "Rate limit exceeded. Please try again later." },
         { status: 429 }
@@ -128,7 +133,7 @@ export async function POST(request: Request) {
     // Update rate limit tracking in database
     const updatedRequests = [...recentRequests, now];
     console.log(
-      `[API] Updating rate limit for IP: ${ip} with ${updatedRequests.length} requests`
+      `[API] Updating rate limit for IP: ${logSafeIp} with ${updatedRequests.length} requests`
     );
 
     // Use upsert pattern to either insert or update
@@ -244,8 +249,60 @@ export async function POST(request: Request) {
       const googleAI = getGoogleAIClient();
       const model = googleAI.getGenerativeModel({ model: activeModel.name });
 
-      const systemPrompt =
-        'You are a helpful language tutor for a reading comprehension game. Create content based on the language and CEFR level specified in the user prompt.\n\nThe user will specify a language (like English, Italian, Spanish, etc.) and a CEFR level (A1-C2).\n\nFollow these guidelines for different CEFR levels:\n- A1 (Beginner): Use very simple vocabulary, basic grammar, and short sentences (3-5 words). Focus on concrete, everyday topics like food, animals, or daily routines.\n- A2 (Elementary): Use simple vocabulary, basic grammar with some complexity, short paragraphs. Familiar topics with some detail.\n- B1 (Intermediate): Use intermediate vocabulary, standard grammar, clear paragraphs. Wider range of topics.\n- B2 (Upper Intermediate): Use varied vocabulary, more complex grammar, longer paragraphs. Abstract topics and detailed discussions.\n- C1 (Advanced): Use advanced vocabulary, complex grammar structures, sophisticated paragraphs. Academic and specialized topics.\n- C2 (Proficiency): Use sophisticated vocabulary, masterful grammar, nuanced paragraphs. Any topic with precision and cultural references.\n\nIMPORTANT FORMATTING INSTRUCTIONS:\n1. Generate the paragraph in the language requested by the user (e.g., Italian, Spanish, etc.)\n2. Generate the question and all answers in ENGLISH, regardless of the paragraph language\n\nCreate direct, clear comprehension questions that:\n- Have one unmistakably correct answer that comes directly from the text\n- Test simple comprehension rather than inference or interpretation\n- Focus on key details from the paragraph\n- Have plausible but clearly incorrect distractors\n\nCreate content in the following format ONLY:\n\n1. A paragraph in the requested language on an interesting topic appropriate for the requested CEFR level\n2. A multiple choice question IN ENGLISH that tests direct comprehension of the paragraph\n3. Four possible answers IN ENGLISH labeled A, B, C, and D\n4. The correct answer letter\n5. A short topic description for image generation (3-5 words in English)\n6. For each option, provide a brief explanation IN ENGLISH of why it is correct or incorrect\n7. Include the exact text from the paragraph (a quote in the original language) that supports the correct answer\n\nFormat your response exactly like this (including the JSON format):\n```json\n{\n  "paragraph": "your paragraph text here in the requested language",\n  "question": "your question about the paragraph here IN ENGLISH",\n  "options": {\n    "A": "first option IN ENGLISH",\n    "B": "second option IN ENGLISH",\n    "C": "third option IN ENGLISH",\n    "D": "fourth option IN ENGLISH"\n  },\n  "explanations": {\n    "A": "Explanation of why A is correct/incorrect IN ENGLISH",\n    "B": "Explanation of why B is correct/incorrect IN ENGLISH",\n    "C": "Explanation of why C is correct/incorrect IN ENGLISH",\n    "D": "Explanation of why D is correct/incorrect IN ENGLISH"\n  },\n  "correctAnswer": "B",\n  "relevantText": "Exact quote from the paragraph that supports the correct answer in the original language",\n  "topic": "brief topic for image IN ENGLISH"\n}\n```';
+      const systemPrompt = `You are a helpful language tutor for a reading comprehension game. Create content based on the language and CEFR level specified in the user prompt.
+
+The user will specify a language (like English, Italian, Spanish, etc.) and a CEFR level (A1-C2).
+
+Follow these guidelines for different CEFR levels:
+- A1 (Beginner): Use very simple vocabulary, basic grammar, and short sentences (3-5 words). Focus on concrete, everyday topics like food, animals, or daily routines.
+- A2 (Elementary): Use simple vocabulary, basic grammar with some complexity, short paragraphs. Familiar topics with some detail.
+- B1 (Intermediate): Use intermediate vocabulary, standard grammar, clear paragraphs. Wider range of topics.
+- B2 (Upper Intermediate): Use varied vocabulary, more complex grammar, longer paragraphs. Abstract topics and detailed discussions.
+- C1 (Advanced): Use advanced vocabulary, complex grammar structures, sophisticated paragraphs. Academic and specialized topics.
+- C2 (Proficiency): Use sophisticated vocabulary, masterful grammar, nuanced paragraphs. Any topic with precision and cultural references.
+
+IMPORTANT FORMATTING INSTRUCTIONS:
+1. Generate the paragraph in the language requested by the user (e.g., Italian, Spanish, etc.)
+2. Generate the question and all answers in ENGLISH, regardless of the paragraph language
+
+Create direct, clear comprehension questions that:
+- Have one unmistakably correct answer that comes directly from the text
+- Test simple comprehension rather than inference or interpretation
+- Focus on key details from the paragraph
+- Have plausible but clearly incorrect distractors
+
+Create content in the following format ONLY:
+
+1. A paragraph in the requested language on an interesting topic appropriate for the requested CEFR level
+2. A multiple choice question IN ENGLISH that tests direct comprehension of the paragraph
+3. Four possible answers IN ENGLISH labeled A, B, C, and D
+4. The correct answer letter
+5. A short topic description for image generation (3-5 words in English)
+6. For each option, provide a brief explanation IN ENGLISH of why it is correct or incorrect
+7. Include the exact text from the paragraph (a quote in the original language) that supports the correct answer
+
+Format your response exactly like this (including the JSON format):
+\`\`\`json
+{
+  "paragraph": "your paragraph text here in the requested language",
+  "question": "your question about the paragraph here IN ENGLISH",
+  "options": {
+    "A": "first option IN ENGLISH",
+    "B": "second option IN ENGLISH",
+    "C": "third option IN ENGLISH",
+    "D": "fourth option IN ENGLISH"
+  },
+  "explanations": {
+    "A": "Explanation of why A is correct/incorrect IN ENGLISH",
+    "B": "Explanation of why B is correct/incorrect IN ENGLISH",
+    "C": "Explanation of why C is correct/incorrect IN ENGLISH",
+    "D": "Explanation of why D is correct/incorrect IN ENGLISH"
+  },
+  "correctAnswer": "B",
+  "relevantText": "Exact quote from the paragraph that supports the correct answer in the original language",
+  "topic": "brief topic for image IN ENGLISH"
+}
+\`\`\``;
 
       const combinedPrompt = `${systemPrompt}\n\n${prompt}`;
       const response = await model.generateContent(combinedPrompt);
@@ -254,7 +311,9 @@ export async function POST(request: Request) {
 
     console.log(`[API] Received response from ${activeModel.provider}`);
 
-    // Store the result in database
+    // Store the result in database - truncate result for logging
+    const truncatedResult =
+      result && result.length > 50 ? result.substring(0, 50) + "..." : result;
     console.log(
       `[API] Storing generated content in database for language: ${language}, level: ${cefrLevel}`
     );

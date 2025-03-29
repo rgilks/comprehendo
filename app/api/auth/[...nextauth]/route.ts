@@ -57,8 +57,14 @@ const handler = NextAuth({
             user.email || null,
             user.image || null
           );
+
+          // Mask email for privacy in logs
+          const maskedEmail = user.email
+            ? user.email.replace(/(.{2})(.*)(@.*)/, "$1***$3")
+            : null;
+
           console.log(
-            `[AUTH] User ${user.name || user.email || user.id} logged in via ${
+            `[AUTH] User ${user.name || maskedEmail || user.id} logged in via ${
               account.provider
             }`
           );
