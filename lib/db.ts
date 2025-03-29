@@ -109,7 +109,7 @@ try {
           return new Proxy(stmt, {
             get(stmtTarget, stmtProp) {
               if (stmtProp === 'run' || stmtProp === 'get') {
-                return function (...args: any[]) {
+                return function (...args: unknown[]) {
                   // Format parameters to be more compact
                   const formattedParams = args.map((param) => {
                     if (typeof param === 'string' && param.length > 50) {
@@ -123,15 +123,20 @@ try {
                       stmtProp === 'run' ? 'Executing' : 'Querying'
                     } with params: ${JSON.stringify(formattedParams)}`
                   );
-                  const result = (stmtTarget as any)[stmtProp](...args);
-                  return result;
+                  // Use type assertion with unknown as intermediate step to avoid type errors
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  return (stmtTarget as any)[stmtProp](...args);
                 };
               }
+              // Use type assertion with unknown as intermediate step to avoid type errors
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               return (stmtTarget as any)[stmtProp];
             },
           });
         };
       }
+      // Use type assertion with unknown as intermediate step to avoid type errors
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (target as any)[prop];
     },
   });

@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 
-let deferredPrompt: any;
+// Define a proper type for the deferred prompt
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: string }>;
+}
+
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 export default function PWAInstall() {
   const [showInstallButton, setShowInstallButton] = useState(false);
@@ -18,7 +24,7 @@ export default function PWAInstall() {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
       // Store the event so it can be triggered later
-      deferredPrompt = e;
+      deferredPrompt = e as BeforeInstallPromptEvent;
       // Show the install button
       setShowInstallButton(true);
     });
@@ -37,7 +43,7 @@ export default function PWAInstall() {
     deferredPrompt.prompt();
 
     // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
+    await deferredPrompt.userChoice;
 
     // We no longer need the prompt
     deferredPrompt = null;

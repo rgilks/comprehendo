@@ -1,4 +1,3 @@
-import { OpenAI } from 'openai';
 import { NextResponse } from 'next/server';
 import db from '../../../lib/db';
 import { getServerSession } from 'next-auth';
@@ -18,7 +17,6 @@ import {
 
 // Simple in-memory rate limiter
 // Maps IP addresses to timestamps of their requests
-const rateLimits = new Map();
 const MAX_REQUESTS_PER_HOUR = 100; // Adjust as needed
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
 const CACHE_TTL = 60 * 60 * 24; // 24 hours in seconds
@@ -297,7 +295,6 @@ Format your response exactly like this (including the JSON format):
     console.log(`[API] Received response from ${activeModel.provider}`);
 
     // Store the result in database - truncate result for logging
-    const truncatedResult = result && result.length > 50 ? result.substring(0, 50) + '...' : result;
     console.log(
       `[API] Storing generated content in database for language: ${language}, level: ${cefrLevel}`
     );
