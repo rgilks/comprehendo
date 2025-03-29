@@ -34,7 +34,7 @@ export default function Home() {
           style={{ animationDelay: "0.3s" }}
         >
           <p>
-            Powered by OpenAI |{" "}
+            Powered by OpenAI & Google Gemini |{" "}
             <Link
               href="https://github.com/rgilks/comprehend"
               className="underline hover:text-blue-400"
