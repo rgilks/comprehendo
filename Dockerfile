@@ -4,15 +4,24 @@ FROM node:18-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json ./
-RUN npm install
+# Copy package files first for better caching
+COPY package.json package-lock.json* ./
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Copy only necessary files for build
+COPY next.config.js ./
+COPY tsconfig.json ./
+COPY package.json ./
+COPY public ./public
+COPY app ./app
+COPY components ./components
+COPY lib ./lib
+COPY styles ./styles
+COPY middleware.ts ./
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
@@ -47,7 +56,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Create directory for SQLite database
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data && chown nextjs:nodejs /data
 
 USER nextjs
 
