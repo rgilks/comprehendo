@@ -1,8 +1,7 @@
-// TextGenerator component - Provides reading comprehension quiz functionality
-"use client";
+// TextGenerator component - Provides reading comprehension quiz functionality with formatting
+'use client';
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
+import { useState, useEffect } from 'react';
 
 type QuizData = {
   paragraph: string;
@@ -24,33 +23,33 @@ type QuizData = {
   topic: string;
 };
 
-type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-type Language = "English" | "Italian" | "Spanish" | "French" | "German";
+type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German';
 
 const CEFR_LEVELS = {
-  A1: "Beginner",
-  A2: "Elementary",
-  B1: "Intermediate",
-  B2: "Upper Intermediate",
-  C1: "Advanced",
-  C2: "Proficiency",
+  A1: 'Beginner',
+  A2: 'Elementary',
+  B1: 'Intermediate',
+  B2: 'Upper Intermediate',
+  C1: 'Advanced',
+  C2: 'Proficiency',
 };
 
 const CEFR_DESCRIPTIONS = {
-  A1: "Basic phrases, simple questions",
-  A2: "Familiar topics, simple sentences",
-  B1: "Routine matters, basic opinions",
-  B2: "Technical discussions, clear viewpoints",
-  C1: "Complex topics, spontaneous expression",
-  C2: "Virtually everything, nuanced expression",
+  A1: 'Basic phrases, simple questions',
+  A2: 'Familiar topics, simple sentences',
+  B1: 'Routine matters, basic opinions',
+  B2: 'Technical discussions, clear viewpoints',
+  C1: 'Complex topics, spontaneous expression',
+  C2: 'Virtually everything, nuanced expression',
 };
 
 const LANGUAGES = {
-  English: "English",
-  Italian: "Italiano",
-  Spanish: "Español",
-  French: "Français",
-  German: "Deutsch",
+  English: 'English',
+  Italian: 'Italiano',
+  Spanish: 'Español',
+  French: 'Français',
+  German: 'Deutsch',
 };
 
 export default function TextGenerator() {
@@ -59,40 +58,38 @@ export default function TextGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
-  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>("B1");
-  const [language, setLanguage] = useState<Language>("English");
-  const [highlightedParagraph, setHighlightedParagraph] = useState<
-    string | null
-  >(null);
+  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
+  const [language, setLanguage] = useState<Language>('English');
+  const [highlightedParagraph, setHighlightedParagraph] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
 
   useEffect(() => {
     if (quizData && isAnswered) {
+      const highlightRelevantText = () => {
+        if (!quizData || !quizData.relevantText) return;
+
+        const { paragraph, relevantText } = quizData;
+
+        // Escape special regex characters in the relevant text
+        const escapedText = relevantText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Create a regular expression to find the text to highlight
+        const regex = new RegExp(`(${escapedText})`, 'gi');
+
+        // Replace the matched text with highlighted version
+        const highlighted = paragraph.replace(
+          regex,
+          '<span class="bg-yellow-300 text-black px-1 rounded">$1</span>'
+        );
+
+        setHighlightedParagraph(highlighted);
+      };
+
       highlightRelevantText();
     } else {
       setHighlightedParagraph(null);
     }
   }, [isAnswered, quizData]);
-
-  const highlightRelevantText = () => {
-    if (!quizData || !quizData.relevantText) return;
-
-    const { paragraph, relevantText } = quizData;
-
-    // Escape special regex characters in the relevant text
-    const escapedText = relevantText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-    // Create a regular expression to find the text to highlight
-    const regex = new RegExp(`(${escapedText})`, "gi");
-
-    // Replace the matched text with highlighted version
-    const highlighted = paragraph.replace(
-      regex,
-      '<span class="bg-yellow-300 text-black px-1 rounded">$1</span>'
-    );
-
-    setHighlightedParagraph(highlighted);
-  };
 
   const generateText = async () => {
     setLoading(true);
@@ -109,10 +106,10 @@ export default function TextGenerator() {
       // Generate a random seed to get different cached responses
       const seed = Math.floor(Math.random() * 100);
 
-      const response = await fetch("/api/chat", {
-        method: "POST",
+      const response = await fetch('/api/chat', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           prompt: `Generate a reading comprehension paragraph in ${language} with multiple choice questions in English for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
@@ -127,22 +124,22 @@ export default function TextGenerator() {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to generate text");
+        throw new Error('Failed to generate text');
       }
 
       const data = await response.json();
       try {
         // Parse the JSON response from the string
-        const jsonString = data.result.replace(/```json|```/g, "").trim();
+        const jsonString = data.result.replace(/```json|```/g, '').trim();
         const parsedData = JSON.parse(jsonString);
         setQuizData(parsedData);
       } catch (parseErr) {
-        console.error("Error parsing JSON:", parseErr);
-        setError("Failed to parse the generated quiz. Please try again.");
+        console.error('Error parsing JSON:', parseErr);
+        setError('Failed to parse the generated quiz. Please try again.');
       }
     } catch (err) {
-      console.error("Error generating text:", err);
-      setError("Failed to generate text. Please try again.");
+      console.error('Error generating text:', err);
+      setError('Failed to generate text. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -170,8 +167,6 @@ export default function TextGenerator() {
     generateText();
   };
 
-  const isCorrect = selectedAnswer === quizData?.correctAnswer;
-
   return (
     <div className="w-full max-w-3xl mx-auto my-8">
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
@@ -195,9 +190,9 @@ export default function TextGenerator() {
                     clipRule="evenodd"
                   />
                 </svg>
-                CEFR Level:{" "}
+                CEFR Level:{' '}
                 <span className="text-xs text-blue-300 ml-2">
-                  What's your proficiency level?
+                  What&apos;s your proficiency level?
                 </span>
               </span>
             </label>
@@ -208,8 +203,8 @@ export default function TextGenerator() {
                   onClick={() => setCefrLevel(level)}
                   className={`relative px-3 py-2 text-sm rounded transition-colors ${
                     cefrLevel === level
-                      ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
+                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
                   }`}
                 >
                   <div className="font-semibold">
@@ -248,8 +243,8 @@ export default function TextGenerator() {
                   onClick={() => setLanguage(lang)}
                   className={`px-3 py-2 text-sm rounded transition-colors ${
                     language === lang
-                      ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
-                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                      ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
+                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
                   }`}
                 >
                   {LANGUAGES[lang]}
@@ -336,9 +331,7 @@ export default function TextGenerator() {
                 <div className="h-2 w-2 rounded-full bg-green-400 animate-ping"></div>
               </div>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              Generating Your Quiz
-            </h3>
+            <h3 className="text-xl font-semibold text-white mb-2">Generating Your Quiz</h3>
             <p className="text-gray-400 text-center">
               Creating a {cefrLevel} level reading passage in {language}...
             </p>
@@ -371,14 +364,11 @@ export default function TextGenerator() {
                 1
               </span>
               <div>
-                <span className="font-medium text-white">
-                  Select your settings
-                </span>
+                <span className="font-medium text-white">Select your settings</span>
                 <p className="mt-1 text-sm">
-                  Choose your <span className="text-blue-400">CEFR level</span>{" "}
-                  and preferred{" "}
-                  <span className="text-green-400">reading language</span> to
-                  customize your practice
+                  Choose your <span className="text-blue-400">CEFR level</span> and preferred{' '}
+                  <span className="text-green-400">reading language</span> to customize your
+                  practice
                 </p>
               </div>
             </li>
@@ -387,12 +377,9 @@ export default function TextGenerator() {
                 2
               </span>
               <div>
-                <span className="font-medium text-white">
-                  Generate a passage
-                </span>
+                <span className="font-medium text-white">Generate a passage</span>
                 <p className="mt-1 text-sm">
-                  AI creates a reading passage tailored to your level with a
-                  comprehension question
+                  AI creates a reading passage tailored to your level with a comprehension question
                 </p>
               </div>
             </li>
@@ -401,12 +388,9 @@ export default function TextGenerator() {
                 3
               </span>
               <div>
-                <span className="font-medium text-white">
-                  Test your comprehension
-                </span>
+                <span className="font-medium text-white">Test your comprehension</span>
                 <p className="mt-1 text-sm">
-                  Answer the multiple-choice question and receive instant
-                  feedback with explanations
+                  Answer the multiple-choice question and receive instant feedback with explanations
                 </p>
               </div>
             </li>
@@ -452,8 +436,7 @@ export default function TextGenerator() {
                 >
                   <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                 </svg>
-                Reading Passage{" "}
-                {language !== "English" && `(${LANGUAGES[language]})`}
+                Reading Passage {language !== 'English' && `(${LANGUAGES[language]})`}
               </h2>
               <div className="flex space-x-2">
                 <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
@@ -478,9 +461,7 @@ export default function TextGenerator() {
 
             {quizData.topic && (
               <div className="p-3 bg-gradient-to-r from-gray-900 to-indigo-900/40 border-t border-gray-700 flex justify-end">
-                <span className="text-xs text-gray-400">
-                  Topic: {quizData.topic}
-                </span>
+                <span className="text-xs text-gray-400">Topic: {quizData.topic}</span>
               </div>
             )}
           </div>
@@ -514,18 +495,16 @@ export default function TextGenerator() {
                     disabled={isAnswered}
                     className={`p-3 border w-full text-left rounded-lg cursor-pointer transition-all ${
                       selectedAnswer === key
-                        ? "border-blue-500 bg-blue-900/50"
-                        : "border-gray-600 hover:bg-gray-700"
+                        ? 'border-blue-500 bg-blue-900/50'
+                        : 'border-gray-600 hover:bg-gray-700'
                     } ${
                       isAnswered && key === quizData.correctAnswer
-                        ? "border-green-500 bg-green-900/50 ring-2 ring-green-500"
-                        : ""
+                        ? 'border-green-500 bg-green-900/50 ring-2 ring-green-500'
+                        : ''
                     } ${
-                      isAnswered &&
-                      selectedAnswer === key &&
-                      key !== quizData.correctAnswer
-                        ? "border-red-500 bg-red-900/50 ring-2 ring-red-500"
-                        : ""
+                      isAnswered && selectedAnswer === key && key !== quizData.correctAnswer
+                        ? 'border-red-500 bg-red-900/50 ring-2 ring-red-500'
+                        : ''
                     }`}
                     onClick={() => !isAnswered && handleAnswerSelect(key)}
                   >
@@ -533,10 +512,10 @@ export default function TextGenerator() {
                       <span
                         className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-2 text-sm font-semibold ${
                           selectedAnswer === key
-                            ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
                             : isAnswered && key === quizData.correctAnswer
-                              ? "bg-gradient-to-r from-green-600 to-green-700 text-white"
-                              : "bg-gray-700 text-white"
+                              ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
+                              : 'bg-gray-700 text-white'
                         }`}
                       >
                         {key}
@@ -548,15 +527,11 @@ export default function TextGenerator() {
                       <div
                         className={`mt-2 text-sm px-2 py-1 rounded ${
                           key === quizData.correctAnswer
-                            ? "bg-green-900/40 text-green-300"
-                            : "bg-red-900/40 text-red-300"
+                            ? 'bg-green-900/40 text-green-300'
+                            : 'bg-red-900/40 text-red-300'
                         }`}
                       >
-                        {
-                          quizData.explanations[
-                            key as keyof typeof quizData.explanations
-                          ]
-                        }
+                        {quizData.explanations[key as keyof typeof quizData.explanations]}
                       </div>
                     )}
                   </button>
