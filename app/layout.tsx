@@ -1,12 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "./AuthProvider";
+import ClientPWAWrapper from "./components/ClientPWAWrapper";
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+};
 
 export const metadata: Metadata = {
   title: "Comprehend - Language Reading Practice",
@@ -21,6 +26,12 @@ export const metadata: Metadata = {
       "Practice reading comprehension in multiple languages with adaptive difficulty",
     images: ["/og-image.png"],
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Comprehend",
+  },
 };
 
 export default function RootLayout({
@@ -30,8 +41,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body className={poppins.className}>
         <AuthProvider>{children}</AuthProvider>
+        <ClientPWAWrapper />
       </body>
     </html>
   );
