@@ -52,45 +52,149 @@ Comprehend implements several strategies to manage OpenAI API costs:
 - **C1 (Advanced)**: Complex topics, spontaneous expression
 - **C2 (Proficiency)**: Virtually everything, nuanced expression
 
-## Getting Started
+## Setup and Running
+
+Follow these steps to get Comprehend running on your local machine and optionally deploy it to Fly.io.
 
 ### Prerequisites
 
-- Node.js (version 18 or higher)
-- npm or yarn
-- OpenAI API key
-- Google Generative AI API key (for Gemini)
-- GitHub OAuth credentials (for authentication)
-- Google OAuth credentials (for authentication)
+Before you begin, make sure you have the following installed and set up:
 
-### Development
+1.  **Node.js:** Version 18 or higher. (Download from [nodejs.org](https://nodejs.org/)).
+2.  **npm or yarn:** Package manager for Node.js (npm comes with Node.js).
+3.  **Git:** For cloning the repository. (Download from [git-scm.com](https://git-scm.com/)).
+4.  **API Keys & Credentials:** You'll need accounts and credentials from these services:
+    - **OpenAI:** For the GPT model. Get an API key at [platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys).
+    - **Google AI:** For the Gemini model. Get an API key at [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey).
+    - **GitHub:** For user login. Create an OAuth App at [github.com/settings/developers](https://github.com/settings/developers).
+    - **Google Cloud:** For user login. Create OAuth credentials at [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials).
+    - _(Optional) For Deployment:_ A [Fly.io](https://fly.io/) account and the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) installed (`curl -L https://fly.io/install.sh | sh`).
+
+### Running Locally
+
+1.  **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/your-username/comprehend.git
+    cd comprehend
+    ```
+
+    _(Replace `your-username` with the actual repository path if you forked it)._
+
+2.  **Install Dependencies:**
+
+    ```bash
+    npm install
+    ```
+
+    _(Or `yarn install` if you prefer yarn)._
+
+3.  **Configure Environment Variables:**
+
+    - Copy the example environment file:
+      ```bash
+      cp .env.example .env.local
+      ```
+    - Edit the new `.env.local` file with a text editor.
+    - Fill in the values for `OPENAI_API_KEY`, `GOOGLE_AI_API_KEY`, `GITHUB_ID`, `GITHUB_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` using the credentials you obtained in the Prerequisites step.
+    - Generate a secret key for `AUTH_SECRET` by running `openssl rand -base64 32` in your terminal and pasting the output.
+    - Keep `NEXTAUTH_URL=http://localhost:3000` for local development.
+    - The `.env.example` file has comments explaining each variable.
+
+4.  **Run the Development Server:**
+
+    ```bash
+    npm run dev
+    ```
+
+5.  **Open the App:**
+    Navigate to [http://localhost:3000](http://localhost:3000) in your web browser.
+
+### Deploying to Fly.io (Optional)
+
+This project includes configuration for continuous deployment to Fly.io using GitHub Actions. When you push code to the `main` branch, it will automatically deploy.
+
+**First-Time Setup:**
+
+1.  **Login to Fly CLI:**
+
+    ```bash
+    fly auth login
+    ```
+
+2.  **Create a Fly App:**
+
+    ```bash
+    # Choose a unique name for your app (e.g., my-comprehend-app)
+    fly apps create <your-app-name>
+    ```
+
+3.  **Create a Persistent Volume:** (For the SQLite database)
+
+    ```bash
+    # Use the same app name as above. Choose a region (e.g., lhr for London).
+    fly volumes create sqlite_data --app <your-app-name> --region lhr --size 1
+    ```
+
+4.  **Set Production Secrets:**
+
+    - **Important:** Edit your `.env.local` file. Change `NEXTAUTH_URL` to your Fly app's URL (e.g., `https://<your-app-name>.fly.dev`). Make sure all other API keys and secrets are the production values you intend to use.
+    - Import the secrets into Fly.io:
+      ```bash
+      # Make sure you are in the project directory
+      fly secrets import --app <your-app-name> < .env.local
+      ```
+    - _Note:_ You can also set secrets individually using `fly secrets set KEY=VALUE --app <your-app-name>`.
+
+5.  **Get Fly API Token:**
+
+    ```bash
+    fly auth token
+    ```
+
+    - Copy the displayed token.
+
+6.  **Add Token to GitHub Secrets:**
+    - Go to your GitHub repository > Settings > Secrets and variables > Actions.
+    - Click "New repository secret".
+    - Name the secret `FLY_API_TOKEN`.
+    - Paste the token you copied in the previous step into the "Value" field.
+    - Click "Add secret".
+
+**Deployment:**
+
+- With the above steps completed, simply push your code to the `main` branch on GitHub.
+  ```bash
+  git push origin main
+  ```
+- The GitHub Action defined in `.github/workflows/fly.yml` will automatically run `fly deploy` using your `FLY_API_TOKEN` and the secrets configured in Fly.io.
+- You can monitor the deployment progress in the "Actions" tab of your GitHub repository.
+
+**Manual Deployment:**
+
+If you need to deploy manually (without pushing to `main`), run:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/comprehend.git
-cd comprehend
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-# Create a .env.local file with your API keys and OAuth credentials:
-# OPENAI_API_KEY=your-key-here
-# GOOGLE_AI_API_KEY=your-gemini-key-here
-# GITHUB_ID=your-github-oauth-client-id
-# GITHUB_SECRET=your-github-oauth-client-secret
-# GOOGLE_CLIENT_ID=your-google-oauth-client-id
-# GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
-# NEXTAUTH_URL=http://localhost:3000
-# NEXTAUTH_SECRET=your-random-secret-here
-
-# Run the development server
-npm run dev
+fly deploy --app <your-app-name>
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
+### Switching AI Models
 
-### Development Workflow
+To switch between OpenAI and Google AI models:
+
+- **Locally:** Change the `ACTIVE_MODEL` variable in your `.env.local` file.
+- **Production (Fly.io):** Update the secret in Fly.io:
+
+  ```bash
+  fly secrets set ACTIVE_MODEL=gpt-3.5-turbo --app <your-app-name>
+  # or
+  fly secrets set ACTIVE_MODEL=gemini-2.0-flash-lite --app <your-app-name>
+
+  # Restart the app to apply the change
+  fly apps restart <your-app-name>
+  ```
+
+## Development Workflow
 
 Comprehend uses a modern development workflow with several tools to ensure code quality:
 
@@ -129,98 +233,6 @@ This approach allows for fast local development while ensuring that code pushed 
   - OpenAI API (GPT-3.5-turbo)
   - Google Generative AI (Gemini 2.0 Flash-Lite)
 - **Deployment**: Configured for Fly.io with GitHub Actions CI/CD
-
-## API Configuration
-
-The application requires API keys to function:
-
-1. **OpenAI API Key**: You can obtain an API key by signing up at [OpenAI's website](https://openai.com).
-2. **Google AI API Key**: Sign up for Gemini access at [Google AI Studio](https://makersuite.google.com/app/apikey).
-3. **GitHub OAuth**: Register a new OAuth application at [GitHub Developer Settings](https://github.com/settings/developers).
-4. **Google OAuth**: Create credentials at [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
-
-Add your API keys to a `.env.local` file in the root directory:
-
-```
-OPENAI_API_KEY=your-openai-api-key
-GOOGLE_AI_API_KEY=your-google-ai-key
-GITHUB_ID=your-github-oauth-client-id
-GITHUB_SECRET=your-github-oauth-client-secret
-GOOGLE_CLIENT_ID=your-google-oauth-client-id
-GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-random-secret-here
-# Optional: ACTIVE_MODEL=gemini-2.0-flash-lite (this is the default)
-```
-
-To switch between models, set the `ACTIVE_MODEL` environment variable:
-
-- `gpt-3.5-turbo` - OpenAI's GPT-3.5 Turbo
-- `gemini-2.0-flash-lite` - Google's Gemini 2.0 Flash-Lite (default if not specified)
-
-For production deployment, set the environment variables securely in your hosting provider.
-
-## Database
-
-Comprehend uses SQLite for data persistence:
-
-- **Development**: SQLite database is stored in the `data` directory
-- **Production**: Database is stored in a Fly.io volume at `/data`
-
-The database stores:
-
-- User authentication data
-- Generated content for caching
-- Usage statistics for analytics and rate limiting
-
-## Deployment
-
-This project is configured for continuous deployment to Fly.io from GitHub. Here's how it works:
-
-1. When you push to the `main` branch, a GitHub Action automatically deploys to Fly.io
-2. The deployment process uses the Dockerfile to build and deploy the application
-
-### Setting Up Continuous Deployment
-
-1. Sign up for a Fly.io account if you haven't already
-2. Install the Fly CLI: `curl -L https://fly.io/install.sh | sh`
-3. Login to Fly.io: `fly auth login`
-4. Create a new Fly app (if you haven't already): `fly apps create comprehend`
-5. Create a volume for SQLite data: `fly volumes create sqlite_data -a comprehend -r lhr -s 1`
-6. Generate a Fly.io API token: `fly auth token`
-7. Add the token as a GitHub repository secret named `FLY_API_TOKEN`
-8. Add your API keys to Fly.io:
-   ```
-   fly secrets set OPENAI_API_KEY="your-openai-api-key"
-   fly secrets set GOOGLE_AI_API_KEY="your-google-ai-key"
-   fly secrets set GITHUB_ID="your-github-oauth-client-id"
-   fly secrets set GITHUB_SECRET="your-github-oauth-client-secret"
-   fly secrets set GOOGLE_CLIENT_ID="your-google-oauth-client-id"
-   fly secrets set GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
-   fly secrets set NEXTAUTH_URL="https://comprehend.fly.dev"
-   fly secrets set NEXTAUTH_SECRET="your-random-secret-here"
-   fly secrets set ACTIVE_MODEL="gemini-2.0-flash-lite"
-   ```
-
-The GitHub Action workflow will automatically deploy your application when you push to the main branch.
-
-To manually deploy:
-
-```
-fly deploy
-```
-
-To switch between models in production, update the ACTIVE_MODEL secret:
-
-```
-fly secrets set ACTIVE_MODEL="gemini-2.0-flash-lite"
-```
-
-After updating the secret, restart your Fly.io app to apply the changes:
-
-```
-fly app restart
-```
 
 ## Production Considerations
 
