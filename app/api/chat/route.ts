@@ -8,6 +8,7 @@ import {
   ModelConfig,
 } from '../../../lib/modelConfig';
 import OpenAI from 'openai';
+import { z } from 'zod';
 
 // Don't initialize OpenAI at build time
 // const getOpenAIClient = () => {
@@ -36,11 +37,11 @@ interface GeneratedContentRow {
   created_at: string;
 }
 
-// Define interface for the expected request body structure
-interface ChatRequestBody {
-  prompt: string;
-  seed?: number; // seed is optional
-}
+// Define Zod schema for the request body
+const chatRequestBodySchema = z.object({
+  prompt: z.string().min(1, { message: 'Prompt is required' }), // Ensure prompt is a non-empty string
+  seed: z.number().optional(), // seed is optional
+});
 
 // Define a type for the successful OpenAI completion structure we expect
 // (Only include properties actually accessed)
@@ -172,25 +173,26 @@ export async function POST(request: Request) {
     `
     ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
 
-    // Use the interface for the request body
-    const body: ChatRequestBody = await request.json();
-    // Type assertion needed here because .json() returns Promise<any>
-    // Now body.prompt and body.seed are typed correctly
-    const { prompt, seed } = body;
+    // Use the Zod schema to parse and validate the request body
+    const parsedBody = chatRequestBodySchema.safeParse(await request.json());
 
-    // Use type guard for prompt substring
-    if (typeof prompt === 'string') {
-      console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
-    } else {
-      // Handle cases where prompt might not be a string if needed, though validation below covers empty
-      console.log('[API] Error: Prompt is not a string');
-      return NextResponse.json({ error: 'Invalid prompt format' }, { status: 400 });
+    if (!parsedBody.success) {
+      // If validation fails, return a 400 error with Zod's error messages
+      console.log('[API] Invalid request body:', parsedBody.error.flatten());
+      return NextResponse.json(
+        {
+          error: 'Invalid request body',
+          issues: parsedBody.error.flatten().fieldErrors, // Send specific issues back
+        },
+        { status: 400 }
+      );
     }
 
-    if (!prompt) {
-      console.log('[API] Error: No prompt provided');
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
-    }
+    // Use the validated data
+    const { prompt, seed } = parsedBody.data;
+
+    // Log the received prompt safely (already validated as string)
+    console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
 
     // prompt is known to be a string here, safe to use .match
     const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);

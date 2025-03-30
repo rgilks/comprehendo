@@ -27,24 +27,6 @@
       "rules": {
         "@typescript-eslint/no-explicit-any": "off"
       }
-    },
-    {
-      "files": ["app/api/chat/route.ts"],
-      "rules": {
-        "@typescript-eslint/no-unsafe-assignment": "off"
-      }
-    },
-    {
-      "files": ["app/api/image/route.ts"],
-      "rules": {
-        "@typescript-eslint/no-unsafe-assignment": "off"
-      }
-    },
-    {
-      "files": ["app/components/TextGenerator.tsx"],
-      "rules": {
-        "@typescript-eslint/no-unsafe-assignment": "off"
-      }
     }
   ]
 }
