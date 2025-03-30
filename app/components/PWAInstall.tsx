@@ -40,16 +40,20 @@ export default function PWAInstall() {
     if (!deferredPrompt) return;
 
     // Show the install prompt
-    deferredPrompt.prompt();
+    try {
+      await deferredPrompt.prompt();
 
-    // Wait for the user to respond to the prompt
-    await deferredPrompt.userChoice;
-
-    // We no longer need the prompt
-    deferredPrompt = null;
-
-    // Hide the button
-    setShowInstallButton(false);
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`[PWA Install] User choice: ${outcome}`);
+    } catch (error) {
+      console.error('[PWA Install] Error during install prompt:', error);
+    } finally {
+      // We no longer need the prompt regardless of outcome
+      deferredPrompt = null;
+      // Hide the button
+      setShowInstallButton(false);
+    }
   };
 
   if (!showInstallButton) return null;
@@ -58,7 +62,9 @@ export default function PWAInstall() {
     <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white p-4 rounded-lg shadow-lg">
       <p className="mb-2">Install Comprehend for offline use!</p>
       <button
-        onClick={handleInstallClick}
+        onClick={() => {
+          void handleInstallClick();
+        }}
         className="bg-white text-blue-600 px-4 py-2 rounded font-medium hover:bg-blue-50"
       >
         Install App
