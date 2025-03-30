@@ -19,6 +19,17 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/.next/',
     '<rootDir>/__tests__/mocks/',
+    '<rootDir>/jest.config.js',
+    '<rootDir>/jest.setup.js',
+    '<rootDir>/next.config.js',
+  ],
+  // Explicitly collect coverage from these directories
+  collectCoverageFrom: [
+    'app/**/*.{js,jsx,ts,tsx}',
+    'lib/**/*.{js,jsx,ts,tsx}',
+    '!app/**/*.test.{js,jsx,ts,tsx}', // Exclude test files
+    '!**/node_modules/**',
+    '!**/vendor/**',
   ],
   // Add more setup options before each test is run
   testPathIgnorePatterns: [
