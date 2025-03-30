@@ -22,6 +22,7 @@ Comprehend is an AI-powered language learning application designed to help users
 - **Responsive Design**: Optimized for both desktop and mobile devices
 - **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback
 - **Cost-Control System**: Intelligent rate limiting and caching to manage API costs
+- **Robust Validation**: Uses Zod for request validation on API routes.
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions
 - **Continuous Deployment**: Automatic deployment to Fly.io when code is pushed to main branch
 
@@ -38,7 +39,7 @@ Comprehend is an AI-powered language learning application designed to help users
 
 Comprehend implements several strategies to manage OpenAI API costs:
 
-- **Rate Limiting**: Users are limited to 20 requests per hour to prevent excessive API usage
+- **Rate Limiting**: Users are limited to 100 requests per hour to prevent excessive API usage
 - **Response Caching**: Successful API responses are cached for 24 hours to reduce duplicate calls
 - **Intelligent Seed System**: Random seeds create variety in cached responses to avoid repetitive content
 - **Graceful Error Handling**: User-friendly messages when rate limits are reached
@@ -232,6 +233,7 @@ This approach allows for fast local development while ensuring that code pushed 
 - **AI Integration**:
   - OpenAI API (GPT-3.5-turbo)
   - Google Generative AI (Gemini 2.0 Flash-Lite)
+- **Validation**: Zod
 - **Deployment**: Configured for Fly.io with GitHub Actions CI/CD
 
 ## Production Considerations
@@ -241,7 +243,7 @@ When deploying to production, consider the following:
 - **API Usage Monitoring**: Set up a dashboard to monitor OpenAI API usage and costs
 - **Persistent Cache**: Replace the in-memory cache with Redis or a database for a multi-server setup
 - **Rate Limit Adjustments**: Fine-tune the rate limits based on your user base and budget
-- **Security**: Implement additional security measures like CORS and request validation
+- **Security**: Implement additional security measures like CORS and potentially more complex request validation beyond Zod's schema checks
 - **Scaling**: Adjust Fly.io configuration in `fly.toml` for additional resources as needed
 - **Authentication**: Configure additional OAuth providers as needed
 - **Database Backups**: Set up regular backups of the SQLite database
