@@ -1,11 +1,12 @@
 import { OpenAI } from 'openai';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-// Define interface for the expected request body structure
-interface ImageRequestBody {
-  prompt: string;
-  level?: string; // level is optional
-}
+// Define Zod schema for the request body
+const imageRequestBodySchema = z.object({
+  prompt: z.string().min(1, { message: 'Prompt is required' }),
+  level: z.string().optional(), // level is optional
+});
 
 // Explicitly type the return value
 const getOpenAIClient = (): OpenAI => {
@@ -16,15 +17,23 @@ const getOpenAIClient = (): OpenAI => {
 
 export async function POST(request: Request) {
   try {
-    // Use the interface for the request body
-    const body: ImageRequestBody = await request.json();
-    // Assign default after validation/typing
-    const { prompt } = body;
-    const level = body.level ?? 'B1'; // Default level if not provided
+    // Use the Zod schema to parse and validate the request body
+    const parsedBody = imageRequestBodySchema.safeParse(await request.json());
 
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    if (!parsedBody.success) {
+      console.log('[API Image] Invalid request body:', parsedBody.error.flatten());
+      return NextResponse.json(
+        {
+          error: 'Invalid request body',
+          issues: parsedBody.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
     }
+
+    // Use the validated data
+    const { prompt } = parsedBody.data;
+    const level = parsedBody.data.level ?? 'B1'; // Default level if not provided
 
     // Initialize OpenAI only when the route is called
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

@@ -1,38 +1,52 @@
 // TextGenerator component - Provides reading comprehension quiz functionality with formatting
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+// Removed import for HighlightedParagraph and constants
+// import {
+//   CEFR_LEVELS,
+//   CEFR_DESCRIPTIONS,
+//   LANGUAGES,
+// } from '../../lib/constants';
+// import { HighlightedParagraph } from './HighlightedParagraph';
+import { z } from 'zod';
 
-type QuizData = {
-  paragraph: string;
-  question: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-  explanations: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-  correctAnswer: string;
-  relevantText: string;
-  topic: string;
-};
+// Define Zod schema for QuizData
+const quizDataSchema = z.object({
+  paragraph: z.string(),
+  question: z.string(),
+  options: z.object({
+    A: z.string(),
+    B: z.string(),
+    C: z.string(),
+    D: z.string(),
+  }),
+  explanations: z.object({
+    A: z.string(),
+    B: z.string(),
+    C: z.string(),
+    D: z.string(),
+  }),
+  correctAnswer: z.string(),
+  relevantText: z.string(),
+  topic: z.string(),
+});
 
-// Define interface for the expected API response structure
-interface ApiResponseData {
-  result?: string; // Optional because error responses won't have it
-  error?: string; // Optional for success responses
-}
+// Infer QuizData type from the schema
+type QuizData = z.infer<typeof quizDataSchema>;
 
+// Define Zod schema for the API response
+const apiResponseSchema = z.object({
+  result: z.string().optional(),
+  error: z.string().optional(),
+});
+
+// Type definitions
 type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German';
 
-const CEFR_LEVELS = {
+// Define constants directly in the component
+const CEFR_LEVELS: Record<CEFRLevel, string> = {
   A1: 'Beginner',
   A2: 'Elementary',
   B1: 'Intermediate',
@@ -41,7 +55,7 @@ const CEFR_LEVELS = {
   C2: 'Proficiency',
 };
 
-const CEFR_DESCRIPTIONS = {
+const CEFR_DESCRIPTIONS: Record<CEFRLevel, string> = {
   A1: 'Basic phrases, simple questions',
   A2: 'Familiar topics, simple sentences',
   B1: 'Routine matters, basic opinions',
@@ -50,7 +64,7 @@ const CEFR_DESCRIPTIONS = {
   C2: 'Virtually everything, nuanced expression',
 };
 
-const LANGUAGES = {
+const LANGUAGES: Record<Language, string> = {
   English: 'English',
   Italian: 'Italiano',
   Spanish: 'Español',
@@ -59,104 +73,117 @@ const LANGUAGES = {
 };
 
 export default function TextGenerator() {
+  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
+  const [language, setLanguage] = useState<Language>('English');
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
-  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
-  const [language, setLanguage] = useState<Language>('English');
   const [highlightedParagraph, setHighlightedParagraph] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
 
   useEffect(() => {
-    if (quizData && isAnswered) {
-      const highlightRelevantText = () => {
-        if (!quizData || !quizData.relevantText) return;
+    // Initial text generation
+    generateText().catch((error) => {
+      console.error('Error during initial text generation:', error);
+      setError('Failed to load initial content.');
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
-        const { paragraph, relevantText } = quizData;
-
-        // Escape special regex characters in the relevant text
-        const escapedText = relevantText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        // Create a regular expression to find the text to highlight
+  const highlightRelevantText = useCallback(() => {
+    if (quizData && isAnswered && selectedAnswer === quizData.correctAnswer) {
+      try {
+        const escapedText = quizData.relevantText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedText})`, 'gi');
-
-        // Replace the matched text with highlighted version
-        const highlighted = paragraph.replace(
+        // Use dangerouslySetInnerHTML for highlighting, ensuring proper handling
+        const highlighted = quizData.paragraph.replace(
           regex,
-          '<span class="bg-yellow-300 text-black px-1 rounded">$1</span>'
+          '<mark class="bg-yellow-300 text-black px-1 rounded">$1</mark>' // Example mark tag
         );
-
         setHighlightedParagraph(highlighted);
-      };
-
-      highlightRelevantText();
+      } catch (e) {
+        console.error('Error creating regex or highlighting text:', e);
+        setHighlightedParagraph(quizData.paragraph); // Fallback to original paragraph
+      }
     } else {
-      setHighlightedParagraph(null);
+      setHighlightedParagraph(quizData?.paragraph ?? null); // Show original paragraph or null
     }
-  }, [isAnswered, quizData]);
+  }, [quizData, isAnswered, selectedAnswer]);
+
+  useEffect(() => {
+    if (showExplanation) {
+      highlightRelevantText();
+    }
+    // Reset highlighting when explanations are hidden or quiz data changes
+    if (!showExplanation && quizData) {
+      setHighlightedParagraph(quizData.paragraph);
+    }
+  }, [showExplanation, highlightRelevantText, quizData]);
 
   const generateText = async () => {
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
     setIsAnswered(false);
-    setHighlightedParagraph(null);
+    setHighlightedParagraph(null); // Reset highlight
     setShowExplanation(false);
-
-    // Clear previous quiz data when starting to load a new one
     setQuizData(null);
 
     try {
       const seed = Math.floor(Math.random() * 100);
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const responseResult: unknown = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: `Generate a reading comprehension paragraph in ${language} with multiple choice questions in English for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
           seed: seed,
         }),
       });
 
-      // Type guard for fetch response
       if (!(responseResult instanceof Response)) {
         console.error('Fetch did not return a Response object.', responseResult);
         throw new Error('Invalid response received from server.');
       }
       const response: Response = responseResult;
 
-      const data: ApiResponseData = await response.json();
+      // Parse JSON directly into the validator
+      const parsedApiResponse = apiResponseSchema.safeParse(await response.json());
+
+      if (!parsedApiResponse.success) {
+        console.error('Invalid API response structure:', parsedApiResponse.error);
+        throw new Error('Received invalid data structure from server.');
+      }
+      const data = parsedApiResponse.data;
 
       if (response.status === 429) {
         setError(data.error || "You've reached the usage limit. Please try again later.");
         setLoading(false);
         return;
       }
-
       if (!response.ok || !data.result) {
-        // data.result is string | undefined here
         console.error('API Error Response:', data);
         throw new Error(data.error || 'Failed to generate text');
       }
 
-      // data.result is definitely a string now
       try {
         const jsonString = data.result.replace(/```json|```/g, '').trim();
 
-        // Revert to simpler parsing and state setting
-        const parsedData = JSON.parse(jsonString);
+        // Parse JSON string directly into the validator
+        const parsedQuizData = quizDataSchema.safeParse(JSON.parse(jsonString));
 
-        // We might need to disable linting for this assignment if it complains again
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        setQuizData(parsedData);
+        if (!parsedQuizData.success) {
+          console.error('Error parsing generated quiz JSON:', parsedQuizData.error);
+          setError('Failed to parse the structure of the generated quiz. Please try again.');
+          setQuizData(null);
+          return;
+        }
+        setQuizData(parsedQuizData.data);
+        setHighlightedParagraph(parsedQuizData.data.paragraph); // Set initial paragraph
       } catch (parseErr) {
-        console.error('Error parsing JSON:', parseErr);
-        setError('Failed to parse the generated quiz. Please try again.');
+        console.error('Error parsing JSON string:', parseErr);
+        setError('Failed to parse the generated quiz content. Please try again.');
       }
     } catch (err: unknown) {
       console.error('Error generating text:', err);
@@ -184,7 +211,7 @@ export default function TextGenerator() {
   const resetQuiz = () => {
     setSelectedAnswer(null);
     setIsAnswered(false);
-    setHighlightedParagraph(null);
+    setHighlightedParagraph(quizData?.paragraph ?? null); // Reset to original paragraph
     setShowExplanation(false);
   };
 
@@ -325,277 +352,176 @@ export default function TextGenerator() {
                     clipRule="evenodd"
                   />
                 </svg>
-                Generate {language} Reading Practice
+                Generate New Text
               </div>
             )}
           </button>
         </div>
       </div>
 
-      {loading && (
-        <div className="bg-gradient-to-r from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-xl p-12 border border-gray-700 shadow-lg mb-8 fade-in">
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-16 h-16 mb-6 relative">
-              <svg
-                className="animate-spin w-16 h-16 text-blue-500"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-2 w-2 rounded-full bg-green-400 animate-ping"></div>
-              </div>
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Generating Your Quiz</h3>
-            <p className="text-gray-400 text-center">
-              Creating a {cefrLevel} level reading passage in {language}...
-            </p>
-          </div>
-        </div>
-      )}
-
-      {!quizData && !loading && (
-        <div className="bg-gradient-to-r from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-lg mb-8 fade-in">
-          <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2 text-blue-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            How It Works
-          </h2>
-          <ol className="text-left space-y-4 text-gray-300">
-            <li className="flex items-start p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-              <span className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow-md">
-                1
-              </span>
-              <div>
-                <span className="font-medium text-white">Select your settings</span>
-                <p className="mt-1 text-sm">
-                  Choose your <span className="text-blue-400">CEFR level</span> and preferred{' '}
-                  <span className="text-green-400">reading language</span> to customize your
-                  practice
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-              <span className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow-md">
-                2
-              </span>
-              <div>
-                <span className="font-medium text-white">Generate a passage</span>
-                <p className="mt-1 text-sm">
-                  AI creates a reading passage tailored to your level with a comprehension question
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-              <span className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow-md">
-                3
-              </span>
-              <div>
-                <span className="font-medium text-white">Test your comprehension</span>
-                <p className="mt-1 text-sm">
-                  Answer the multiple-choice question and receive instant feedback with explanations
-                </p>
-              </div>
-            </li>
-          </ol>
-          <div className="mt-4 text-center text-sm text-gray-400">
-            Click the Generate button above to start practicing!
-          </div>
-        </div>
-      )}
-
       {error && (
-        <div className="mt-4 p-4 bg-red-900/70 border border-red-700 text-red-100 rounded-lg shadow-md">
-          <div className="flex items-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 mr-2 text-red-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            {error}
-          </div>
+        <div
+          className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded relative mb-6 shadow-md"
+          role="alert"
+        >
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline ml-2">{error}</span>
         </div>
       )}
 
-      {quizData && !loading && (
-        <div className="space-y-6 fade-in">
-          <div className="bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-xl shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-900 to-indigo-900/40 p-4 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-2 text-blue-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-                </svg>
-                Reading Passage {language !== 'English' && `(${LANGUAGES[language]})`}
-              </h2>
-              <div className="flex space-x-2">
-                <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
-                  Level: {cefrLevel}
-                </span>
-                <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
-                  {LANGUAGES[language]}
-                </span>
-              </div>
-            </div>
+      {loading && !quizData && (
+        <div className="flex justify-center items-center h-64">
+          <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+        </div>
+      )}
 
-            <div className="p-5 bg-gray-800/90 text-white backdrop-blur-sm">
-              {highlightedParagraph ? (
-                <p
-                  className="leading-relaxed text-lg"
-                  dangerouslySetInnerHTML={{ __html: highlightedParagraph }}
-                />
-              ) : (
-                <p className="leading-relaxed text-lg">{quizData.paragraph}</p>
+      {quizData && (
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
+          <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
+            <h2 className="text-lg font-semibold text-white flex items-center">
+              <svg
+                className="h-5 w-5 mr-2 text-blue-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+              </svg>
+              Reading Passage {language !== 'English' && `(${LANGUAGES[language]})`}
+            </h2>
+            <div className="flex space-x-2">
+              <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
+                {cefrLevel}
+              </span>
+              <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
+                {LANGUAGES[language]}
+              </span>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <div
+              className="prose prose-invert max-w-none text-white leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: highlightedParagraph || quizData.paragraph || '' }}
+            />
+          </div>
+
+          <div className="mb-6">
+            <h3 className="text-md font-semibold mb-3 text-white">{quizData.question}</h3>
+            <div className="space-y-2">
+              {(Object.keys(quizData.options) as Array<keyof typeof quizData.options>).map(
+                (key) => (
+                  <button
+                    key={key}
+                    onClick={() => handleAnswerSelect(key)}
+                    disabled={isAnswered}
+                    className={`w-full text-left px-4 py-3 rounded transition-colors disabled:cursor-not-allowed flex items-center ${
+                      isAnswered
+                        ? key === quizData.correctAnswer
+                          ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
+                          : key === selectedAnswer
+                            ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
+                            : 'bg-gray-700 border border-gray-600 text-gray-400'
+                        : selectedAnswer === key
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
+                          : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="font-semibold mr-2">{key}.</span>
+                    <span>{quizData.options[key]}</span>
+                    {isAnswered && key === quizData.correctAnswer && (
+                      <svg
+                        className="w-5 h-5 text-green-300 ml-auto"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                    {isAnswered && key !== quizData.correctAnswer && key === selectedAnswer && (
+                      <svg
+                        className="w-5 h-5 text-red-300 ml-auto"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                )
               )}
             </div>
+          </div>
 
-            {quizData.topic && (
-              <div className="p-3 bg-gradient-to-r from-gray-900 to-indigo-900/40 border-t border-gray-700 flex justify-end">
-                <span className="text-xs text-gray-400">Topic: {quizData.topic}</span>
-              </div>
+          <div className="mt-6 flex justify-between items-center">
+            <button
+              onClick={isAnswered ? generateNewQuiz : checkAnswer}
+              disabled={!selectedAnswer && !isAnswered}
+              className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
+            >
+              {isAnswered ? 'Next Quiz' : 'Check Answer'}
+            </button>
+            {isAnswered && (
+              <button
+                onClick={resetQuiz}
+                className="px-4 py-2 bg-gray-600 text-gray-200 rounded hover:bg-gray-500 transition-colors text-sm"
+              >
+                Try Again
+              </button>
             )}
           </div>
 
-          <div className="bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-xl shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-900 to-indigo-900/40 p-4">
-              <h3 className="text-lg font-medium text-white flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-2 text-yellow-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1a1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Question (English)
-              </h3>
-            </div>
-
-            <div className="p-5 bg-gray-800/90 text-white backdrop-blur-sm">
-              <p className="text-lg mb-6 font-medium">{quizData.question}</p>
-
+          {showExplanation && (
+            <div className="mt-6 pt-4 border-t border-gray-700">
+              <h4 className="text-md font-semibold mb-3 text-white">Explanations</h4>
               <div className="space-y-3">
-                {Object.entries(quizData.options).map(([key, value]) => (
-                  <button
+                {(
+                  Object.keys(quizData.explanations) as Array<keyof typeof quizData.explanations>
+                ).map((key) => (
+                  <div
                     key={key}
-                    disabled={isAnswered}
-                    className={`p-3 border w-full text-left rounded-lg cursor-pointer transition-all ${
-                      selectedAnswer === key
-                        ? 'border-blue-500 bg-blue-900/50'
-                        : 'border-gray-600 hover:bg-gray-700'
-                    } ${
-                      isAnswered && key === quizData.correctAnswer
-                        ? 'border-green-500 bg-green-900/50 ring-2 ring-green-500'
-                        : ''
-                    } ${
-                      isAnswered && selectedAnswer === key && key !== quizData.correctAnswer
-                        ? 'border-red-500 bg-red-900/50 ring-2 ring-red-500'
-                        : ''
+                    className={`p-3 rounded border ${
+                      key === quizData.correctAnswer
+                        ? 'bg-green-900 border-green-700'
+                        : key === selectedAnswer
+                          ? 'bg-red-900 border-red-700'
+                          : 'bg-gray-750 border-gray-600'
                     }`}
-                    onClick={() => !isAnswered && handleAnswerSelect(key)}
                   >
-                    <div className="flex items-start">
-                      <span
-                        className={`flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-2 text-sm font-semibold ${
-                          selectedAnswer === key
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
-                            : isAnswered && key === quizData.correctAnswer
-                              ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
-                              : 'bg-gray-700 text-white'
-                        }`}
-                      >
-                        {key}
-                      </span>
-                      <span className="pt-0.5">{value}</span>
-                    </div>
-
-                    {isAnswered && showExplanation && (
-                      <div
-                        className={`mt-2 text-sm px-2 py-1 rounded ${
+                    <p className="text-sm text-gray-200">
+                      <strong
+                        className={`font-semibold ${
                           key === quizData.correctAnswer
-                            ? 'bg-green-900/40 text-green-300'
-                            : 'bg-red-900/40 text-red-300'
+                            ? 'text-green-300'
+                            : key === selectedAnswer
+                              ? 'text-red-300'
+                              : 'text-gray-300'
                         }`}
                       >
-                        {quizData.explanations[key as keyof typeof quizData.explanations]}
-                      </div>
+                        {key}. {quizData.options[key]}:
+                      </strong>
+                      <span className="ml-1">{quizData.explanations[key]}</span>
+                    </p>
+                    {key === quizData.correctAnswer && quizData.relevantText && (
+                      <p className="text-xs text-gray-400 mt-1 italic">
+                        Supporting text: &quot;{quizData.relevantText}&quot;
+                      </p>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
-
-              {!isAnswered && selectedAnswer && (
-                <div className="mt-4">
-                  <button
-                    onClick={checkAnswer}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors shadow-md"
-                  >
-                    Check Answer
-                  </button>
-                </div>
-              )}
-
-              {isAnswered && (
-                <div className="mt-6 flex flex-col sm:flex-row items-center gap-3">
-                  <button
-                    onClick={resetQuiz}
-                    className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors w-full sm:w-auto shadow-md"
-                  >
-                    Try Again
-                  </button>
-                  <button
-                    onClick={generateNewQuiz}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:via-indigo-600 hover:to-green-600 transition-colors w-full sm:w-auto shadow-md"
-                  >
-                    Generate New Quiz
-                  </button>
-                </div>
-              )}
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

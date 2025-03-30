@@ -166,7 +166,10 @@ describe('Chat API - [/api/chat]', () => {
     const response = await chatRouteHandler(req as unknown as Request);
 
     const jsonData = await expectErrorResponse(response, 400);
-    expect(jsonData.error).toBe('Prompt is required');
+    expect(jsonData.error).toBe('Invalid request body');
+    expect(jsonData.issues).toBeDefined();
+    expect(jsonData.issues.prompt).toBeDefined();
+    expect(jsonData.issues.prompt).toContain('Prompt is required');
   });
 
   it('generates content using OpenAI provider', async () => {
