@@ -103,12 +103,16 @@ try {
   const dbProxy = new Proxy(db, {
     get(target, prop) {
       if (prop === 'prepare') {
+        // Return a function that wraps the original prepare
         return function (sql: string) {
-          const stmt = target.prepare(sql);
+          const stmt: Database.Statement = target.prepare(sql);
 
+          // Return a proxy for the statement
           return new Proxy(stmt, {
             get(stmtTarget, stmtProp) {
-              if (stmtProp === 'run' || stmtProp === 'get') {
+              // Intercept calls to run, get, all
+              if (stmtProp === 'run' || stmtProp === 'get' || stmtProp === 'all') {
+                // Return a function that wraps the original statement method
                 return function (...args: unknown[]) {
                   // Format parameters to be more compact
                   const formattedParams = args.map((param) => {
@@ -120,24 +124,36 @@ try {
 
                   console.log(
                     `[DB] ${
-                      stmtProp === 'run' ? 'Executing' : 'Querying'
+                      String(stmtProp) === 'run' ? 'Executing' : 'Querying'
                     } with params: ${JSON.stringify(formattedParams)}`
                   );
-                  // Use type assertion with unknown as intermediate step to avoid type errors
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  return (stmtTarget as any)[stmtProp](...args);
+
+                  // Type assertion is needed because we're dynamically calling
+                  if (stmtProp === 'run') {
+                    return stmtTarget.run(...args);
+                  } else if (stmtProp === 'get') {
+                    return stmtTarget.get(...args);
+                  } else if (stmtProp === 'all') {
+                    return stmtTarget.all(...args);
+                  }
+                  // Fallback: Still potentially unsafe, but Reflect.get is preferred
+                  // Disable unsafe return for this dynamic fallback
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+                  return Reflect.get(stmtTarget, stmtProp);
                 };
               }
-              // Use type assertion with unknown as intermediate step to avoid type errors
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              return (stmtTarget as any)[stmtProp];
+              // For other properties of the statement, return them directly
+              // Disable unsafe return for this dynamic fallback
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+              return Reflect.get(stmtTarget, stmtProp);
             },
           });
         };
       }
-      // Use type assertion with unknown as intermediate step to avoid type errors
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (target as any)[prop];
+      // For other properties of the database, return them directly
+      // Disable unsafe return for this dynamic fallback
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return Reflect.get(target, prop);
     },
   });
 

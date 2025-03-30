@@ -26,7 +26,9 @@ export default function AuthButton() {
           <span className="text-white">{session.user?.name}</span>
         </div>
         <button
-          onClick={() => signOut()}
+          onClick={() => {
+            void signOut();
+          }}
           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           Sign Out
@@ -38,7 +40,9 @@ export default function AuthButton() {
   return (
     <div className="flex flex-col sm:flex-row gap-3">
       <button
-        onClick={() => signIn('github')}
+        onClick={() => {
+          void signIn('github');
+        }}
         className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 justify-center"
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -47,7 +51,9 @@ export default function AuthButton() {
         Sign in with GitHub
       </button>
       <button
-        onClick={() => signIn('google')}
+        onClick={() => {
+          void signIn('google');
+        }}
         className="px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 justify-center"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">

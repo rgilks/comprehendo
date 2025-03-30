@@ -7,6 +7,7 @@ import {
   getOpenAIClient,
   ModelConfig,
 } from '../../../lib/modelConfig';
+import OpenAI from 'openai';
 
 // Don't initialize OpenAI at build time
 // const getOpenAIClient = () => {
@@ -33,6 +34,24 @@ interface GeneratedContentRow {
   content: string;
   questions: string;
   created_at: string;
+}
+
+// Define interface for the expected request body structure
+interface ChatRequestBody {
+  prompt: string;
+  seed?: number; // seed is optional
+}
+
+// Define a type for the successful OpenAI completion structure we expect
+// (Only include properties actually accessed)
+type OpenAIChatCompletion = OpenAI.Chat.Completions.ChatCompletion;
+
+// Define a type for the successful Google AI response structure we expect
+// (Only include properties actually accessed)
+interface GoogleAIContentResponse {
+  response: {
+    text: () => string;
+  };
 }
 
 // Initialize rate limiting table
@@ -96,7 +115,24 @@ export async function POST(request: Request) {
       .get(ip) as RateLimitRow | undefined;
 
     if (rateLimitRow) {
-      userRequests = JSON.parse(rateLimitRow.requests);
+      // Provide type for JSON.parse result
+      try {
+        // Initialize with unknown, then check type
+        const parsedRequests: unknown = JSON.parse(rateLimitRow.requests);
+        // Basic type check for safety
+        if (
+          Array.isArray(parsedRequests) &&
+          parsedRequests.every((item) => typeof item === 'number')
+        ) {
+          userRequests = parsedRequests; // Assign directly
+        } else {
+          console.warn(`[API] Invalid rate limit data found for IP ${logSafeIp}. Resetting.`);
+          userRequests = []; // Reset if data is corrupt
+        }
+      } catch (parseError) {
+        console.error(`[API] Failed to parse rate limit data for IP ${logSafeIp}:`, parseError);
+        userRequests = []; // Reset on parse error
+      }
       console.log(`[API] Found ${userRequests.length} previous requests for IP: ${logSafeIp}`);
 
       // Update last updated timestamp
@@ -136,29 +172,43 @@ export async function POST(request: Request) {
     `
     ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
 
-    const body = await request.json();
+    // Use the interface for the request body
+    const body: ChatRequestBody = await request.json();
+    // Type assertion needed here because .json() returns Promise<any>
+    // Now body.prompt and body.seed are typed correctly
     const { prompt, seed } = body;
-    console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
+
+    // Use type guard for prompt substring
+    if (typeof prompt === 'string') {
+      console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
+    } else {
+      // Handle cases where prompt might not be a string if needed, though validation below covers empty
+      console.log('[API] Error: Prompt is not a string');
+      return NextResponse.json({ error: 'Invalid prompt format' }, { status: 400 });
+    }
 
     if (!prompt) {
       console.log('[API] Error: No prompt provided');
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    // Extract CEFR level and language from the prompt for better caching
+    // prompt is known to be a string here, safe to use .match
     const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
     const languageMatch = prompt.match(/paragraph in ([A-Za-z]+)/);
 
-    const cefrLevel = cefrLevelMatch ? cefrLevelMatch[1] : 'unknown';
-    const language = languageMatch ? languageMatch[1] : 'unknown';
+    // cefrLevelMatch and languageMatch are RegExpMatchArray | null, accessing [1] is potentially unsafe
+    const cefrLevel = cefrLevelMatch?.[1] ?? 'unknown'; // Use optional chaining and nullish coalescing
+    const language = languageMatch?.[1] ?? 'unknown'; // Use optional chaining and nullish coalescing
     console.log(`[API] Extracted language: ${language}, level: ${cefrLevel}`);
 
     // Create a cache key from the CEFR level, language, and seed for better variety
-    const cacheKey = `${language}-${cefrLevel}-${seed || 0}`;
+    const seedValue = typeof seed === 'number' ? seed : 0; // Ensure seed is a number
+    const cacheKey = `${language}-${cefrLevel}-${seedValue}`;
     console.log(`[API] Checking cache for key: ${cacheKey}`);
 
     // Check cache in database
-    const cachedContent = db
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const resultFromDb: unknown = db
       .prepare(
         `
       SELECT content, created_at FROM generated_content 
@@ -166,7 +216,22 @@ export async function POST(request: Request) {
       ORDER BY created_at DESC LIMIT 1
     `
       )
-      .get(language, cefrLevel, seed % 100 || 0) as GeneratedContentRow | undefined;
+      .get(language, cefrLevel, seedValue % 100);
+
+    let cachedContent: GeneratedContentRow | undefined = undefined; // Initialize
+
+    // Type guard for the database result
+    if (
+      typeof resultFromDb === 'object' &&
+      resultFromDb !== null &&
+      'content' in resultFromDb &&
+      typeof resultFromDb.content === 'string' &&
+      'created_at' in resultFromDb &&
+      typeof resultFromDb.created_at === 'string'
+      // Add other property checks from GeneratedContentRow if needed for full safety
+    ) {
+      cachedContent = resultFromDb as GeneratedContentRow; // Cast only after check
+    }
 
     if (cachedContent) {
       const timestamp = new Date(cachedContent.created_at).getTime();
@@ -188,9 +253,7 @@ export async function POST(request: Request) {
     // Get the active model configuration
     const activeModel: ModelConfig = getActiveModel();
 
-    // Create completion based on model provider
-    let completion;
-    let result;
+    let result: string | null = null;
 
     if (activeModel.provider === 'openai') {
       // Check if API key is available
@@ -203,7 +266,8 @@ export async function POST(request: Request) {
       }
 
       const openai = getOpenAIClient();
-      completion = await openai.chat.completions.create({
+      // Use the defined type for the completion result
+      const completion: OpenAIChatCompletion = await openai.chat.completions.create({
         model: activeModel.name,
         messages: [
           {
@@ -218,7 +282,8 @@ export async function POST(request: Request) {
         ],
         max_tokens: activeModel.maxTokens,
       });
-      result = completion.choices[0].message.content;
+      // Access content safely using optional chaining
+      result = completion?.choices?.[0]?.message?.content ?? null;
     } else if (activeModel.provider === 'google') {
       // Check if API key is available
       if (!process.env.GOOGLE_AI_API_KEY) {
@@ -287,9 +352,20 @@ Format your response exactly like this (including the JSON format):
 }
 \`\`\``;
 
-      const combinedPrompt = `${systemPrompt}\n\n${prompt}`;
-      const response = await model.generateContent(combinedPrompt);
-      result = response.response.text();
+      const googleResponse: GoogleAIContentResponse = await model.generateContent(
+        systemPrompt + '\n\n' + prompt
+      ); // Combine prompts for Google
+      // Access content safely using optional chaining and calling the function
+      result = googleResponse?.response?.text() ?? null;
+    }
+
+    // Check if result is valid before proceeding
+    if (result === null) {
+      console.error('[API] Failed to get valid content from AI provider');
+      return NextResponse.json(
+        { error: 'AI provider failed to generate content' },
+        { status: 500 }
+      );
     }
 
     console.log(`[API] Received response from ${activeModel.provider}`);

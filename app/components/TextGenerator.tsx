@@ -23,6 +23,12 @@ type QuizData = {
   topic: string;
 };
 
+// Define interface for the expected API response structure
+interface ApiResponseData {
+  result?: string; // Optional because error responses won't have it
+  error?: string; // Optional for success responses
+}
+
 type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German';
 
@@ -103,10 +109,10 @@ export default function TextGenerator() {
     setQuizData(null);
 
     try {
-      // Generate a random seed to get different cached responses
       const seed = Math.floor(Math.random() * 100);
 
-      const response = await fetch('/api/chat', {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const responseResult: unknown = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,29 +123,48 @@ export default function TextGenerator() {
         }),
       });
 
+      // Type guard for fetch response
+      if (!(responseResult instanceof Response)) {
+        console.error('Fetch did not return a Response object.', responseResult);
+        throw new Error('Invalid response received from server.');
+      }
+      const response: Response = responseResult;
+
+      const data: ApiResponseData = await response.json();
+
       if (response.status === 429) {
-        setError("You've reached the usage limit. Please try again later.");
+        setError(data.error || "You've reached the usage limit. Please try again later.");
         setLoading(false);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error('Failed to generate text');
+      if (!response.ok || !data.result) {
+        // data.result is string | undefined here
+        console.error('API Error Response:', data);
+        throw new Error(data.error || 'Failed to generate text');
       }
 
-      const data = await response.json();
+      // data.result is definitely a string now
       try {
-        // Parse the JSON response from the string
         const jsonString = data.result.replace(/```json|```/g, '').trim();
+
+        // Revert to simpler parsing and state setting
         const parsedData = JSON.parse(jsonString);
+
+        // We might need to disable linting for this assignment if it complains again
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         setQuizData(parsedData);
       } catch (parseErr) {
         console.error('Error parsing JSON:', parseErr);
         setError('Failed to parse the generated quiz. Please try again.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error generating text:', err);
-      setError('Failed to generate text. Please try again.');
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to generate text. Please try again.');
+      } else {
+        setError('An unknown error occurred while generating text.');
+      }
     } finally {
       setLoading(false);
     }
@@ -164,7 +189,9 @@ export default function TextGenerator() {
   };
 
   const generateNewQuiz = () => {
-    generateText();
+    generateText().catch((error) => {
+      console.error('Error explicitly caught from generateNewQuiz:', error);
+    });
   };
 
   return (
@@ -254,7 +281,9 @@ export default function TextGenerator() {
           </div>
 
           <button
-            onClick={generateText}
+            onClick={() => {
+              void generateText();
+            }}
             disabled={loading}
             className="px-5 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:via-indigo-600 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed w-full font-medium transition-all transform hover:scale-[1.02] flex items-center justify-center shadow-lg"
           >
