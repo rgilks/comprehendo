@@ -2,9 +2,23 @@
 
 import { signIn, signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Session } from 'next-auth';
+
+interface CustomSession extends Session {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    isAdmin?: boolean | null;
+  };
+}
 
 export default function AuthButton() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession() as {
+    data: CustomSession | null;
+    status: 'loading' | 'authenticated' | 'unauthenticated';
+  };
 
   if (status === 'loading') {
     return <div className="animate-pulse bg-gray-700 h-10 w-32 rounded-lg"></div>;
@@ -25,6 +39,14 @@ export default function AuthButton() {
           )}
           <span className="text-white">{session.user?.name}</span>
         </div>
+        {session.user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Admin
+          </Link>
+        )}
         <button
           onClick={() => {
             void signOut();

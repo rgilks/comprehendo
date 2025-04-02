@@ -51,7 +51,8 @@ try {
       ip_address TEXT,
       language TEXT NOT NULL,
       level TEXT NOT NULL,
-      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      user_id INTEGER REFERENCES users(id) -- Ensure user_id exists here too
     );
 
     CREATE TABLE IF NOT EXISTS users (
@@ -65,6 +66,11 @@ try {
       last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(provider_id, provider)
     );
+
+    -- Add indexes for sorting performance in admin view
+    CREATE INDEX IF NOT EXISTS idx_generated_content_created_at ON generated_content(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_usage_stats_timestamp ON usage_stats(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
   `);
 
   // Check if user_id column exists in usage_stats and add it if missing
