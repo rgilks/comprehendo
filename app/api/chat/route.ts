@@ -372,7 +372,37 @@ Format your response exactly like this (including the JSON format):
 
     console.log(`[API] Received response from ${activeModel.provider}`);
 
-    // Store the result in database - truncate result for logging
+    // Parse the result JSON to extract questions and other details
+    let parsedContent: Record<string, unknown> = {}; // Use a broader type initially
+    try {
+      // Clean the result string if necessary (remove potential markdown backticks)
+      const cleanedResult = result.replace(/^```json\n|\n```$/g, '');
+      // Provide type safety for JSON.parse result
+      const parsedJson: unknown = JSON.parse(cleanedResult);
+      // Check if it's an object before assigning
+      if (typeof parsedJson === 'object' && parsedJson !== null) {
+        parsedContent = parsedJson as Record<string, unknown>; // Cast after check
+      } else {
+        throw new Error('AI result was not a valid JSON object.');
+      }
+    } catch (parseError) {
+      console.error('[API] Failed to parse AI response JSON:', parseError, 'Raw result:', result);
+      // Handle the error appropriately, maybe return a 500 response
+      return NextResponse.json({ error: 'Failed to process AI response format' }, { status: 500 });
+    }
+
+    // Extract relevant fields for the 'questions' column
+    const questionsData = {
+      question: parsedContent.question,
+      options: parsedContent.options,
+      explanations: parsedContent.explanations,
+      correctAnswer: parsedContent.correctAnswer,
+      relevantText: parsedContent.relevantText,
+      topic: parsedContent.topic,
+      // Add any other fields from the parsed JSON you might want to store
+    };
+
+    // Store the result and the structured questions in the database
     console.log(
       `[API] Storing generated content in database for language: ${language}, level: ${cefrLevel}`
     );
@@ -381,7 +411,9 @@ Format your response exactly like this (including the JSON format):
       INSERT INTO generated_content (language, level, content, questions, created_at)
       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
     `
-    ).run(language, cefrLevel, result, JSON.stringify({ prompt }));
+      // Save the original full AI response JSON string in 'content'
+      // Save the extracted question/options structure JSON string in 'questions'
+    ).run(language, cefrLevel, result, JSON.stringify(questionsData));
 
     // Track usage statistics with user ID when available
     console.log(
