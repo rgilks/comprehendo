@@ -11,8 +11,7 @@ let db: Database.Database;
 
 // Check if we're in the build phase
 const isBuildPhase =
-  process.env.NODE_ENV === 'production' &&
-  (!process.env.NEXT_PHASE || process.env.NEXT_PHASE === 'phase-production-build');
+  process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
 try {
   // During build phase or if we can't access the filesystem, use in-memory database
