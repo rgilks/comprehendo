@@ -406,14 +406,34 @@ Format your response exactly like this (including the JSON format):
     console.log(
       `[API] Storing generated content in database for language: ${language}, level: ${cefrLevel}`
     );
-    db.prepare(
-      `
-      INSERT INTO generated_content (language, level, content, questions, created_at)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `
-      // Save the original full AI response JSON string in 'content'
-      // Save the extracted question/options structure JSON string in 'questions'
-    ).run(language, cefrLevel, result, JSON.stringify(questionsData));
+    console.log('[API] Preparing to insert generated_content...');
+
+    let contentInsertSuccessful = false;
+    try {
+      const insertContentInfo = db
+        .prepare(
+          `
+          INSERT INTO generated_content (language, level, content, questions, created_at)
+          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `
+        )
+        .run(language, cefrLevel, result, JSON.stringify(questionsData));
+
+      console.log(
+        `[API] DB Insert Result (generated_content): changes=${insertContentInfo.changes}, lastInsertRowid=${insertContentInfo.lastInsertRowid}`
+      );
+      // Only mark successful if changes > 0
+      if (insertContentInfo.changes > 0) {
+        contentInsertSuccessful = true;
+        console.log('[API] Successfully inserted generated_content (Marked success).');
+      } else {
+        console.warn('[API] DB Insert for generated_content reported 0 changes.');
+      }
+    } catch (contentError) {
+      console.error('[API] CRITICAL ERROR during generated_content insert:', contentError);
+      // Optionally, you might want to return a 500 error here
+      // return NextResponse.json({ error: "Database error saving content" }, { status: 500 });
+    }
 
     // Track usage statistics with user ID when available
     console.log(
@@ -422,30 +442,61 @@ Format your response exactly like this (including the JSON format):
       }`
     );
 
-    try {
-      db.prepare(
-        `
-        INSERT INTO usage_stats (ip_address, user_id, language, level)
-        VALUES (?, ?, ?, ?)
-      `
-      ).run(ip, userId, language, cefrLevel);
-    } catch (error) {
-      // Fallback to the original query without user_id if there's an error
-      console.error('[API] Error recording usage stats with user_id, trying without:', error);
+    if (contentInsertSuccessful) {
+      // Optionally, only try inserting stats if content insert seemed okay
+      console.log(
+        `[API] Recording usage statistics for language: ${language}, level: ${cefrLevel}${userId ? ', user: ' + userId : ''}`
+      );
+
       try {
-        db.prepare(
+        console.log('[API] Preparing to insert usage_stats (with user_id if available)...');
+        const insertStatsInfo1 = db
+          .prepare(
+            `
+            INSERT INTO usage_stats (ip_address, user_id, language, level)
+            VALUES (?, ?, ?, ?)
           `
-          INSERT INTO usage_stats (ip_address, language, level)
-          VALUES (?, ?, ?)
-        `
-        ).run(ip, language, cefrLevel);
-      } catch (fallbackError) {
-        console.error('[API] Error recording usage stats:', fallbackError);
-        // Continue execution - don't fail the request just because stats recording failed
+          )
+          .run(ip, userId, language, cefrLevel);
+        console.log(
+          `[API] DB Insert Result (usage_stats with user_id): changes=${insertStatsInfo1.changes}, lastInsertRowid=${insertStatsInfo1.lastInsertRowid}`
+        );
+        if (insertStatsInfo1.changes > 0) {
+          console.log('[API] Successfully inserted usage_stats (with user_id attempt).');
+        } else {
+          console.warn('[API] DB Insert for usage_stats (with user_id) reported 0 changes.');
+        }
+      } catch (error) {
+        console.error('[API] Error recording usage stats with user_id, trying fallback:', error);
+        try {
+          console.log('[API] Preparing to insert usage_stats (fallback without user_id)...');
+          const insertStatsInfo2 = db
+            .prepare(
+              `
+              INSERT INTO usage_stats (ip_address, language, level)
+              VALUES (?, ?, ?)
+            `
+            )
+            .run(ip, language, cefrLevel);
+          console.log(
+            `[API] DB Insert Result (usage_stats fallback): changes=${insertStatsInfo2.changes}, lastInsertRowid=${insertStatsInfo2.lastInsertRowid}`
+          );
+          if (insertStatsInfo2.changes > 0) {
+            console.log('[API] Successfully inserted usage_stats (fallback attempt).');
+          } else {
+            console.warn('[API] DB Insert for usage_stats (fallback) reported 0 changes.');
+          }
+        } catch (fallbackError) {
+          console.error('[API] CRITICAL ERROR during usage_stats fallback insert:', fallbackError);
+        }
       }
+    } else {
+      console.warn(
+        '[API] Skipping usage_stats insert because generated_content insert failed or reported 0 changes.'
+      );
     }
 
-    console.log('[API] Request completed successfully');
+    console.log('[API] Request completed successfully (reached end of try block).');
     return NextResponse.json({ result });
   } catch (error) {
     console.error('[API] Error in chat API:', error);
