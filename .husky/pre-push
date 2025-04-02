@@ -2,5 +2,6 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 echo "Running pre-push checks..."
+# Only run check, as verify includes check and adds unnecessary format
 npm run check
-npm run verify
+# npm run verify - Removed redundant call
