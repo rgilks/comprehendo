@@ -25,6 +25,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Robust Validation**: Uses Zod for request validation on API routes.
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions
 - **Continuous Deployment**: Automatic deployment to Fly.io when code is pushed to main branch
+- **Admin Panel**: A secure area for administrators to view application data (usage stats, generated content, users).
 
 ## How It Works
 
@@ -101,6 +102,7 @@ Before you begin, make sure you have the following installed and set up:
     - Generate a secret key for `AUTH_SECRET` by running `openssl rand -base64 32` in your terminal and pasting the output.
     - Keep `NEXTAUTH_URL=http://localhost:3000` for local development.
     - The `.env.example` file has comments explaining each variable.
+    - **(Admin Access)** Define `ADMIN_EMAILS` as a comma-separated list of email addresses that should have admin access (e.g., `admin1@example.com,admin2@example.com`).
 
 4.  **Run the Development Server:**
 
@@ -146,6 +148,10 @@ This project includes configuration for continuous deployment to Fly.io using Gi
       fly secrets import --app <your-app-name> < .env.local
       ```
     - _Note:_ You can also set secrets individually using `fly secrets set KEY=VALUE --app <your-app-name>`.
+    - Make sure to also set the `ADMIN_EMAILS` secret if you want admin access in production:
+      ```bash
+      fly secrets set ADMIN_EMAILS="your_admin@example.com,another@example.com" --app <your-app-name>
+      ```
 
 5.  **Get Fly API Token:**
 
@@ -303,3 +309,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT
+
+## Admin Panel
+
+Comprehendo includes a basic admin panel accessible at the `/admin` route.
+
+- **Access Control**: Only users logged in with an email address listed in the `ADMIN_EMAILS` environment variable can access this page. Attempts by non-admins will redirect to the homepage.
+- **Functionality**: The admin panel allows authorized users to:
+  - View a list of database tables (`users`, `generated_content`, `usage_stats`).
+  - Select a table to view its data.
+  - Browse table data using pagination controls.
+  - Refresh the data view.
+- **Setup**: To enable admin access, set the `ADMIN_EMAILS` environment variable (comma-separated list) both locally (`.env.local`) and in your deployment environment (e.g., Fly.io secrets).
