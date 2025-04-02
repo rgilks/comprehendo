@@ -18,7 +18,7 @@
     "test:components": "jest __tests__/components",
     "test:integration": "jest __tests__/integration",
     "prepare": "husky && husky install",
-    "test:quick": "jest --bail --findRelatedTests",
+    "test:quick": "jest --bail --findRelatedTests --passWithNoTests",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "npm run format && npm run check"
