@@ -138,134 +138,139 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">comprehendo admin</h1>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Comprehendo admin</h1>
 
-      {isLoadingTables && <p>Loading table names...</p>}
-      {error && !selectedTable && <p className="text-red-500">Error loading tables: {error}</p>}
+        {isLoadingTables && <p>Loading table names...</p>}
+        {error && !selectedTable && <p className="text-red-500">Error loading tables: {error}</p>}
 
-      {/* Table Selection */}
-      {!isLoadingTables && tableNames.length > 0 && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-3">
-            {tableNames.map((name) => (
-              <button
-                key={name}
-                onClick={() => handleTableSelect(name)}
-                className={`${buttonBaseClass} ${selectedTable === name ? primaryButtonClass : secondaryButtonClass}`}
-              >
-                {name}
-              </button>
-            ))}
+        {/* Table Selection */}
+        {!isLoadingTables && tableNames.length > 0 && (
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-3">
+              {tableNames.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => handleTableSelect(name)}
+                  className={`${buttonBaseClass} ${selectedTable === name ? primaryButtonClass : secondaryButtonClass}`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Table View Area */}
-      {selectedTable && (
-        <div className="min-h-[340px]">
-          {error && (
-            <p className="text-red-500 mb-4">
-              Error loading data for {selectedTable}: {error}
-            </p>
-          )}
-
-          {/* Pagination Controls - Structure always rendered, left button conditional */}
-          <div className="flex justify-between items-center mb-4 text-sm min-h-[38px]">
-            {/* Conditional Button: Refresh on Page 1, Previous otherwise */}
-            {currentPage === 1 ? (
-              <button
-                onClick={handleRefresh}
-                disabled={isLoadingData || !!error} // Disable on error too
-                className={`${refreshButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''}`}
-              >
-                <RefreshIcon />
-                <span>{isLoadingData ? 'Refreshing...' : 'Refresh'}</span> {/* Simplified text */}
-              </button>
-            ) : (
-              <button
-                onClick={handlePreviousPage}
-                disabled={isLoadingData} // Only disable when loading if not page 1
-                className={`${secondaryButtonClass}`}
-              >
-                <ChevronLeftIcon />
-                <span>Previous</span>
-              </button>
+        {/* Table View Area */}
+        {selectedTable && (
+          <div className="min-h-[340px]">
+            {error && (
+              <p className="text-red-500 mb-4">
+                Error loading data for {selectedTable}: {error}
+              </p>
             )}
 
-            {/* Hide text if no rows or error */}
-            <span className={`text-gray-300 ${totalRows === 0 || !!error ? 'invisible' : ''}`}>
-              Page {currentPage} of {totalPages} (Total: {totalRows} rows)
-            </span>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage >= totalPages || isLoadingData || totalRows === 0 || !!error}
-              className={`${secondaryButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''}`}
+            {/* Pagination Controls - Structure always rendered, left button conditional */}
+            <div className="flex justify-between items-center mb-4 text-sm min-h-[38px]">
+              {/* Conditional Button: Refresh on Page 1, Previous otherwise */}
+              {currentPage === 1 ? (
+                <button
+                  onClick={handleRefresh}
+                  disabled={isLoadingData || !!error} // Disable on error too
+                  className={`${refreshButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''}`}
+                >
+                  <RefreshIcon />
+                  <span>{isLoadingData ? 'Refreshing...' : 'Refresh'}</span> {/* Simplified text */}
+                </button>
+              ) : (
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={isLoadingData} // Only disable when loading if not page 1
+                  className={`${secondaryButtonClass}`}
+                >
+                  <ChevronLeftIcon />
+                  <span>Previous</span>
+                </button>
+              )}
+
+              {/* Hide text if no rows or error */}
+              <span className={`text-gray-300 ${totalRows === 0 || !!error ? 'invisible' : ''}`}>
+                Page {currentPage} of {totalPages} (Total: {totalRows} rows)
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage >= totalPages || isLoadingData || totalRows === 0 || !!error}
+                className={`${secondaryButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''}`}
+              >
+                <span>Next</span>
+                <ChevronRightIcon />
+              </button>
+            </div>
+
+            {/* Table Display Wrapper - Apply opacity and transition during load */}
+            <div
+              className={`overflow-x-auto relative ${isLoadingData ? 'opacity-60' : ''} transition-opacity duration-200`}
             >
-              <span>Next</span>
-              <ChevronRightIcon />
-            </button>
-          </div>
-
-          {/* Table Display Wrapper - Apply opacity and transition during load */}
-          <div
-            className={`overflow-x-auto relative ${isLoadingData ? 'opacity-60' : ''} transition-opacity duration-200`}
-          >
-            {!error && (
-              <table className="min-w-full bg-white border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    {tableData.length > 0 ? (
-                      Object.keys(tableData[0]).map((key) => (
-                        <th
-                          key={key}
-                          className="py-2 px-4 border-b text-left text-gray-900 font-semibold"
-                        >
-                          {key}
-                        </th>
-                      ))
-                    ) : (
-                      <th className="py-2 px-4 border-b text-left text-gray-900 font-semibold">
-                        &nbsp;
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody style={{ minHeight: `${minBodyHeight}px` }}>
-                  {!isLoadingData && tableData.length > 0
-                    ? tableData.map((row, rowIndex) => (
-                        <tr key={rowIndex} className="hover:bg-gray-50">
-                          {Object.values(row).map((value, colIndex) => (
-                            <td key={colIndex} className="py-2 px-4 border-b text-gray-900 text-sm">
-                              {typeof value === 'string'
-                                ? value.length > 100
-                                  ? `${value.substring(0, 100)}...`
-                                  : value
-                                : value === null || value === undefined
-                                  ? 'NULL'
-                                  : typeof value === 'object'
-                                    ? JSON.stringify(value)
-                                    : // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                                      String(value)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))
-                    : !error && (
-                        <tr>
-                          <td
-                            colSpan={tableData.length > 0 ? Object.keys(tableData[0]).length : 1}
-                            className="py-4 px-4 text-center text-gray-500"
+              {!error && (
+                <table className="min-w-full bg-white border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      {tableData.length > 0 ? (
+                        Object.keys(tableData[0]).map((key) => (
+                          <th
+                            key={key}
+                            className="py-2 px-4 border-b text-left text-gray-900 font-semibold"
                           >
-                            {isLoadingData ? '' : 'No data found in this table.'}
-                          </td>
-                        </tr>
+                            {key}
+                          </th>
+                        ))
+                      ) : (
+                        <th className="py-2 px-4 border-b text-left text-gray-900 font-semibold">
+                          &nbsp;
+                        </th>
                       )}
-                </tbody>
-              </table>
-            )}
+                    </tr>
+                  </thead>
+                  <tbody style={{ minHeight: `${minBodyHeight}px` }}>
+                    {!isLoadingData && tableData.length > 0
+                      ? tableData.map((row, rowIndex) => (
+                          <tr key={rowIndex} className="hover:bg-gray-50">
+                            {Object.values(row).map((value, colIndex) => (
+                              <td
+                                key={colIndex}
+                                className="py-2 px-4 border-b text-gray-900 text-sm"
+                              >
+                                {typeof value === 'string'
+                                  ? value.length > 100
+                                    ? `${value.substring(0, 100)}...`
+                                    : value
+                                  : value === null || value === undefined
+                                    ? 'NULL'
+                                    : typeof value === 'object'
+                                      ? JSON.stringify(value)
+                                      : // eslint-disable-next-line @typescript-eslint/no-base-to-string
+                                        String(value)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))
+                      : !error && (
+                          <tr>
+                            <td
+                              colSpan={tableData.length > 0 ? Object.keys(tableData[0]).length : 1}
+                              className="py-4 px-4 text-center text-gray-500"
+                            >
+                              {isLoadingData ? '' : 'No data found in this table.'}
+                            </td>
+                          </tr>
+                        )}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

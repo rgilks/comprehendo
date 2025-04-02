@@ -16,8 +16,8 @@ export default function Home() {
         </div>
 
         <div className="text-center py-10 md:py-16 fade-in">
-          <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-cyan-400 to-green-400 bg-clip-text text-transparent drop-shadow-sm">
-            Comprehend
+          <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-6 text-gray-800 dark:text-gray-200">
+            Comprehendo
           </h1>
           <p className="text-xl mb-3 text-gray-300 max-w-2xl mx-auto">
             An AI-powered language learning tool to improve your reading comprehension
@@ -35,7 +35,7 @@ export default function Home() {
           <p>
             Powered by OpenAI & Google Gemini |{' '}
             <Link
-              href="https://github.com/rgilks/comprehend"
+              href="https://github.com/rgilks/comprehendo"
               className="underline hover:text-blue-400"
             >
               GitHub

@@ -14,21 +14,33 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Comprehend - Language Reading Practice',
+  title: 'Comprehendo - Language Reading Practice',
   description: 'Improve your language skills with AI-powered reading comprehension exercises',
   keywords: 'language learning, reading comprehension, CEFR, AI, education',
-  authors: [{ name: 'Comprehend Team' }],
-  metadataBase: new URL('http://localhost:3000'),
+  authors: [{ name: 'Comprehendo Team' }],
+  metadataBase: new URL('https://comprehendo.app'),
   openGraph: {
-    title: 'Comprehend - AI-Powered Language Learning',
-    description: 'Practice reading comprehension in multiple languages with adaptive difficulty',
-    images: ['/og-image.png'],
+    title: 'Comprehendo - AI-Powered Language Learning',
+    description:
+      'Practice reading comprehension in multiple languages with AI-generated passages and questions.',
+    locale: 'en_US',
+    type: 'website',
   },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Comprehend',
+    title: 'Comprehendo',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Comprehendo',
+    description: 'AI-powered language learning for reading comprehension.',
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
   },
 };
 

@@ -4,7 +4,7 @@ import fs from 'fs';
 
 // Define database directory and path
 const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DB_DIR, 'comprehend.sqlite');
+const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
 // Initialize database connection
 let db: Database.Database;

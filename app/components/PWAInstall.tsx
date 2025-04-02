@@ -60,7 +60,7 @@ export default function PWAInstall() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white p-4 rounded-lg shadow-lg">
-      <p className="mb-2">Install Comprehend for offline use!</p>
+      <p className="mb-2">Install Comprehendo for offline use!</p>
       <button
         onClick={() => {
           void handleInstallClick();

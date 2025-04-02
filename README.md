@@ -1,12 +1,12 @@
-# Comprehend
+# Comprehendo
 
 A multi-language reading comprehension practice tool powered by Next.js, OpenAI, and Google Gemini
 
-![Comprehend Screenshot](public/screenshot.png)
+![Comprehendo Screenshot](public/screenshot.png)
 
 ## Overview
 
-Comprehend is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding.
+Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding.
 
 ## Features
 
@@ -37,7 +37,7 @@ Comprehend is an AI-powered language learning application designed to help users
 
 ## API Cost Management
 
-Comprehend implements several strategies to manage OpenAI API costs:
+Comprehendo implements several strategies to manage OpenAI API costs:
 
 - **Rate Limiting**: Users are limited to 100 requests per hour to prevent excessive API usage
 - **Response Caching**: Successful API responses are cached for 24 hours to reduce duplicate calls
@@ -55,7 +55,7 @@ Comprehend implements several strategies to manage OpenAI API costs:
 
 ## Setup and Running
 
-Follow these steps to get Comprehend running on your local machine and optionally deploy it to Fly.io.
+Follow these steps to get Comprehendo running on your local machine and optionally deploy it to Fly.io.
 
 ### Prerequisites
 
@@ -76,8 +76,8 @@ Before you begin, make sure you have the following installed and set up:
 1.  **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/your-username/comprehend.git
-    cd comprehend
+    git clone https://github.com/your-username/comprehendo.git
+    cd comprehendo
     ```
 
     _(Replace `your-username` with the actual repository path if you forked it)._
@@ -126,7 +126,7 @@ This project includes configuration for continuous deployment to Fly.io using Gi
 2.  **Create a Fly App:**
 
     ```bash
-    # Choose a unique name for your app (e.g., my-comprehend-app)
+    # Choose a unique name for your app (e.g., my-comprehendo-app)
     fly apps create <your-app-name>
     ```
 
@@ -197,7 +197,7 @@ To switch between OpenAI and Google AI models:
 
 ## Development Workflow
 
-Comprehend uses a modern development workflow with several tools to ensure code quality:
+Comprehendo uses a modern development workflow with several tools to ensure code quality:
 
 ```bash
 # Format code using Prettier
