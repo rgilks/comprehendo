@@ -1,6 +1,6 @@
 # Dependency Migration Plan
 
-This document tracks the migration of Comprehend to newer versions of its core dependencies.
+This document tracks the migration of Comprehendo to newer versions of its core dependencies.
 
 ## Initial State (March 28, 2025)
 
