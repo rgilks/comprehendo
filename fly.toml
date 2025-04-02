@@ -1,5 +1,5 @@
-app = "comprehend"     # Note sure why we can't use the name "comprehendo"
-primary_region = "lhr" # London - changed from Silicon Valley
+app = "comprehendo"
+primary_region = "lhr"
 
 [build]
 
