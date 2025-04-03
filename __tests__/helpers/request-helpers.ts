@@ -11,6 +11,8 @@ export interface TestPromptOptions {
   seed?: number;
   ip?: string;
   headers?: Record<string, string>;
+  passageLanguage?: string;
+  questionLanguage?: string;
 }
 
 /**
@@ -23,7 +25,14 @@ export const defaultPrompt =
  * Create a chat API request for testing
  */
 export const createChatRequest = (options: TestPromptOptions = {}) => {
-  const { prompt = defaultPrompt, seed = 42, ip = '127.0.0.1', headers = {} } = options;
+  const {
+    prompt = defaultPrompt,
+    seed = 42,
+    ip = '127.0.0.1',
+    headers = {},
+    passageLanguage = 'English',
+    questionLanguage = 'English',
+  } = options;
 
   const requestHeaders = {
     'x-forwarded-for': ip,
@@ -37,6 +46,8 @@ export const createChatRequest = (options: TestPromptOptions = {}) => {
     body: JSON.stringify({
       prompt,
       seed,
+      passageLanguage,
+      questionLanguage,
     }),
   });
 };

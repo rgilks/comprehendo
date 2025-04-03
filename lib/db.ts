@@ -102,6 +102,33 @@ try {
     console.error('[DB] Error checking or adding column:', error);
   }
 
+  // Check if question_language column exists in generated_content and add it if missing
+  try {
+    interface ColumnInfo {
+      cid: number;
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }
+
+    const columns = db.prepare('PRAGMA table_info(generated_content)').all() as ColumnInfo[];
+
+    const hasQuestionLangColumn = columns.some((column) => column.name === 'question_language');
+
+    if (!hasQuestionLangColumn) {
+      console.log('[DB] Adding question_language column to generated_content table');
+      db.exec(`
+        ALTER TABLE generated_content 
+        ADD COLUMN question_language TEXT
+      `);
+      console.log('[DB] Column added successfully');
+    }
+  } catch (error) {
+    console.error('[DB] Error checking or adding question_language column:', error);
+  }
+
   console.log('[DB] Schema initialization complete');
 
   // Create a proxy to intercept and log database operations
