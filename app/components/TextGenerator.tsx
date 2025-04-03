@@ -72,6 +72,28 @@ const LANGUAGES: Record<Language, string> = {
   German: 'Deutsch',
 };
 
+// Skeleton Loader Component
+const QuizSkeleton = () => (
+  <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg animate-pulse">
+    <div className="h-4 bg-gray-700 rounded w-3/4 mb-4"></div> {/* Title Placeholder */}
+    <div className="space-y-3 mb-6">
+      <div className="h-3 bg-gray-700 rounded w-full"></div>
+      <div className="h-3 bg-gray-700 rounded w-full"></div>
+      <div className="h-3 bg-gray-700 rounded w-5/6"></div>
+      <div className="h-3 bg-gray-700 rounded w-4/6"></div>
+    </div>{' '}
+    {/* Paragraph Placeholder */}
+    <div className="h-4 bg-gray-700 rounded w-1/2 mb-4"></div> {/* Question Placeholder */}
+    <div className="space-y-2">
+      <div className="h-10 bg-gray-700 rounded w-full"></div>
+      <div className="h-10 bg-gray-700 rounded w-full"></div>
+      <div className="h-10 bg-gray-700 rounded w-full"></div>
+      <div className="h-10 bg-gray-700 rounded w-full"></div>
+    </div>{' '}
+    {/* Options Placeholder */}
+  </div>
+);
+
 export default function TextGenerator() {
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
   const [language, setLanguage] = useState<Language>('English');
@@ -198,21 +220,12 @@ export default function TextGenerator() {
   };
 
   const handleAnswerSelect = (answer: string) => {
+    // Prevent changing answer after it's already been processed
+    if (isAnswered) return;
+
     setSelectedAnswer(answer);
-  };
-
-  const checkAnswer = () => {
-    if (selectedAnswer) {
-      setIsAnswered(true);
-      setShowExplanation(true);
-    }
-  };
-
-  const resetQuiz = () => {
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setHighlightedParagraph(quizData?.paragraph ?? null); // Reset to original paragraph
-    setShowExplanation(false);
+    setIsAnswered(true);
+    setShowExplanation(true);
   };
 
   const generateNewQuiz = () => {
@@ -369,11 +382,7 @@ export default function TextGenerator() {
         </div>
       )}
 
-      {loading && !quizData && (
-        <div className="flex justify-center items-center h-64">
-          <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-        </div>
-      )}
+      {loading && !quizData && <QuizSkeleton />}
 
       {quizData && (
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
@@ -463,23 +472,17 @@ export default function TextGenerator() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-between items-center">
-            <button
-              onClick={isAnswered ? generateNewQuiz : checkAnswer}
-              disabled={!selectedAnswer && !isAnswered}
-              className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
-            >
-              {isAnswered ? 'Next Quiz' : 'Check Answer'}
-            </button>
-            {isAnswered && (
+          {isAnswered && (
+            <div className="mt-6 flex justify-end items-center">
               <button
-                onClick={resetQuiz}
-                className="px-4 py-2 bg-gray-600 text-gray-200 rounded hover:bg-gray-500 transition-colors text-sm"
+                onClick={generateNewQuiz}
+                disabled={loading}
+                className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
               >
-                Try Again
+                Next Quiz
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {showExplanation && (
             <div className="mt-6 pt-4 border-t border-gray-700">
