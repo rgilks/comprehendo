@@ -96,7 +96,8 @@ const QuizSkeleton = () => (
 
 export default function TextGenerator() {
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
-  const [language, setLanguage] = useState<Language>('English');
+  const [passageLanguage, setPassageLanguage] = useState<Language>('English');
+  const [questionLanguage, setQuestionLanguage] = useState<Language>('English');
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,8 +160,10 @@ export default function TextGenerator() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `Generate a reading comprehension paragraph in ${language} with multiple choice questions in English for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
+          prompt: `Generate a reading comprehension paragraph in ${passageLanguage} and the corresponding multiple choice question, options, and explanations ONLY in ${questionLanguage} for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
           seed: seed,
+          passageLanguage: passageLanguage,
+          questionLanguage: questionLanguage,
         }),
       });
 
@@ -307,10 +310,45 @@ export default function TextGenerator() {
               {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
                 <button
                   key={lang}
-                  onClick={() => setLanguage(lang)}
+                  onClick={() => setPassageLanguage(lang)}
                   className={`px-3 py-2 text-sm rounded transition-colors ${
-                    language === lang
+                    passageLanguage === lang
                       ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
+                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                  }`}
+                >
+                  {LANGUAGES[lang]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">
+              <span className="flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-1 text-purple-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10c0 3.866-3.582 7-8 7a8.74 8.74 0 01-4.145-.993L.5 19.5l1.846-4.309A7.984 7.984 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zm-8-5c-3.309 0-6 2.239-6 5s2.691 5 6 5 6-2.239 6-5-2.691-5-6-5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Question & Options Language:
+              </span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setQuestionLanguage(lang)}
+                  className={`px-3 py-2 text-sm rounded transition-colors ${
+                    questionLanguage === lang
+                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
                       : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
                   }`}
                 >
@@ -365,7 +403,7 @@ export default function TextGenerator() {
                     clipRule="evenodd"
                   />
                 </svg>
-                Generate New Text
+                Next Question
               </div>
             )}
           </button>
@@ -396,14 +434,17 @@ export default function TextGenerator() {
               >
                 <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
               </svg>
-              Reading Passage {language !== 'English' && `(${LANGUAGES[language]})`}
+              Reading Passage {passageLanguage !== 'English' && `(${LANGUAGES[passageLanguage]})`}
             </h2>
             <div className="flex space-x-2">
               <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
                 {cefrLevel}
               </span>
               <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
-                {LANGUAGES[language]}
+                P: {LANGUAGES[passageLanguage]}
+              </span>
+              <span className="text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white px-2 py-1 rounded-full shadow-sm">
+                Q: {LANGUAGES[questionLanguage]}
               </span>
             </div>
           </div>

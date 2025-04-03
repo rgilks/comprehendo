@@ -39,8 +39,10 @@ interface GeneratedContentRow {
 
 // Define Zod schema for the request body
 const chatRequestBodySchema = z.object({
-  prompt: z.string().min(1, { message: 'Prompt is required' }), // Ensure prompt is a non-empty string
-  seed: z.number().optional(), // seed is optional
+  prompt: z.string().min(1, { message: 'Prompt is required' }),
+  seed: z.number().optional(),
+  passageLanguage: z.string(),
+  questionLanguage: z.string(),
 });
 
 // Define a type for the successful OpenAI completion structure we expect
@@ -189,38 +191,40 @@ export async function POST(request: Request) {
     }
 
     // Use the validated data
-    const { prompt, seed } = parsedBody.data;
+    const { prompt, seed, passageLanguage, questionLanguage } = parsedBody.data;
 
-    // Log the received prompt safely (already validated as string)
+    // Log the received prompt safely
     console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
+    // Log received languages
+    console.log(
+      `[API] Passage Language: ${passageLanguage}, Question Language: ${questionLanguage}`
+    );
 
-    // prompt is known to be a string here, safe to use .match
+    // Extract CEFR level from the prompt (assuming it's still reliable)
     const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
-    const languageMatch = prompt.match(/paragraph in ([A-Za-z]+)/);
+    const cefrLevel = cefrLevelMatch?.[1] ?? 'unknown';
+    console.log(`[API] Extracted level: ${cefrLevel}`);
 
-    // cefrLevelMatch and languageMatch are RegExpMatchArray | null, accessing [1] is potentially unsafe
-    const cefrLevel = cefrLevelMatch?.[1] ?? 'unknown'; // Use optional chaining and nullish coalescing
-    const language = languageMatch?.[1] ?? 'unknown'; // Use optional chaining and nullish coalescing
-    console.log(`[API] Extracted language: ${language}, level: ${cefrLevel}`);
-
-    // Create a cache key from the CEFR level, language, and seed for better variety
-    const seedValue = typeof seed === 'number' ? seed : 0; // Ensure seed is a number
-    const cacheKey = `${language}-${cefrLevel}-${seedValue}`;
+    // Create a cache key including both languages, level, and seed
+    const seedValue = typeof seed === 'number' ? seed : 0;
+    const cacheKey = `${passageLanguage}-${questionLanguage}-${cefrLevel}-${seedValue}`;
     console.log(`[API] Checking cache for key: ${cacheKey}`);
 
-    // Check cache in database
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    // Check cache in database, now including question_language
     const resultFromDb: unknown = db
       .prepare(
         `
-      SELECT content, created_at FROM generated_content 
-      WHERE language = ? AND level = ? AND id % 100 = ?
+      SELECT content, created_at FROM generated_content \
+      WHERE language = ? \
+        AND question_language = ? \
+        AND level = ? \
+        AND id % 100 = ?\
       ORDER BY created_at DESC LIMIT 1
     `
       )
-      .get(language, cefrLevel, seedValue % 100);
+      .get(passageLanguage, questionLanguage, cefrLevel, seedValue % 100);
 
-    let cachedContent: GeneratedContentRow | undefined = undefined; // Initialize
+    let cachedContent: GeneratedContentRow | undefined = undefined;
 
     // Type guard for the database result
     if (
@@ -274,8 +278,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content:
-              'You are a helpful language tutor for a reading comprehension game. Create content based on the language and CEFR level specified in the user prompt.\n\nThe user will specify a language (like English, Italian, Spanish, etc.) and a CEFR level (A1-C2).\n\nFollow these guidelines for different CEFR levels:\n- A1 (Beginner): Use very simple vocabulary, basic grammar, and short sentences (3-5 words). Focus on concrete, everyday topics like food, animals, or daily routines.\n- A2 (Elementary): Use simple vocabulary, basic grammar with some complexity, short paragraphs. Familiar topics with some detail.\n- B1 (Intermediate): Use intermediate vocabulary, standard grammar, clear paragraphs. Wider range of topics.\n- B2 (Upper Intermediate): Use varied vocabulary, more complex grammar, longer paragraphs. Abstract topics and detailed discussions.\n- C1 (Advanced): Use advanced vocabulary, complex grammar structures, sophisticated paragraphs. Academic and specialized topics.\n- C2 (Proficiency): Use sophisticated vocabulary, masterful grammar, nuanced paragraphs. Any topic with precision and cultural references.\n\nIMPORTANT FORMATTING INSTRUCTIONS:\n1. Generate the paragraph in the language requested by the user (e.g., Italian, Spanish, etc.)\n2. Generate the question and all answers in ENGLISH, regardless of the paragraph language\n\nCreate direct, clear comprehension questions that:\n- Have one unmistakably correct answer that comes directly from the text\n- Test simple comprehension rather than inference or interpretation\n- Focus on key details from the paragraph\n- Have plausible but clearly incorrect distractors\n\nCreate content in the following format ONLY:\n\n1. A paragraph in the requested language on an interesting topic appropriate for the requested CEFR level\n2. A multiple choice question IN ENGLISH that tests direct comprehension of the paragraph\n3. Four possible answers IN ENGLISH labeled A, B, C, and D\n4. The correct answer letter\n5. A short topic description for image generation (3-5 words in English)\n6. For each option, provide a brief explanation IN ENGLISH of why it is correct or incorrect\n7. Include the exact text from the paragraph (a quote in the original language) that supports the correct answer\n\nFormat your response exactly like this (including the JSON format):\n```json\n{\n  "paragraph": "your paragraph text here in the requested language",\n  "question": "your question about the paragraph here IN ENGLISH",\n  "options": {\n    "A": "first option IN ENGLISH",\n    "B": "second option IN ENGLISH",\n    "C": "third option IN ENGLISH",\n    "D": "fourth option IN ENGLISH"\n  },\n  "explanations": {\n    "A": "Explanation of why A is correct/incorrect IN ENGLISH",\n    "B": "Explanation of why B is correct/incorrect IN ENGLISH",\n    "C": "Explanation of why C is correct/incorrect IN ENGLISH",\n    "D": "Explanation of why D is correct/incorrect IN ENGLISH"\n  },\n  "correctAnswer": "B",\n  "relevantText": "Exact quote from the paragraph that supports the correct answer in the original language",\n  "topic": "brief topic for image IN ENGLISH"\n}\n```\n\nEXAMPLES:\n\nExample for Italian (B1 level):\n```json\n{\n  "paragraph": "Milano è una città famosa per la moda e il design. Ogni anno, migliaia di visitatori vengono per vedere le nuove collezioni. Il Duomo è il monumento più conosciuto della città. La gente può salire sul tetto per ammirare il panorama.",\n  "question": "Why do thousands of visitors come to Milan every year?",\n  "options": {\n    "A": "To visit the Duomo cathedral",\n    "B": "To see new fashion collections",\n    "C": "To admire the view from rooftops",\n    "D": "To study design at universities"\n  },\n  "explanations": {\n    "A": "Incorrect. While the Duomo is mentioned as the most famous monument, it\'s not stated as the reason thousands visit.",\n    "B": "Correct. The paragraph states that thousands of visitors come to see the new collections.",\n    "C": "Incorrect. While people can climb the Duomo to see the view, this is not mentioned as why thousands visit annually.",\n    "D": "Incorrect. Universities are not mentioned in the paragraph."\n  },\n  "correctAnswer": "B",\n  "relevantText": "Ogni anno, migliaia di visitatori vengono per vedere le nuove collezioni.",\n  "topic": "Milan fashion"\n}\n```\n\nVary the topics and ensure the correct answer isn\'t always the same letter. Make the question challenging but clearly answerable from the paragraph. Keep language appropriate for the specified CEFR level.',
+            content: `You are a helpful language tutor for a reading comprehension game. Create content based on the CEFR level and the TWO languages specified in the user prompt.\\n\\nFollow these guidelines for different CEFR levels:\\n- A1 (Beginner): Use very simple vocabulary, basic grammar, and short sentences (3-5 words). Focus on concrete, everyday topics like food, animals, or daily routines.\\n- A2 (Elementary): Use simple vocabulary, basic grammar with some complexity, short paragraphs. Familiar topics with some detail.\\n- B1 (Intermediate): Use intermediate vocabulary, standard grammar, clear paragraphs. Wider range of topics.\\n- B2 (Upper Intermediate): Use varied vocabulary, more complex grammar, longer paragraphs. Abstract topics and detailed discussions.\\n- C1 (Advanced): Use advanced vocabulary, complex grammar structures, sophisticated paragraphs. Academic and specialized topics.\\n- C2 (Proficiency): Use sophisticated vocabulary, masterful grammar, nuanced paragraphs. Any topic with precision and cultural references.\\n\\nIMPORTANT FORMATTING INSTRUCTIONS:\\n1. Generate the reading PARAGRAPH ONLY in the FIRST language specified (e.g., Italian, Spanish, etc.).\\n2. Generate the QUESTION, OPTIONS, and EXPLANATIONS ONLY in the SECOND language specified.\\n\\nCreate direct, clear comprehension questions that:\\n- Have one unmistakably correct answer that comes directly from the text\\n- Test simple comprehension rather than inference or interpretation\\n- Focus on key details from the paragraph\\n- Have plausible but clearly incorrect distractors\\n\\nCreate content in the following format ONLY:\\n\\n1. A paragraph in the requested FIRST language on an interesting topic appropriate for the requested CEFR level\\n2. A multiple choice question in the requested SECOND language that tests direct comprehension of the paragraph\\n3. Four possible answers in the requested SECOND language labeled A, B, C, and D\\n4. The correct answer letter\\n5. A short topic description for image generation (3-5 words in English, regardless of other languages)\\n6. For each option, provide a brief explanation in the requested SECOND language of why it is correct or incorrect\\n7. Include the exact text from the paragraph (a quote in the original FIRST language) that supports the correct answer\\n\\nFormat your response exactly like this (including the JSON format). Ensure the entire response is a single, valid JSON object. Use ONLY double quotes for all strings and property names. Escape any double quotes that appear inside string values with a backslash (\\\").\\n\\\`\\\`\\\`json\\n{\\n  \"paragraph\": \"your paragraph text here in the requested FIRST language\",\\n  \"question\": \"your question about the paragraph here IN THE SECOND language\",\\n  \"options\": {\\n    \"A\": \"first option IN THE SECOND language\",\\n    \"B\": \"second option IN THE SECOND language\",\\n    \"C\": \"third option IN THE SECOND language\",\\n    \"D\": \"fourth option IN THE SECOND language\"\\n  },\\n  \"explanations\": {\\n    \"A\": \"Explanation of why A is correct/incorrect IN THE SECOND language\",\\n    \"B\": \"Explanation of why B is correct/incorrect IN THE SECOND language\",\\n    \"C\": \"Explanation of why C is correct/incorrect IN THE SECOND language\",\\n    \"D\": \"Explanation of why D is correct/incorrect IN THE SECOND language\"\\n  },\\n  \"correctAnswer\": \"B\",\\n  \"relevantText\": \"Exact quote from the paragraph that supports the correct answer in the original FIRST language\",\\n  \"topic\": \"brief topic for image IN ENGLISH\"\\n}\\n\\\`\\\`\\\`\\n\\nVary the topics and ensure the correct answer isn\\\'t always the same letter. Make the question challenging but clearly answerable from the paragraph. Keep language appropriate for the specified CEFR level.`,
           },
           {
             role: 'user',
@@ -299,60 +302,7 @@ export async function POST(request: Request) {
       const googleAI = getGoogleAIClient();
       const model = googleAI.getGenerativeModel({ model: activeModel.name });
 
-      const systemPrompt = `You are a helpful language tutor for a reading comprehension game. Create content based on the language and CEFR level specified in the user prompt.
-
-The user will specify a language (like English, Italian, Spanish, etc.) and a CEFR level (A1-C2).
-
-Follow these guidelines for different CEFR levels:
-- A1 (Beginner): Use very simple vocabulary, basic grammar, and short sentences (3-5 words). Focus on concrete, everyday topics like food, animals, or daily routines.
-- A2 (Elementary): Use simple vocabulary, basic grammar with some complexity, short paragraphs. Familiar topics with some detail.
-- B1 (Intermediate): Use intermediate vocabulary, standard grammar, clear paragraphs. Wider range of topics.
-- B2 (Upper Intermediate): Use varied vocabulary, more complex grammar, longer paragraphs. Abstract topics and detailed discussions.
-- C1 (Advanced): Use advanced vocabulary, complex grammar structures, sophisticated paragraphs. Academic and specialized topics.
-- C2 (Proficiency): Use sophisticated vocabulary, masterful grammar, nuanced paragraphs. Any topic with precision and cultural references.
-
-IMPORTANT FORMATTING INSTRUCTIONS:
-1. Generate the paragraph in the language requested by the user (e.g., Italian, Spanish, etc.)
-2. Generate the question and all answers in ENGLISH, regardless of the paragraph language
-
-Create direct, clear comprehension questions that:
-- Have one unmistakably correct answer that comes directly from the text
-- Test simple comprehension rather than inference or interpretation
-- Focus on key details from the paragraph
-- Have plausible but clearly incorrect distractors
-
-Create content in the following format ONLY:
-
-1. A paragraph in the requested language on an interesting topic appropriate for the requested CEFR level
-2. A multiple choice question IN ENGLISH that tests direct comprehension of the paragraph
-3. Four possible answers IN ENGLISH labeled A, B, C, and D
-4. The correct answer letter
-5. A short topic description for image generation (3-5 words in English)
-6. For each option, provide a brief explanation IN ENGLISH of why it is correct or incorrect
-7. Include the exact text from the paragraph (a quote in the original language) that supports the correct answer
-
-Format your response exactly like this (including the JSON format):
-\`\`\`json
-{
-  "paragraph": "your paragraph text here in the requested language",
-  "question": "your question about the paragraph here IN ENGLISH",
-  "options": {
-    "A": "first option IN ENGLISH",
-    "B": "second option IN ENGLISH",
-    "C": "third option IN ENGLISH",
-    "D": "fourth option IN ENGLISH"
-  },
-  "explanations": {
-    "A": "Explanation of why A is correct/incorrect IN ENGLISH",
-    "B": "Explanation of why B is correct/incorrect IN ENGLISH",
-    "C": "Explanation of why C is correct/incorrect IN ENGLISH",
-    "D": "Explanation of why D is correct/incorrect IN ENGLISH"
-  },
-  "correctAnswer": "B",
-  "relevantText": "Exact quote from the paragraph that supports the correct answer in the original language",
-  "topic": "brief topic for image IN ENGLISH"
-}
-\`\`\``;
+      const systemPrompt = `You are a helpful language tutor for a reading comprehension game. Create content based on the CEFR level and the TWO languages specified in the user prompt.\\n\\nFollow these guidelines for different CEFR levels:\\n- A1 (Beginner): Use very simple vocabulary, basic grammar, and short sentences (3-5 words). Focus on concrete, everyday topics like food, animals, or daily routines.\\n- A2 (Elementary): Use simple vocabulary, basic grammar with some complexity, short paragraphs. Familiar topics with some detail.\\n- B1 (Intermediate): Use intermediate vocabulary, standard grammar, clear paragraphs. Wider range of topics.\\n- B2 (Upper Intermediate): Use varied vocabulary, more complex grammar, longer paragraphs. Abstract topics and detailed discussions.\\n- C1 (Advanced): Use advanced vocabulary, complex grammar structures, sophisticated paragraphs. Academic and specialized topics.\\n- C2 (Proficiency): Use sophisticated vocabulary, masterful grammar, nuanced paragraphs. Any topic with precision and cultural references.\\n\\nIMPORTANT FORMATTING INSTRUCTIONS:\\n1. Generate the reading PARAGRAPH ONLY in the FIRST language specified (e.g., Italian, Spanish, etc.).\\n2. Generate the QUESTION, OPTIONS, and EXPLANATIONS ONLY in the SECOND language specified.\\n\\nCreate direct, clear comprehension questions that:\\n- Have one unmistakably correct answer that comes directly from the text\\n- Test simple comprehension rather than inference or interpretation\\n- Focus on key details from the paragraph\\n- Have plausible but clearly incorrect distractors\\n\\nCreate content in the following format ONLY:\\n\\n1. A paragraph in the requested FIRST language on an interesting topic appropriate for the requested CEFR level\\n2. A multiple choice question in the requested SECOND language that tests direct comprehension of the paragraph\\n3. Four possible answers in the requested SECOND language labeled A, B, C, and D\\n4. The correct answer letter\\n5. A short topic description for image generation (3-5 words in English, regardless of other languages)\\n6. For each option, provide a brief explanation in the requested SECOND language of why it is correct or incorrect\\n7. Include the exact text from the paragraph (a quote in the original FIRST language) that supports the correct answer\\n\\nFormat your response exactly like this (including the JSON format). Ensure the entire response is a single, valid JSON object. Use ONLY double quotes for all strings and property names. Escape any double quotes that appear inside string values with a backslash (\\\").\\n\\\`\\\`\\\`json\\n{\\n  \"paragraph\": \"your paragraph text here in the requested FIRST language\",\\n  \"question\": \"your question about the paragraph here IN THE SECOND language\",\\n  \"options\": {\\n    \"A\": \"first option IN THE SECOND language\",\\n    \"B\": \"second option IN THE SECOND language\",\\n    \"C\": \"third option IN THE SECOND language\",\\n    \"D\": \"fourth option IN THE SECOND language\"\\n  },\\n  \"explanations\": {\\n    \"A\": \"Explanation of why A is correct/incorrect IN THE SECOND language\",\\n    \"B\": \"Explanation of why B is correct/incorrect IN THE SECOND language\",\\n    \"C\": \"Explanation of why C is correct/incorrect IN THE SECOND language\",\\n    \"D\": \"Explanation of why D is correct/incorrect IN THE SECOND language\"\\n  },\\n  \"correctAnswer\": \"B\",\\n  \"relevantText\": \"Exact quote from the paragraph that supports the correct answer in the original FIRST language\",\\n  \"topic\": \"brief topic for image IN ENGLISH\"\\n}\\n\\\`\\\`\\\`\\n\\nVary the topics and ensure the correct answer isn\\\'t always the same letter. Make the question challenging but clearly answerable from the paragraph. Keep language appropriate for the specified CEFR level.`;
 
       const googleResponse: GoogleAIContentResponse = await model.generateContent(
         systemPrompt + '\n\n' + prompt
@@ -375,10 +325,12 @@ Format your response exactly like this (including the JSON format):
     // Parse the result JSON to extract questions and other details
     let parsedContent: Record<string, unknown> = {}; // Use a broader type initially
     try {
-      // Clean the result string if necessary (remove potential markdown backticks)
-      const cleanedResult = result.replace(/^```json\n|\n```$/g, '');
+      // More robustly find JSON within potential markdown fences
+      const jsonMatch = result.match(/```(?:json)?([\s\S]*?)```/);
+      const jsonString = jsonMatch ? jsonMatch[1].trim() : result.trim(); // Extract or use original
+
       // Provide type safety for JSON.parse result
-      const parsedJson: unknown = JSON.parse(cleanedResult);
+      const parsedJson: unknown = JSON.parse(jsonString); // Parse the extracted/trimmed string
       // Check if it's an object before assigning
       if (typeof parsedJson === 'object' && parsedJson !== null) {
         parsedContent = parsedJson as Record<string, unknown>; // Cast after check
@@ -404,7 +356,7 @@ Format your response exactly like this (including the JSON format):
 
     // Store the result and the structured questions in the database
     console.log(
-      `[API] Storing generated content in database for language: ${language}, level: ${cefrLevel}`
+      `[API] Storing generated content in database for passage: ${passageLanguage}, question: ${questionLanguage}, level: ${cefrLevel}`
     );
     console.log('[API] Preparing to insert generated_content...');
 
@@ -413,11 +365,17 @@ Format your response exactly like this (including the JSON format):
       const insertContentInfo = db
         .prepare(
           `
-          INSERT INTO generated_content (language, level, content, questions, created_at)
-          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+          INSERT INTO generated_content (language, question_language, level, content, questions, created_at)
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         `
         )
-        .run(language, cefrLevel, result, JSON.stringify(questionsData));
+        .run(
+          passageLanguage, // language column now stores passage language
+          questionLanguage, // new question_language column
+          cefrLevel,
+          result,
+          JSON.stringify(questionsData)
+        );
 
       console.log(
         `[API] DB Insert Result (generated_content): changes=${insertContentInfo.changes}, lastInsertRowid=${insertContentInfo.lastInsertRowid}`
@@ -437,7 +395,7 @@ Format your response exactly like this (including the JSON format):
 
     // Track usage statistics with user ID when available
     console.log(
-      `[API] Recording usage statistics for language: ${language}, level: ${cefrLevel}${
+      `[API] Recording usage statistics for passage: ${passageLanguage}, question: ${questionLanguage}, level: ${cefrLevel}${
         userId ? ', user: ' + userId : ''
       }`
     );
@@ -445,7 +403,7 @@ Format your response exactly like this (including the JSON format):
     if (contentInsertSuccessful) {
       // Optionally, only try inserting stats if content insert seemed okay
       console.log(
-        `[API] Recording usage statistics for language: ${language}, level: ${cefrLevel}${userId ? ', user: ' + userId : ''}`
+        `[API] Recording usage statistics for passage: ${passageLanguage}, question: ${questionLanguage}, level: ${cefrLevel}${userId ? ', user: ' + userId : ''}`
       );
 
       try {
@@ -457,7 +415,7 @@ Format your response exactly like this (including the JSON format):
             VALUES (?, ?, ?, ?)
           `
           )
-          .run(ip, userId, language, cefrLevel);
+          .run(ip, userId, passageLanguage, cefrLevel);
         console.log(
           `[API] DB Insert Result (usage_stats with user_id): changes=${insertStatsInfo1.changes}, lastInsertRowid=${insertStatsInfo1.lastInsertRowid}`
         );
@@ -477,7 +435,7 @@ Format your response exactly like this (including the JSON format):
               VALUES (?, ?, ?)
             `
             )
-            .run(ip, language, cefrLevel);
+            .run(ip, passageLanguage, cefrLevel);
           console.log(
             `[API] DB Insert Result (usage_stats fallback): changes=${insertStatsInfo2.changes}, lastInsertRowid=${insertStatsInfo2.lastInsertRowid}`
           );
