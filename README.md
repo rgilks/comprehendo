@@ -17,6 +17,8 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Interactive Quiz Format**: Answer multiple-choice questions and receive immediate feedback
 - **Detailed Explanations**: Learn why answers are correct or incorrect with thorough explanations
 - **Text Highlighting**: See the relevant portion of text highlighted after answering
+- **Word Translation**: Hover over any word to see its translation in English
+- **Text-to-Speech**: Listen to passages and individual words with adjustable volume
 - **User Authentication**: Secure login via GitHub and Google OAuth
 - **Data Persistence**: Store user preferences and usage statistics in SQLite
 - **Responsive Design**: Optimized for both desktop and mobile devices
