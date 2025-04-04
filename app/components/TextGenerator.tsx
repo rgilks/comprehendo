@@ -184,6 +184,12 @@ export default function TextGenerator() {
   const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null); // Store language at generation time
   const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null); // Store question language at generation time
 
+  // --- Question Delay State ---
+  const QUESTION_DELAY_MS = 20000; // 20 seconds
+  const [showQuestionSection, setShowQuestionSection] = useState<boolean>(false);
+  const questionDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // --- End Question Delay State ---
+
   // Check for Speech Synthesis support on mount
   useEffect(() => {
     setIsSpeechSupported(
@@ -285,15 +291,6 @@ export default function TextGenerator() {
   }, [stopPassageSpeech]);
   // --- End NEW Passage Speech Controls ---
 
-  useEffect(() => {
-    // Initial text generation
-    generateText().catch((error) => {
-      console.error('Error during initial text generation:', error);
-      setError('Failed to load initial content.');
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
-
   const highlightRelevantText = useCallback(() => {
     if (quizData && isAnswered && selectedAnswer === quizData.correctAnswer) {
       try {
@@ -332,6 +329,14 @@ export default function TextGenerator() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizData]); // Keep dependency on quizData
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup question delay timer
+      if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
+    };
+  }, []);
 
   // --- Function to render paragraph with click-to-speak words ---
   const renderParagraphWithWordHover = useCallback(
@@ -395,6 +400,10 @@ export default function TextGenerator() {
     setShowExplanation(false);
     setQuizData(null);
 
+    // Clear existing question delay timer and hide section
+    if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
+    setShowQuestionSection(false); // Hide question section immediately
+
     try {
       const seed = Math.floor(Math.random() * 100);
       const responseResult: unknown = await fetch('/api/chat', {
@@ -453,6 +462,14 @@ export default function TextGenerator() {
         setHighlightedParagraph(parsedQuizData.data.paragraph); // Set initial paragraph
         setGeneratedPassageLanguage(passageLanguage); // STORE the languages used for this generation
         setGeneratedQuestionLanguage(questionLanguage);
+
+        // --- START QUESTION DELAY TIMER ---
+        // Ensure the previous timer is cleared before starting a new one
+        if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
+        questionDelayTimeoutRef.current = setTimeout(() => {
+          setShowQuestionSection(true);
+        }, QUESTION_DELAY_MS);
+        // --- END QUESTION DELAY TIMER ---
       } catch (parseErr) {
         console.error('Error parsing JSON string:', parseErr);
         setError('Failed to parse the generated quiz content. Please try again.');
@@ -474,7 +491,7 @@ export default function TextGenerator() {
   };
 
   const handleAnswerSelect = (answer: string) => {
-    // Prevent changing answer after it's already been processed
+    // Allow selecting even if cooldown is active, but don't allow changing selection
     if (isAnswered) return;
 
     setSelectedAnswer(answer);
@@ -483,8 +500,14 @@ export default function TextGenerator() {
   };
 
   const generateNewQuiz = () => {
+    // Check conditions *before* stopping speech or calling generateText
+    if (loading || (quizData !== null && !isAnswered)) {
+      console.log('Cannot generate new quiz while loading or previous question is unanswered.');
+      return;
+    }
     // Stop speech before generating new quiz
     stopPassageSpeech();
+    // Proceed with generation
     generateText().catch((error) => {
       console.error('Error explicitly caught from generateNewQuiz:', error);
     });
@@ -552,7 +575,7 @@ export default function TextGenerator() {
                 >
                   <path
                     fillRule="evenodd"
-                    d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z"
+                    d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.572-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z"
                     clipRule="evenodd"
                   />
                 </svg>
@@ -610,56 +633,6 @@ export default function TextGenerator() {
               ))}
             </div>
           </div>
-
-          <button
-            onClick={() => {
-              void generateText();
-            }}
-            disabled={loading}
-            className="px-5 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:via-indigo-600 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed w-full font-medium transition-all transform hover:scale-[1.02] flex items-center justify-center shadow-lg"
-          >
-            {loading ? (
-              <div className="flex items-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Generating...
-              </div>
-            ) : (
-              <div className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-2"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Next Question
-              </div>
-            )}
-          </button>
         </div>
       </div>
 
@@ -748,118 +721,180 @@ export default function TextGenerator() {
             </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-md font-semibold mb-3 text-white">{quizData.question}</h3>
-            <div className="space-y-2">
-              {(Object.keys(quizData.options) as Array<keyof typeof quizData.options>).map(
-                (key) => (
-                  <button
-                    key={key}
-                    onClick={() => handleAnswerSelect(key)}
-                    disabled={isAnswered}
-                    className={`w-full text-left px-4 py-3 rounded transition-colors disabled:cursor-not-allowed flex items-center ${
-                      isAnswered
-                        ? key === quizData.correctAnswer
-                          ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
-                          : key === selectedAnswer
-                            ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
-                            : 'bg-gray-700 border border-gray-600 text-gray-400'
-                        : selectedAnswer === key
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
-                          : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                    }`}
-                  >
-                    <span className="font-semibold mr-2">{key}.</span>
-                    <span>{quizData.options[key]}</span>
-                    {isAnswered && key === quizData.correctAnswer && (
-                      <svg
-                        className="w-5 h-5 text-green-300 ml-auto"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                    {isAnswered && key !== quizData.correctAnswer && key === selectedAnswer && (
-                      <svg
-                        className="w-5 h-5 text-red-300 ml-auto"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          {isAnswered && (
-            <div className="mt-6 flex justify-end items-center">
-              <button
-                onClick={generateNewQuiz}
-                disabled={loading}
-                className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
-              >
-                Next Quiz
-              </button>
+          {/* Indicator shown during question delay */}
+          {quizData && !showQuestionSection && (
+            <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
+              Question will appear shortly...
             </div>
           )}
 
-          {showExplanation && (
-            <div className="mt-6 pt-4 border-t border-gray-700">
-              <h4 className="text-md font-semibold mb-3 text-white">Explanations</h4>
-              <div className="space-y-3">
-                {(
-                  Object.keys(quizData.explanations) as Array<keyof typeof quizData.explanations>
-                ).map((key) => (
-                  <div
-                    key={key}
-                    className={`p-3 rounded border ${
-                      key === quizData.correctAnswer
-                        ? 'bg-green-900 border-green-700'
-                        : key === selectedAnswer
-                          ? 'bg-red-900 border-red-700'
-                          : 'bg-gray-750 border-gray-600'
-                    }`}
-                  >
-                    <p className="text-sm text-gray-200">
-                      <strong
-                        className={`font-semibold ${
-                          key === quizData.correctAnswer
-                            ? 'text-green-300'
-                            : key === selectedAnswer
-                              ? 'text-red-300'
-                              : 'text-gray-300'
+          {/* --- Conditionally Rendered Question/Options/Explanation Block --- */}
+          {showQuestionSection && (
+            <>
+              <div className="mb-6">
+                <h3 className="text-md font-semibold mb-3 text-white">{quizData.question}</h3>
+                <div className="space-y-2">
+                  {(Object.keys(quizData.options) as Array<keyof typeof quizData.options>).map(
+                    (key) => (
+                      <button
+                        key={key}
+                        onClick={() => handleAnswerSelect(key)}
+                        disabled={isAnswered}
+                        className={`w-full text-left px-4 py-3 rounded transition-colors disabled:cursor-not-allowed flex items-center ${
+                          isAnswered
+                            ? key === quizData.correctAnswer
+                              ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
+                              : key === selectedAnswer
+                                ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
+                                : 'bg-gray-700 border border-gray-600 text-gray-400'
+                            : selectedAnswer === key
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
+                              : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
                         }`}
                       >
-                        {key}. {quizData.options[key]}:
-                      </strong>
-                      <span className="ml-1">{quizData.explanations[key]}</span>
-                    </p>
-                    {key === quizData.correctAnswer && quizData.relevantText && (
-                      <p className="text-xs text-gray-400 mt-1 italic">
-                        Supporting text: &quot;{quizData.relevantText}&quot;
-                      </p>
-                    )}
-                  </div>
-                ))}
+                        <span className="font-semibold mr-2">{key}.</span>
+                        <span>{quizData.options[key]}</span>
+                        {isAnswered && key === quizData.correctAnswer && (
+                          <svg
+                            className="w-5 h-5 text-green-300 ml-auto"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                        {isAnswered && key !== quizData.correctAnswer && key === selectedAnswer && (
+                          <svg
+                            className="w-5 h-5 text-red-300 ml-auto"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
+
+              {showExplanation && (
+                <div className="mt-6 pt-4 border-t border-gray-700">
+                  <h4 className="text-md font-semibold mb-3 text-white">Explanations</h4>
+                  <div className="space-y-3">
+                    {(
+                      Object.keys(quizData.explanations) as Array<
+                        keyof typeof quizData.explanations
+                      >
+                    ).map((key) => (
+                      <div
+                        key={key}
+                        className={`p-3 rounded border ${
+                          key === quizData.correctAnswer
+                            ? 'bg-green-900 border-green-700'
+                            : key === selectedAnswer
+                              ? 'bg-red-900 border-red-700'
+                              : 'bg-gray-750 border-gray-600'
+                        }`}
+                      >
+                        <p className="text-sm text-gray-200">
+                          <strong
+                            className={`font-semibold ${
+                              key === quizData.correctAnswer
+                                ? 'text-green-300'
+                                : key === selectedAnswer
+                                  ? 'text-red-300'
+                                  : 'text-gray-300'
+                            }`}
+                          >
+                            {key}. {quizData.options[key]}:
+                          </strong>
+                          <span className="ml-1">{quizData.explanations[key]}</span>
+                        </p>
+                        {key === quizData.correctAnswer && quizData.relevantText && (
+                          <p className="text-xs text-gray-400 mt-1 italic">
+                            Supporting text: &quot;{quizData.relevantText}&quot;
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
+
+      {/* Generate Button - Moved to the bottom */}
+      <div className="mt-8">
+        {' '}
+        {/* Add some margin above the button */}
+        <button
+          onClick={generateNewQuiz}
+          disabled={loading || (quizData !== null && !isAnswered)}
+          className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading || (quizData !== null && !isAnswered) ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
+        >
+          {loading ? (
+            <div className="flex items-center">
+              <svg
+                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Generating...
+            </div>
+          ) : quizData !== null && !isAnswered ? (
+            // Differentiate between delay period and question visible period
+            showQuestionSection ? (
+              'Answer the question below'
+            ) : (
+              'Reading time...'
+            )
+          ) : (
+            <div className="flex items-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Generate New Quiz
+            </div>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
