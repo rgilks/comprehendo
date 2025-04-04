@@ -103,7 +103,7 @@ const apiResponseSchema = z.object({
 
 // Type definitions
 type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German';
+type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German' | 'Hindi' | 'Hebrew';
 
 // Define constants directly in the component
 const CEFR_LEVELS: Record<CEFRLevel, string> = {
@@ -124,21 +124,28 @@ const CEFR_DESCRIPTIONS: Record<CEFRLevel, string> = {
   C2: 'Virtually everything, nuanced expression',
 };
 
+// Add a constant to identify RTL languages
+const RTL_LANGUAGES: Language[] = ['Hebrew'];
+
 const LANGUAGES: Record<Language, string> = {
   English: 'English',
   Italian: 'Italiano',
   Spanish: 'Español',
   French: 'Français',
   German: 'Deutsch',
+  Hindi: 'हिन्दी',
+  Hebrew: 'עברית',
 };
 
 // Map Language type to BCP 47 language codes for SpeechSynthesis
 const BCP47_LANGUAGE_MAP: Record<Language, string> = {
-  English: 'en-US', // Or 'en-GB' etc. depending on preference
+  English: 'en-US',
   Italian: 'it-IT',
-  Spanish: 'es-ES', // Or regional variants like 'es-MX'
+  Spanish: 'es-ES',
   French: 'fr-FR',
   German: 'de-DE',
+  Hindi: 'hi-IN',
+  Hebrew: 'he-IL',
 };
 
 // Skeleton Loader Component
@@ -162,6 +169,11 @@ const QuizSkeleton = () => (
     {/* Options Placeholder */}
   </div>
 );
+
+// Add a helper function to determine text direction
+const getTextDirection = (language: Language) => {
+  return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
+};
 
 export default function TextGenerator() {
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
@@ -345,47 +357,45 @@ export default function TextGenerator() {
       if (!paragraphHtml) return null;
       if (!isSpeechSupported) {
         // If speech is not supported, just render the HTML directly
-        return <div dangerouslySetInnerHTML={{ __html: paragraphHtml }} />;
+        return (
+          <div
+            dir={getTextDirection(langType)}
+            className="text-gray-200 leading-relaxed mb-6"
+            dangerouslySetInnerHTML={{ __html: paragraphHtml }}
+          />
+        );
       }
 
       // Regular expression to split the HTML string by spaces,
       // keeping the spaces and also handling HTML tags without splitting them.
-      // This regex tries to match sequences of non-whitespace/non-tag characters (words),
-      // HTML tags, or sequences of whitespace.
-      const segments = paragraphHtml.split(/(\<[^>]+\>|\s+)/).filter(Boolean); // Split and remove empty strings
+      const segments = paragraphHtml.split(/(\<[^>]+\>|\s+)/).filter(Boolean);
 
-      return segments.map((segment, index) => {
-        // Check if the segment is an HTML tag (like <mark> or </mark>)
-        if (/^\<[^>]+\>$/.test(segment)) {
-          // Render tags directly without hover effect
-          return <span key={`segment-${index}`} dangerouslySetInnerHTML={{ __html: segment }} />;
-        }
-        // Check if the segment is just whitespace
-        if (/^\s+$/.test(segment)) {
-          // Render whitespace as is
-          return <span key={`segment-${index}`}>{segment}</span>;
-        }
-
-        // Otherwise, it's likely a word or part of a word
-        // Clean the word for speech (remove potential HTML tags if any slipped through - basic cleaning)
-        const wordForSpeech = segment.replace(/\<[^>]+\>/g, '').trim();
-
-        // Don't attach hover effect to very short strings or punctuation-only strings
-        if (wordForSpeech.length <= 1 && !/^[a-zA-Z0-9]+$/.test(wordForSpeech)) {
-          return <span key={`segment-${index}`} dangerouslySetInnerHTML={{ __html: segment }} />;
-        }
-
-        return (
-          <span
-            key={`segment-${index}`}
-            onClick={() => speakText(wordForSpeech, BCP47_LANGUAGE_MAP[langType])} // Pass Language type
-            className="hover-speak-word cursor-pointer"
-            dangerouslySetInnerHTML={{ __html: segment }} // Render the original segment (keeps highlighting)
-          />
-        );
-      });
+      return (
+        <div dir={getTextDirection(langType)} className="text-gray-200 leading-relaxed mb-6">
+          {segments.map((segment, index) => {
+            if (segment.match(/^\s+$/)) {
+              // If segment is whitespace, preserve it
+              return <span key={index}>{segment}</span>;
+            }
+            if (segment.startsWith('<')) {
+              // If segment is an HTML tag, render it directly
+              return <span key={index} dangerouslySetInnerHTML={{ __html: segment }} />;
+            }
+            // For actual words, make them interactive
+            return (
+              <span
+                key={index}
+                className="cursor-pointer hover:text-blue-400 transition-colors duration-200"
+                onClick={() => speakText(segment, langType)}
+              >
+                {segment}
+              </span>
+            );
+          })}
+        </div>
+      );
     },
-    [isSpeechSupported, speakText] // speakText dependency now includes stopPassageSpeech
+    [isSpeechSupported, speakText]
   );
 
   const generateText = async () => {
@@ -759,60 +769,35 @@ export default function TextGenerator() {
           {/* --- Conditionally Rendered Question/Options/Explanation Block --- */}
           {showQuestionSection && (
             <>
-              <div className="mb-6">
-                <h3 className="text-md font-semibold mb-3 text-white">{quizData.question}</h3>
-                <div className="space-y-2">
-                  {(Object.keys(quizData.options) as Array<keyof typeof quizData.options>).map(
-                    (key) => (
-                      <button
-                        key={key}
-                        onClick={() => handleAnswerSelect(key)}
-                        disabled={isAnswered}
-                        className={`w-full text-left px-4 py-3 rounded transition-colors disabled:cursor-not-allowed flex items-center ${
-                          isAnswered
-                            ? key === quizData.correctAnswer
-                              ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
-                              : key === selectedAnswer
-                                ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
-                                : 'bg-gray-700 border border-gray-600 text-gray-400'
-                            : selectedAnswer === key
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
-                              : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        <span className="font-semibold mr-2">{key}.</span>
-                        <span>{quizData.options[key]}</span>
-                        {isAnswered && key === quizData.correctAnswer && (
-                          <svg
-                            className="w-5 h-5 text-green-300 ml-auto"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                        {isAnswered && key !== quizData.correctAnswer && key === selectedAnswer && (
-                          <svg
-                            className="w-5 h-5 text-red-300 ml-auto"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    )
-                  )}
+              <div className="mt-6">
+                <h3
+                  dir={getTextDirection(questionLanguage)}
+                  className="text-lg font-semibold text-white mb-4"
+                >
+                  {quizData.question}
+                </h3>
+                <div className="space-y-3">
+                  {Object.entries(quizData.options).map(([key, value]) => (
+                    <button
+                      key={key}
+                      onClick={() => handleAnswerSelect(key)}
+                      disabled={isAnswered}
+                      dir={getTextDirection(questionLanguage)}
+                      className={`w-full text-left p-3 rounded transition-colors duration-200 ${
+                        isAnswered
+                          ? key === quizData.correctAnswer
+                            ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
+                            : key === selectedAnswer
+                              ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
+                              : 'bg-gray-700 border border-gray-600 text-gray-400'
+                          : selectedAnswer === key
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
+                            : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
+                      }`}
+                    >
+                      <span className="font-semibold">{key}:</span> {value}
+                    </button>
+                  ))}
                 </div>
               </div>
 
