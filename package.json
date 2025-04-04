@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build && npm run sentry:sourcemaps",
     "start": "next start",
     "lint": "next lint",
     "check": "next lint --no-cache && next build",
@@ -21,10 +21,13 @@
     "test:quick": "jest --bail --findRelatedTests --passWithNoTests",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run format && npm run check"
+    "verify": "npm run format && npm run check",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org rob-gilks --project comprehendo ./.next && sentry-cli sourcemaps upload --org rob-gilks --project comprehendo ./.next"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
+    "@sentry/cli": "^2.43.0",
+    "@sentry/nextjs": "^9.11.0",
     "better-sqlite3": "^11.9.1",
     "next": "15.2.4",
     "next-auth": "^4.24.11",
