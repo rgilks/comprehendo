@@ -181,6 +181,8 @@ export default function TextGenerator() {
   // Use a ref to hold the utterance, avoiding re-renders on change
   const passageUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   // --- End NEW State ---
+  const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null); // Store language at generation time
+  const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null); // Store question language at generation time
 
   // Check for Speech Synthesis support on mount
   useEffect(() => {
@@ -226,7 +228,8 @@ export default function TextGenerator() {
 
   // --- NEW Passage Speech Controls ---
   const handlePlayPause = useCallback(() => {
-    if (!isSpeechSupported || !quizData?.paragraph) return;
+    // Use generatedPassageLanguage for speech
+    if (!isSpeechSupported || !quizData?.paragraph || !generatedPassageLanguage) return;
 
     if (isSpeakingPassage) {
       if (isPaused) {
@@ -243,7 +246,7 @@ export default function TextGenerator() {
       stopPassageSpeech(); // Ensure any previous state is cleared
 
       const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
-      utterance.lang = BCP47_LANGUAGE_MAP[passageLanguage];
+      utterance.lang = BCP47_LANGUAGE_MAP[generatedPassageLanguage]; // Use stored language
       passageUtteranceRef.current = utterance; // Store the utterance
 
       utterance.onend = () => {
@@ -273,7 +276,7 @@ export default function TextGenerator() {
     quizData?.paragraph,
     isSpeakingPassage,
     isPaused,
-    passageLanguage,
+    generatedPassageLanguage, // Depend on stored language
     stopPassageSpeech,
   ]);
 
@@ -332,7 +335,7 @@ export default function TextGenerator() {
 
   // --- Function to render paragraph with click-to-speak words ---
   const renderParagraphWithWordHover = useCallback(
-    (paragraphHtml: string | null, lang: string) => {
+    (paragraphHtml: string | null, langType: Language) => {
       if (!paragraphHtml) return null;
       if (!isSpeechSupported) {
         // If speech is not supported, just render the HTML directly
@@ -369,7 +372,7 @@ export default function TextGenerator() {
         return (
           <span
             key={`segment-${index}`}
-            onClick={() => speakText(wordForSpeech, lang)} // Uses modified speakText
+            onClick={() => speakText(wordForSpeech, BCP47_LANGUAGE_MAP[langType])} // Pass Language type
             className="hover-speak-word cursor-pointer"
             dangerouslySetInnerHTML={{ __html: segment }} // Render the original segment (keeps highlighting)
           />
@@ -382,6 +385,8 @@ export default function TextGenerator() {
   const generateText = async () => {
     // Stop speech before generating new text
     stopPassageSpeech();
+    setGeneratedPassageLanguage(null); // Reset generated language
+    setGeneratedQuestionLanguage(null); // Reset generated question language
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
@@ -421,6 +426,8 @@ export default function TextGenerator() {
       if (response.status === 429) {
         setError(data.error || "You've reached the usage limit. Please try again later.");
         setLoading(false);
+        setGeneratedPassageLanguage(null); // Reset generated language on error
+        setGeneratedQuestionLanguage(null);
         return;
       }
       if (!response.ok || !data.result) {
@@ -438,16 +445,24 @@ export default function TextGenerator() {
           console.error('Error parsing generated quiz JSON:', parsedQuizData.error);
           setError('Failed to parse the structure of the generated quiz. Please try again.');
           setQuizData(null);
+          setGeneratedPassageLanguage(null); // Reset generated language on parse error
+          setGeneratedQuestionLanguage(null);
           return;
         }
         setQuizData(parsedQuizData.data);
         setHighlightedParagraph(parsedQuizData.data.paragraph); // Set initial paragraph
+        setGeneratedPassageLanguage(passageLanguage); // STORE the languages used for this generation
+        setGeneratedQuestionLanguage(questionLanguage);
       } catch (parseErr) {
         console.error('Error parsing JSON string:', parseErr);
         setError('Failed to parse the generated quiz content. Please try again.');
+        setGeneratedPassageLanguage(null); // Reset generated language on parse error
+        setGeneratedQuestionLanguage(null);
       }
     } catch (err: unknown) {
       console.error('Error generating text:', err);
+      setGeneratedPassageLanguage(null); // Reset generated language on fetch/other errors
+      setGeneratedQuestionLanguage(null);
       if (err instanceof Error) {
         setError(err.message || 'Failed to generate text. Please try again.');
       } else {
@@ -660,7 +675,7 @@ export default function TextGenerator() {
 
       {loading && !quizData && <QuizSkeleton />}
 
-      {quizData && (
+      {quizData && generatedPassageLanguage && generatedQuestionLanguage && (
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
           <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
             <h2 className="text-lg font-semibold text-white flex items-center">
@@ -679,10 +694,10 @@ export default function TextGenerator() {
                 {cefrLevel}
               </span>
               <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
-                P: {LANGUAGES[passageLanguage]}
+                P: {LANGUAGES[generatedPassageLanguage]}
               </span>
               <span className="text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white px-2 py-1 rounded-full shadow-sm">
-                Q: {LANGUAGES[questionLanguage]}
+                Q: {LANGUAGES[generatedQuestionLanguage]}
               </span>
             </div>
           </div>
@@ -724,10 +739,12 @@ export default function TextGenerator() {
               className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
               // Render using the word hover function
             >
-              {renderParagraphWithWordHover(
-                highlightedParagraph || quizData.paragraph,
-                BCP47_LANGUAGE_MAP[passageLanguage]
-              )}
+              {/* Only render/enable word speech if generated language is set */}
+              {generatedPassageLanguage &&
+                renderParagraphWithWordHover(
+                  highlightedParagraph || quizData.paragraph,
+                  generatedPassageLanguage // Pass the stored Language type
+                )}
             </div>
           </div>
 
