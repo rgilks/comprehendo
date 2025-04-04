@@ -7,7 +7,7 @@ export default withAuth(
   // `withAuth` augments your `Request` with the user's token.
   async function middleware(req) {
     const token = await getToken({ req });
-    const isAdmin = token?.role === 'admin';
+    const isAdmin = token?.isAdmin === true;
     const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
 
     try {
