@@ -221,7 +221,7 @@ export default function TextGenerator() {
 
   // --- Speech Synthesis Utility (Modified for single words) ---
   const speakText = useCallback(
-    (text: string | null, lang: string) => {
+    (text: string | null, lang: Language) => {
       if (!isSpeechSupported || !text) {
         // console.warn('Speech synthesis not supported or text is empty.'); // Can be noisy
         return; // Exit if not supported or no text
@@ -231,7 +231,7 @@ export default function TextGenerator() {
       stopPassageSpeech();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang; // Set the language
+      utterance.lang = BCP47_LANGUAGE_MAP[lang]; // Use the BCP 47 language code
 
       // Optional: Add error handling for the speech event
       utterance.onerror = (event) => {
