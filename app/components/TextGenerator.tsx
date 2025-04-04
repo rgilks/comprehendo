@@ -404,90 +404,111 @@ export default function TextGenerator() {
     if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
     setShowQuestionSection(false); // Hide question section immediately
 
-    try {
-      const seed = Math.floor(Math.random() * 100);
-      const responseResult: unknown = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `Generate a reading comprehension paragraph in ${passageLanguage} and the corresponding multiple choice question, options, and explanations ONLY in ${questionLanguage} for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
-          seed: seed,
-          passageLanguage: passageLanguage,
-          questionLanguage: questionLanguage,
-        }),
-      });
+    const maxAttempts = 3;
+    const retryDelayMs = 1000; // 1 second delay between retries
 
-      if (!(responseResult instanceof Response)) {
-        console.error('Fetch did not return a Response object.', responseResult);
-        throw new Error('Invalid response received from server.');
-      }
-      const response: Response = responseResult;
-
-      // Parse JSON directly into the validator
-      const parsedApiResponse = apiResponseSchema.safeParse(await response.json());
-
-      if (!parsedApiResponse.success) {
-        console.error('Invalid API response structure:', parsedApiResponse.error);
-        throw new Error('Received invalid data structure from server.');
-      }
-      const data = parsedApiResponse.data;
-
-      if (response.status === 429) {
-        setError(data.error || "You've reached the usage limit. Please try again later.");
-        setLoading(false);
-        setGeneratedPassageLanguage(null); // Reset generated language on error
-        setGeneratedQuestionLanguage(null);
-        return;
-      }
-      if (!response.ok || !data.result) {
-        console.error('API Error Response:', data);
-        throw new Error(data.error || 'Failed to generate text');
-      }
-
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        const jsonString = data.result.replace(/```json|```/g, '').trim();
+        console.log(`Attempt ${attempt + 1} of ${maxAttempts} to generate text...`);
+        const seed = Math.floor(Math.random() * 100);
+        const responseResult: unknown = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `Generate a reading comprehension paragraph in ${passageLanguage} and the corresponding multiple choice question, options, and explanations ONLY in ${questionLanguage} for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
+            seed: seed,
+            passageLanguage: passageLanguage,
+            questionLanguage: questionLanguage,
+          }),
+        });
 
-        // Parse JSON string directly into the validator
-        const parsedQuizData = quizDataSchema.safeParse(JSON.parse(jsonString));
-
-        if (!parsedQuizData.success) {
-          console.error('Error parsing generated quiz JSON:', parsedQuizData.error);
-          setError('Failed to parse the structure of the generated quiz. Please try again.');
-          setQuizData(null);
-          setGeneratedPassageLanguage(null); // Reset generated language on parse error
-          setGeneratedQuestionLanguage(null);
-          return;
+        if (!(responseResult instanceof Response)) {
+          console.error('Fetch did not return a Response object.', responseResult);
+          throw new Error('Invalid response received from server.');
         }
-        setQuizData(parsedQuizData.data);
-        setHighlightedParagraph(parsedQuizData.data.paragraph); // Set initial paragraph
-        setGeneratedPassageLanguage(passageLanguage); // STORE the languages used for this generation
-        setGeneratedQuestionLanguage(questionLanguage);
+        const response: Response = responseResult;
 
-        // --- START QUESTION DELAY TIMER ---
-        // Ensure the previous timer is cleared before starting a new one
-        if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
-        questionDelayTimeoutRef.current = setTimeout(() => {
-          setShowQuestionSection(true);
-        }, QUESTION_DELAY_MS);
-        // --- END QUESTION DELAY TIMER ---
-      } catch (parseErr) {
-        console.error('Error parsing JSON string:', parseErr);
-        setError('Failed to parse the generated quiz content. Please try again.');
-        setGeneratedPassageLanguage(null); // Reset generated language on parse error
-        setGeneratedQuestionLanguage(null);
+        // Parse JSON directly into the validator
+        const parsedApiResponse = apiResponseSchema.safeParse(await response.json());
+
+        if (!parsedApiResponse.success) {
+          console.error('Invalid API response structure:', parsedApiResponse.error);
+          throw new Error('Received invalid data structure from server.');
+        }
+
+        const data = parsedApiResponse.data;
+
+        if (response.status === 429) {
+          // Don't retry on rate limit error, show message immediately
+          setError(data.error || "You've reached the usage limit. Please try again later.");
+          setGeneratedPassageLanguage(null);
+          setGeneratedQuestionLanguage(null);
+          // No need to break here, the finally block will handle loading state
+          return; // Exit generateText completely
+        }
+
+        if (!response.ok || !data.result) {
+          console.error('API Error Response:', data);
+          throw new Error(data.error || `API request failed with status ${response.status}`);
+        }
+
+        // Attempt to parse the inner JSON (quiz data)
+        try {
+          const jsonString = data.result.replace(/```json|```/g, '').trim();
+          const parsedQuizData = quizDataSchema.safeParse(JSON.parse(jsonString));
+
+          if (!parsedQuizData.success) {
+            console.error('Error parsing generated quiz JSON:', parsedQuizData.error);
+            throw new Error('Failed to parse the structure of the generated quiz.');
+          }
+
+          // SUCCESS!
+          setQuizData(parsedQuizData.data);
+          setHighlightedParagraph(parsedQuizData.data.paragraph);
+          setGeneratedPassageLanguage(passageLanguage);
+          setGeneratedQuestionLanguage(questionLanguage);
+          setError(null); // Clear any previous errors
+
+          // --- START QUESTION DELAY TIMER ---
+          if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
+          questionDelayTimeoutRef.current = setTimeout(() => {
+            setShowQuestionSection(true);
+          }, QUESTION_DELAY_MS);
+          // --- END QUESTION DELAY TIMER ---
+
+          console.log(`Successfully generated text on attempt ${attempt + 1}`);
+          break; // Exit the retry loop on success
+        } catch (parseErr) {
+          console.error(`Attempt ${attempt + 1}: Error parsing inner JSON`, parseErr);
+          // Throw the parsing error to be caught by the outer catch block for retry logic
+          if (parseErr instanceof Error) throw parseErr;
+          else throw new Error('Failed to parse generated quiz content.');
+        }
+      } catch (err: unknown) {
+        console.error(`Attempt ${attempt + 1} failed:`, err);
+
+        // If this was the last attempt, set the final error state
+        if (attempt === maxAttempts - 1) {
+          console.error('All generation attempts failed.');
+          setGeneratedPassageLanguage(null);
+          setGeneratedQuestionLanguage(null);
+          if (err instanceof Error) {
+            setError(
+              err.message || 'Failed to generate text after multiple attempts. Please try again.'
+            );
+          } else {
+            setError('An unknown error occurred after multiple attempts.');
+          }
+          // Let the loop finish so finally block runs
+        } else {
+          // Wait before the next retry
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
       }
-    } catch (err: unknown) {
-      console.error('Error generating text:', err);
-      setGeneratedPassageLanguage(null); // Reset generated language on fetch/other errors
-      setGeneratedQuestionLanguage(null);
-      if (err instanceof Error) {
-        setError(err.message || 'Failed to generate text. Please try again.');
-      } else {
-        setError('An unknown error occurred while generating text.');
-      }
-    } finally {
-      setLoading(false);
-    }
+    } // End of for loop
+
+    // This runs after the loop finishes (either by success break or all attempts failing)
+    setLoading(false);
   };
 
   const handleAnswerSelect = (answer: string) => {
