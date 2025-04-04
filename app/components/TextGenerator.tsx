@@ -186,15 +186,15 @@ export default function TextGenerator() {
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [highlightedParagraph, setHighlightedParagraph] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
-  const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(false); // State for speech support
-  // --- NEW State for Speech Control ---
+  const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(false);
   const [isSpeakingPassage, setIsSpeakingPassage] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  // Use a ref to hold the utterance, avoiding re-renders on change
+  // Add state for tracking current word
+  const [currentWordIndex, setCurrentWordIndex] = useState<number | null>(null);
   const passageUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  // --- End NEW State ---
-  const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null); // Store language at generation time
-  const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null); // Store question language at generation time
+  const wordsRef = useRef<string[]>([]);
+  const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null);
+  const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null);
 
   // --- Question Delay State ---
   const QUESTION_DELAY_MS = 20000; // 20 seconds
@@ -212,10 +212,11 @@ export default function TextGenerator() {
   // --- Stop Passage Speech Utility ---
   const stopPassageSpeech = useCallback(() => {
     if (isSpeechSupported) {
-      window.speechSynthesis.cancel(); // Cancels all speech
+      window.speechSynthesis.cancel();
       setIsSpeakingPassage(false);
       setIsPaused(false);
-      passageUtteranceRef.current = null; // Clear the ref
+      setCurrentWordIndex(null);
+      passageUtteranceRef.current = null;
     }
   }, [isSpeechSupported]);
 
@@ -263,25 +264,45 @@ export default function TextGenerator() {
       // Start new playback
       stopPassageSpeech(); // Ensure any previous state is cleared
 
+      // Split the paragraph into words and store them
+      const words = quizData.paragraph.split(/\s+/);
+      wordsRef.current = words;
+
       const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
-      utterance.lang = BCP47_LANGUAGE_MAP[generatedPassageLanguage]; // Use stored language
-      passageUtteranceRef.current = utterance; // Store the utterance
+      utterance.lang = BCP47_LANGUAGE_MAP[generatedPassageLanguage];
+      passageUtteranceRef.current = utterance;
+
+      // Add word boundary event handler
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          // Calculate word index based on character position
+          let wordIndex = 0;
+          let charCount = 0;
+          for (let i = 0; i < words.length; i++) {
+            charCount += words[i].length + 1; // +1 for space
+            if (charCount > event.charIndex) {
+              wordIndex = i;
+              break;
+            }
+          }
+          setCurrentWordIndex(wordIndex);
+        }
+      };
 
       utterance.onend = () => {
         setIsSpeakingPassage(false);
         setIsPaused(false);
+        setCurrentWordIndex(null);
         passageUtteranceRef.current = null;
       };
 
       utterance.onerror = (event) => {
-        // Ignore interruption errors, as they are expected when stopping/cancelling
         if (event.error !== 'interrupted') {
           console.error('Speech synthesis error (passage):', event.error);
-          // Reset state only for unexpected errors
           setIsSpeakingPassage(false);
           setIsPaused(false);
+          setCurrentWordIndex(null);
           passageUtteranceRef.current = null;
-          // Optionally provide user feedback here for unexpected errors
         }
       };
 
@@ -294,7 +315,7 @@ export default function TextGenerator() {
     quizData?.paragraph,
     isSpeakingPassage,
     isPaused,
-    generatedPassageLanguage, // Depend on stored language
+    generatedPassageLanguage,
     stopPassageSpeech,
   ]);
 
@@ -351,12 +372,11 @@ export default function TextGenerator() {
     };
   }, []);
 
-  // --- Function to render paragraph with click-to-speak words ---
+  // --- Function to render paragraph with word hover ---
   const renderParagraphWithWordHover = useCallback(
     (paragraphHtml: string | null, langType: Language) => {
       if (!paragraphHtml) return null;
       if (!isSpeechSupported) {
-        // If speech is not supported, just render the HTML directly
         return (
           <div
             dir={getTextDirection(langType)}
@@ -374,18 +394,20 @@ export default function TextGenerator() {
         <div dir={getTextDirection(langType)} className="text-gray-200 leading-relaxed mb-6">
           {segments.map((segment, index) => {
             if (segment.match(/^\s+$/)) {
-              // If segment is whitespace, preserve it
               return <span key={index}>{segment}</span>;
             }
             if (segment.startsWith('<')) {
-              // If segment is an HTML tag, render it directly
               return <span key={index} dangerouslySetInnerHTML={{ __html: segment }} />;
             }
-            // For actual words, make them interactive
+            // For actual words, make them interactive and highlight current word
             return (
               <span
                 key={index}
-                className="cursor-pointer hover:text-blue-400 transition-colors duration-200"
+                className={`cursor-pointer transition-colors duration-200 px-1 -mx-1 ${
+                  currentWordIndex === Math.floor(index / 2)
+                    ? 'bg-blue-500 text-white rounded'
+                    : 'hover:text-blue-400'
+                }`}
                 onClick={() => speakText(segment, langType)}
               >
                 {segment}
@@ -395,7 +417,7 @@ export default function TextGenerator() {
         </div>
       );
     },
-    [isSpeechSupported, speakText]
+    [isSpeechSupported, speakText, currentWordIndex]
   );
 
   const generateText = async () => {
