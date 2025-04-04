@@ -175,6 +175,64 @@ const getTextDirection = (language: Language) => {
   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
 };
 
+// Add TranslatableWord component before the TextGenerator component
+const TranslatableWord = React.memo(
+  ({
+    word,
+    fromLang,
+    isCurrentWord,
+    onSpeak,
+    onTranslate,
+  }: {
+    word: string;
+    fromLang: Language;
+    isCurrentWord: boolean;
+    onSpeak: () => void;
+    onTranslate: (word: string, fromLang: Language) => Promise<string | null>;
+  }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [translation, setTranslation] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleMouseEnter = useCallback(async () => {
+      setIsHovered(true);
+      setIsLoading(true);
+      const result = await onTranslate(word, fromLang);
+      if (result) setTranslation(result);
+      setIsLoading(false);
+    }, [word, fromLang, onTranslate]);
+
+    const handleMouseLeave = useCallback(() => {
+      setIsHovered(false);
+      setTranslation(null);
+    }, []);
+
+    return (
+      <span
+        className={`cursor-pointer transition-colors duration-200 px-1 -mx-1 relative group ${
+          isCurrentWord ? 'bg-blue-500 text-white rounded' : 'hover:text-blue-400'
+        }`}
+        onClick={onSpeak}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {word}
+        {isHovered && (
+          <span className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
+            {isLoading ? (
+              <span className="inline-block animate-pulse">Translating...</span>
+            ) : (
+              <span className="font-medium">{translation || word}</span>
+            )}
+          </span>
+        )}
+      </span>
+    );
+  }
+);
+
+TranslatableWord.displayName = 'TranslatableWord';
+
 export default function TextGenerator() {
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
   const [passageLanguage, setPassageLanguage] = useState<Language>('English');
@@ -191,10 +249,13 @@ export default function TextGenerator() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   // Add state for tracking current word
   const [currentWordIndex, setCurrentWordIndex] = useState<number | null>(null);
+  const [wordTranslation, setWordTranslation] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
   const passageUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const wordsRef = useRef<string[]>([]);
   const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null);
   const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null);
+  const [volume, setVolume] = useState(1); // Add volume state (0 to 1)
 
   // --- Question Delay State ---
   const QUESTION_DELAY_MS = 20000; // 20 seconds
@@ -224,62 +285,54 @@ export default function TextGenerator() {
   const speakText = useCallback(
     (text: string | null, lang: Language) => {
       if (!isSpeechSupported || !text) {
-        // console.warn('Speech synthesis not supported or text is empty.'); // Can be noisy
-        return; // Exit if not supported or no text
+        return;
       }
 
-      // Stop any ongoing passage speech before speaking a word
       stopPassageSpeech();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = BCP47_LANGUAGE_MAP[lang]; // Use the BCP 47 language code
+      utterance.lang = BCP47_LANGUAGE_MAP[lang];
+      utterance.volume = volume; // Set the volume
 
-      // Optional: Add error handling for the speech event
       utterance.onerror = (event) => {
         console.error('Speech synthesis error (word):', event.error);
       };
 
-      // We don't track state for single words, just speak them
       window.speechSynthesis.speak(utterance);
     },
-    [isSpeechSupported, stopPassageSpeech] // Added stopPassageSpeech dependency
+    [isSpeechSupported, stopPassageSpeech, volume] // Add volume dependency
   );
 
   // --- NEW Passage Speech Controls ---
   const handlePlayPause = useCallback(() => {
-    // Use generatedPassageLanguage for speech
     if (!isSpeechSupported || !quizData?.paragraph || !generatedPassageLanguage) return;
 
     if (isSpeakingPassage) {
       if (isPaused) {
-        // Resume
         window.speechSynthesis.resume();
         setIsPaused(false);
       } else {
-        // Pause
         window.speechSynthesis.pause();
         setIsPaused(true);
       }
     } else {
-      // Start new playback
-      stopPassageSpeech(); // Ensure any previous state is cleared
+      stopPassageSpeech();
 
-      // Split the paragraph into words and store them
       const words = quizData.paragraph.split(/\s+/);
       wordsRef.current = words;
 
       const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
       utterance.lang = BCP47_LANGUAGE_MAP[generatedPassageLanguage];
+      utterance.volume = volume; // Set the volume
+
       passageUtteranceRef.current = utterance;
 
-      // Add word boundary event handler
       utterance.onboundary = (event) => {
         if (event.name === 'word') {
-          // Calculate word index based on character position
           let wordIndex = 0;
           let charCount = 0;
           for (let i = 0; i < words.length; i++) {
-            charCount += words[i].length + 1; // +1 for space
+            charCount += words[i].length + 1;
             if (charCount > event.charIndex) {
               wordIndex = i;
               break;
@@ -317,6 +370,7 @@ export default function TextGenerator() {
     isPaused,
     generatedPassageLanguage,
     stopPassageSpeech,
+    volume, // Add volume dependency
   ]);
 
   const handleStop = useCallback(() => {
@@ -372,7 +426,39 @@ export default function TextGenerator() {
     };
   }, []);
 
-  // --- Function to render paragraph with word hover ---
+  // Add translation function
+  const getTranslation = useCallback(
+    async (word: string, fromLang: Language, toLang: Language = 'English') => {
+      if (fromLang === toLang) return word;
+
+      setIsTranslating(true);
+      try {
+        // Convert language codes to simpler format (e.g., 'en-US' -> 'en')
+        const sourceLang = BCP47_LANGUAGE_MAP[fromLang].split('-')[0];
+        const targetLang = BCP47_LANGUAGE_MAP[toLang].split('-')[0];
+
+        const response = await fetch(
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${sourceLang}|${targetLang}`
+        );
+
+        if (!response.ok) throw new Error('Translation failed');
+
+        const data = await response.json();
+        if (data.responseStatus === 200 && data.responseData?.translatedText) {
+          return data.responseData.translatedText;
+        }
+        throw new Error('No translation available');
+      } catch (error) {
+        console.error('Translation error:', error);
+        return word; // Return original word on error instead of null
+      } finally {
+        setIsTranslating(false);
+      }
+    },
+    []
+  );
+
+  // Modify the renderParagraphWithWordHover function
   const renderParagraphWithWordHover = useCallback(
     (paragraphHtml: string | null, langType: Language) => {
       if (!paragraphHtml) return null;
@@ -386,8 +472,6 @@ export default function TextGenerator() {
         );
       }
 
-      // Regular expression to split the HTML string by spaces,
-      // keeping the spaces and also handling HTML tags without splitting them.
       const segments = paragraphHtml.split(/(\<[^>]+\>|\s+)/).filter(Boolean);
 
       return (
@@ -399,25 +483,21 @@ export default function TextGenerator() {
             if (segment.startsWith('<')) {
               return <span key={index} dangerouslySetInnerHTML={{ __html: segment }} />;
             }
-            // For actual words, make them interactive and highlight current word
             return (
-              <span
+              <TranslatableWord
                 key={index}
-                className={`cursor-pointer transition-colors duration-200 px-1 -mx-1 ${
-                  currentWordIndex === Math.floor(index / 2)
-                    ? 'bg-blue-500 text-white rounded'
-                    : 'hover:text-blue-400'
-                }`}
-                onClick={() => speakText(segment, langType)}
-              >
-                {segment}
-              </span>
+                word={segment}
+                fromLang={langType}
+                isCurrentWord={currentWordIndex === Math.floor(index / 2)}
+                onSpeak={() => speakText(segment, langType)}
+                onTranslate={getTranslation}
+              />
             );
           })}
         </div>
       );
     },
-    [isSpeechSupported, speakText, currentWordIndex]
+    [isSpeechSupported, speakText, currentWordIndex, getTranslation]
   );
 
   const generateText = async () => {
@@ -566,6 +646,26 @@ export default function TextGenerator() {
       console.error('Error explicitly caught from generateNewQuiz:', error);
     });
   };
+
+  // Add a function to handle volume changes
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    setVolume(newVolume);
+    // Update volume of current utterance if one is playing
+    if (passageUtteranceRef.current) {
+      passageUtteranceRef.current.volume = newVolume;
+    }
+    // Also update any currently speaking synthesis
+    if (window.speechSynthesis.speaking) {
+      // Cancel and restart with new volume
+      window.speechSynthesis.cancel();
+      if (passageUtteranceRef.current) {
+        passageUtteranceRef.current.volume = newVolume;
+        window.speechSynthesis.speak(passageUtteranceRef.current);
+        setIsSpeakingPassage(true);
+        setIsPaused(false);
+      }
+    }
+  }, []);
 
   return (
     <div className="w-full max-w-3xl mx-auto my-8">
@@ -758,6 +858,26 @@ export default function TextGenerator() {
                       <StopIcon className="w-4 h-4" />
                     </button>
                   )}
+                  <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-4 h-4 text-gray-300"
+                    >
+                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905h1.932l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
+                    </svg>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={volume}
+                      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                      title="Volume"
+                    />
+                  </div>
                 </div>
               )}
               {/* --- End UPDATED Speech Controls --- */}
