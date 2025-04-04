@@ -11,6 +11,11 @@ RUN npm ci
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Add build argument for Sentry token
+ARG SENTRY_AUTH_TOKEN
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+
 COPY --from=deps /app/node_modules ./node_modules
 # Copy everything instead of individual directories
 COPY . .
