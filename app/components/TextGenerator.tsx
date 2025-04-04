@@ -292,7 +292,8 @@ export default function TextGenerator() {
   // --- End NEW Passage Speech Controls ---
 
   const highlightRelevantText = useCallback(() => {
-    if (quizData && isAnswered && selectedAnswer === quizData.correctAnswer) {
+    // Highlight whenever explanations are shown and relevant text exists
+    if (quizData && showExplanation && quizData.relevantText) {
       try {
         const escapedText = quizData.relevantText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedText})`, 'gi');
@@ -309,7 +310,7 @@ export default function TextGenerator() {
     } else {
       setHighlightedParagraph(quizData?.paragraph ?? null); // Show original paragraph or null
     }
-  }, [quizData, isAnswered, selectedAnswer]);
+  }, [quizData, showExplanation]);
 
   useEffect(() => {
     if (showExplanation) {
@@ -733,12 +734,18 @@ export default function TextGenerator() {
               className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
               // Render using the word hover function
             >
-              {/* Only render/enable word speech if generated language is set */}
-              {generatedPassageLanguage &&
+              {/* Conditional Rendering: Use dangerouslySetInnerHTML if highlighting is active, otherwise use word hover */}
+              {highlightedParagraph && highlightedParagraph !== quizData.paragraph ? (
+                <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
+              ) : generatedPassageLanguage ? (
                 renderParagraphWithWordHover(
-                  highlightedParagraph || quizData.paragraph,
+                  quizData.paragraph, // Pass original paragraph for word hover
                   generatedPassageLanguage // Pass the stored Language type
-                )}
+                )
+              ) : (
+                // Fallback if language isn't set (shouldn't normally happen here)
+                <div>{quizData.paragraph}</div>
+              )}
             </div>
           </div>
 
