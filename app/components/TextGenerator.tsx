@@ -1,7 +1,7 @@
 // TextGenerator component - Provides reading comprehension quiz functionality with formatting
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 // Removed import for HighlightedParagraph and constants
 // import {
 //   CEFR_LEVELS,
@@ -175,36 +175,39 @@ const getTextDirection = (language: Language) => {
   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
 };
 
-// Add TranslatableWord component before the TextGenerator component
-const TranslatableWord = React.memo(
-  ({
-    word,
-    fromLang,
-    isCurrentWord,
-    onSpeak,
-    onTranslate,
-  }: {
-    word: string;
-    fromLang: Language;
-    isCurrentWord: boolean;
-    onSpeak: () => void;
-    onTranslate: (word: string, fromLang: Language) => Promise<string | null>;
-  }) => {
+interface TranslatableWordProps {
+  word: string;
+  fromLang: Language;
+  isCurrentWord: boolean;
+  onSpeak: () => void;
+  onTranslate: (word: string, sourceLang: string, targetLang: string) => Promise<string>;
+}
+
+const TranslatableWord = memo(
+  ({ word, fromLang, isCurrentWord, onSpeak, onTranslate }: TranslatableWordProps) => {
     const [isHovered, setIsHovered] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleMouseEnter = useCallback(async () => {
+    const handleMouseEnter = useCallback(() => {
       setIsHovered(true);
-      setIsLoading(true);
-      const result = await onTranslate(word, fromLang);
-      if (result) setTranslation(result);
-      setIsLoading(false);
-    }, [word, fromLang, onTranslate]);
+      if (!translation && !isLoading) {
+        void (async () => {
+          setIsLoading(true);
+          try {
+            const sourceLang = BCP47_LANGUAGE_MAP[fromLang].split('-')[0];
+            const targetLang = BCP47_LANGUAGE_MAP['English'].split('-')[0];
+            const result = await onTranslate(word, sourceLang, targetLang);
+            setTranslation(result);
+          } finally {
+            setIsLoading(false);
+          }
+        })();
+      }
+    }, [word, fromLang, onTranslate, translation, isLoading]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
-      setTranslation(null);
     }, []);
 
     return (
@@ -212,7 +215,7 @@ const TranslatableWord = React.memo(
         className={`cursor-pointer transition-colors duration-200 px-1 -mx-1 relative group ${
           isCurrentWord ? 'bg-blue-500 text-white rounded' : 'hover:text-blue-400'
         }`}
-        onClick={onSpeak}
+        onClick={() => void onSpeak()}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -247,15 +250,12 @@ export default function TextGenerator() {
   const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(false);
   const [isSpeakingPassage, setIsSpeakingPassage] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  // Add state for tracking current word
   const [currentWordIndex, setCurrentWordIndex] = useState<number | null>(null);
-  const [wordTranslation, setWordTranslation] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
   const passageUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const wordsRef = useRef<string[]>([]);
   const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null);
   const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null);
-  const [volume, setVolume] = useState(1); // Add volume state (0 to 1)
+  const [volume, setVolume] = useState(0.5); // Change initial volume to 50%
 
   // --- Question Delay State ---
   const QUESTION_DELAY_MS = 20000; // 20 seconds
@@ -292,7 +292,7 @@ export default function TextGenerator() {
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = BCP47_LANGUAGE_MAP[lang];
-      utterance.volume = volume; // Set the volume
+      utterance.volume = volume;
 
       utterance.onerror = (event) => {
         console.error('Speech synthesis error (word):', event.error);
@@ -300,7 +300,7 @@ export default function TextGenerator() {
 
       window.speechSynthesis.speak(utterance);
     },
-    [isSpeechSupported, stopPassageSpeech, volume] // Add volume dependency
+    [isSpeechSupported, stopPassageSpeech, volume]
   );
 
   // --- NEW Passage Speech Controls ---
@@ -323,7 +323,7 @@ export default function TextGenerator() {
 
       const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
       utterance.lang = BCP47_LANGUAGE_MAP[generatedPassageLanguage];
-      utterance.volume = volume; // Set the volume
+      utterance.volume = volume;
 
       passageUtteranceRef.current = utterance;
 
@@ -370,7 +370,7 @@ export default function TextGenerator() {
     isPaused,
     generatedPassageLanguage,
     stopPassageSpeech,
-    volume, // Add volume dependency
+    volume,
   ]);
 
   const handleStop = useCallback(() => {
@@ -426,24 +426,24 @@ export default function TextGenerator() {
     };
   }, []);
 
-  // Add translation function
+  // Add type for translation API response
+  interface TranslationResponse {
+    responseStatus: number;
+    responseData: {
+      translatedText: string;
+    };
+  }
+
   const getTranslation = useCallback(
-    async (word: string, fromLang: Language, toLang: Language = 'English') => {
-      if (fromLang === toLang) return word;
-
-      setIsTranslating(true);
+    async (word: string, sourceLang: string, targetLang: string): Promise<string> => {
       try {
-        // Convert language codes to simpler format (e.g., 'en-US' -> 'en')
-        const sourceLang = BCP47_LANGUAGE_MAP[fromLang].split('-')[0];
-        const targetLang = BCP47_LANGUAGE_MAP[toLang].split('-')[0];
-
         const response = await fetch(
           `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${sourceLang}|${targetLang}`
         );
 
         if (!response.ok) throw new Error('Translation failed');
 
-        const data = await response.json();
+        const data = (await response.json()) as TranslationResponse;
         if (data.responseStatus === 200 && data.responseData?.translatedText) {
           return data.responseData.translatedText;
         }
@@ -451,8 +451,6 @@ export default function TextGenerator() {
       } catch (error) {
         console.error('Translation error:', error);
         return word; // Return original word on error instead of null
-      } finally {
-        setIsTranslating(false);
       }
     },
     []
@@ -473,6 +471,7 @@ export default function TextGenerator() {
       }
 
       const segments = paragraphHtml.split(/(\<[^>]+\>|\s+)/).filter(Boolean);
+      let wordCounter = 0;
 
       return (
         <div dir={getTextDirection(langType)} className="text-gray-200 leading-relaxed mb-6">
@@ -483,12 +482,14 @@ export default function TextGenerator() {
             if (segment.startsWith('<')) {
               return <span key={index} dangerouslySetInnerHTML={{ __html: segment }} />;
             }
+            const isCurrentWord = wordCounter === currentWordIndex;
+            wordCounter++;
             return (
               <TranslatableWord
                 key={index}
                 word={segment}
                 fromLang={langType}
-                isCurrentWord={currentWordIndex === Math.floor(index / 2)}
+                isCurrentWord={isCurrentWord}
                 onSpeak={() => speakText(segment, langType)}
                 onTranslate={getTranslation}
               />
@@ -497,7 +498,7 @@ export default function TextGenerator() {
         </div>
       );
     },
-    [isSpeechSupported, speakText, currentWordIndex, getTranslation]
+    [isSpeechSupported, speakText, getTranslation, currentWordIndex]
   );
 
   const generateText = async () => {
@@ -865,7 +866,7 @@ export default function TextGenerator() {
                       fill="currentColor"
                       className="w-4 h-4 text-gray-300"
                     >
-                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905h1.932l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
+                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905h1.932l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 01-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
                     </svg>
                     <input
                       type="range"
