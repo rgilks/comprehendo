@@ -6,7 +6,7 @@ A multi-language reading comprehension practice tool powered by Next.js, OpenAI,
 
 ## Overview
 
-Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding.
+Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding. Word translations are powered by the MyMemory Translation API.
 
 ## Features
 
