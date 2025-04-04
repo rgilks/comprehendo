@@ -1,7 +1,7 @@
 // TextGenerator component - Provides reading comprehension quiz functionality with formatting
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 // Removed import for HighlightedParagraph and constants
 // import {
 //   CEFR_LEVELS,
@@ -10,6 +10,66 @@ import React, { useState, useEffect, useCallback } from 'react';
 // } from '../../lib/constants';
 // import { HighlightedParagraph } from './HighlightedParagraph';
 import { z } from 'zod';
+
+// Simple Speaker Icon
+// const SpeakerIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+//   <svg
+//     xmlns="http://www.w3.org/2000/svg"
+//     viewBox="0 0 24 24"
+//     fill="currentColor"
+//     className={className}
+//   >
+//     <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06z" />
+//     <path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06z" />
+//   </svg>
+// );
+
+// --- NEW Icons for Controls ---
+const PlayIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+  >
+    <path
+      fillRule="evenodd"
+      d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const PauseIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+  >
+    <path
+      fillRule="evenodd"
+      d="M6.75 5.25a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Zm9 0a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const StopIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+  >
+    <path
+      fillRule="evenodd"
+      d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+// --- End Icons ---
 
 // Define Zod schema for QuizData
 const quizDataSchema = z.object({
@@ -72,6 +132,15 @@ const LANGUAGES: Record<Language, string> = {
   German: 'Deutsch',
 };
 
+// Map Language type to BCP 47 language codes for SpeechSynthesis
+const BCP47_LANGUAGE_MAP: Record<Language, string> = {
+  English: 'en-US', // Or 'en-GB' etc. depending on preference
+  Italian: 'it-IT',
+  Spanish: 'es-ES', // Or regional variants like 'es-MX'
+  French: 'fr-FR',
+  German: 'de-DE',
+};
+
 // Skeleton Loader Component
 const QuizSkeleton = () => (
   <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg animate-pulse">
@@ -105,6 +174,113 @@ export default function TextGenerator() {
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [highlightedParagraph, setHighlightedParagraph] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
+  const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(false); // State for speech support
+  // --- NEW State for Speech Control ---
+  const [isSpeakingPassage, setIsSpeakingPassage] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  // Use a ref to hold the utterance, avoiding re-renders on change
+  const passageUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  // --- End NEW State ---
+
+  // Check for Speech Synthesis support on mount
+  useEffect(() => {
+    setIsSpeechSupported(
+      'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
+    );
+  }, []);
+
+  // --- Stop Passage Speech Utility ---
+  const stopPassageSpeech = useCallback(() => {
+    if (isSpeechSupported) {
+      window.speechSynthesis.cancel(); // Cancels all speech
+      setIsSpeakingPassage(false);
+      setIsPaused(false);
+      passageUtteranceRef.current = null; // Clear the ref
+    }
+  }, [isSpeechSupported]);
+
+  // --- Speech Synthesis Utility (Modified for single words) ---
+  const speakText = useCallback(
+    (text: string | null, lang: string) => {
+      if (!isSpeechSupported || !text) {
+        // console.warn('Speech synthesis not supported or text is empty.'); // Can be noisy
+        return; // Exit if not supported or no text
+      }
+
+      // Stop any ongoing passage speech before speaking a word
+      stopPassageSpeech();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang; // Set the language
+
+      // Optional: Add error handling for the speech event
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error (word):', event.error);
+      };
+
+      // We don't track state for single words, just speak them
+      window.speechSynthesis.speak(utterance);
+    },
+    [isSpeechSupported, stopPassageSpeech] // Added stopPassageSpeech dependency
+  );
+
+  // --- NEW Passage Speech Controls ---
+  const handlePlayPause = useCallback(() => {
+    if (!isSpeechSupported || !quizData?.paragraph) return;
+
+    if (isSpeakingPassage) {
+      if (isPaused) {
+        // Resume
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        // Pause
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
+    } else {
+      // Start new playback
+      stopPassageSpeech(); // Ensure any previous state is cleared
+
+      const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
+      utterance.lang = BCP47_LANGUAGE_MAP[passageLanguage];
+      passageUtteranceRef.current = utterance; // Store the utterance
+
+      utterance.onend = () => {
+        setIsSpeakingPassage(false);
+        setIsPaused(false);
+        passageUtteranceRef.current = null;
+      };
+
+      utterance.onerror = (event) => {
+        // Ignore interruption errors, as they are expected when stopping/cancelling
+        if (event.error !== 'interrupted') {
+          console.error('Speech synthesis error (passage):', event.error);
+          // Reset state only for unexpected errors
+          setIsSpeakingPassage(false);
+          setIsPaused(false);
+          passageUtteranceRef.current = null;
+          // Optionally provide user feedback here for unexpected errors
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+      setIsSpeakingPassage(true);
+      setIsPaused(false);
+    }
+  }, [
+    isSpeechSupported,
+    quizData?.paragraph,
+    isSpeakingPassage,
+    isPaused,
+    passageLanguage,
+    stopPassageSpeech,
+  ]);
+
+  const handleStop = useCallback(() => {
+    stopPassageSpeech();
+  }, [stopPassageSpeech]);
+  // --- End NEW Passage Speech Controls ---
 
   useEffect(() => {
     // Initial text generation
@@ -145,7 +321,67 @@ export default function TextGenerator() {
     }
   }, [showExplanation, highlightRelevantText, quizData]);
 
+  // Stop speech when component unmounts or quiz data changes
+  useEffect(() => {
+    return () => {
+      // Use the dedicated stop function
+      stopPassageSpeech();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizData]); // Keep dependency on quizData
+
+  // --- Function to render paragraph with click-to-speak words ---
+  const renderParagraphWithWordHover = useCallback(
+    (paragraphHtml: string | null, lang: string) => {
+      if (!paragraphHtml) return null;
+      if (!isSpeechSupported) {
+        // If speech is not supported, just render the HTML directly
+        return <div dangerouslySetInnerHTML={{ __html: paragraphHtml }} />;
+      }
+
+      // Regular expression to split the HTML string by spaces,
+      // keeping the spaces and also handling HTML tags without splitting them.
+      // This regex tries to match sequences of non-whitespace/non-tag characters (words),
+      // HTML tags, or sequences of whitespace.
+      const segments = paragraphHtml.split(/(\<[^>]+\>|\s+)/).filter(Boolean); // Split and remove empty strings
+
+      return segments.map((segment, index) => {
+        // Check if the segment is an HTML tag (like <mark> or </mark>)
+        if (/^\<[^>]+\>$/.test(segment)) {
+          // Render tags directly without hover effect
+          return <span key={`segment-${index}`} dangerouslySetInnerHTML={{ __html: segment }} />;
+        }
+        // Check if the segment is just whitespace
+        if (/^\s+$/.test(segment)) {
+          // Render whitespace as is
+          return <span key={`segment-${index}`}>{segment}</span>;
+        }
+
+        // Otherwise, it's likely a word or part of a word
+        // Clean the word for speech (remove potential HTML tags if any slipped through - basic cleaning)
+        const wordForSpeech = segment.replace(/\<[^>]+\>/g, '').trim();
+
+        // Don't attach hover effect to very short strings or punctuation-only strings
+        if (wordForSpeech.length <= 1 && !/^[a-zA-Z0-9]+$/.test(wordForSpeech)) {
+          return <span key={`segment-${index}`} dangerouslySetInnerHTML={{ __html: segment }} />;
+        }
+
+        return (
+          <span
+            key={`segment-${index}`}
+            onClick={() => speakText(wordForSpeech, lang)} // Uses modified speakText
+            className="hover-speak-word cursor-pointer"
+            dangerouslySetInnerHTML={{ __html: segment }} // Render the original segment (keeps highlighting)
+          />
+        );
+      });
+    },
+    [isSpeechSupported, speakText] // speakText dependency now includes stopPassageSpeech
+  );
+
   const generateText = async () => {
+    // Stop speech before generating new text
+    stopPassageSpeech();
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
@@ -232,6 +468,8 @@ export default function TextGenerator() {
   };
 
   const generateNewQuiz = () => {
+    // Stop speech before generating new quiz
+    stopPassageSpeech();
     generateText().catch((error) => {
       console.error('Error explicitly caught from generateNewQuiz:', error);
     });
@@ -450,10 +688,47 @@ export default function TextGenerator() {
           </div>
 
           <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold text-white">
+                Reading Passage ({passageLanguage})
+              </h3>
+              {/* --- UPDATED Speech Controls --- */}
+              {isSpeechSupported && quizData.paragraph && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePlayPause}
+                    title={isSpeakingPassage && !isPaused ? 'Pause' : 'Play'}
+                    className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
+                    disabled={!quizData.paragraph}
+                  >
+                    {isSpeakingPassage && !isPaused ? (
+                      <PauseIcon className="w-4 h-4" />
+                    ) : (
+                      <PlayIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                  {isSpeakingPassage && ( // Show Stop button only when speaking/paused
+                    <button
+                      onClick={handleStop}
+                      title="Stop"
+                      className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                    >
+                      <StopIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* --- End UPDATED Speech Controls --- */}
+            </div>
             <div
-              className="prose prose-invert max-w-none text-white leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: highlightedParagraph || quizData.paragraph || '' }}
-            />
+              className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
+              // Render using the word hover function
+            >
+              {renderParagraphWithWordHover(
+                highlightedParagraph || quizData.paragraph,
+                BCP47_LANGUAGE_MAP[passageLanguage]
+              )}
+            </div>
           </div>
 
           <div className="mb-6">
