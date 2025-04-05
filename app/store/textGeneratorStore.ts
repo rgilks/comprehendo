@@ -5,7 +5,8 @@ import { type Language, LANGUAGES, SPEECH_LANGUAGES } from '@/contexts/LanguageC
 import { type CEFRLevel } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { getVocabularyGuidance, getGrammarGuidance } from '@/config/language-guidance';
-import { ChatRequestParams } from '@/lib/api';
+import { generateChatResponse } from '@/app/actions/chat';
+import { getProgress, updateProgress } from '@/app/actions/userProgress';
 
 // Quiz data schema
 const quizDataSchema = z.object({
@@ -30,12 +31,6 @@ const quizDataSchema = z.object({
 
 export type QuizData = z.infer<typeof quizDataSchema>;
 
-// API response schema
-const apiResponseSchema = z.object({
-  result: z.string().optional(),
-  error: z.string().optional(),
-});
-
 interface TranslationResponse {
   responseStatus: number;
   responseData: {
@@ -43,17 +38,10 @@ interface TranslationResponse {
   };
 }
 
-// Progress response type
-interface UserProgressResponse {
-  currentLevel: CEFRLevel;
-  currentStreak: number;
-  leveledUp?: boolean;
-}
-
-// When using React Query type-safely
-interface ReactQueryChatMutation {
-  mutateAsync: (params: ChatRequestParams) => Promise<string>;
-}
+// Define the API response schema
+const apiResponseSchema = z.object({
+  result: z.string(),
+});
 
 interface TextGeneratorState {
   // UI state
@@ -340,34 +328,17 @@ export const useTextGeneratorStore = create(
       });
 
       try {
-        const response = await fetch(`/api/user/progress?language=${passageLanguage}`);
+        const result = await getProgress({ language: passageLanguage });
 
-        if (response.ok) {
-          const data = (await response.json()) as UserProgressResponse;
-
-          if (data.currentLevel) {
-            set((state) => {
-              state.cefrLevel = data.currentLevel;
-            });
-          }
-          set((state) => {
-            state.userStreak = data.currentStreak ?? 0;
-          });
-          console.log(`[Progress] Fetched user progress for ${passageLanguage}:`, data);
-        } else {
-          let errorMsg = `Failed to fetch user progress (${response.status})`;
-          try {
-            const errorText = await response.text();
-            const errorData = JSON.parse(errorText) as { message?: string; error?: string };
-            errorMsg = errorData?.message || errorData?.error || errorMsg;
-          } catch (errorParsingOrReadingError) {
-            console.warn(
-              '[Progress Fetch] Could not parse error response JSON or read text:',
-              errorParsingOrReadingError
-            );
-          }
-          throw new Error(errorMsg);
+        if (result.error) {
+          throw new Error(result.error);
         }
+
+        set((state) => {
+          state.cefrLevel = (result.currentLevel || 'A1') as CEFRLevel;
+          state.userStreak = result.currentStreak || 0;
+        });
+        console.log(`[Progress] Fetched user progress for ${passageLanguage}:`, result);
       } catch (err) {
         console.error(`[Progress] Error fetching user progress for ${passageLanguage}:`, err);
         set((state) => {
@@ -460,50 +431,6 @@ export const useTextGeneratorStore = create(
               let forceCache = false;
               let success = false;
 
-              // Create chat mutation instance - needs to be done in component that uses this store
-              const chatMutation = {
-                mutateAsync: async (params: ChatRequestParams) => {
-                  try {
-                    const response = await fetch('/api/chat', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(params),
-                    });
-
-                    if (!response.ok) {
-                      // Define a simple type for the expected error structure
-                      type ErrorResponse = { error?: string; message?: string };
-                      let errorData: ErrorResponse = {};
-                      try {
-                        // Try to parse the error response body
-                        errorData = (await response.json()) as ErrorResponse;
-                      } catch (parseError) {
-                        console.warn('Could not parse error response JSON:', parseError);
-                        // If parsing fails, use the status text or a default message
-                        throw new Error(
-                          response.statusText || `HTTP error! status: ${response.status}`
-                        );
-                      }
-                      // Use the parsed error message if available
-                      throw new Error(
-                        errorData.error ||
-                          errorData.message ||
-                          `HTTP error! status: ${response.status}`
-                      );
-                    }
-
-                    // Await the JSON response first, then parse
-                    const jsonResponse = (await response.json()) as unknown;
-                    const data = apiResponseSchema.parse(jsonResponse);
-                    return data.result;
-                  } catch (error) {
-                    throw error;
-                  }
-                },
-              };
-
               // Keep trying until we succeed or exhaust all options
               while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
                 try {
@@ -515,89 +442,68 @@ export const useTextGeneratorStore = create(
                     forceCache,
                   };
 
-                  // Try to get the React Query mutation if available from ReactQueryAdapter
-                  const reactQueryMutation =
-                    typeof window !== 'undefined'
-                      ? (window as Window & { __reactQueryChatMutation?: ReactQueryChatMutation })
-                          .__reactQueryChatMutation
-                      : undefined;
+                  // Use server action directly
+                  console.log('[API] Using server action');
+                  const response = await generateChatResponse(requestBody);
 
-                  // Use React Query mutation if available, otherwise use fetch directly
-                  let result: string | undefined;
-                  if (reactQueryMutation) {
-                    console.log('[API] Using React Query mutation');
-                    result = await reactQueryMutation.mutateAsync(requestBody);
-                  } else {
-                    console.log('[API] Using direct fetch');
-                    // Use the internal fetch implementation
-                    result = await chatMutation.mutateAsync(requestBody);
-                  }
+                  // Validate the response with Zod schema
+                  const validatedResponse = apiResponseSchema.parse(response);
+                  const result = validatedResponse.result;
 
                   if (!result) {
                     throw new Error('No result received');
                   }
 
-                  // Clean up the string response from the AI before parsing
-                  const jsonString = result.replace(/```json|```/g, '').trim();
+                  try {
+                    // The server has already validated this against the quiz schema
+                    const jsonData = JSON.parse(result) as z.infer<typeof quizDataSchema>;
+                    console.log('[Debug] JSON parse successful');
 
-                  // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
-                  const parsedResult = z
-                    .string()
-                    .transform((str) => {
-                      try {
-                        return JSON.parse(str) as unknown;
-                      } catch (e) {
-                        throw new Error(`Failed to parse JSON: ${String(e)}`);
-                      }
-                    })
-                    .pipe(quizDataSchema)
-                    .safeParse(jsonString);
+                    // The server has already validated against the schema, but we do a final check
+                    // This provides type safety but shouldn't fail under normal circumstances
+                    const validatedData = quizDataSchema.parse(jsonData);
 
-                  if (!parsedResult.success) {
-                    console.error('Error parsing generated quiz JSON:', parsedResult.error);
+                    set((state) => {
+                      state.quizData = validatedData;
+                      state.generatedPassageLanguage = passageLanguage;
+                    });
+
+                    // --- Calculate Dynamic Question Delay ---
+                    const WPM = 250; // Lower WPM for a quicker appearance
+                    const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
+                    const readingTimeMs = (wordCount / WPM) * 60 * 1000;
+                    const bufferMs = 1500; // Further reduce buffer for a more responsive feel
+                    const minDelayMs = 1500; // Shorter minimum delay
+                    const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
+                    console.log(
+                      `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
+                    );
+                    // --- End Calculate Delay ---
+
+                    // Start timer to show question section using calculated delay, but with a cross-fade effect
+                    const timeoutId = setTimeout(() => {
+                      // When it's time to show the question, first make sure content is visible
+                      if (!get().showContent)
+                        set((state) => {
+                          state.showContent = true;
+                        });
+
+                      // Short delay to ensure content is visible before showing question
+                      setTimeout(() => {
+                        set((state) => {
+                          state.showQuestionSection = true;
+                        });
+                      }, 100);
+                    }, questionDelayMs);
+
+                    set((state) => {
+                      state.questionDelayTimeoutRef = timeoutId;
+                    });
+                    success = true;
+                  } catch (error) {
+                    console.error('Error parsing generated quiz JSON:', error);
                     throw new Error('Failed to parse the structure of the generated quiz.');
                   }
-
-                  // No need to cast - Zod guarantees the type
-                  const validatedData = parsedResult.data;
-
-                  set((state) => {
-                    state.quizData = validatedData;
-                    state.generatedPassageLanguage = passageLanguage;
-                  });
-
-                  // --- Calculate Dynamic Question Delay ---
-                  const WPM = 250; // Lower WPM for a quicker appearance
-                  const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
-                  const readingTimeMs = (wordCount / WPM) * 60 * 1000;
-                  const bufferMs = 1500; // Further reduce buffer for a more responsive feel
-                  const minDelayMs = 1500; // Shorter minimum delay
-                  const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
-                  console.log(
-                    `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
-                  );
-                  // --- End Calculate Delay ---
-
-                  // Start timer to show question section using calculated delay, but with a cross-fade effect
-                  const timeoutId = setTimeout(() => {
-                    // When it's time to show the question, first make sure content is visible
-                    if (!get().showContent)
-                      set((state) => {
-                        state.showContent = true;
-                      });
-
-                    // Short delay to ensure content is visible before showing question
-                    setTimeout(() => {
-                      set((state) => {
-                        state.showQuestionSection = true;
-                      });
-                    }, 100);
-                  }, questionDelayMs);
-
-                  set((state) => {
-                    state.questionDelayTimeoutRef = timeoutId;
-                  });
-                  success = true;
                 } catch (err) {
                   console.error(`Error during attempt ${currentRetry + 1}:`, err);
                   if (currentRetry < MAX_RETRIES) {
@@ -643,7 +549,7 @@ export const useTextGeneratorStore = create(
             state.error = 'Failed to start generation process';
           });
         }
-      }, 300);
+      }, 500);
     },
 
     // Handle answer selection
@@ -683,44 +589,25 @@ export const useTextGeneratorStore = create(
 
       // Update user progress if authenticated
       try {
-        const response = await fetch('/api/user/progress', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            isCorrect: answer === quizData.correctAnswer,
-            language: generatedPassageLanguage,
-          }),
+        const result = await updateProgress({
+          isCorrect: answer === quizData.correctAnswer,
+          language: generatedPassageLanguage || '',
         });
 
-        if (response.ok) {
-          const progressData = (await response.json()) as UserProgressResponse;
-
-          if (progressData) {
-            set((state) => {
-              state.userStreak = progressData.currentStreak;
-            });
-
-            // First check for level up
-            if (progressData.leveledUp) {
-              set((state) => {
-                state.cefrLevel = progressData.currentLevel;
-              });
-              console.log(`[Progress] Leveled up to ${progressData.currentLevel}!`);
-            }
-          }
+        if (result.error) {
+          console.error(`[Progress] Error: ${result.error}`);
         } else {
-          let errorMsg = `Failed to update progress (${response.status})`;
-          try {
-            const errorText = await response.text();
-            const errorData = JSON.parse(errorText) as { message?: string; error?: string };
-            errorMsg = errorData?.message || errorData?.error || errorMsg;
-          } catch (errorParsingOrReadingError) {
-            console.warn(
-              '[Progress Update] Could not parse error response JSON or read text:',
-              errorParsingOrReadingError
-            );
+          set((state) => {
+            state.userStreak = result.currentStreak;
+          });
+
+          // First check for level up
+          if (result.leveledUp) {
+            set((state) => {
+              state.cefrLevel = result.currentLevel as CEFRLevel;
+            });
+            console.log(`[Progress] Leveled up to ${result.currentLevel}!`);
           }
-          console.error(`[Progress] Error: ${errorMsg}`);
         }
       } catch (err) {
         console.error('[Progress] Error updating progress:', err);

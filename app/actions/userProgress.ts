@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+'use server';
+
 import { getServerSession } from 'next-auth/next';
 import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
@@ -13,58 +14,74 @@ interface SessionUser extends NonNullable<Session['user']> {
 const CEFR_LEVELS: ReadonlyArray<string> = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 // Schemas for request validation
-const postRequestBodySchema = z.object({
+const updateProgressSchema = z.object({
   isCorrect: z.boolean(),
   language: z.string().min(2).max(5), // Expecting language code e.g., 'en', 'es'
 });
 
-const getRequestQuerySchema = z.object({
+const getProgressSchema = z.object({
   language: z.string().min(2).max(5),
 });
 
-// --- POST Handler --- (Update progress)
-export async function POST(request: Request) {
+export type UpdateProgressParams = z.infer<typeof updateProgressSchema>;
+export type GetProgressParams = z.infer<typeof getProgressSchema>;
+
+export interface ProgressResponse {
+  currentLevel: string;
+  currentStreak: number;
+  leveledUp?: boolean;
+  error?: string;
+}
+
+// Update progress - equivalent to POST handler
+export async function updateProgress(params: UpdateProgressParams): Promise<ProgressResponse> {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as SessionUser | undefined;
 
   if (!session || !sessionUser?.dbId) {
-    console.warn('[API /user/progress POST] Unauthorized access attempt or missing dbId');
-    return NextResponse.json({ error: 'Unauthorized or invalid session' }, { status: 401 });
+    console.warn('[UserProgress] Unauthorized access attempt or missing dbId');
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'Unauthorized or invalid session',
+    };
   }
 
   const userId = sessionUser.dbId;
 
   try {
-    const rawBody: unknown = await request.json();
-    console.log('[API /user/progress POST] Request body:', JSON.stringify(rawBody));
+    console.log('[UserProgress] Request params:', JSON.stringify(params));
 
-    // Now parse/validate the unknown type
-    const parsedBody = postRequestBodySchema.safeParse(rawBody);
+    // Now parse/validate the params
+    const parsedBody = updateProgressSchema.safeParse(params);
 
     if (!parsedBody.success) {
       console.warn(
-        `[API /user/progress POST] Invalid request body for user ${userId}:`,
+        `[UserProgress] Invalid request body for user ${userId}:`,
         parsedBody.error.flatten()
       );
-      return NextResponse.json(
-        { error: 'Invalid request body', issues: parsedBody.error.flatten() },
-        { status: 400 }
-      );
+      return {
+        currentLevel: 'A1',
+        currentStreak: 0,
+        error: 'Invalid request parameters',
+      };
     }
 
     const { isCorrect, language } = parsedBody.data;
 
     // Safety check for language code
     if (!language) {
-      console.warn(`[API /user/progress POST] Missing language parameter for user ${userId}`);
-      return NextResponse.json({ error: 'Language parameter is required' }, { status: 400 });
+      console.warn(`[UserProgress] Missing language parameter for user ${userId}`);
+      return {
+        currentLevel: 'A1',
+        currentStreak: 0,
+        error: 'Language parameter is required',
+      };
     }
 
     // Normalize language code: ensure lowercase 2-letter code
     const normalizedLanguage = language.toLowerCase().slice(0, 2);
-    console.log(
-      `[API /user/progress POST] Processing for user ${userId}, language: ${normalizedLanguage}`
-    );
+    console.log(`[UserProgress] Processing for user ${userId}, language: ${normalizedLanguage}`);
 
     // --- Get or Create User Progress Record for the language ---
     try {
@@ -81,7 +98,7 @@ export async function POST(request: Request) {
 
       if (!userProgress) {
         console.log(
-          `[API /user/progress POST] No record found for user ${userId}, language ${normalizedLanguage}. Creating default A1 record.`
+          `[UserProgress] No record found for user ${userId}, language ${normalizedLanguage}. Creating default A1 record.`
         );
         // Create default record if none exists for this language
         db.prepare('INSERT INTO user_language_progress (user_id, language_code) VALUES (?, ?)').run(
@@ -107,19 +124,19 @@ export async function POST(request: Request) {
             correct_streak = 0; // Reset streak on level up
             leveledUp = true;
             console.log(
-              `[API /user/progress POST] User ${userId}, Lang ${normalizedLanguage}: Leveled up to ${current_cefr_level}`
+              `[UserProgress] User ${userId}, Lang ${normalizedLanguage}: Leveled up to ${current_cefr_level}`
             );
           } else {
             correct_streak = 0; // Reset streak even at max level
             console.log(
-              `[API /user/progress POST] User ${userId}, Lang ${normalizedLanguage}: Reached max level, streak reset.`
+              `[UserProgress] User ${userId}, Lang ${normalizedLanguage}: Reached max level, streak reset.`
             );
           }
         }
       } else {
         if (correct_streak > 0) {
           console.log(
-            `[API /user/progress POST] User ${userId}, Lang ${normalizedLanguage}: Streak reset from ${correct_streak}.`
+            `[UserProgress] User ${userId}, Lang ${normalizedLanguage}: Streak reset from ${correct_streak}.`
           );
         }
         correct_streak = 0;
@@ -131,68 +148,76 @@ export async function POST(request: Request) {
       ).run(current_cefr_level, correct_streak, userId, normalizedLanguage);
 
       console.log(
-        `[API /user/progress POST] Successfully updated progress for user ${userId}, language ${normalizedLanguage}`
+        `[UserProgress] Successfully updated progress for user ${userId}, language ${normalizedLanguage}`
       );
-      return NextResponse.json({
+      return {
         currentLevel: current_cefr_level,
         currentStreak: correct_streak,
         leveledUp: leveledUp,
-      });
+      };
     } catch (dbError) {
-      console.error(`[API /user/progress POST] Database error for user ${userId}:`, dbError);
-      return NextResponse.json(
-        { error: 'A database error occurred while updating progress' },
-        { status: 500 }
-      );
+      console.error(`[UserProgress] Database error for user ${userId}:`, dbError);
+      return {
+        currentLevel: 'A1',
+        currentStreak: 0,
+        error: 'A database error occurred while updating progress',
+      };
     }
   } catch (error) {
-    console.error(`[API /user/progress POST] Error for user ${userId}:`, error);
-    return NextResponse.json(
-      { error: 'An error occurred while updating progress' },
-      { status: 500 }
-    );
+    console.error(`[UserProgress] Error for user ${userId}:`, error);
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'An error occurred while updating progress',
+    };
   }
 }
 
-// --- GET Handler --- (Fetch progress for a specific language)
-export async function GET(request: Request) {
+// Get progress - equivalent to GET handler
+export async function getProgress(params: GetProgressParams): Promise<ProgressResponse> {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as SessionUser | undefined;
 
   if (!session || !sessionUser?.dbId) {
-    console.warn('[API /user/progress GET] Unauthorized access attempt or missing dbId');
-    return NextResponse.json({ error: 'Unauthorized or invalid session' }, { status: 401 });
+    console.warn('[UserProgress] Unauthorized access attempt or missing dbId');
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'Unauthorized or invalid session',
+    };
   }
 
   const userId = sessionUser.dbId;
 
-  // Extract language from query parameters
-  const { searchParams } = new URL(request.url);
-  const language = searchParams.get('language');
-  console.log(`[API /user/progress GET] Request for user ${userId}, raw language: ${language}`);
+  console.log(`[UserProgress] Request for user ${userId}, raw language: ${params.language}`);
 
-  if (!language) {
-    console.warn(`[API /user/progress GET] Missing language parameter for user ${userId}`);
-    return NextResponse.json({ error: 'Language parameter is required' }, { status: 400 });
+  if (!params.language) {
+    console.warn(`[UserProgress] Missing language parameter for user ${userId}`);
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'Language parameter is required',
+    };
   }
 
-  const parsedQuery = getRequestQuerySchema.safeParse({ language });
+  const parsedQuery = getProgressSchema.safeParse(params);
 
   if (!parsedQuery.success) {
     console.warn(
-      `[API /user/progress GET] Invalid language parameter for user ${userId}:`,
+      `[UserProgress] Invalid language parameter for user ${userId}:`,
       parsedQuery.error.flatten()
     );
-    return NextResponse.json(
-      { error: 'Invalid query parameter: language', issues: parsedQuery.error.flatten() },
-      { status: 400 }
-    );
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'Invalid language parameter',
+    };
   }
 
   // Normalize language code: ensure lowercase 2-letter code
   const normalizedLanguage = parsedQuery.data.language.toLowerCase().slice(0, 2);
   console.log(
-    `[API /user/progress GET] Processing for user ${userId}, normalized language: ${normalizedLanguage}`
+    `[UserProgress] Processing for user ${userId}, normalized language: ${normalizedLanguage}`
   );
 
   try {
@@ -207,30 +232,29 @@ export async function GET(request: Request) {
 
     if (!userProgress) {
       // If no record, assume A1 level, 0 streak (as per new logic)
-      // We could optionally create the record here too, but GET shouldn't usually modify data.
-      // Let POST handle creation on first correct/incorrect answer for the language.
       console.log(
-        `[API /user/progress GET] No record found for user ${userId}, language ${normalizedLanguage}. Returning default A1.`
+        `[UserProgress] No record found for user ${userId}, language ${normalizedLanguage}. Returning default A1.`
       );
-      return NextResponse.json({ currentLevel: 'A1', currentStreak: 0 });
+      return { currentLevel: 'A1', currentStreak: 0 };
     }
 
     console.log(
-      `[API /user/progress GET] Found progress for user ${userId}, language ${normalizedLanguage}:`,
+      `[UserProgress] Found progress for user ${userId}, language ${normalizedLanguage}:`,
       userProgress
     );
-    return NextResponse.json({
+    return {
       currentLevel: userProgress.cefr_level,
       currentStreak: userProgress.correct_streak,
-    });
+    };
   } catch (error) {
     console.error(
-      `[API /user/progress GET] Error for user ${userId}, language ${normalizedLanguage}:`,
+      `[UserProgress] Error for user ${userId}, language ${normalizedLanguage}:`,
       error
     );
-    return NextResponse.json(
-      { error: 'An error occurred while fetching progress' },
-      { status: 500 }
-    );
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'An error occurred while fetching progress',
+    };
   }
 }
