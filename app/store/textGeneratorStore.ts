@@ -139,7 +139,7 @@ export const useTextGeneratorStore = create<TextGeneratorState>((set, get) => ({
 
   setVolumeLevel: (volume) => {
     set({ volume });
-    const { passageUtteranceRef, isSpeakingPassage } = get();
+    const { passageUtteranceRef } = get();
 
     if (passageUtteranceRef) {
       passageUtteranceRef.volume = volume;
@@ -358,46 +358,45 @@ export const useTextGeneratorStore = create<TextGeneratorState>((set, get) => ({
 
       const levelToUse = cefrLevel;
 
-      // Get a random topic appropriate for the current CEFR level
-      const randomTopic = getRandomTopicForLevel(levelToUse);
-
-      // Get vocabulary and grammar guidance for the current level
-      const vocabGuidance = getVocabularyGuidance(levelToUse);
-      const grammarGuidance = getGrammarGuidance(levelToUse);
-
-      const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
-      // We need to get the questionLanguage from the context at runtime
-      // This will be provided by the component
-      const questionLanguage = get().generatedQuestionLanguage || 'en';
-      const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
-
-      // Add language guidance to the prompt for A1 and A2 levels
-      let languageInstructions = '';
-      if (['A1', 'A2'].includes(levelToUse)) {
-        languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
-      }
-
-      const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
-
-      const seed = Math.floor(Math.random() * 100);
-
-      console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
-      console.log(
-        '[API] Passage Lang:',
-        passageLanguage,
-        'Question Lang:',
-        questionLanguage,
-        'Level:',
-        levelToUse,
-        'Topic:',
-        randomTopic
-      );
-
-      const MAX_RETRIES = 2;
-      let currentRetry = 0;
-      let forceCache = false;
-
       try {
+        // Get a random topic appropriate for the current CEFR level
+        const randomTopic = getRandomTopicForLevel(levelToUse);
+
+        // Get vocabulary and grammar guidance for the current level
+        const vocabGuidance = getVocabularyGuidance(levelToUse);
+        const grammarGuidance = getGrammarGuidance(levelToUse);
+
+        const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
+        // We need to get the questionLanguage from the context at runtime
+        // This will be provided by the component
+        const questionLanguage = get().generatedQuestionLanguage || 'en';
+        const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
+
+        // Add language guidance to the prompt for A1 and A2 levels
+        let languageInstructions = '';
+        if (['A1', 'A2'].includes(levelToUse)) {
+          languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
+        }
+
+        const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
+
+        const seed = Math.floor(Math.random() * 100);
+
+        console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
+        console.log(
+          '[API] Passage Lang:',
+          passageLanguage,
+          'Question Lang:',
+          questionLanguage,
+          'Level:',
+          levelToUse,
+          'Topic:',
+          randomTopic
+        );
+
+        const MAX_RETRIES = 2;
+        let currentRetry = 0;
+        let forceCache = false;
         let success = false;
 
         // Keep trying until we succeed or exhaust all options
@@ -581,7 +580,6 @@ export const useTextGeneratorStore = create<TextGeneratorState>((set, get) => ({
         const progressData = (await response.json()) as UserProgressResponse;
 
         if (progressData) {
-          const previousStreak = userStreak || 0;
           set({ userStreak: progressData.currentStreak });
 
           // First check for level up

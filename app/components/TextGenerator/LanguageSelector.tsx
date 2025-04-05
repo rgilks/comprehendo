@@ -5,7 +5,6 @@ import { GlobeAltIcon, BookOpenIcon } from '@heroicons/react/24/solid';
 import { LANGUAGES, type Language } from '../../contexts/LanguageContext';
 import useTextGeneratorStore from '../../store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
-import type { CEFRLevel } from '../../config/language-guidance';
 
 const LanguageSelector = () => {
   const { t } = useTranslation('common');
