@@ -8,7 +8,7 @@ import { type Language } from './contexts/LanguageContext'; // Assuming Language
 const i18nConfig = {
   lng: 'en',
   fallbackLng: 'en',
-  supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi'],
+  supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he'],
   ns: ['common'], // Default namespaces
   defaultNS: 'common',
   interpolation: {
