@@ -3,12 +3,6 @@
 import { LanguageProvider, type Language } from '../contexts/LanguageContext';
 import { notFound } from 'next/navigation';
 import HomeContent from './HomeContent';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Comprehendo',
-  description: 'An AI-powered language learning tool',
-};
 
 export default function LanguagePage({ params }: { params: { lang: string } }) {
   // Validate language
