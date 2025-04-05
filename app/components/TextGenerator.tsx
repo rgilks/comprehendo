@@ -678,7 +678,7 @@ export default function TextGenerator() {
 
       setTimeout(() => setShowExplanation(true), 300);
     },
-    [isAnswered, quizData, stopPassageSpeech, status, t, generatedPassageLanguage]
+    [isAnswered, quizData, stopPassageSpeech, status, t, generatedPassageLanguage, userStreak]
   );
 
   const handleVolumeChange = useCallback((newVolume: number) => {
