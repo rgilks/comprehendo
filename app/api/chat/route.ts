@@ -33,6 +33,7 @@ const chatRequestBodySchema = z.object({
   seed: z.number().optional(),
   passageLanguage: z.string(),
   questionLanguage: z.string(),
+  forceCache: z.boolean().optional(),
 });
 
 type OpenAIChatCompletion = OpenAI.Chat.Completions.ChatCompletion;
@@ -159,12 +160,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const { prompt, seed, passageLanguage, questionLanguage } = parsedBody.data;
+    const { prompt, seed, passageLanguage, questionLanguage, forceCache } = parsedBody.data;
 
     console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
     console.log(
       `[API] Passage Language: ${passageLanguage}, Question Language: ${questionLanguage}`
     );
+    if (forceCache) {
+      console.log(
+        '[API] Force cache option enabled - will use cached content if available regardless of age'
+      );
+    }
 
     const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
     const cefrLevel = cefrLevelMatch?.[1] ?? 'unknown';
@@ -174,36 +180,105 @@ export async function POST(request: Request) {
     const cacheKey = `${passageLanguage}-${questionLanguage}-${cefrLevel}-${seedValue}`;
     console.log(`[API] Checking cache for key: ${cacheKey}`);
 
-    const resultFromDb: unknown = db
-      .prepare(
+    // Function to get cached content with optional level override
+    const getCachedContent = (level: string) => {
+      const result = db
+        .prepare(
+          `
+        SELECT content, created_at FROM generated_content \
+        WHERE language = ? \
+          AND question_language = ? \
+          AND level = ? \
+          AND id % 100 = ?\
+        ORDER BY created_at DESC LIMIT 1
+      `
+        )
+        .get(passageLanguage, questionLanguage, level, seedValue % 100);
+
+      // Validate result has the expected structure
+      if (
+        typeof result === 'object' &&
+        result !== null &&
+        'content' in result &&
+        typeof result.content === 'string' &&
+        'created_at' in result &&
+        typeof result.created_at === 'string'
+      ) {
+        return result as GeneratedContentRow;
+      }
+
+      return undefined;
+    };
+
+    // First try with exact CEFR level
+    let cachedContent = getCachedContent(cefrLevel);
+
+    // If forceCache is true and no content found, try with surrounding CEFR levels
+    if (forceCache && !cachedContent) {
+      console.log(
+        `[API] Force cache enabled but no content for ${cefrLevel}, trying nearby levels`
+      );
+      const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+      const currentIndex = cefrLevels.indexOf(cefrLevel);
+
+      // Try one level easier if available
+      if (currentIndex > 0) {
+        const easierLevel = cefrLevels[currentIndex - 1];
+        console.log(`[API] Trying easier level: ${easierLevel}`);
+        cachedContent = getCachedContent(easierLevel);
+        if (cachedContent) {
+          console.log(`[API] Found content at easier level: ${easierLevel}`);
+        }
+      }
+
+      // If still not found, try one level harder if available
+      if (!cachedContent && currentIndex < cefrLevels.length - 1) {
+        const harderLevel = cefrLevels[currentIndex + 1];
+        console.log(`[API] Trying harder level: ${harderLevel}`);
+        cachedContent = getCachedContent(harderLevel);
+        if (cachedContent) {
+          console.log(`[API] Found content at harder level: ${harderLevel}`);
+        }
+      }
+
+      // If still not found, try any level as last resort
+      if (!cachedContent) {
+        console.log(`[API] Force cache: last resort - trying any content for this language pair`);
+        const anyLevelContent = db
+          .prepare(
+            `
+          SELECT content, created_at FROM generated_content \
+          WHERE language = ? \
+            AND question_language = ? \
+          ORDER BY created_at DESC LIMIT 1
         `
-      SELECT content, created_at FROM generated_content \
-      WHERE language = ? \
-        AND question_language = ? \
-        AND level = ? \
-        AND id % 100 = ?\
-      ORDER BY created_at DESC LIMIT 1
-    `
-      )
-      .get(passageLanguage, questionLanguage, cefrLevel, seedValue % 100);
+          )
+          .get(passageLanguage, questionLanguage);
 
-    let cachedContent: GeneratedContentRow | undefined = undefined;
-
-    if (
-      typeof resultFromDb === 'object' &&
-      resultFromDb !== null &&
-      'content' in resultFromDb &&
-      typeof resultFromDb.content === 'string' &&
-      'created_at' in resultFromDb &&
-      typeof resultFromDb.created_at === 'string'
-    ) {
-      cachedContent = resultFromDb as GeneratedContentRow;
+        // Validate anyLevelContent has the expected structure
+        if (
+          typeof anyLevelContent === 'object' &&
+          anyLevelContent !== null &&
+          'content' in anyLevelContent &&
+          typeof anyLevelContent.content === 'string' &&
+          'created_at' in anyLevelContent &&
+          typeof anyLevelContent.created_at === 'string'
+        ) {
+          console.log(
+            `[API] Force cache: found content for this language pair with different level/seed`
+          );
+          cachedContent = anyLevelContent as GeneratedContentRow;
+        }
+      }
     }
 
     if (cachedContent) {
       const timestamp = new Date(cachedContent.created_at).getTime();
-      if (now - timestamp < CACHE_TTL * 1000) {
-        console.log(`[API] Cache hit for key: ${cacheKey}`);
+      // If forceCache is true, skip the age check and use the cached content regardless of age
+      if (forceCache || now - timestamp < CACHE_TTL * 1000) {
+        console.log(
+          `[API] ${forceCache ? 'Force cache enabled - using cached content' : 'Cache hit'} for key: ${cacheKey}`
+        );
         return NextResponse.json({ result: cachedContent.content });
       }
       console.log(`[API] Cache expired for key: ${cacheKey}`);

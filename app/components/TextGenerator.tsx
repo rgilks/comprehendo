@@ -481,45 +481,57 @@ export default function TextGenerator() {
       levelToUse
     );
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt, seed, passageLanguage, questionLanguage }),
-      });
+    const MAX_RETRIES = 2;
+    let currentRetry = 0;
+    let forceCache = false;
 
-      if (!response.ok) {
-        // Define a simple type for the expected error structure
-        type ErrorResponse = { error?: string; message?: string };
-        let errorData: ErrorResponse = {};
-        try {
-          // Try to parse the error response body
-          errorData = (await response.json()) as ErrorResponse;
-        } catch (parseError) {
-          console.warn('Could not parse error response JSON:', parseError);
-          // If parsing fails, use the status text or a default message
-          throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
-        }
-        // Use the parsed error message if available
-        throw new Error(
-          errorData.error || errorData.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      // Await the JSON response first, then parse
-      const jsonResponse = (await response.json()) as unknown;
-      const data = apiResponseSchema.parse(jsonResponse);
-
-      if (data.error || !data.result) {
-        throw new Error(data.error || 'No result received');
-      }
-
-      // Clean up the string response from the AI before parsing
-      const jsonString = data.result.replace(/```json|```/g, '').trim();
-
+    async function attemptFetch() {
       try {
+        const requestBody = {
+          prompt,
+          seed,
+          passageLanguage,
+          questionLanguage,
+          forceCache, // Add this parameter to the request
+        };
+
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          // Define a simple type for the expected error structure
+          type ErrorResponse = { error?: string; message?: string };
+          let errorData: ErrorResponse = {};
+          try {
+            // Try to parse the error response body
+            errorData = (await response.json()) as ErrorResponse;
+          } catch (parseError) {
+            console.warn('Could not parse error response JSON:', parseError);
+            // If parsing fails, use the status text or a default message
+            throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
+          }
+          // Use the parsed error message if available
+          throw new Error(
+            errorData.error || errorData.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        // Await the JSON response first, then parse
+        const jsonResponse = (await response.json()) as unknown;
+        const data = apiResponseSchema.parse(jsonResponse);
+
+        if (data.error || !data.result) {
+          throw new Error(data.error || 'No result received');
+        }
+
+        // Clean up the string response from the AI before parsing
+        const jsonString = data.result.replace(/```json|```/g, '').trim();
+
         // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
         const parsedResult = z
           .string()
@@ -561,21 +573,50 @@ export default function TextGenerator() {
         questionDelayTimeoutRef.current = setTimeout(() => {
           setShowQuestionSection(true);
         }, questionDelayMs); // Use dynamic delay
+
+        return true; // Indicate success
       } catch (err: unknown) {
-        console.error('Error parsing generated quiz JSON:', err);
-        if (err instanceof Error) {
-          setError(`${t('common.errorPrefix')} ${err.message}`);
+        console.error(`Error during attempt ${currentRetry + 1}:`, err);
+        if (currentRetry < MAX_RETRIES) {
+          // If we have retries left, increment the counter and try again
+          currentRetry++;
+          console.log(`Retrying... Attempt ${currentRetry + 1} of ${MAX_RETRIES + 1}`);
+          return false; // Indicate failure, triggering a retry
+        } else if (!forceCache) {
+          // We've exhausted our retries, try the cache as last resort
+          console.log('Retries exhausted, trying to force cache retrieval');
+          forceCache = true;
+          currentRetry = 0; // Reset retry counter for the cache attempt
+          return false; // Indicate failure, triggering the cache attempt
         } else {
-          setError(t('practice.error'));
+          // We've tried retries and cache, now show error
+          if (err instanceof Error) {
+            setError(`${t('common.errorPrefix')} ${err.message}`);
+          } else {
+            setError(t('practice.error'));
+          }
+          throw err; // Re-throw to exit the retry loop
         }
       }
-    } catch (err: unknown) {
-      console.error('Error generating text:', err);
-      if (err instanceof Error) {
-        setError(`${t('common.errorPrefix')} ${err.message}`);
-      } else {
-        setError(t('practice.error'));
+    }
+
+    try {
+      let success = false;
+
+      // Keep trying until we succeed or exhaust all options
+      while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
+        success = await attemptFetch();
+
+        // If not successful and still have retries, wait before next attempt
+        if (!success && currentRetry <= MAX_RETRIES) {
+          const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
+          console.log(`Waiting ${delay}ms before retry ${currentRetry + 1}...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
       }
+    } catch (err) {
+      // Final error handling is already done in attemptFetch
+      console.error('All attempts failed:', err);
     } finally {
       setLoading(false);
     }
@@ -756,16 +797,7 @@ export default function TextGenerator() {
                 )}
               </span>
 
-              {/* Display Streak */}
-              {status === 'authenticated' && userStreak !== null && (
-                <span
-                  className={`text-xs font-semibold ${userStreak > 0 ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-white'} px-2 py-0.5 rounded-full shadow flex items-center`}
-                  title={`${t('practice.correctStreak')}: ${userStreak}`}
-                >
-                  {userStreak > 0 && <span className="mr-1">🔥</span>}
-                  {userStreak}
-                </span>
-              )}
+              {/* Display Streak - Moved to progress section only */}
             </div>
           </div>
         </div>
