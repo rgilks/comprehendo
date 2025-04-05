@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Language } from '../contexts/LanguageContext';
+import AnimateTransition from './AnimateTransition';
 
 export default function LanguageSelector() {
   const { language, setLanguage, languages } = useLanguage();
@@ -45,7 +46,7 @@ export default function LanguageSelector() {
           {languages[language]}
           {/* Basic Chevron Down Icon */}
           <svg
-            className="-mr-1 ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4"
+            className={`-mr-1 ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
@@ -60,9 +61,14 @@ export default function LanguageSelector() {
         </button>
       </div>
 
-      {isOpen && (
+      <AnimateTransition
+        show={isOpen}
+        type="slide-down"
+        className="origin-top-left absolute left-0 top-full mt-2 w-auto min-w-[100px] z-50"
+        unmountOnExit
+      >
         <div
-          className="origin-top-left absolute left-0 top-full mt-2 w-auto min-w-[100px] rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+          className="rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="menu-button"
@@ -80,7 +86,7 @@ export default function LanguageSelector() {
             ))}
           </div>
         </div>
-      )}
+      </AnimateTransition>
     </div>
   );
 }
