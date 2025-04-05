@@ -10,18 +10,17 @@ export const metadata: Metadata = {
   description: 'An AI-powered language learning tool',
 };
 
-interface LayoutProps {
+export default function RootLayout({
+  children,
+  params,
+}: {
   children: React.ReactNode;
-  params: {
-    lang: string;
-  };
-}
-
-export default function RootLayout({ children, params: { lang } }: LayoutProps) {
+  params: { lang: string };
+}) {
   return (
-    <html lang={lang}>
+    <html lang={params.lang}>
       <body className={inter.className}>
-        <LanguageProvider initialLanguage={lang as Language}>{children}</LanguageProvider>
+        <LanguageProvider initialLanguage={params.lang as Language}>{children}</LanguageProvider>
       </body>
     </html>
   );
