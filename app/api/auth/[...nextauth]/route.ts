@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import NextAuth from 'next-auth';
-import { authOptions } from '../../../../lib/authOptions';
+import { authOptions } from '@/lib/authOptions';
 
 /**
  * For App Router, NextAuth exports an object with route handlers

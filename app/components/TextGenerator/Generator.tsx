@@ -2,8 +2,8 @@
 
 import React, { useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
-import AnimateTransition from '../AnimateTransition';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
+import AnimateTransition from '@/components/AnimateTransition';
 
 const Generator = () => {
   const { t } = useTranslation('common');

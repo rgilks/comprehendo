@@ -1,13 +1,8 @@
 'use client';
 
 import React from 'react';
-import {
-  PlayIcon as HeroPlayIcon,
-  PauseIcon as HeroPauseIcon,
-  StopIcon as HeroStopIcon,
-  SpeakerWaveIcon,
-} from '@heroicons/react/24/solid';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
+import { SpeakerWaveIcon, PlayIcon, PauseIcon, StopIcon } from '@heroicons/react/24/solid';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
 
 const AudioControls = () => {
@@ -34,9 +29,9 @@ const AudioControls = () => {
         className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
       >
         {isSpeakingPassage && !isPaused ? (
-          <HeroPauseIcon className="w-4 h-4" />
+          <PauseIcon className="w-4 h-4" />
         ) : (
-          <HeroPlayIcon className="w-4 h-4" />
+          <PlayIcon className="w-4 h-4" />
         )}
       </button>
 
@@ -46,7 +41,7 @@ const AudioControls = () => {
           title={t('common.stop')}
           className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
         >
-          <HeroStopIcon className="w-4 h-4" />
+          <StopIcon className="w-4 h-4" />
         </button>
       )}
 

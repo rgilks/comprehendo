@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
 
 const ErrorDisplay = () => {
   const { t } = useTranslation('common');
