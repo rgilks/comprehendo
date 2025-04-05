@@ -10,11 +10,14 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/app/(.*)$': '<rootDir>/app/$1',
     '^@/lib/(.*)$': '<rootDir>/lib/$1',
+    '^@/components/(.*)$': '<rootDir>/components/$1',
+    '^@/config/(.*)$': '<rootDir>/config/$1',
+    '^@/contexts/(.*)$': '<rootDir>/contexts/$1',
+    '^@/types/(.*)$': '<rootDir>/types/$1',
   },
   coveragePathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.next/',
-    '<rootDir>/__tests__/mocks/',
     '<rootDir>/jest.config.js',
     '<rootDir>/jest.setup.js',
     '<rootDir>/next.config.js',
@@ -22,15 +25,13 @@ const customJestConfig = {
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
     'lib/**/*.{js,jsx,ts,tsx}',
-    '!app/**/*.test.{js,jsx,ts,tsx}',
+    'components/**/*.{js,jsx,ts,tsx}',
+    'contexts/**/*.{js,jsx,ts,tsx}',
+    '!**/*.test.{js,jsx,ts,tsx}',
     '!**/node_modules/**',
     '!**/vendor/**',
   ],
-  testPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/.next/',
-    '<rootDir>/__tests__/mocks/',
-  ],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
   transform: {
     '^.+\\.(ts|tsx)$': [
       'ts-jest',
@@ -39,7 +40,7 @@ const customJestConfig = {
       },
     ],
   },
-  testMatch: ['**/__tests__/**/*test.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
+  testMatch: ['**/?(*.)+(spec|test).[jt]s?(x)'],
   transformIgnorePatterns: [
     'node_modules/(?!(next|next-auth|jose|openid-client|@panva|oidc-token-hash)/)',
   ],
