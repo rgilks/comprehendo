@@ -2,6 +2,7 @@ import { LanguageProvider, type Language } from '../contexts/LanguageContext';
 import { notFound } from 'next/navigation';
 import HomeContent from './HomeContent';
 import type { Metadata } from 'next';
+import type { PageProps } from 'next';
 
 export function generateMetadata(): Metadata {
   return {
@@ -25,7 +26,7 @@ export function generateStaticParams() {
   ];
 }
 
-export default function Page({ params }: { params: { lang: string } }) {
+export default function Page({ params }: PageProps<{ lang: string }>) {
   // Validate language
   const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
   if (!validLanguages.includes(params.lang)) {
