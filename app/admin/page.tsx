@@ -129,8 +129,7 @@ export default function AdminPage() {
           value.match(/^.*?({\[\\s\\S]*?}).*?$/) || value.match(/^.*?(\\[[\\s\\S]*?\\]).*?$/);
         const potentialJson = jsonMatch ? jsonMatch[1] : value;
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          const parsedJson = JSON.parse(potentialJson);
+          const parsedJson = JSON.parse(potentialJson) as Record<string, unknown>;
           return (
             <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
               {JSON.stringify(parsedJson, null, 2)}
@@ -142,7 +141,7 @@ export default function AdminPage() {
         return value;
       }
 
-      if (typeof value === 'object') {
+      if (typeof value === 'object' && value !== null) {
         return (
           <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
             {JSON.stringify(value, null, 2)}
@@ -150,8 +149,13 @@ export default function AdminPage() {
         );
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
-      return String(value);
+      // Only convert primitives to string
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+      }
+
+      // Default case for any other types
+      return '[Complex Value]';
     };
 
     return (
@@ -299,10 +303,11 @@ export default function AdminPage() {
                                         : value
                                       : value === null || value === undefined
                                         ? 'NULL'
-                                        : typeof value === 'object'
+                                        : typeof value === 'object' && value !== null
                                           ? JSON.stringify(value)
-                                          : // eslint-disable-next-line @typescript-eslint/no-base-to-string
-                                            String(value)}
+                                          : typeof value === 'number' || typeof value === 'boolean'
+                                            ? String(value)
+                                            : '[Complex Value]'}
                                   </td>
                                 ))}
                               </tr>

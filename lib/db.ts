@@ -183,18 +183,15 @@ try {
                   } else if (stmtProp === 'all') {
                     return stmtTarget.all(...args);
                   }
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-                  return Reflect.get(stmtTarget, stmtProp);
+                  return Reflect.get(stmtTarget, stmtProp) as unknown;
                 };
               }
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-              return Reflect.get(stmtTarget, stmtProp);
+              return Reflect.get(stmtTarget, stmtProp) as unknown;
             },
           });
         };
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return Reflect.get(target, prop);
+      return Reflect.get(target, prop) as unknown;
     },
   });
 

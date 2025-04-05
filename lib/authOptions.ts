@@ -12,31 +12,48 @@ interface UserWithEmail extends User {
 
 const providers = [];
 
+// Add debug logs for GitHub provider
 if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
+  console.log('[NextAuth] GitHub OAuth credentials found, adding provider');
   providers.push(
     GitHub({
       clientId: process.env.GITHUB_ID,
       clientSecret: process.env.GITHUB_SECRET,
     })
   );
-} else if (process.env.NODE_ENV === 'production') {
-  console.warn('GitHub OAuth credentials missing');
+} else {
+  console.warn('[NextAuth] GitHub OAuth credentials missing');
 }
 
+// Add debug logs for Google provider
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  console.log('[NextAuth] Google OAuth credentials found, adding provider');
   providers.push(
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     })
   );
-} else if (process.env.NODE_ENV === 'production') {
-  console.warn('Google OAuth credentials missing');
+} else {
+  console.warn('[NextAuth] Google OAuth credentials missing');
+}
+
+// Log active providers count
+console.log(`[NextAuth] Configured ${providers.length} authentication providers`);
+
+// Check for required environment variables
+if (!process.env.AUTH_SECRET) {
+  console.error('[NextAuth] ERROR: AUTH_SECRET is missing!');
+}
+
+if (!process.env.NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
+  console.warn('[NextAuth] NEXTAUTH_URL is not set, this might cause issues in production');
 }
 
 export const authOptions: NextAuthOptions = {
   providers,
   secret: process.env.AUTH_SECRET,
+  debug: process.env.NODE_ENV !== 'production',
   session: {
     strategy: 'jwt' as const,
   },

@@ -360,8 +360,7 @@ export default function TextGenerator() {
     return () => {
       stopPassageSpeech();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quizData]);
+  }, [quizData, stopPassageSpeech]);
 
   useEffect(() => {
     return () => {
@@ -699,6 +698,16 @@ export default function TextGenerator() {
     }
   }, []);
 
+  // Add a helper function to handle async click events
+  const handleAsyncClick = useCallback(
+    (asyncFn: (key: string) => Promise<void>, key: string) =>
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        void asyncFn(key);
+      },
+    []
+  );
+
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative">
       <div className="w-full max-w-3xl mx-auto my-8">
@@ -871,8 +880,7 @@ export default function TextGenerator() {
                     {Object.entries(quizData.options).map(([key, value]) => (
                       <button
                         key={key}
-                        /* eslint-disable-next-line @typescript-eslint/no-misused-promises */
-                        onClick={() => handleAnswerSelect(key)}
+                        onClick={handleAsyncClick(handleAnswerSelect, key)}
                         disabled={isAnswered}
                         dir={getTextDirection(questionLanguage)}
                         className={`w-full text-left p-3 rounded transition-colors duration-200 ${
