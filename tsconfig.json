@@ -24,7 +24,13 @@
     ],
 
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/components/*": ["./app/components/*"],
+      "@/store/*": ["./app/store/*"],
+      "@/contexts/*": ["./app/contexts/*"],
+      "@/config/*": ["./app/config/*"],
+      "@/types/*": ["./app/types/*"],
+      "@/utils/*": ["./app/utils/*"]
     },
 
     "sourceMap": true,

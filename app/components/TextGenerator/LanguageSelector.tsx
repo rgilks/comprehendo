@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { GlobeAltIcon, BookOpenIcon } from '@heroicons/react/24/solid';
-import { LANGUAGES, type Language } from '../../contexts/LanguageContext';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
+import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
 
 const LanguageSelector = () => {

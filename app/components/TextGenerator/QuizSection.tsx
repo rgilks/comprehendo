@@ -2,10 +2,10 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getTextDirection } from '../../contexts/LanguageContext';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
-import AnimateTransition from '../AnimateTransition';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { getTextDirection } from '@/contexts/LanguageContext';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
+import AnimateTransition from '@/components/AnimateTransition';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const QuizSection = () => {
   const { t } = useTranslation('common');
