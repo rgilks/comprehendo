@@ -19,9 +19,11 @@ import {
   useLanguage,
   type Language,
   LANGUAGES,
-  BCP47_LANGUAGE_MAP,
+  SPEECH_LANGUAGES,
   getTextDirection,
 } from '../contexts/LanguageContext';
+
+import { useTranslation } from 'react-i18next';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -52,23 +54,7 @@ const apiResponseSchema = z.object({
 
 type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
-const CEFR_LEVELS: Record<CEFRLevel, string> = {
-  A1: 'Beginner',
-  A2: 'Elementary',
-  B1: 'Intermediate',
-  B2: 'Upper Intermediate',
-  C1: 'Advanced',
-  C2: 'Proficiency',
-};
-
-const CEFR_DESCRIPTIONS: Record<CEFRLevel, string> = {
-  A1: 'Basic phrases, simple questions',
-  A2: 'Familiar topics, simple sentences',
-  B1: 'Routine matters, basic opinions',
-  B2: 'Technical discussions, clear viewpoints',
-  C1: 'Complex topics, spontaneous expression',
-  C2: 'Virtually everything, nuanced expression',
-};
+const CEFR_LEVELS_LIST: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 const QuizSkeleton = () => (
   <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg animate-pulse">
@@ -109,8 +95,8 @@ const TranslatableWord = memo(
         void (async () => {
           setIsLoading(true);
           try {
-            const sourceLang = BCP47_LANGUAGE_MAP[fromLang].split('-')[0];
-            const targetLang = BCP47_LANGUAGE_MAP['English'].split('-')[0];
+            const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
+            const targetLang = SPEECH_LANGUAGES['en'].split('-')[0];
             const result = await onTranslate(word, sourceLang, targetLang);
             setTranslation(result);
           } finally {
@@ -151,8 +137,9 @@ const TranslatableWord = memo(
 TranslatableWord.displayName = 'TranslatableWord';
 
 export default function TextGenerator() {
+  const { t } = useTranslation();
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
-  const [passageLanguage, setPassageLanguage] = useState<Language>('English');
+  const [passageLanguage, setPassageLanguage] = useState<Language>('en');
   const { language: questionLanguage } = useLanguage();
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -200,7 +187,7 @@ export default function TextGenerator() {
       stopPassageSpeech();
 
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = BCP47_LANGUAGE_MAP[lang];
+      utterance.lang = SPEECH_LANGUAGES[lang];
       utterance.volume = volume;
 
       utterance.onerror = (event) => {
@@ -230,7 +217,7 @@ export default function TextGenerator() {
       wordsRef.current = words;
 
       const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
-      utterance.lang = BCP47_LANGUAGE_MAP[generatedPassageLanguage];
+      utterance.lang = SPEECH_LANGUAGES[generatedPassageLanguage];
       utterance.volume = volume;
 
       passageUtteranceRef.current = utterance;
@@ -300,7 +287,7 @@ export default function TextGenerator() {
         setHighlightedParagraph(quizData.paragraph);
       }
     } else {
-      setHighlightedParagraph(quizData?.paragraph ?? null);
+      setHighlightedParagraph(quizData?.paragraph || null);
     }
   }, [quizData, showExplanation]);
 
@@ -425,7 +412,7 @@ export default function TextGenerator() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: `Generate a reading comprehension paragraph in ${passageLanguage} and the corresponding multiple choice question, options, and explanations ONLY in ${questionLanguage} for CEFR level ${cefrLevel} (${CEFR_LEVELS[cefrLevel]}) language learners.`,
+            prompt: `Generate a reading comprehension paragraph in ${passageLanguage} and the corresponding multiple choice question, options, and explanations ONLY in ${questionLanguage} for CEFR level ${cefrLevel} language learners.`,
             seed: seed,
             passageLanguage: passageLanguage,
             questionLanguage: questionLanguage,
@@ -550,7 +537,7 @@ export default function TextGenerator() {
       <div className="w-full max-w-3xl mx-auto my-8">
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
           <h2 className="text-xl font-bold mb-4 text-white bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            Customize Your Practice
+            {t('practice.cefr.title')}
           </h2>
 
           <div className="mb-6 space-y-5">
@@ -561,14 +548,14 @@ export default function TextGenerator() {
                     className="h-5 w-5 mr-1 text-blue-400"
                     aria-hidden="true"
                   />
-                  CEFR Level:{' '}
+                  {t('practice.level')}:{' '}
                   <span className="text-xs text-blue-300 ml-2">
-                    What&apos;s your proficiency level?
+                    {t('practice.cefr.description')}
                   </span>
                 </span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {(Object.keys(CEFR_LEVELS) as CEFRLevel[]).map((level) => (
+                {CEFR_LEVELS_LIST.map((level) => (
                   <button
                     key={level}
                     onClick={() => setCefrLevel(level)}
@@ -579,10 +566,10 @@ export default function TextGenerator() {
                     }`}
                   >
                     <div className="font-semibold">
-                      {level} - {CEFR_LEVELS[level]}
+                      {level} - {t(`practice.cefr.levels.${level}.name`)}
                     </div>
                     <div className="text-xs opacity-80 mt-1 line-clamp-1">
-                      {CEFR_DESCRIPTIONS[level]}
+                      {t(`practice.cefr.levels.${level}.description`)}
                     </div>
                   </button>
                 ))}
@@ -632,7 +619,7 @@ export default function TextGenerator() {
             <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
               <h2 className="text-lg font-semibold text-white flex items-center">
                 <BookOpenIcon className="h-5 w-5 mr-2 text-blue-400" aria-hidden="true" />
-                Reading Passage {passageLanguage !== 'English' && `(${LANGUAGES[passageLanguage]})`}
+                Reading Passage {passageLanguage !== 'en' && `(${LANGUAGES[passageLanguage]})`}
               </h2>
               <div className="flex space-x-2">
                 <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
