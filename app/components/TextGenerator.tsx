@@ -10,11 +10,18 @@ import {
   SpeakerWaveIcon,
   InformationCircleIcon,
   GlobeAltIcon,
-  ChatBubbleLeftRightIcon,
   BookOpenIcon,
   ArrowPathIcon,
   PlusCircleIcon,
 } from '@heroicons/react/24/solid';
+
+import {
+  useLanguage,
+  type Language,
+  LANGUAGES,
+  BCP47_LANGUAGE_MAP,
+  getTextDirection,
+} from '../contexts/LanguageContext';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -44,7 +51,6 @@ const apiResponseSchema = z.object({
 });
 
 type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German' | 'Hindi' | 'Hebrew';
 
 const CEFR_LEVELS: Record<CEFRLevel, string> = {
   A1: 'Beginner',
@@ -62,28 +68,6 @@ const CEFR_DESCRIPTIONS: Record<CEFRLevel, string> = {
   B2: 'Technical discussions, clear viewpoints',
   C1: 'Complex topics, spontaneous expression',
   C2: 'Virtually everything, nuanced expression',
-};
-
-const RTL_LANGUAGES: Language[] = ['Hebrew'];
-
-const LANGUAGES: Record<Language, string> = {
-  English: 'English',
-  Italian: 'Italiano',
-  Spanish: 'Español',
-  French: 'Français',
-  German: 'Deutsch',
-  Hindi: 'हिन्दी',
-  Hebrew: 'עברית',
-};
-
-const BCP47_LANGUAGE_MAP: Record<Language, string> = {
-  English: 'en-US',
-  Italian: 'it-IT',
-  Spanish: 'es-ES',
-  French: 'fr-FR',
-  German: 'de-DE',
-  Hindi: 'hi-IN',
-  Hebrew: 'he-IL',
 };
 
 const QuizSkeleton = () => (
@@ -104,10 +88,6 @@ const QuizSkeleton = () => (
     </div>{' '}
   </div>
 );
-
-const getTextDirection = (language: Language) => {
-  return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
-};
 
 interface TranslatableWordProps {
   word: string;
@@ -173,7 +153,7 @@ TranslatableWord.displayName = 'TranslatableWord';
 export default function TextGenerator() {
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
   const [passageLanguage, setPassageLanguage] = useState<Language>('English');
-  const [questionLanguage, setQuestionLanguage] = useState<Language>('English');
+  const { language: questionLanguage } = useLanguage();
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -566,304 +546,282 @@ export default function TextGenerator() {
   }, []);
 
   return (
-    <div className="w-full max-w-3xl mx-auto my-8">
-      <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
-        <h2 className="text-xl font-bold mb-4 text-white bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-          Customize Your Practice
-        </h2>
+    <>
+      <div className="w-full max-w-3xl mx-auto my-8">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
+          <h2 className="text-xl font-bold mb-4 text-white bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            Customize Your Practice
+          </h2>
 
-        <div className="mb-6 space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              <span className="flex items-center">
-                <InformationCircleIcon className="h-5 w-5 mr-1 text-blue-400" aria-hidden="true" />
-                CEFR Level:{' '}
-                <span className="text-xs text-blue-300 ml-2">
-                  What&apos;s your proficiency level?
+          <div className="mb-6 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                <span className="flex items-center">
+                  <InformationCircleIcon
+                    className="h-5 w-5 mr-1 text-blue-400"
+                    aria-hidden="true"
+                  />
+                  CEFR Level:{' '}
+                  <span className="text-xs text-blue-300 ml-2">
+                    What&apos;s your proficiency level?
+                  </span>
                 </span>
-              </span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {(Object.keys(CEFR_LEVELS) as CEFRLevel[]).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setCefrLevel(level)}
-                  className={`relative px-3 py-2 text-sm rounded transition-colors ${
-                    cefrLevel === level
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
-                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                  }`}
-                >
-                  <div className="font-semibold">
-                    {level} - {CEFR_LEVELS[level]}
-                  </div>
-                  <div className="text-xs opacity-80 mt-1 line-clamp-1">
-                    {CEFR_DESCRIPTIONS[level]}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              <span className="flex items-center">
-                <GlobeAltIcon className="h-5 w-5 mr-1 text-green-400" aria-hidden="true" />
-                Reading Passage Language:
-              </span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setPassageLanguage(lang)}
-                  className={`px-3 py-2 text-sm rounded transition-colors ${
-                    passageLanguage === lang
-                      ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
-                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                  }`}
-                >
-                  {LANGUAGES[lang]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              <span className="flex items-center">
-                <ChatBubbleLeftRightIcon
-                  className="h-5 w-5 mr-1 text-purple-400"
-                  aria-hidden="true"
-                />
-                Question & Options Language:
-              </span>
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setQuestionLanguage(lang)}
-                  className={`px-3 py-2 text-sm rounded transition-colors ${
-                    questionLanguage === lang
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
-                      : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                  }`}
-                >
-                  {LANGUAGES[lang]}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div
-          className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded relative mb-6 shadow-md"
-          role="alert"
-        >
-          <strong className="font-bold">Error:</strong>
-          <span className="block sm:inline ml-2">{error}</span>
-        </div>
-      )}
-
-      {loading && !quizData && <QuizSkeleton />}
-
-      {quizData && generatedPassageLanguage && generatedQuestionLanguage && (
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-          <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white flex items-center">
-              <BookOpenIcon className="h-5 w-5 mr-2 text-blue-400" aria-hidden="true" />
-              Reading Passage {passageLanguage !== 'English' && `(${LANGUAGES[passageLanguage]})`}
-            </h2>
-            <div className="flex space-x-2">
-              <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
-                {cefrLevel}
-              </span>
-              <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
-                P: {LANGUAGES[generatedPassageLanguage]}
-              </span>
-              <span className="text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white px-2 py-1 rounded-full shadow-sm">
-                Q: {LANGUAGES[generatedQuestionLanguage]}
-              </span>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold text-white">
-                Reading Passage ({passageLanguage})
-              </h3>
-              {/* --- UPDATED Speech Controls --- */}
-              {isSpeechSupported && quizData.paragraph && (
-                <div className="flex items-center space-x-2">
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {(Object.keys(CEFR_LEVELS) as CEFRLevel[]).map((level) => (
                   <button
-                    onClick={handlePlayPause}
-                    title={isSpeakingPassage && !isPaused ? 'Pause' : 'Play'}
-                    className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
-                    disabled={!quizData.paragraph}
+                    key={level}
+                    onClick={() => setCefrLevel(level)}
+                    className={`relative px-3 py-2 text-sm rounded transition-colors ${
+                      cefrLevel === level
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
+                        : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    }`}
                   >
-                    {isSpeakingPassage && !isPaused ? (
-                      <HeroPauseIcon className="w-4 h-4" />
-                    ) : (
-                      <HeroPlayIcon className="w-4 h-4" />
-                    )}
+                    <div className="font-semibold">
+                      {level} - {CEFR_LEVELS[level]}
+                    </div>
+                    <div className="text-xs opacity-80 mt-1 line-clamp-1">
+                      {CEFR_DESCRIPTIONS[level]}
+                    </div>
                   </button>
-                  {isSpeakingPassage && ( // Show Stop button only when speaking/paused
-                    <button
-                      onClick={handleStop}
-                      title="Stop"
-                      className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
-                    >
-                      <HeroStopIcon className="w-4 h-4" />
-                    </button>
-                  )}
-                  <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
-                    <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={volume}
-                      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                      title="Volume"
-                    />
-                  </div>
-                </div>
-              )}
-              {/* --- End UPDATED Speech Controls --- */}
+                ))}
+              </div>
             </div>
-            <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
-              {highlightedParagraph && highlightedParagraph !== quizData.paragraph ? (
-                <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
-              ) : generatedPassageLanguage ? (
-                renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
-              ) : (
-                <div>{quizData.paragraph}</div>
-              )}
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                <span className="flex items-center">
+                  <GlobeAltIcon className="h-5 w-5 mr-1 text-green-400" aria-hidden="true" />
+                  Reading Passage Language:
+                </span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => setPassageLanguage(lang)}
+                    className={`px-3 py-2 text-sm rounded transition-colors ${
+                      passageLanguage === lang
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
+                        : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    }`}
+                  >
+                    {LANGUAGES[lang]}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+        </div>
 
-          {quizData && !showQuestionSection && (
-            <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
-              Question will appear shortly...
-            </div>
-          )}
+        {error && (
+          <div
+            className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded relative mb-6 shadow-md"
+            role="alert"
+          >
+            <strong className="font-bold">Error:</strong>
+            <span className="block sm:inline ml-2">{error}</span>
+          </div>
+        )}
 
-          {showQuestionSection && (
-            <>
-              <div className="mt-6">
-                <h3
-                  dir={getTextDirection(questionLanguage)}
-                  className="text-lg font-semibold text-white mb-4"
-                >
-                  {quizData.question}
-                </h3>
-                <div className="space-y-3">
-                  {Object.entries(quizData.options).map(([key, value]) => (
-                    <button
-                      key={key}
-                      onClick={() => handleAnswerSelect(key)}
-                      disabled={isAnswered}
-                      dir={getTextDirection(questionLanguage)}
-                      className={`w-full text-left p-3 rounded transition-colors duration-200 ${
-                        isAnswered
-                          ? key === quizData.correctAnswer
-                            ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
-                            : key === selectedAnswer
-                              ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
-                              : 'bg-gray-700 border border-gray-600 text-gray-400'
-                          : selectedAnswer === key
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
-                            : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      <span className="font-semibold">{key}:</span> {value}
-                    </button>
-                  ))}
-                </div>
+        {loading && !quizData && <QuizSkeleton />}
+
+        {quizData && generatedPassageLanguage && generatedQuestionLanguage && (
+          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
+              <h2 className="text-lg font-semibold text-white flex items-center">
+                <BookOpenIcon className="h-5 w-5 mr-2 text-blue-400" aria-hidden="true" />
+                Reading Passage {passageLanguage !== 'English' && `(${LANGUAGES[passageLanguage]})`}
+              </h2>
+              <div className="flex space-x-2">
+                <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
+                  {cefrLevel}
+                </span>
+                <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
+                  P: {LANGUAGES[generatedPassageLanguage]}
+                </span>
+                <span className="text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white px-2 py-1 rounded-full shadow-sm">
+                  Q: {LANGUAGES[generatedQuestionLanguage]}
+                </span>
               </div>
+            </div>
 
-              {showExplanation && (
-                <div className="mt-6 pt-4 border-t border-gray-700">
-                  <h4 className="text-md font-semibold mb-3 text-white">Explanations</h4>
-                  <div className="space-y-3">
-                    {(
-                      Object.keys(quizData.explanations) as Array<
-                        keyof typeof quizData.explanations
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold text-white">
+                  Reading Passage ({passageLanguage})
+                </h3>
+                {/* --- UPDATED Speech Controls --- */}
+                {isSpeechSupported && quizData.paragraph && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handlePlayPause}
+                      title={isSpeakingPassage && !isPaused ? 'Pause' : 'Play'}
+                      className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
+                      disabled={!quizData.paragraph}
+                    >
+                      {isSpeakingPassage && !isPaused ? (
+                        <HeroPauseIcon className="w-4 h-4" />
+                      ) : (
+                        <HeroPlayIcon className="w-4 h-4" />
+                      )}
+                    </button>
+                    {isSpeakingPassage && ( // Show Stop button only when speaking/paused
+                      <button
+                        onClick={handleStop}
+                        title="Stop"
+                        className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
                       >
-                    ).map((key) => (
-                      <div
+                        <HeroStopIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
+                      <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={volume}
+                        onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                        className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        title="Volume"
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* --- End UPDATED Speech Controls --- */}
+              </div>
+              <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
+                {highlightedParagraph && highlightedParagraph !== quizData.paragraph ? (
+                  <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
+                ) : generatedPassageLanguage ? (
+                  renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
+                ) : (
+                  <div>{quizData.paragraph}</div>
+                )}
+              </div>
+            </div>
+
+            {quizData && !showQuestionSection && (
+              <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
+                Question will appear shortly...
+              </div>
+            )}
+
+            {showQuestionSection && (
+              <>
+                <div className="mt-6">
+                  <h3
+                    dir={getTextDirection(questionLanguage)}
+                    className="text-lg font-semibold text-white mb-4"
+                  >
+                    {quizData.question}
+                  </h3>
+                  <div className="space-y-3">
+                    {Object.entries(quizData.options).map(([key, value]) => (
+                      <button
                         key={key}
-                        className={`p-3 rounded border ${
-                          key === quizData.correctAnswer
-                            ? 'bg-green-900 border-green-700'
-                            : key === selectedAnswer
-                              ? 'bg-red-900 border-red-700'
-                              : 'bg-gray-750 border-gray-600'
+                        onClick={() => handleAnswerSelect(key)}
+                        disabled={isAnswered}
+                        dir={getTextDirection(questionLanguage)}
+                        className={`w-full text-left p-3 rounded transition-colors duration-200 ${
+                          isAnswered
+                            ? key === quizData.correctAnswer
+                              ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
+                              : key === selectedAnswer
+                                ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
+                                : 'bg-gray-700 border border-gray-600 text-gray-400'
+                            : selectedAnswer === key
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
+                              : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
                         }`}
                       >
-                        <p className="text-sm text-gray-200">
-                          <strong
-                            className={`font-semibold ${
-                              key === quizData.correctAnswer
-                                ? 'text-green-300'
-                                : key === selectedAnswer
-                                  ? 'text-red-300'
-                                  : 'text-gray-300'
-                            }`}
-                          >
-                            {key}. {quizData.options[key]}:
-                          </strong>
-                          <span className="ml-1">{quizData.explanations[key]}</span>
-                        </p>
-                        {key === quizData.correctAnswer && quizData.relevantText && (
-                          <p className="text-xs text-gray-400 mt-1 italic">
-                            Supporting text: &quot;{quizData.relevantText}&quot;
-                          </p>
-                        )}
-                      </div>
+                        <span className="font-semibold">{key}:</span> {value}
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
 
-      <div className="mt-8">
-        {' '}
-        <button
-          onClick={generateNewQuiz}
-          disabled={loading || (quizData !== null && !isAnswered)}
-          className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading || (quizData !== null && !isAnswered) ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
-        >
-          {loading ? (
-            <div className="flex items-center">
-              <ArrowPathIcon
-                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                aria-hidden="true"
-              />
-              Generating...
-            </div>
-          ) : quizData !== null && !isAnswered ? (
-            showQuestionSection ? (
-              'Answer the question below'
+                {showExplanation && (
+                  <div className="mt-6 pt-4 border-t border-gray-700">
+                    <h4 className="text-md font-semibold mb-3 text-white">Explanations</h4>
+                    <div className="space-y-3">
+                      {(
+                        Object.keys(quizData.explanations) as Array<
+                          keyof typeof quizData.explanations
+                        >
+                      ).map((key) => (
+                        <div
+                          key={key}
+                          className={`p-3 rounded border ${
+                            key === quizData.correctAnswer
+                              ? 'bg-green-900 border-green-700'
+                              : key === selectedAnswer
+                                ? 'bg-red-900 border-red-700'
+                                : 'bg-gray-750 border-gray-600'
+                          }`}
+                        >
+                          <p className="text-sm text-gray-200">
+                            <strong
+                              className={`font-semibold ${
+                                key === quizData.correctAnswer
+                                  ? 'text-green-300'
+                                  : key === selectedAnswer
+                                    ? 'text-red-300'
+                                    : 'text-gray-300'
+                              }`}
+                            >
+                              {key}. {quizData.options[key]}:
+                            </strong>
+                            <span className="ml-1">{quizData.explanations[key]}</span>
+                          </p>
+                          {key === quizData.correctAnswer && quizData.relevantText && (
+                            <p className="text-xs text-gray-400 mt-1 italic">
+                              Supporting text: &quot;{quizData.relevantText}&quot;
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="mt-8">
+          {' '}
+          <button
+            onClick={generateNewQuiz}
+            disabled={loading || (quizData !== null && !isAnswered)}
+            className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading || (quizData !== null && !isAnswered) ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
+          >
+            {loading ? (
+              <div className="flex items-center">
+                <ArrowPathIcon
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  aria-hidden="true"
+                />
+                Generating...
+              </div>
+            ) : quizData !== null && !isAnswered ? (
+              showQuestionSection ? (
+                'Answer the question below'
+              ) : (
+                'Reading time...'
+              )
             ) : (
-              'Reading time...'
-            )
-          ) : (
-            <div className="flex items-center">
-              <PlusCircleIcon className="h-5 w-5 mr-2" aria-hidden="true" />
-              Generate New Quiz
-            </div>
-          )}
-        </button>
+              <div className="flex items-center">
+                <PlusCircleIcon className="h-5 w-5 mr-2" aria-hidden="true" />
+                Generate New Quiz
+              </div>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
