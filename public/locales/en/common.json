@@ -1,0 +1,78 @@
+{
+  "title": "Comprehendo",
+  "subtitle": "An AI-powered language learning tool to improve your reading comprehension",
+  "powered_by": "Powered by Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
+  "navigation": {
+    "home": "Home",
+    "practice": "Practice",
+    "admin": "Admin"
+  },
+  "practice": {
+    "title": "Reading Practice",
+    "level": "Level",
+    "cefr": {
+      "title": "Customize Your Practice",
+      "description": "What's your proficiency level?",
+      "levels": {
+        "A1": {
+          "name": "Beginner",
+          "description": "Basic phrases, simple questions"
+        },
+        "A2": {
+          "name": "Elementary",
+          "description": "Familiar topics, simple sentences"
+        },
+        "B1": {
+          "name": "Intermediate",
+          "description": "Routine matters, basic opinions"
+        },
+        "B2": {
+          "name": "Upper Intermediate",
+          "description": "Technical discussions, clear viewpoints"
+        },
+        "C1": {
+          "name": "Advanced",
+          "description": "Complex topics, spontaneous expression"
+        },
+        "C2": {
+          "name": "Proficiency",
+          "description": "Virtually everything, nuanced expression"
+        }
+      }
+    },
+    "passageLanguage": "Passage Language",
+    "questionLanguage": "Question Language",
+    "generate": "Generate",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "tryAgain": "Try Again",
+    "passage": "Passage",
+    "question": "Question",
+    "options": {
+      "a": "Option A",
+      "b": "Option B",
+      "c": "Option C",
+      "d": "Option D"
+    },
+    "submit": "Submit",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "explanation": "Explanation",
+    "next": "Next"
+  },
+  "admin": {
+    "title": "Admin",
+    "users": "Users",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "common": {
+    "language": "Language",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "brand": "Comprehendo",
+  "subtitle": "KI-gestütztes Sprachenlernen zur Verbesserung des Leseverständnisses",
+  "navigation": {
+    "home": "Startseite",
+    "practice": "Üben",
+    "admin": "Verwaltung"
+  },
+  "practice": {
+    "title": "Leseverständnis",
+    "level": "Niveau",
+    "cefr": {
+      "title": "Passen Sie Ihre Übung an",
+      "description": "Wie ist Ihr Sprachniveau?",
+      "levels": {
+        "A1": {
+          "name": "Anfänger",
+          "description": "Grundlegende Sätze, einfache Fragen"
+        },
+        "A2": {
+          "name": "Grundstufe",
+          "description": "Vertraute Themen, einfache Sätze"
+        },
+        "B1": {
+          "name": "Mittelstufe",
+          "description": "Alltägliche Angelegenheiten, grundlegende Meinungen"
+        },
+        "B2": {
+          "name": "Obere Mittelstufe",
+          "description": "Technische Diskussionen, klare Standpunkte"
+        },
+        "C1": {
+          "name": "Fortgeschritten",
+          "description": "Komplexe Themen, spontane Ausdrucksweise"
+        },
+        "C2": {
+          "name": "Beherrschung",
+          "description": "Fast alles, nuancierte Ausdrucksweise"
+        }
+      }
+    },
+    "passageLanguage": "Textsprache",
+    "questionLanguage": "Fragesprache",
+    "generate": "Generieren",
+    "loading": "Laden...",
+    "error": "Ein Fehler ist aufgetreten",
+    "tryAgain": "Erneut versuchen",
+    "passage": "Text",
+    "question": "Frage",
+    "options": {
+      "a": "Option A",
+      "b": "Option B",
+      "c": "Option C",
+      "d": "Option D"
+    },
+    "submit": "Einreichen",
+    "correct": "Richtig!",
+    "incorrect": "Falsch",
+    "explanation": "Erklärung",
+    "next": "Weiter"
+  },
+  "admin": {
+    "title": "Verwaltung",
+    "users": "Benutzer",
+    "settings": "Einstellungen",
+    "logout": "Abmelden"
+  },
+  "common": {
+    "language": "Sprache",
+    "theme": "Design",
+    "dark": "Dunkel",
+    "light": "Hell",
+    "system": "System"
+  }
+}

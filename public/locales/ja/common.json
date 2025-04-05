@@ -1,0 +1,75 @@
+{
+  "brand": "Comprehendo",
+  "subtitle": "AIを活用した言語学習で読解力を向上",
+  "navigation": {
+    "home": "ホーム",
+    "practice": "練習",
+    "admin": "管理"
+  },
+  "practice": {
+    "title": "読解練習",
+    "level": "レベル",
+    "cefr": {
+      "title": "練習をカスタマイズ",
+      "description": "あなたの習熟度はどのレベルですか？",
+      "levels": {
+        "A1": {
+          "name": "入門",
+          "description": "基本的なフレーズ、簡単な質問"
+        },
+        "A2": {
+          "name": "初級",
+          "description": "身近な話題、簡単な文"
+        },
+        "B1": {
+          "name": "中級",
+          "description": "日常的な事柄、基本的な意見"
+        },
+        "B2": {
+          "name": "中上級",
+          "description": "技術的な議論、明確な視点"
+        },
+        "C1": {
+          "name": "上級",
+          "description": "複雑な話題、自然な表現"
+        },
+        "C2": {
+          "name": "熟達",
+          "description": "ほぼすべて、微妙なニュアンス"
+        }
+      }
+    },
+    "passageLanguage": "文章の言語",
+    "questionLanguage": "質問の言語",
+    "generate": "生成",
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "tryAgain": "再試行",
+    "passage": "文章",
+    "question": "質問",
+    "options": {
+      "a": "選択肢A",
+      "b": "選択肢B",
+      "c": "選択肢C",
+      "d": "選択肢D"
+    },
+    "submit": "送信",
+    "correct": "正解！",
+    "incorrect": "不正解",
+    "explanation": "解説",
+    "next": "次へ"
+  },
+  "admin": {
+    "title": "管理",
+    "users": "ユーザー",
+    "settings": "設定",
+    "logout": "ログアウト"
+  },
+  "common": {
+    "language": "言語",
+    "theme": "テーマ",
+    "dark": "ダーク",
+    "light": "ライト",
+    "system": "システム"
+  }
+}
