@@ -17,7 +17,7 @@ export default function HomeContent() {
       <div className="z-10 w-full max-w-5xl">
         <div className="flex justify-between items-center mb-8">
           <LanguageSelector />
-          <AuthButton />
+          <AuthButton variant="icon-only" />
         </div>
 
         <div className="text-center py-10 md:py-16 fade-in">
