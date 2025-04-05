@@ -102,10 +102,11 @@ const TranslatableWord = memo(
     const [isHovered, setIsHovered] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const shouldTranslate = fromLang !== toLang;
 
     const handleMouseEnter = useCallback(() => {
       setIsHovered(true);
-      if (!translation && !isLoading) {
+      if (shouldTranslate && !translation && !isLoading) {
         void (async () => {
           setIsLoading(true);
           try {
@@ -118,7 +119,7 @@ const TranslatableWord = memo(
           }
         })();
       }
-    }, [word, fromLang, toLang, onTranslate, translation, isLoading]);
+    }, [word, fromLang, toLang, onTranslate, translation, isLoading, shouldTranslate]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
@@ -142,7 +143,7 @@ const TranslatableWord = memo(
         onMouseLeave={handleMouseLeave}
       >
         {word}
-        {isHovered && (
+        {isHovered && shouldTranslate && (
           <span className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
             {isLoading ? (
               <span className="inline-block animate-pulse">{t('common.translating')}</span>
