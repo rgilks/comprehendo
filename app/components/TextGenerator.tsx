@@ -649,6 +649,7 @@ export default function TextGenerator() {
 
           // Use the typed progressData variable
           if (progressData) {
+            const previousStreak = userStreak || 0;
             setUserStreak(progressData.currentStreak);
 
             if (progressData.leveledUp) {
@@ -658,6 +659,13 @@ export default function TextGenerator() {
                 duration: 4000,
                 position: 'top-center',
               });
+            } else if (progressData.currentStreak > previousStreak) {
+              // Show toast notification for streak increase
+              toast.success(`${t('practice.streakIncreased')} ${progressData.currentStreak} 🔥`, {
+                duration: 3000,
+                position: 'top-center',
+              });
+              console.log('[Progress] Updated streak:', progressData.currentStreak);
             } else {
               console.log('[Progress] Updated streak:', progressData.currentStreak);
             }
