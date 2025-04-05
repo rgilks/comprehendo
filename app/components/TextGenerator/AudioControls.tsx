@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { SpeakerWaveIcon, PlayIcon, PauseIcon, StopIcon } from '@heroicons/react/24/solid';
+import { SpeakerWaveIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +13,6 @@ const AudioControls = () => {
     isPaused,
     volume,
     handlePlayPause,
-    handleStop,
     setVolumeLevel,
   } = useTextGeneratorStore();
 
