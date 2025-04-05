@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
-import AuthProvider from './AuthProvider';
-import ClientPWAWrapper from './components/ClientPWAWrapper';
-import { LanguageProvider, type Language } from './contexts/LanguageContext';
+import AuthProvider from '@/components/AuthProvider';
+import ClientPWAWrapper from '@/components/ClientPWAWrapper';
+import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({

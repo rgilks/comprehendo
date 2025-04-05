@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useCallback, memo } from 'react';
-import { type Language, SPEECH_LANGUAGES } from '../../contexts/LanguageContext';
-import AnimateTransition from '../AnimateTransition';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
+import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
+import AnimateTransition from '@/components/AnimateTransition';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
 
 interface TranslatableWordProps {
   word: string;
