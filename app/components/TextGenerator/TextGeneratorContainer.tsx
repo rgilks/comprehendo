@@ -15,7 +15,7 @@ import ProgressTracker from './ProgressTracker';
 import Generator from './Generator';
 
 const TextGeneratorContainer = () => {
-  const { language: questionLanguage } = useLanguage();
+  const { language: contextLanguage } = useLanguage();
   const { status } = useSession();
   const { loading, quizData, showContent, fetchUserProgress } = useTextGeneratorStore();
 
@@ -36,10 +36,11 @@ const TextGeneratorContainer = () => {
     }
   }, [status, fetchUserProgress]);
 
-  // Update the store when question language changes
+  // Update the store when question language changes, but only once on mount
+  // and when the contextLanguage changes to prevent infinite updates
   useEffect(() => {
-    useTextGeneratorStore.setState({ generatedQuestionLanguage: questionLanguage });
-  }, [questionLanguage]);
+    useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
+  }, [contextLanguage]);
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative" ref={contentContainerRef}>
@@ -50,14 +51,19 @@ const TextGeneratorContainer = () => {
 
         {loading && !quizData && <QuizSkeleton />}
 
-        {quizData && !loading && (
-          <AnimateTransition show={showContent} type="fade-in" duration={400} unmountOnExit>
+        <AnimateTransition
+          show={!!(quizData && !loading && showContent)}
+          type="fade-in"
+          duration={400}
+          unmountOnExit
+        >
+          {quizData && !loading && (
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
               <ReadingPassage />
               <QuizSection />
             </div>
-          </AnimateTransition>
-        )}
+          )}
+        </AnimateTransition>
 
         {(!quizData || !loading) && (
           <>
