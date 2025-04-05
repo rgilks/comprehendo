@@ -1,3 +1,5 @@
+'use client';
+
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import LanguageSelector from '../components/LanguageSelector';
