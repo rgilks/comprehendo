@@ -4,6 +4,7 @@ import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
 import ClientPWAWrapper from '@/components/ClientPWAWrapper';
 import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
+import ReactQueryProvider from '../components/ReactQueryProvider';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({
@@ -63,10 +64,12 @@ export default async function RootLayout({
       </head>
       <body className={poppins.className}>
         <AuthProvider>
-          <LanguageProvider initialLanguage={locale}>
-            {children}
-            <ClientPWAWrapper />
-          </LanguageProvider>
+          <ReactQueryProvider>
+            <LanguageProvider initialLanguage={locale}>
+              {children}
+              <ClientPWAWrapper />
+            </LanguageProvider>
+          </ReactQueryProvider>
         </AuthProvider>
       </body>
     </html>
