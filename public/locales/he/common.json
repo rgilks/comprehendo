@@ -1,0 +1,111 @@
+{
+  "title": "Comprehendo",
+  "subtitle": "למידת שפה מבוססת בינה מלאכותית לשיפור הבנת הנקרא",
+  "powered_by": "מופעל על ידי Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
+  "navigation": {
+    "home": "בית",
+    "practice": "תרגול",
+    "admin": "ניהול"
+  },
+  "practice": {
+    "title": "תרגול קריאה",
+    "level": "רמה",
+    "cefr": {
+      "title": "התאמה אישית",
+      "description": "מה רמת השליטה שלך בשפה?",
+      "levels": {
+        "A1": {
+          "name": "מתחילים",
+          "description": "משפטים בסיסיים, שאלות פשוטות"
+        },
+        "A2": {
+          "name": "יסודי",
+          "description": "נושאים מוכרים, משפטים פשוטים"
+        },
+        "B1": {
+          "name": "בינוני",
+          "description": "ענייני יום-יום, דעות בסיסיות"
+        },
+        "B2": {
+          "name": "בינוני-מתקדם",
+          "description": "דיונים טכניים, נקודות מבט ברורות"
+        },
+        "C1": {
+          "name": "מתקדם",
+          "description": "נושאים מורכבים, ביטוי חופשי"
+        },
+        "C2": {
+          "name": "שליטה מלאה",
+          "description": "כמעט הכל, ביטוי מדויק ועשיר"
+        }
+      }
+    },
+    "passageLanguage": "שפת הטקסט",
+    "questionLanguage": "שפת השאלות",
+    "generate": "יצירה",
+    "loading": "טוען...",
+    "error": "אירעה שגיאה",
+    "tryAgain": "נסה שנית",
+    "passage": "טקסט",
+    "question": "שאלה",
+    "options": {
+      "a": "אפשרות א'",
+      "b": "אפשרות ב'",
+      "c": "אפשרות ג'",
+      "d": "אפשרות ד'"
+    },
+    "submit": "שלח תשובה",
+    "correct": "תשובה נכונה!",
+    "incorrect": "תשובה לא נכונה",
+    "explanation": "הסבר",
+    "next": "הבא",
+    "readingTime": "זמן קריאה...",
+    "answerQuestionBelow": "ענה/י על השאלה הבאה:",
+    "generateNewText": "צור טקסט חדש",
+    "supportingTextPrefix": "טקסט תומך: ",
+    "passageLanguageLabel": "שפת הטקסט לקריאה:",
+    "questionWillAppear": "השאלה תופיע מיד...",
+    "passageTitle": "טקסט לקריאה"
+  },
+  "admin": {
+    "title": "ניהול",
+    "users": "משתמשים",
+    "settings": "הגדרות",
+    "logout": "התנתקות",
+    "light": "בהיר",
+    "system": "מערכת",
+    "translating": "מתרגם...",
+    "errorPrefix": "שגיאה: ",
+    "generating": "יוצר...",
+    "pause": "השהה",
+    "play": "נגן",
+    "stop": "עצור",
+    "volume": "עוצמת קול"
+  },
+  "common": {
+    "language": "שפה",
+    "theme": "ערכת נושא",
+    "dark": "כהה",
+    "light": "בהיר",
+    "system": "מערכת",
+    "translating": "מתרגם...",
+    "errorPrefix": "שגיאה: ",
+    "generating": "יוצר...",
+    "pause": "השהה",
+    "play": "נגן",
+    "stop": "עצור",
+    "volume": "עוצמת קול"
+  },
+  "loadingTranslations": "טוען תרגומים...",
+  "pwa": {
+    "installPrompt": "התקן את Comprehendo לגישה מהירה.",
+    "installButton": "התקן אפליקציה"
+  },
+  "auth": {
+    "signOut": "התנתקות",
+    "signInGitHub": "התחברות עם GitHub",
+    "signInGoogle": "התחברות עם Google"
+  }
+}
