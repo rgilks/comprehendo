@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
+    "@heroicons/react": "^2.2.0",
     "@sentry/cli": "^2.43.0",
     "@sentry/nextjs": "^9.11.0",
     "better-sqlite3": "^11.9.1",

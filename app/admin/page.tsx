@@ -3,50 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link'; // Import Link
 import { getTableNames, getTableData } from './actions'; // Import server actions
-
-// Simple SVG Icons (can be replaced with library icons if preferred)
-const RefreshIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-4 h-4"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-    />
-  </svg>
-);
-
-const ChevronLeftIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-4 h-4"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-  </svg>
-);
-
-const ChevronRightIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-4 h-4"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-  </svg>
-);
+import {
+  ArrowPathIcon as HeroRefreshIcon,
+  ChevronLeftIcon as HeroChevronLeftIcon,
+  ChevronRightIcon as HeroChevronRightIcon,
+} from '@heroicons/react/24/solid';
 
 export default function AdminPage() {
   const [tableNames, setTableNames] = useState<string[]>([]);
@@ -222,9 +183,10 @@ export default function AdminPage() {
       <div>
         <button
           onClick={onBack}
-          className={`${secondaryButtonClass} mb-4 px-3 py-1 sm:px-4 sm:py-2`}
+          className={`${secondaryButtonClass} mb-4 px-3 py-1 sm:px-4 sm:py-2 flex items-center`}
         >
-          &larr; Back to {selectedTable || 'Table'}
+          <HeroChevronLeftIcon className="h-4 w-4 mr-1" aria-hidden="true" />
+          Back to {selectedTable || 'Table'}
         </button>
         <div className="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
           <dl>
@@ -296,21 +258,19 @@ export default function AdminPage() {
                   {currentPage === 1 ? (
                     <button
                       onClick={handleRefresh}
-                      disabled={isLoadingData || !!error} // Disable on error too
+                      disabled={isLoadingData || !!error}
                       className={`${refreshButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''} px-3 py-1 sm:px-4 sm:py-2`}
                     >
-                      <RefreshIcon />
+                      <HeroRefreshIcon className="h-4 w-4" aria-hidden="true" />
                       <span>{isLoadingData ? 'Refreshing...' : 'Refresh'}</span>{' '}
-                      {/* Simplified text */}
                     </button>
                   ) : (
                     <button
                       onClick={handlePreviousPage}
-                      disabled={isLoadingData} // Only disable when loading if not page 1
-                      className={`${secondaryButtonClass} px-3 py-1 sm:px-4 sm:py-2`}
+                      disabled={currentPage <= 1 || isLoadingData}
+                      className={secondaryButtonClass}
                     >
-                      <ChevronLeftIcon />
-                      <span>Previous</span>
+                      <HeroChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
                     </button>
                   )}
 
@@ -322,13 +282,10 @@ export default function AdminPage() {
                   </span>
                   <button
                     onClick={handleNextPage}
-                    disabled={
-                      currentPage >= totalPages || isLoadingData || totalRows === 0 || !!error
-                    }
-                    className={`${secondaryButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''} px-3 py-1 sm:px-4 sm:py-2`}
+                    disabled={currentPage >= totalPages || isLoadingData}
+                    className={secondaryButtonClass}
                   >
-                    <span>Next</span>
-                    <ChevronRightIcon />
+                    <HeroChevronRightIcon className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
 
