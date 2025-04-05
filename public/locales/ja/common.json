@@ -1,6 +1,9 @@
 {
-  "brand": "Comprehendo",
+  "title": "Comprehendo",
   "subtitle": "AIを活用した言語学習で読解力を向上",
+  "powered_by": "Google Gemini を搭載",
+  "github": "GitHub",
+  "brand": "Comprehendo",
   "navigation": {
     "home": "ホーム",
     "practice": "練習",
@@ -57,19 +60,52 @@
     "correct": "正解！",
     "incorrect": "不正解",
     "explanation": "解説",
-    "next": "次へ"
+    "next": "次へ",
+    "readingTime": "読書時間...",
+    "answerQuestionBelow": "下の質問に答えてください",
+    "generateNewText": "新しいテキストを生成",
+    "supportingTextPrefix": "サポートテキスト: ",
+    "passageLanguageLabel": "読解文章の言語:",
+    "questionWillAppear": "質問はまもなく表示されます...",
+    "passageTitle": "読解文章"
   },
   "admin": {
     "title": "管理",
     "users": "ユーザー",
     "settings": "設定",
-    "logout": "ログアウト"
+    "logout": "ログアウト",
+    "light": "ライト",
+    "system": "システム",
+    "translating": "翻訳中...",
+    "errorPrefix": "エラー: ",
+    "generating": "生成中...",
+    "pause": "一時停止",
+    "play": "再生",
+    "stop": "停止",
+    "volume": "音量"
   },
   "common": {
     "language": "言語",
     "theme": "テーマ",
     "dark": "ダーク",
     "light": "ライト",
-    "system": "システム"
+    "system": "システム",
+    "translating": "翻訳中...",
+    "errorPrefix": "エラー: ",
+    "generating": "生成中...",
+    "pause": "一時停止",
+    "play": "再生",
+    "stop": "停止",
+    "volume": "音量"
+  },
+  "loadingTranslations": "翻訳を読み込み中...",
+  "pwa": {
+    "installPrompt": "Comprehendoをインストールして素早くアクセス。",
+    "installButton": "アプリをインストール"
+  },
+  "auth": {
+    "signOut": "サインアウト",
+    "signInGitHub": "GitHubでサインイン",
+    "signInGoogle": "Googleでサインイン"
   }
 }

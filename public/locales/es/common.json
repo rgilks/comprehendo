@@ -60,7 +60,14 @@
     "correct": "¡Correcto!",
     "incorrect": "Incorrecto",
     "explanation": "Explicación",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "readingTime": "Reading time...",
+    "answerQuestionBelow": "Answer the question below",
+    "generateNewText": "Generate New Text",
+    "supportingTextPrefix": "Supporting text: ",
+    "passageLanguageLabel": "Reading Passage Language:",
+    "questionWillAppear": "Question will appear shortly...",
+    "passageTitle": "Reading Passage"
   },
   "admin": {
     "title": "Administración",
@@ -72,7 +79,24 @@
     "language": "Idioma",
     "theme": "Tema",
     "dark": "Oscuro",
-    "light": "Claro",
-    "system": "Sistema"
+    "light": "Ligero",
+    "system": "Sistema",
+    "translating": "Traduciendo...",
+    "errorPrefix": "Error:",
+    "generating": "Generando...",
+    "pause": "Pausa",
+    "play": "Reproducir",
+    "stop": "Detener",
+    "volume": "Volumen"
+  },
+  "loadingTranslations": "Cargando traducciones...",
+  "pwa": {
+    "installPrompt": "Instala Comprehendo para un acceso rápido.",
+    "installButton": "Instalar aplicación"
+  },
+  "auth": {
+    "signOut": "Cerrar sesión",
+    "signInGitHub": "Iniciar sesión con GitHub",
+    "signInGoogle": "Iniciar sesión con Google"
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -11,6 +12,7 @@ let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 export default function PWAInstall() {
   const [showInstallButton, setShowInstallButton] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -49,14 +51,14 @@ export default function PWAInstall() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white p-4 rounded-lg shadow-lg">
-      <p className="mb-2">Install Comprehendo for quick access.</p>
+      <p className="mb-2">{t('pwa.installPrompt')}</p>
       <button
         onClick={() => {
           void handleInstallClick();
         }}
         className="bg-white text-blue-600 px-4 py-2 rounded font-medium hover:bg-blue-50"
       >
-        Install App
+        {t('pwa.installButton')}
       </button>
     </div>
   );

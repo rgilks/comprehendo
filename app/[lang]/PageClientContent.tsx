@@ -6,6 +6,7 @@ import HomeContent from './HomeContent';
 import { Suspense } from 'react';
 import i18n from '../i18n.client';
 import { type Resource } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 interface PageClientContentProps {
   initialLanguage: Language;
@@ -16,6 +17,7 @@ export default function PageClientContent({
   initialLanguage,
   initialI18nStore,
 }: PageClientContentProps) {
+  const { t } = useTranslation();
   // Ensure resources for the initial language are loaded idempotently
   Object.keys(initialI18nStore).forEach((lang) => {
     // Only process the language relevant to this page load
@@ -50,7 +52,7 @@ export default function PageClientContent({
   return (
     <I18nextProvider i18n={i18n}>
       <LanguageProvider initialLanguage={initialLanguage}>
-        <Suspense fallback={<div>Loading translations...</div>}>
+        <Suspense fallback={<div>{t('loadingTranslations')}</div>}>
           <HomeContent />
         </Suspense>
       </LanguageProvider>

@@ -60,7 +60,14 @@
     "correct": "Correct!",
     "incorrect": "Incorrect",
     "explanation": "Explanation",
-    "next": "Next"
+    "next": "Next",
+    "readingTime": "Reading time...",
+    "answerQuestionBelow": "Answer the question below",
+    "generateNewText": "Generate New Text",
+    "supportingTextPrefix": "Supporting text: ",
+    "passageLanguageLabel": "Reading Passage Language:",
+    "questionWillAppear": "Question will appear shortly...",
+    "passageTitle": "Reading Passage"
   },
   "admin": {
     "title": "Admin",
@@ -73,6 +80,23 @@
     "theme": "Theme",
     "dark": "Dark",
     "light": "Light",
-    "system": "System"
+    "system": "System",
+    "translating": "Translating...",
+    "errorPrefix": "Error:",
+    "generating": "Generating...",
+    "pause": "Pause",
+    "play": "Play",
+    "stop": "Stop",
+    "volume": "Volume"
+  },
+  "loadingTranslations": "Loading translations...",
+  "pwa": {
+    "installPrompt": "Install Comprehendo for quick access.",
+    "installButton": "Install App"
+  },
+  "auth": {
+    "signOut": "Sign Out",
+    "signInGitHub": "Sign in with GitHub",
+    "signInGoogle": "Sign in with Google"
   }
 }
