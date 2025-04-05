@@ -525,69 +525,54 @@ export default function TextGenerator() {
     <>
       <div className="w-full max-w-3xl mx-auto my-8">
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
-          <h2 className="text-xl font-bold mb-4 text-white bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            {t('practice.cefr.title')}
-          </h2>
-
-          <div className="mb-6 space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                <span className="flex items-center">
-                  <InformationCircleIcon
-                    className="h-5 w-5 mr-1 text-blue-400"
-                    aria-hidden="true"
-                  />
-                  {t('practice.level')}:{' '}
-                  <span className="text-xs text-blue-300 ml-2">
-                    {t('practice.cefr.description')}
-                  </span>
-                </span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {CEFR_LEVELS_LIST.map((level) => (
-                  <button
-                    key={level}
-                    onClick={() => setCefrLevel(level)}
-                    className={`relative px-3 py-2 text-sm rounded transition-colors ${
-                      cefrLevel === level
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
-                        : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                    }`}
-                  >
-                    <div className="font-semibold">
-                      {level} - {t(`practice.cefr.levels.${level}.name`)}
-                    </div>
-                    <div className="text-xs opacity-80 mt-1 line-clamp-1">
-                      {t(`practice.cefr.levels.${level}.description`)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                <span className="flex items-center">
-                  <GlobeAltIcon className="h-5 w-5 mr-1 text-green-400" aria-hidden="true" />
-                  {t('practice.passageLanguageLabel')}
-                </span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => setPassageLanguage(lang)}
-                    className={`px-3 py-2 text-sm rounded transition-colors ${
-                      passageLanguage === lang
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
-                        : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-                    }`}
-                  >
-                    {LANGUAGES[lang]}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Grid for Labels (Row 1) and Selectors (Row 2) */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            {' '}
+            {/* Two columns, gaps */}
+            {/* Row 1: Labels */}
+            <label
+              htmlFor="passage-language-select"
+              className="block text-sm font-medium text-white col-span-1"
+            >
+              <span className="flex items-center">
+                <GlobeAltIcon className="h-5 w-5 mr-1 text-green-400" aria-hidden="true" />
+                {t('practice.passageLanguageLabel')}
+              </span>
+            </label>
+            <label
+              htmlFor="cefr-level-select"
+              className="block text-sm font-medium text-white col-span-1"
+            >
+              <span className="flex items-center">
+                <InformationCircleIcon className="h-5 w-5 mr-1 text-blue-400" aria-hidden="true" />
+                {t('practice.level')}
+              </span>
+            </label>
+            {/* Row 2: Selectors */}
+            <select
+              id="passage-language-select"
+              value={passageLanguage}
+              onChange={(e) => setPassageLanguage(e.target.value as Language)}
+              className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors col-span-1"
+            >
+              {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
+                <option key={lang} value={lang}>
+                  {LANGUAGES[lang]}
+                </option>
+              ))}
+            </select>
+            <select
+              id="cefr-level-select"
+              value={cefrLevel}
+              onChange={(e) => setCefrLevel(e.target.value as CEFRLevel)}
+              className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors col-span-1"
+            >
+              {CEFR_LEVELS_LIST.map((level) => (
+                <option key={level} value={level}>
+                  {level} - {t(`practice.cefr.levels.${level}.name`)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -603,82 +588,69 @@ export default function TextGenerator() {
 
         {loading && !quizData && <QuizSkeleton />}
 
-        {quizData && generatedPassageLanguage && generatedQuestionLanguage && (
+        {/* Reading Passage Section */}
+        {quizData && !loading && generatedPassageLanguage && generatedQuestionLanguage && (
           <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-              <h2 className="text-lg font-semibold text-white flex items-center">
-                <BookOpenIcon className="h-5 w-5 mr-2 text-blue-400" aria-hidden="true" />
-                {t('practice.passageTitle')}{' '}
-                {passageLanguage !== 'en' && `(${LANGUAGES[passageLanguage]})`}
-              </h2>
-              <div className="flex space-x-2">
-                <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
-                  {cefrLevel}
-                </span>
-                <span className="text-sm bg-gradient-to-r from-green-600 to-green-700 text-white px-2 py-1 rounded-full shadow-sm">
-                  P: {LANGUAGES[generatedPassageLanguage]}
-                </span>
-                <span className="text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white px-2 py-1 rounded-full shadow-sm">
-                  Q: {LANGUAGES[generatedQuestionLanguage]}
-                </span>
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+              {/* Title on the left */}
+              <div className="flex items-center space-x-2 text-lg font-semibold">
+                <BookOpenIcon className="w-5 h-5 text-blue-400" />
+                <span>{t('practice.passageTitle')}</span>
               </div>
+
+              {/* Speech Controls on the right */}
+              {isSpeechSupported && quizData.paragraph && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePlayPause}
+                    title={isSpeakingPassage && !isPaused ? t('common.pause') : t('common.play')}
+                    className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
+                    disabled={!quizData.paragraph}
+                  >
+                    {isSpeakingPassage && !isPaused ? (
+                      <HeroPauseIcon className="w-4 h-4" />
+                    ) : (
+                      <HeroPlayIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                  {isSpeakingPassage && (
+                    <button
+                      onClick={handleStop}
+                      title={t('common.stop')}
+                      className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                    >
+                      <HeroStopIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                  <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
+                    <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={volume}
+                      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                      title={t('common.volume')}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold text-white">
-                  {t('practice.passageTitle')} ({LANGUAGES[passageLanguage]})
-                </h3>
-                {/* --- UPDATED Speech Controls --- */}
-                {isSpeechSupported && quizData.paragraph && (
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handlePlayPause}
-                      title={isSpeakingPassage && !isPaused ? t('common.pause') : t('common.play')}
-                      className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
-                      disabled={!quizData.paragraph}
-                    >
-                      {isSpeakingPassage && !isPaused ? (
-                        <HeroPauseIcon className="w-4 h-4" />
-                      ) : (
-                        <HeroPlayIcon className="w-4 h-4" />
-                      )}
-                    </button>
-                    {isSpeakingPassage && ( // Show Stop button only when speaking/paused
-                      <button
-                        onClick={handleStop}
-                        title={t('common.stop')}
-                        className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
-                      >
-                        <HeroStopIcon className="w-4 h-4" />
-                      </button>
-                    )}
-                    <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
-                      <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={volume}
-                        onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                        className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                        title={t('common.volume')}
-                      />
-                    </div>
-                  </div>
-                )}
-                {/* --- End UPDATED Speech Controls --- */}
-              </div>
-              <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
-                {highlightedParagraph && highlightedParagraph !== quizData.paragraph ? (
-                  <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
-                ) : generatedPassageLanguage ? (
-                  renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
-                ) : (
-                  <div>{quizData.paragraph}</div>
-                )}
-              </div>
+            {/* Passage Text */}
+            <div
+              className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
+              dir={getTextDirection(generatedPassageLanguage)}
+            >
+              {highlightedParagraph ? (
+                <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
+              ) : generatedPassageLanguage ? (
+                renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
+              ) : (
+                <div>{quizData.paragraph}</div>
+              )}
             </div>
 
             {quizData && !showQuestionSection && (
@@ -772,35 +744,28 @@ export default function TextGenerator() {
           </div>
         )}
 
-        <div className="mt-8">
-          {' '}
-          <button
-            onClick={generateNewQuiz}
-            disabled={loading || (quizData !== null && !isAnswered)}
-            className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading || (quizData !== null && !isAnswered) ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
-          >
-            {loading ? (
-              <div className="flex items-center">
-                <ArrowPathIcon
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  aria-hidden="true"
-                />
-                {t('common.generating')}
-              </div>
-            ) : quizData !== null && !isAnswered ? (
-              showQuestionSection ? (
-                t('practice.answerQuestionBelow')
+        {/* Conditionally render the button initially OR after the question is answered */}
+        {(!quizData || isAnswered) && (
+          <div className="mt-8">
+            <button
+              onClick={generateNewQuiz}
+              disabled={loading}
+              className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <ArrowPathIcon
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    aria-hidden="true"
+                  />
+                  {t('common.generating')}
+                </div>
               ) : (
-                t('practice.readingTime')
-              )
-            ) : (
-              <div className="flex items-center">
-                <PlusCircleIcon className="h-5 w-5 mr-2" aria-hidden="true" />
-                {t('practice.generateNewText')}
-              </div>
-            )}
-          </button>
-        </div>
+                t('practice.generateNewText')
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
