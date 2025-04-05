@@ -1,4 +1,3 @@
-// Mock for the database
 const mockExec = jest.fn();
 const mockPrepare = jest.fn(() => ({
   run: jest.fn(),
@@ -12,6 +11,5 @@ const mockDb = {
   pragma: jest.fn(),
 };
 
-// Export both the mock functions and the mock db object
 export default mockDb;
 export { mockExec, mockPrepare };

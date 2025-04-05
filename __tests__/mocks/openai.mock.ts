@@ -1,4 +1,3 @@
-// Mock OpenAI client
 const mockCreateCompletion = jest.fn().mockResolvedValue({
   choices: [
     {

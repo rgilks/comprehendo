@@ -1,13 +1,6 @@
-/**
- * Database mocking utilities for tests
- */
-
-/**
- * Creates a mock database with customizable behavior
- */
 export const createMockDb = () => {
   const mockExec = jest.fn();
-  const mockPrepare = jest.fn((query) => ({
+  const mockPrepare = jest.fn(() => ({
     get: jest.fn().mockReturnValue(null),
     run: jest.fn(),
     all: jest.fn().mockReturnValue([]),
@@ -25,19 +18,14 @@ export const createMockDb = () => {
   };
 };
 
-/**
- * Creates a customized db.prepare implementation for specific test scenarios
- */
 export const createPrepareImplementation = (behaviors: Record<string, any>) => {
   return (query: string) => {
-    // Loop through behaviors and find matching query
     for (const [queryPart, behavior] of Object.entries(behaviors)) {
       if (query.includes(queryPart)) {
         return behavior;
       }
     }
 
-    // Default behavior
     return {
       get: jest.fn().mockReturnValue(null),
       run: jest.fn(),
@@ -46,9 +34,6 @@ export const createPrepareImplementation = (behaviors: Record<string, any>) => {
   };
 };
 
-/**
- * Setup behavior for db.prepare to return cached content
- */
 export const setupCachedContentMock = (cachedContent: any) => {
   return createPrepareImplementation({
     'FROM generated_content': {
@@ -59,9 +44,6 @@ export const setupCachedContentMock = (cachedContent: any) => {
   });
 };
 
-/**
- * Setup behavior for db.prepare to return an authenticated user
- */
 export const setupAuthenticatedUserMock = (mockUser: any) => {
   return createPrepareImplementation({
     'FROM users': {

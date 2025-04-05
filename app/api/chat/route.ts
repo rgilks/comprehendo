@@ -10,18 +10,9 @@ import {
 import OpenAI from 'openai';
 import { z } from 'zod';
 
-// Don't initialize OpenAI at build time
-// const getOpenAIClient = () => {
-//   return new OpenAI({
-//     apiKey: process.env.OPENAI_API_KEY,
-//   });
-// };
-
-// Simple in-memory rate limiter
-// Maps IP addresses to timestamps of their requests
-const MAX_REQUESTS_PER_HOUR = 100; // Adjust as needed
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
-const CACHE_TTL = 60 * 60 * 24; // 24 hours in seconds
+const MAX_REQUESTS_PER_HOUR = 100;
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
+const CACHE_TTL = 60 * 60 * 24;
 
 interface RateLimitRow {
   requests: string;
@@ -37,7 +28,6 @@ interface GeneratedContentRow {
   created_at: string;
 }
 
-// Define Zod schema for the request body
 const chatRequestBodySchema = z.object({
   prompt: z.string().min(1, { message: 'Prompt is required' }),
   seed: z.number().optional(),
@@ -45,19 +35,14 @@ const chatRequestBodySchema = z.object({
   questionLanguage: z.string(),
 });
 
-// Define a type for the successful OpenAI completion structure we expect
-// (Only include properties actually accessed)
 type OpenAIChatCompletion = OpenAI.Chat.Completions.ChatCompletion;
 
-// Define a type for the successful Google AI response structure we expect
-// (Only include properties actually accessed)
 interface GoogleAIContentResponse {
   response: {
     text: () => string;
   };
 }
 
-// Initialize rate limiting table
 console.log('[API] Initializing rate limiting table...');
 db.exec(`
   CREATE TABLE IF NOT EXISTS rate_limits (
@@ -70,11 +55,9 @@ console.log('[API] Rate limiting table initialized');
 
 export async function POST(request: Request) {
   try {
-    // Get user session if available
     const session = await getServerSession();
     let userId = null;
 
-    // Get user ID from database if logged in
     if (session?.user) {
       const userEmail = session.user.email as string | undefined;
 
@@ -99,58 +82,48 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get IP address from headers
     const ip =
       request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown-ip';
 
-    // Truncate IP or mask it for privacy in logs
     const logSafeIp = ip.length > 20 ? ip.substring(0, 20) + '...' : ip;
     console.log(`[API] Request from IP: ${logSafeIp}`);
 
-    // Check rate limit
     const now = Date.now();
     let userRequests: number[] = [];
 
-    // Get rate limit data from database
     console.log(`[API] Checking rate limit for IP: ${logSafeIp}`);
     const rateLimitRow = db
       .prepare('SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?')
       .get(ip) as RateLimitRow | undefined;
 
     if (rateLimitRow) {
-      // Provide type for JSON.parse result
       try {
-        // Initialize with unknown, then check type
         const parsedRequests: unknown = JSON.parse(rateLimitRow.requests);
-        // Basic type check for safety
         if (
           Array.isArray(parsedRequests) &&
           parsedRequests.every((item) => typeof item === 'number')
         ) {
-          userRequests = parsedRequests; // Assign directly
+          userRequests = parsedRequests;
         } else {
           console.warn(`[API] Invalid rate limit data found for IP ${logSafeIp}. Resetting.`);
-          userRequests = []; // Reset if data is corrupt
+          userRequests = [];
         }
       } catch (parseError) {
         console.error(`[API] Failed to parse rate limit data for IP ${logSafeIp}:`, parseError);
-        userRequests = []; // Reset on parse error
+        userRequests = [];
       }
       console.log(`[API] Found ${userRequests.length} previous requests for IP: ${logSafeIp}`);
 
-      // Update last updated timestamp
       db.prepare('UPDATE rate_limits SET updated_at = CURRENT_TIMESTAMP WHERE ip_address = ?').run(
         ip
       );
     }
 
-    // Filter out requests older than the rate limit window
     const recentRequests = userRequests.filter(
       (timestamp: number) => now - timestamp < RATE_LIMIT_WINDOW
     );
     console.log(`[API] ${recentRequests.length} recent requests for IP: ${logSafeIp}`);
 
-    // Check if user has exceeded rate limit
     if (recentRequests.length >= MAX_REQUESTS_PER_HOUR) {
       console.log(`[API] Rate limit exceeded for IP: ${logSafeIp}`);
       return NextResponse.json(
@@ -159,13 +132,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Update rate limit tracking in database
     const updatedRequests = [...recentRequests, now];
     console.log(
       `[API] Updating rate limit for IP: ${logSafeIp} with ${updatedRequests.length} requests`
     );
 
-    // Use upsert pattern to either insert or update
     db.prepare(
       `
       INSERT INTO rate_limits (ip_address, requests, updated_at)
@@ -175,42 +146,34 @@ export async function POST(request: Request) {
     `
     ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
 
-    // Use the Zod schema to parse and validate the request body
     const parsedBody = chatRequestBodySchema.safeParse(await request.json());
 
     if (!parsedBody.success) {
-      // If validation fails, return a 400 error with Zod's error messages
       console.log('[API] Invalid request body:', parsedBody.error.flatten());
       return NextResponse.json(
         {
           error: 'Invalid request body',
-          issues: parsedBody.error.flatten().fieldErrors, // Send specific issues back
+          issues: parsedBody.error.flatten().fieldErrors,
         },
         { status: 400 }
       );
     }
 
-    // Use the validated data
     const { prompt, seed, passageLanguage, questionLanguage } = parsedBody.data;
 
-    // Log the received prompt safely
     console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
-    // Log received languages
     console.log(
       `[API] Passage Language: ${passageLanguage}, Question Language: ${questionLanguage}`
     );
 
-    // Extract CEFR level from the prompt (assuming it's still reliable)
     const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
     const cefrLevel = cefrLevelMatch?.[1] ?? 'unknown';
     console.log(`[API] Extracted level: ${cefrLevel}`);
 
-    // Create a cache key including both languages, level, and seed
     const seedValue = typeof seed === 'number' ? seed : 0;
     const cacheKey = `${passageLanguage}-${questionLanguage}-${cefrLevel}-${seedValue}`;
     console.log(`[API] Checking cache for key: ${cacheKey}`);
 
-    // Check cache in database, now including question_language
     const resultFromDb: unknown = db
       .prepare(
         `
@@ -226,7 +189,6 @@ export async function POST(request: Request) {
 
     let cachedContent: GeneratedContentRow | undefined = undefined;
 
-    // Type guard for the database result
     if (
       typeof resultFromDb === 'object' &&
       resultFromDb !== null &&
@@ -234,14 +196,12 @@ export async function POST(request: Request) {
       typeof resultFromDb.content === 'string' &&
       'created_at' in resultFromDb &&
       typeof resultFromDb.created_at === 'string'
-      // Add other property checks from GeneratedContentRow if needed for full safety
     ) {
-      cachedContent = resultFromDb as GeneratedContentRow; // Cast only after check
+      cachedContent = resultFromDb as GeneratedContentRow;
     }
 
     if (cachedContent) {
       const timestamp = new Date(cachedContent.created_at).getTime();
-      // Check if cache is still valid (less than CACHE_TTL old)
       if (now - timestamp < CACHE_TTL * 1000) {
         console.log(`[API] Cache hit for key: ${cacheKey}`);
         return NextResponse.json({ result: cachedContent.content });
@@ -251,18 +211,14 @@ export async function POST(request: Request) {
       console.log(`[API] Cache miss for key: ${cacheKey}`);
     }
 
-    // Initialize OpenAI only when the route is called
     console.log('[API] Initializing AI client');
-    // const openai = getOpenAIClient();
 
     console.log('[API] Sending request to AI provider');
-    // Get the active model configuration
     const activeModel: ModelConfig = getActiveModel();
 
     let result: string | null = null;
 
     if (activeModel.provider === 'openai') {
-      // Check if API key is available
       if (!process.env.OPENAI_API_KEY) {
         console.error('[API] OpenAI API key is missing');
         return NextResponse.json(
@@ -272,7 +228,6 @@ export async function POST(request: Request) {
       }
 
       const openai = getOpenAIClient();
-      // Use the defined type for the completion result
       const completion: OpenAIChatCompletion = await openai.chat.completions.create({
         model: activeModel.name,
         messages: [
@@ -287,10 +242,8 @@ export async function POST(request: Request) {
         ],
         max_tokens: activeModel.maxTokens,
       });
-      // Access content safely using optional chaining
       result = completion?.choices?.[0]?.message?.content ?? null;
     } else if (activeModel.provider === 'google') {
-      // Check if API key is available
       if (!process.env.GOOGLE_AI_API_KEY) {
         console.error('[API] Google AI API key is missing');
         return NextResponse.json(
@@ -307,11 +260,9 @@ export async function POST(request: Request) {
       const googleResponse: GoogleAIContentResponse = await model.generateContent(
         systemPrompt + '\n\n' + prompt
       ); // Combine prompts for Google
-      // Access content safely using optional chaining and calling the function
       result = googleResponse?.response?.text() ?? null;
     }
 
-    // Check if result is valid before proceeding
     if (result === null) {
       console.error('[API] Failed to get valid content from AI provider');
       return NextResponse.json(
@@ -322,28 +273,22 @@ export async function POST(request: Request) {
 
     console.log(`[API] Received response from ${activeModel.provider}`);
 
-    // Parse the result JSON to extract questions and other details
-    let parsedContent: Record<string, unknown> = {}; // Use a broader type initially
+    let parsedContent: Record<string, unknown> = {};
     try {
-      // More robustly find JSON within potential markdown fences
       const jsonMatch = result.match(/```(?:json)?([\s\S]*?)```/);
-      const jsonString = jsonMatch ? jsonMatch[1].trim() : result.trim(); // Extract or use original
+      const jsonString = jsonMatch ? jsonMatch[1].trim() : result.trim();
 
-      // Provide type safety for JSON.parse result
-      const parsedJson: unknown = JSON.parse(jsonString); // Parse the extracted/trimmed string
-      // Check if it's an object before assigning
+      const parsedJson: unknown = JSON.parse(jsonString);
       if (typeof parsedJson === 'object' && parsedJson !== null) {
-        parsedContent = parsedJson as Record<string, unknown>; // Cast after check
+        parsedContent = parsedJson as Record<string, unknown>;
       } else {
         throw new Error('AI result was not a valid JSON object.');
       }
     } catch (parseError) {
       console.error('[API] Failed to parse AI response JSON:', parseError, 'Raw result:', result);
-      // Handle the error appropriately, maybe return a 500 response
       return NextResponse.json({ error: 'Failed to process AI response format' }, { status: 500 });
     }
 
-    // Extract relevant fields for the 'questions' column
     const questionsData = {
       question: parsedContent.question,
       options: parsedContent.options,
@@ -351,10 +296,8 @@ export async function POST(request: Request) {
       correctAnswer: parsedContent.correctAnswer,
       relevantText: parsedContent.relevantText,
       topic: parsedContent.topic,
-      // Add any other fields from the parsed JSON you might want to store
     };
 
-    // Store the result and the structured questions in the database
     console.log(
       `[API] Storing generated content in database for passage: ${passageLanguage}, question: ${questionLanguage}, level: ${cefrLevel}`
     );
@@ -369,18 +312,11 @@ export async function POST(request: Request) {
           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         `
         )
-        .run(
-          passageLanguage, // language column now stores passage language
-          questionLanguage, // new question_language column
-          cefrLevel,
-          result,
-          JSON.stringify(questionsData)
-        );
+        .run(passageLanguage, questionLanguage, cefrLevel, result, JSON.stringify(questionsData));
 
       console.log(
         `[API] DB Insert Result (generated_content): changes=${insertContentInfo.changes}, lastInsertRowid=${insertContentInfo.lastInsertRowid}`
       );
-      // Only mark successful if changes > 0
       if (insertContentInfo.changes > 0) {
         contentInsertSuccessful = true;
         console.log('[API] Successfully inserted generated_content (Marked success).');
@@ -389,11 +325,8 @@ export async function POST(request: Request) {
       }
     } catch (contentError) {
       console.error('[API] CRITICAL ERROR during generated_content insert:', contentError);
-      // Optionally, you might want to return a 500 error here
-      // return NextResponse.json({ error: "Database error saving content" }, { status: 500 });
     }
 
-    // Track usage statistics with user ID when available
     console.log(
       `[API] Recording usage statistics for passage: ${passageLanguage}, question: ${questionLanguage}, level: ${cefrLevel}${
         userId ? ', user: ' + userId : ''
@@ -401,7 +334,6 @@ export async function POST(request: Request) {
     );
 
     if (contentInsertSuccessful) {
-      // Optionally, only try inserting stats if content insert seemed okay
       console.log(
         `[API] Recording usage statistics for passage: ${passageLanguage}, question: ${questionLanguage}, level: ${cefrLevel}${userId ? ', user: ' + userId : ''}`
       );

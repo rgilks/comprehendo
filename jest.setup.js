@@ -1,10 +1,7 @@
-// Import Jest DOM extensions
 import '@testing-library/jest-dom';
 
-// Import shims for openai
 import 'openai/shims/node';
 
-// Setup global objects for Next.js if not already defined
 if (typeof Request === 'undefined') {
   global.Request = class Request {};
   global.Response = class Response {
@@ -23,7 +20,6 @@ if (typeof Request === 'undefined') {
   global.FormData = class FormData {};
 }
 
-// Mock Next.js router
 jest.mock('next/router', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -35,7 +31,6 @@ jest.mock('next/router', () => ({
   }),
 }));
 
-// Mock Next/Navigation
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -49,10 +44,8 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Add global fetch mock if needed
 global.fetch = jest.fn();
 
-// Silence console errors and warnings in tests
 global.console = {
   ...console,
   // Uncomment these to suppress console messages in test output
@@ -61,7 +54,6 @@ global.console = {
   // log: jest.fn(),
 };
 
-// Create proper mocks for NextRequest and NextResponse
 const actualNextServer = jest.requireActual('next/server');
 
 jest.mock('next/server', () => {
@@ -71,20 +63,17 @@ jest.mock('next/server', () => {
       this.method = init.method || 'GET';
       this._headers = new Map();
 
-      // Add headers
       if (init.headers) {
         Object.entries(init.headers).forEach(([key, value]) => {
           this._headers.set(key, value);
         });
       }
 
-      // Add body
       if (init.body) {
         this.body = init.body;
       }
     }
 
-    // Header methods
     get headers() {
       return {
         get: (name) => this._headers.get(name),
@@ -92,13 +81,11 @@ jest.mock('next/server', () => {
       };
     }
 
-    // Mock json method to parse the body
     async json() {
       return typeof this.body === 'string' ? JSON.parse(this.body) : this.body;
     }
   }
 
-  // Create a response that actually has a working json method
   function createResponse(body, status = 200) {
     const stringifiedBody = typeof body === 'string' ? body : JSON.stringify(body);
 
@@ -106,7 +93,7 @@ jest.mock('next/server', () => {
       status,
       headers: { 'Content-Type': 'application/json' },
       json: async () => body,
-      _body: stringifiedBody, // For debugging
+      _body: stringifiedBody,
     };
   }
 
@@ -122,5 +109,3 @@ jest.mock('next/server', () => {
     },
   };
 });
-
-// Add any global test setup

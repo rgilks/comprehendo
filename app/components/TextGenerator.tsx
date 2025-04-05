@@ -1,14 +1,7 @@
-// TextGenerator component - Provides reading comprehension quiz functionality with formatting
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
-// Removed import for HighlightedParagraph and constants
-// import {
-//   CEFR_LEVELS,
-//   CEFR_DESCRIPTIONS,
-//   LANGUAGES,
-// } from '../../lib/constants';
-// import { HighlightedParagraph } from './HighlightedParagraph';
+
 import { z } from 'zod';
 import {
   PlayIcon as HeroPlayIcon,
@@ -23,67 +16,6 @@ import {
   PlusCircleIcon,
 } from '@heroicons/react/24/solid';
 
-// Simple Speaker Icon
-// const SpeakerIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-//   <svg
-//     xmlns="http://www.w3.org/2000/svg"
-//     viewBox="0 0 24 24"
-//     fill="currentColor"
-//     className={className}
-//   >
-//     <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06z" />
-//     <path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06z" />
-//   </svg>
-// );
-
-// --- NEW Icons for Controls ---
-// const PlayIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-//   <svg
-//     xmlns="http://www.w3.org/2000/svg"
-//     viewBox="0 0 24 24"
-//     fill="currentColor"
-//     className={className}
-//   >
-//     <path
-//       fillRule="evenodd"
-//       d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
-//       clipRule="evenodd"
-//     />
-//   </svg>
-// );
-
-// const PauseIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-//   <svg
-//     xmlns="http://www.w3.org/2000/svg"
-//     viewBox="0 0 24 24"
-//     fill="currentColor"
-//     className={className}
-//   >
-//     <path
-//       fillRule="evenodd"
-//       d="M6.75 5.25a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Zm9 0a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Z"
-//       clipRule="evenodd"
-//     />
-//   </svg>
-// );
-
-// const StopIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-//   <svg
-//     xmlns="http://www.w3.org/2000/svg"
-//     viewBox="0 0 24 24"
-//     fill="currentColor"
-//     className={className}
-//   >
-//     <path
-//       fillRule="evenodd"
-//       d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
-//       clipRule="evenodd"
-//     />
-//   </svg>
-// );
-// --- End Icons ---
-
-// Define Zod schema for QuizData
 const quizDataSchema = z.object({
   paragraph: z.string(),
   question: z.string(),
@@ -104,20 +36,16 @@ const quizDataSchema = z.object({
   topic: z.string(),
 });
 
-// Infer QuizData type from the schema
 type QuizData = z.infer<typeof quizDataSchema>;
 
-// Define Zod schema for the API response
 const apiResponseSchema = z.object({
   result: z.string().optional(),
   error: z.string().optional(),
 });
 
-// Type definitions
 type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German' | 'Hindi' | 'Hebrew';
 
-// Define constants directly in the component
 const CEFR_LEVELS: Record<CEFRLevel, string> = {
   A1: 'Beginner',
   A2: 'Elementary',
@@ -136,7 +64,6 @@ const CEFR_DESCRIPTIONS: Record<CEFRLevel, string> = {
   C2: 'Virtually everything, nuanced expression',
 };
 
-// Add a constant to identify RTL languages
 const RTL_LANGUAGES: Language[] = ['Hebrew'];
 
 const LANGUAGES: Record<Language, string> = {
@@ -149,7 +76,6 @@ const LANGUAGES: Record<Language, string> = {
   Hebrew: 'עברית',
 };
 
-// Map Language type to BCP 47 language codes for SpeechSynthesis
 const BCP47_LANGUAGE_MAP: Record<Language, string> = {
   English: 'en-US',
   Italian: 'it-IT',
@@ -160,17 +86,15 @@ const BCP47_LANGUAGE_MAP: Record<Language, string> = {
   Hebrew: 'he-IL',
 };
 
-// Skeleton Loader Component
 const QuizSkeleton = () => (
   <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg animate-pulse">
-    <div className="h-4 bg-gray-700 rounded w-3/4 mb-4"></div> {/* Title Placeholder */}
+    <div className="h-4 bg-gray-700 rounded w-3/4 mb-4"></div>
     <div className="space-y-3 mb-6">
       <div className="h-3 bg-gray-700 rounded w-full"></div>
       <div className="h-3 bg-gray-700 rounded w-full"></div>
       <div className="h-3 bg-gray-700 rounded w-5/6"></div>
       <div className="h-3 bg-gray-700 rounded w-4/6"></div>
     </div>{' '}
-    {/* Paragraph Placeholder */}
     <div className="h-4 bg-gray-700 rounded w-1/2 mb-4"></div> {/* Question Placeholder */}
     <div className="space-y-2">
       <div className="h-10 bg-gray-700 rounded w-full"></div>
@@ -178,11 +102,9 @@ const QuizSkeleton = () => (
       <div className="h-10 bg-gray-700 rounded w-full"></div>
       <div className="h-10 bg-gray-700 rounded w-full"></div>
     </div>{' '}
-    {/* Options Placeholder */}
   </div>
 );
 
-// Add a helper function to determine text direction
 const getTextDirection = (language: Language) => {
   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
 };
@@ -267,22 +189,18 @@ export default function TextGenerator() {
   const wordsRef = useRef<string[]>([]);
   const [generatedPassageLanguage, setGeneratedPassageLanguage] = useState<Language | null>(null);
   const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null);
-  const [volume, setVolume] = useState(0.5); // Change initial volume to 50%
+  const [volume, setVolume] = useState(0.5);
 
-  // --- Question Delay State ---
-  const QUESTION_DELAY_MS = 20000; // 20 seconds
+  const QUESTION_DELAY_MS = 20000;
   const [showQuestionSection, setShowQuestionSection] = useState<boolean>(false);
   const questionDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // --- End Question Delay State ---
 
-  // Check for Speech Synthesis support on mount
   useEffect(() => {
     setIsSpeechSupported(
       'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
     );
   }, []);
 
-  // --- Stop Passage Speech Utility ---
   const stopPassageSpeech = useCallback(() => {
     if (isSpeechSupported) {
       window.speechSynthesis.cancel();
@@ -293,7 +211,6 @@ export default function TextGenerator() {
     }
   }, [isSpeechSupported]);
 
-  // --- Speech Synthesis Utility (Modified for single words) ---
   const speakText = useCallback(
     (text: string | null, lang: Language) => {
       if (!isSpeechSupported || !text) {
@@ -315,7 +232,6 @@ export default function TextGenerator() {
     [isSpeechSupported, stopPassageSpeech, volume]
   );
 
-  // --- NEW Passage Speech Controls ---
   const handlePlayPause = useCallback(() => {
     if (!isSpeechSupported || !quizData?.paragraph || !generatedPassageLanguage) return;
 
@@ -388,26 +304,23 @@ export default function TextGenerator() {
   const handleStop = useCallback(() => {
     stopPassageSpeech();
   }, [stopPassageSpeech]);
-  // --- End NEW Passage Speech Controls ---
 
   const highlightRelevantText = useCallback(() => {
-    // Highlight whenever explanations are shown and relevant text exists
     if (quizData && showExplanation && quizData.relevantText) {
       try {
         const escapedText = quizData.relevantText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedText})`, 'gi');
-        // Use dangerouslySetInnerHTML for highlighting, ensuring proper handling
         const highlighted = quizData.paragraph.replace(
           regex,
-          '<mark class="bg-yellow-300 text-black px-1 rounded">$1</mark>' // Example mark tag
+          '<mark class="bg-yellow-300 text-black px-1 rounded">$1</mark>'
         );
         setHighlightedParagraph(highlighted);
       } catch (e) {
         console.error('Error creating regex or highlighting text:', e);
-        setHighlightedParagraph(quizData.paragraph); // Fallback to original paragraph
+        setHighlightedParagraph(quizData.paragraph);
       }
     } else {
-      setHighlightedParagraph(quizData?.paragraph ?? null); // Show original paragraph or null
+      setHighlightedParagraph(quizData?.paragraph ?? null);
     }
   }, [quizData, showExplanation]);
 
@@ -415,30 +328,24 @@ export default function TextGenerator() {
     if (showExplanation) {
       highlightRelevantText();
     }
-    // Reset highlighting when explanations are hidden or quiz data changes
     if (!showExplanation && quizData) {
       setHighlightedParagraph(quizData.paragraph);
     }
   }, [showExplanation, highlightRelevantText, quizData]);
 
-  // Stop speech when component unmounts or quiz data changes
   useEffect(() => {
     return () => {
-      // Use the dedicated stop function
       stopPassageSpeech();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quizData]); // Keep dependency on quizData
+  }, [quizData]);
 
-  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      // Cleanup question delay timer
       if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
     };
   }, []);
 
-  // Add type for translation API response
   interface TranslationResponse {
     responseStatus: number;
     responseData: {
@@ -468,7 +375,6 @@ export default function TextGenerator() {
     []
   );
 
-  // Modify the renderParagraphWithWordHover function
   const renderParagraphWithWordHover = useCallback(
     (paragraphHtml: string | null, langType: Language) => {
       if (!paragraphHtml) return null;
@@ -514,24 +420,22 @@ export default function TextGenerator() {
   );
 
   const generateText = async () => {
-    // Stop speech before generating new text
     stopPassageSpeech();
-    setGeneratedPassageLanguage(null); // Reset generated language
-    setGeneratedQuestionLanguage(null); // Reset generated question language
+    setGeneratedPassageLanguage(null);
+    setGeneratedQuestionLanguage(null);
     setLoading(true);
     setError(null);
     setSelectedAnswer(null);
     setIsAnswered(false);
-    setHighlightedParagraph(null); // Reset highlight
+    setHighlightedParagraph(null);
     setShowExplanation(false);
     setQuizData(null);
 
-    // Clear existing question delay timer and hide section
     if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
-    setShowQuestionSection(false); // Hide question section immediately
+    setShowQuestionSection(false);
 
     const maxAttempts = 3;
-    const retryDelayMs = 1000; // 1 second delay between retries
+    const retryDelayMs = 1000;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
@@ -565,12 +469,10 @@ export default function TextGenerator() {
         const data = parsedApiResponse.data;
 
         if (response.status === 429) {
-          // Don't retry on rate limit error, show message immediately
           setError(data.error || "You've reached the usage limit. Please try again later.");
           setGeneratedPassageLanguage(null);
           setGeneratedQuestionLanguage(null);
-          // No need to break here, the finally block will handle loading state
-          return; // Exit generateText completely
+          return;
         }
 
         if (!response.ok || !data.result) {
@@ -578,7 +480,6 @@ export default function TextGenerator() {
           throw new Error(data.error || `API request failed with status ${response.status}`);
         }
 
-        // Attempt to parse the inner JSON (quiz data)
         try {
           const jsonString = data.result.replace(/```json|```/g, '').trim();
           const parsedQuizData = quizDataSchema.safeParse(JSON.parse(jsonString));
@@ -588,32 +489,27 @@ export default function TextGenerator() {
             throw new Error('Failed to parse the structure of the generated quiz.');
           }
 
-          // SUCCESS!
           setQuizData(parsedQuizData.data);
           setHighlightedParagraph(parsedQuizData.data.paragraph);
           setGeneratedPassageLanguage(passageLanguage);
           setGeneratedQuestionLanguage(questionLanguage);
-          setError(null); // Clear any previous errors
+          setError(null);
 
-          // --- START QUESTION DELAY TIMER ---
           if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
           questionDelayTimeoutRef.current = setTimeout(() => {
             setShowQuestionSection(true);
           }, QUESTION_DELAY_MS);
-          // --- END QUESTION DELAY TIMER ---
 
           console.log(`Successfully generated text on attempt ${attempt + 1}`);
-          break; // Exit the retry loop on success
+          break;
         } catch (parseErr) {
           console.error(`Attempt ${attempt + 1}: Error parsing inner JSON`, parseErr);
-          // Throw the parsing error to be caught by the outer catch block for retry logic
           if (parseErr instanceof Error) throw parseErr;
           else throw new Error('Failed to parse generated quiz content.');
         }
       } catch (err: unknown) {
         console.error(`Attempt ${attempt + 1} failed:`, err);
 
-        // If this was the last attempt, set the final error state
         if (attempt === maxAttempts - 1) {
           console.error('All generation attempts failed.');
           setGeneratedPassageLanguage(null);
@@ -625,20 +521,16 @@ export default function TextGenerator() {
           } else {
             setError('An unknown error occurred after multiple attempts.');
           }
-          // Let the loop finish so finally block runs
         } else {
-          // Wait before the next retry
           await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
         }
       }
     } // End of for loop
 
-    // This runs after the loop finishes (either by success break or all attempts failing)
     setLoading(false);
   };
 
   const handleAnswerSelect = (answer: string) => {
-    // Allow selecting even if cooldown is active, but don't allow changing selection
     if (isAnswered) return;
 
     setSelectedAnswer(answer);
@@ -647,29 +539,22 @@ export default function TextGenerator() {
   };
 
   const generateNewQuiz = () => {
-    // Check conditions *before* stopping speech or calling generateText
     if (loading || (quizData !== null && !isAnswered)) {
       console.log('Cannot generate new quiz while loading or previous question is unanswered.');
       return;
     }
-    // Stop speech before generating new quiz
     stopPassageSpeech();
-    // Proceed with generation
     generateText().catch((error) => {
       console.error('Error explicitly caught from generateNewQuiz:', error);
     });
   };
 
-  // Add a function to handle volume changes
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
-    // Update volume of current utterance if one is playing
     if (passageUtteranceRef.current) {
       passageUtteranceRef.current.volume = newVolume;
     }
-    // Also update any currently speaking synthesis
     if (window.speechSynthesis.speaking) {
-      // Cancel and restart with new volume
       window.speechSynthesis.cancel();
       if (passageUtteranceRef.current) {
         passageUtteranceRef.current.volume = newVolume;
@@ -851,33 +736,23 @@ export default function TextGenerator() {
               )}
               {/* --- End UPDATED Speech Controls --- */}
             </div>
-            <div
-              className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
-              // Render using the word hover function
-            >
-              {/* Conditional Rendering: Use dangerouslySetInnerHTML if highlighting is active, otherwise use word hover */}
+            <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
               {highlightedParagraph && highlightedParagraph !== quizData.paragraph ? (
                 <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
               ) : generatedPassageLanguage ? (
-                renderParagraphWithWordHover(
-                  quizData.paragraph, // Pass original paragraph for word hover
-                  generatedPassageLanguage // Pass the stored Language type
-                )
+                renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
               ) : (
-                // Fallback if language isn't set (shouldn't normally happen here)
                 <div>{quizData.paragraph}</div>
               )}
             </div>
           </div>
 
-          {/* Indicator shown during question delay */}
           {quizData && !showQuestionSection && (
             <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
               Question will appear shortly...
             </div>
           )}
 
-          {/* --- Conditionally Rendered Question/Options/Explanation Block --- */}
           {showQuestionSection && (
             <>
               <div className="mt-6">
@@ -960,10 +835,8 @@ export default function TextGenerator() {
         </div>
       )}
 
-      {/* Generate Button - Moved to the bottom */}
       <div className="mt-8">
         {' '}
-        {/* Add some margin above the button */}
         <button
           onClick={generateNewQuiz}
           disabled={loading || (quizData !== null && !isAnswered)}
@@ -978,7 +851,6 @@ export default function TextGenerator() {
               Generating...
             </div>
           ) : quizData !== null && !isAnswered ? (
-            // Differentiate between delay period and question visible period
             showQuestionSection ? (
               'Answer the question below'
             ) : (

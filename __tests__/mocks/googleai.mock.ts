@@ -1,4 +1,3 @@
-// Mock Google AI client
 const mockGenerateContent = jest.fn().mockResolvedValue({
   response: {
     text: () =>
