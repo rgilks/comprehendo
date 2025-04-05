@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const { isCorrect, language } = parsedBody.data;
 
     // --- Get or Create User Progress Record for the language ---
-    let userProgress = db
+    const userProgress = db
       .prepare(
         'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       )
@@ -150,7 +150,7 @@ export async function GET(request: Request) {
 
   try {
     // Fetch progress for the specific user and language
-    let userProgress = db
+    const userProgress = db
       .prepare(
         'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       )
