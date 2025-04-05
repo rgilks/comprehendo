@@ -10,7 +10,6 @@ import {
   SpeakerWaveIcon,
   GlobeAltIcon,
   BookOpenIcon,
-  ArrowPathIcon,
   XMarkIcon,
 } from '@heroicons/react/24/solid';
 
@@ -583,8 +582,8 @@ export default function TextGenerator() {
     }
   }, [passageLanguage, questionLanguage, cefrLevel, stopPassageSpeech, t]);
 
-  // Create a properly typed click handler function
-  const handleGenerateClick = useCallback(() => {
+  // Create a properly typed click handler function for the Generate button
+  const generateTextHandler = useCallback(() => {
     void generateText();
   }, [generateText]);
 
@@ -929,61 +928,130 @@ export default function TextGenerator() {
                 <h3 className="text-lg font-semibold text-white mb-3">
                   {t('practice.yourProgress')}
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-400">{t('practice.level')}</span>
-                    <div className="mt-1 flex items-center">
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <span className="text-sm text-gray-400">{t('practice.currentStreak')}</span>
+
+                    {/* Progress bar for streak */}
+                    <div className="mt-2 w-full bg-gray-700 rounded-full h-2.5">
+                      <div
+                        className="bg-gradient-to-r from-yellow-500 to-orange-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                        style={{ width: `${Math.min(100, (userStreak / 5) * 100)}%` }}
+                      ></div>
+                    </div>
+
+                    {/* Simple streak indicator without numbers */}
+                    <div className="mt-3 flex justify-between items-center">
+                      {[1, 2, 3, 4, 5].map((position) => (
+                        <div key={position} className="flex flex-col items-center">
+                          <div
+                            className={`w-3 h-3 rounded-full
+                              ${position <= userStreak ? 'bg-yellow-500' : 'bg-gray-600'}
+                              transition-all duration-300`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Level progress section */}
+                  <div className="mt-6 pt-4 border-t border-gray-700">
+                    <span className="text-sm text-gray-400 block mb-2">{t('practice.level')}</span>
+                    <div className="flex items-center mb-4">
                       <span className="text-xl font-bold text-white mr-2">{cefrLevel}</span>
                       <span className="text-sm text-gray-300">
                         - {t(`practice.cefr.levels.${cefrLevel}.name`)}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-400">{t('practice.currentStreak')}</span>
-                    <div className="mt-1 flex items-center">
-                      {userStreak > 0 ? (
-                        <>
-                          <span className="text-xl font-bold text-yellow-500 mr-2">
-                            {userStreak}
-                          </span>
-                          <span className="text-yellow-500">🔥</span>
-                        </>
-                      ) : (
-                        <span className="text-xl font-bold text-gray-400">0</span>
-                      )}
-                      <span className="ml-2 text-sm text-gray-300">/ 5</span>
+                    <div className="text-xs text-gray-300 mb-4">
+                      {t(`practice.cefr.levels.${cefrLevel}.description`)}
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      {userStreak === 0
-                        ? t('practice.startStreak')
-                        : userStreak >= 4
-                          ? t('practice.almostLevelUp')
-                          : t('practice.keepGoing')}
+
+                    {/* Level labels above the progress indicators */}
+                    <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
+                      <span>A1</span>
+                      <span>A2</span>
+                      <span>B1</span>
+                      <span>B2</span>
+                      <span>C1</span>
+                      <span>C2</span>
+                    </div>
+
+                    <div className="flex justify-between items-center mb-1">
+                      {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level, index) => {
+                        const achieved =
+                          ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].indexOf(cefrLevel) >= index;
+                        const isCurrent = level === cefrLevel;
+                        return (
+                          <div key={level} className="flex flex-col items-center">
+                            <div
+                              className={`w-3 h-3 rounded-full ${
+                                achieved ? 'bg-blue-500' : 'bg-gray-600'
+                              } ${isCurrent ? 'ring-1 ring-white ring-opacity-60' : ''}`}
+                              title={`${level}: ${t(`practice.cefr.levels.${level}.name`)}`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="w-full bg-gray-700 rounded-full h-2.5 mt-1">
+                      {/* Calculate progress based on CEFR level */}
+                      {(() => {
+                        const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+                        const levelIndex = levels.indexOf(cefrLevel);
+                        const progress = ((levelIndex + 1) / 6) * 100;
+                        return (
+                          <div
+                            className="bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
               </div>
             )}
-            <button
-              onClick={handleGenerateClick}
-              disabled={loading}
-              className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <ArrowPathIcon
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    aria-hidden="true"
-                  />
-                  {t('common.generating')}
-                </div>
-              ) : (
-                t('practice.generateNewText')
-              )}
-            </button>
           </div>
         )}
+
+        <button
+          onClick={generateTextHandler}
+          disabled={loading}
+          className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
+        >
+          {loading ? (
+            <div className="flex items-center">
+              <div className="animate-spin -ml-1 mr-3 h-5 w-5 text-white">
+                <svg
+                  className="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </div>
+              {t('common.generating')}
+            </div>
+          ) : (
+            t('practice.generateNewText')
+          )}
+        </button>
       </div>
     </div>
   );
