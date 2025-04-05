@@ -67,7 +67,11 @@
     "supportingTextPrefix": "Supporting text: ",
     "passageLanguageLabel": "Learning",
     "questionWillAppear": "Question will appear shortly...",
-    "passageTitle": "Reading Passage"
+    "passageTitle": "Reading Passage",
+    "signInPrompt": {
+      "message": "Sign in to track your progress and see your learning history!",
+      "dismiss": "Dismiss"
+    }
   },
   "admin": {
     "title": "Admin",

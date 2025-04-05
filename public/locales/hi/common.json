@@ -67,7 +67,11 @@
     "supportingTextPrefix": "समर्थन पाठ: ",
     "passageLanguageLabel": "सीखना",
     "questionWillAppear": "प्रश्न शीघ्र ही दिखाई देगा...",
-    "passageTitle": "पढ़ने का गद्यांश"
+    "passageTitle": "पढ़ने का गद्यांश",
+    "signInPrompt": {
+      "message": "अपनी प्रगति ट्रैक करने और अपना सीखने का इतिहास देखने के लिए साइन इन करें!",
+      "dismiss": "खारिज करें"
+    }
   },
   "admin": {
     "title": "एडमिन",
