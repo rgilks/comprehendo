@@ -1,11 +1,5 @@
-/**
- * Request and response helpers for tests
- */
-import { NextRequest, MockNextResponse } from '../mocks/next-mocks';
+import { NextRequest } from '../mocks/next-mocks';
 
-/**
- * Interface for test prompt request options
- */
 export interface TestPromptOptions {
   prompt?: string;
   seed?: number;
@@ -15,15 +9,9 @@ export interface TestPromptOptions {
   questionLanguage?: string;
 }
 
-/**
- * Standard prompt for tests
- */
 export const defaultPrompt =
   'Generate a reading comprehension paragraph in English with multiple choice questions in English for CEFR level B1 (Intermediate) language learners.';
 
-/**
- * Create a chat API request for testing
- */
 export const createChatRequest = (options: TestPromptOptions = {}) => {
   const {
     prompt = defaultPrompt,
@@ -52,11 +40,7 @@ export const createChatRequest = (options: TestPromptOptions = {}) => {
   });
 };
 
-/**
- * Check a response for success
- */
 export const expectSuccessResponse = async (response: Response) => {
-  // Log response status for debugging
   console.log(`Response status: ${response.status}`);
 
   const jsonData = await response.json().catch((e: Error) => {
@@ -71,11 +55,7 @@ export const expectSuccessResponse = async (response: Response) => {
   return jsonData;
 };
 
-/**
- * Check a response for error
- */
 export const expectErrorResponse = async (response: Response, expectedStatus: number) => {
-  // Log response status for debugging
   console.log(`Response status: ${response.status}`);
 
   const jsonData = await response.json().catch((e: Error) => {

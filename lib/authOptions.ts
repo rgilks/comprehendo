@@ -1,4 +1,3 @@
-// lib/authOptions.ts
 import { NextAuthOptions, User, Account } from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
@@ -7,15 +6,12 @@ import { Session } from 'next-auth';
 import db from './db';
 import { AdapterUser } from 'next-auth/adapters';
 
-// Define a type for the user object with potential email
 interface UserWithEmail extends User {
   email?: string | null;
 }
 
-// Define providers array
 const providers = [];
 
-// Add GitHub provider when not building
 if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
   providers.push(
     GitHub({
@@ -27,7 +23,6 @@ if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
   console.warn('GitHub OAuth credentials missing');
 }
 
-// Add Google provider
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   providers.push(
     Google({
@@ -39,7 +34,6 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   console.warn('Google OAuth credentials missing');
 }
 
-// Explicitly type the options object
 export const authOptions: NextAuthOptions = {
   providers,
   secret: process.env.AUTH_SECRET,

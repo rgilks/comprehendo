@@ -1,51 +1,36 @@
-import { NextRequest } from '../mocks/next-mocks';
 import {
   setupTestLogging,
   setupTestEnvironment,
   createChatRequest,
   expectSuccessResponse,
   expectErrorResponse,
-  setupCachedContentMock,
   setupAuthenticatedSession,
   createMockModelConfig,
   defaultTestResponse,
-  createMockOpenAIClient,
-  createMockGoogleAIClient,
 } from '../helpers';
 
-// Allow logs during tests for debugging
 const restoreLogging = setupTestLogging(true);
 
-// Make OpenAI API key available
 const restoreEnv = setupTestEnvironment();
 
-// --- Mock Definitions ---
-// Define placeholders, will be instantiated in beforeEach
 let mockOpenAIClientInstance: any;
 let mockGoogleAIClientInstance: any;
 let mockActiveModel = createMockModelConfig('openai');
 
-// --- Mock Modules ---
-
-// Mock modelConfig - simpler mock call, implementation set in beforeEach
 jest.mock('../../lib/modelConfig');
 
-// Mock the OpenAI constructor
 jest.mock('openai', () => ({
   OpenAI: jest.fn().mockImplementation(() => mockOpenAIClientInstance),
 }));
 
-// Mock the Google AI constructor
 jest.mock('@google/generative-ai', () => ({
   GoogleGenerativeAI: jest.fn().mockImplementation(() => mockGoogleAIClientInstance),
 }));
 
-// Mock next-auth
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn().mockResolvedValue(null),
 }));
 
-// Pre-mock db before importing anything to prevent exec error
 jest.mock('../../lib/db', () => {
   const mockExec = jest.fn();
   const mockPrepare = jest.fn(() => ({
@@ -66,16 +51,14 @@ jest.mock('../../lib/db', () => {
   };
 });
 
-// --- Import Modules Under Test (After Mocks) ---
 import db from '../../lib/db';
-import * as modelConfig from '../../lib/modelConfig'; // Import the mocked module
+import * as modelConfig from '../../lib/modelConfig';
 import { POST as chatRouteHandler } from '../../app/api/chat/route';
 
 describe('Chat API - [/api/chat]', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Define mock AI client structures directly
     const mockOpenAIChatCompletion = {
       choices: [{ message: { content: JSON.stringify(defaultTestResponse) } }],
     };
@@ -93,17 +76,13 @@ describe('Chat API - [/api/chat]', () => {
       getGenerativeModel: jest.fn().mockReturnValue(mockGoogleAIModel),
     };
 
-    // Apply mock implementations for modelConfig
-    mockActiveModel = createMockModelConfig('openai'); // Reset to default
+    mockActiveModel = createMockModelConfig('openai');
     (modelConfig.getActiveModel as jest.Mock).mockReturnValue(mockActiveModel);
     (modelConfig.getOpenAIClient as jest.Mock).mockReturnValue(mockOpenAIClientInstance);
     (modelConfig.getGoogleAIClient as jest.Mock).mockReturnValue(mockGoogleAIClientInstance);
 
-    // Reset active model to OpenAI default for each test
-    // Reset getServerSession mock for authentication tests
-    (require('next-auth').getServerSession as jest.Mock).mockResolvedValue(null); // Ensure default is unauthenticated
+    (require('next-auth').getServerSession as jest.Mock).mockResolvedValue(null);
 
-    // Reset DB mocks before each test
     const mockDbGet = jest.fn().mockReturnValue(null);
     const mockDbRun = jest.fn();
     (db.prepare as jest.Mock).mockImplementation((sql: string) => {
@@ -223,7 +202,7 @@ describe('Chat API - [/api/chat]', () => {
   });
 
   it('handles authenticated user', async () => {
-    const mockUser = setupAuthenticatedSession();
+    setupAuthenticatedSession();
 
     mockActiveModel = createMockModelConfig('openai');
     (modelConfig.getActiveModel as jest.Mock).mockReturnValue(mockActiveModel);
@@ -272,4 +251,3 @@ describe('Chat API - [/api/chat]', () => {
 });
 
 const MAX_REQUESTS_PER_HOUR = 100;
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000;

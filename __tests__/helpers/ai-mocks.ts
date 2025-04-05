@@ -1,10 +1,3 @@
-/**
- * AI Provider mocking utilities for tests
- */
-
-/**
- * Mock response data for AI providers
- */
 export interface MockAIResponseData {
   paragraph: string;
   question: string;
@@ -15,9 +8,6 @@ export interface MockAIResponseData {
   topic: string;
 }
 
-/**
- * Default test response content
- */
 export const defaultTestResponse: MockAIResponseData = {
   paragraph: 'This is a test paragraph.',
   question: 'What is this?',
@@ -38,9 +28,6 @@ export const defaultTestResponse: MockAIResponseData = {
   topic: 'Test Topic',
 };
 
-/**
- * Creates a mock OpenAI client
- */
 export const createMockOpenAIClient = (responseData: MockAIResponseData = defaultTestResponse) => {
   return {
     chat: {
@@ -59,9 +46,6 @@ export const createMockOpenAIClient = (responseData: MockAIResponseData = defaul
   };
 };
 
-/**
- * Creates a mock Google AI client
- */
 export const createMockGoogleAIClient = (
   responseData: MockAIResponseData = defaultTestResponse
 ) => {
@@ -76,9 +60,6 @@ export const createMockGoogleAIClient = (
   };
 };
 
-/**
- * Creates a standard model configuration for tests
- */
 export const createMockModelConfig = (provider: 'openai' | 'google' = 'openai') => {
   const openaiConfig = {
     id: 'gpt-3.5-turbo',
@@ -99,9 +80,6 @@ export const createMockModelConfig = (provider: 'openai' | 'google' = 'openai') 
   return provider === 'openai' ? openaiConfig : googleConfig;
 };
 
-/**
- * Setup complete mocks for a test
- */
 export const setupAIMocks = (
   responseData: MockAIResponseData = defaultTestResponse,
   provider: 'openai' | 'google' = 'openai'

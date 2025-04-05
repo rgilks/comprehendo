@@ -2,24 +2,19 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-// Define database directory and path
 const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
-// Initialize database connection
 let db: Database.Database;
 
-// Check if we're in the build phase
 const isBuildPhase =
   process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
 try {
-  // During build phase or if we can't access the filesystem, use in-memory database
   if (isBuildPhase || !fs.existsSync(process.cwd())) {
     db = new Database(':memory:');
     console.log('[DB] Using in-memory database for build phase');
   } else {
-    // Only create directory in development or when running the actual server
     if (!fs.existsSync(DB_DIR)) {
       fs.mkdirSync(DB_DIR, { recursive: true });
       console.log(`[DB] Created database directory at ${DB_DIR}`);
@@ -29,11 +24,9 @@ try {
     console.log(`[DB] Connected to database at ${DB_PATH}`);
   }
 
-  // Enable foreign keys
   db.pragma('foreign_keys = ON');
   console.log('[DB] Enabled foreign key constraints');
 
-  // Initialize database schema if needed
   console.log('[DB] Initializing database schema...');
   db.exec(`
     CREATE TABLE IF NOT EXISTS generated_content (
@@ -72,9 +65,7 @@ try {
     CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
   `);
 
-  // Check if user_id column exists in usage_stats and add it if missing
   try {
-    // Define the type for SQLite column info
     interface ColumnInfo {
       cid: number;
       name: string;
@@ -84,14 +75,12 @@ try {
       pk: number;
     }
 
-    // Check if user_id column exists by querying the table info
     const columns = db.prepare('PRAGMA table_info(usage_stats)').all() as ColumnInfo[];
 
     const hasUserIdColumn = columns.some((column) => column.name === 'user_id');
 
     if (!hasUserIdColumn) {
       console.log('[DB] Adding user_id column to usage_stats table');
-      // SQLite ALTER TABLE is limited, but we can add a column
       db.exec(`
         ALTER TABLE usage_stats 
         ADD COLUMN user_id INTEGER REFERENCES users(id)
@@ -102,7 +91,6 @@ try {
     console.error('[DB] Error checking or adding column:', error);
   }
 
-  // Check if question_language column exists in generated_content and add it if missing
   try {
     interface ColumnInfo {
       cid: number;
@@ -131,22 +119,16 @@ try {
 
   console.log('[DB] Schema initialization complete');
 
-  // Create a proxy to intercept and log database operations
   const dbProxy = new Proxy(db, {
     get(target, prop) {
       if (prop === 'prepare') {
-        // Return a function that wraps the original prepare
         return function (sql: string) {
           const stmt: Database.Statement = target.prepare(sql);
 
-          // Return a proxy for the statement
           return new Proxy(stmt, {
             get(stmtTarget, stmtProp) {
-              // Intercept calls to run, get, all
               if (stmtProp === 'run' || stmtProp === 'get' || stmtProp === 'all') {
-                // Return a function that wraps the original statement method
                 return function (...args: unknown[]) {
-                  // Format parameters to be more compact
                   const formattedParams = args.map((param) => {
                     if (typeof param === 'string' && param.length > 50) {
                       return param.substring(0, 47) + '...';
@@ -160,7 +142,6 @@ try {
                     } with params: ${JSON.stringify(formattedParams)}`
                   );
 
-                  // Type assertion is needed because we're dynamically calling
                   if (stmtProp === 'run') {
                     return stmtTarget.run(...args);
                   } else if (stmtProp === 'get') {
@@ -168,22 +149,15 @@ try {
                   } else if (stmtProp === 'all') {
                     return stmtTarget.all(...args);
                   }
-                  // Fallback: Still potentially unsafe, but Reflect.get is preferred
-                  // Disable unsafe return for this dynamic fallback
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                   return Reflect.get(stmtTarget, stmtProp);
                 };
               }
-              // For other properties of the statement, return them directly
-              // Disable unsafe return for this dynamic fallback
               // eslint-disable-next-line @typescript-eslint/no-unsafe-return
               return Reflect.get(stmtTarget, stmtProp);
             },
           });
         };
       }
-      // For other properties of the database, return them directly
-      // Disable unsafe return for this dynamic fallback
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return Reflect.get(target, prop);
     },
@@ -194,12 +168,10 @@ try {
 } catch (error) {
   console.error('[DB] Database initialization error:', error);
 
-  // In production server, we want to fail hard if database setup fails
   if (process.env.NODE_ENV === 'production' && !isBuildPhase) {
     throw error;
   }
 
-  // In development or build phase, create an in-memory database as fallback
   db = new Database(':memory:');
   console.warn('[DB] Using in-memory database as fallback');
 }
