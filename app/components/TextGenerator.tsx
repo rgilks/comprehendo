@@ -24,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';
 import AuthButton from './AuthButton';
+import AnimateTransition from './AnimateTransition';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -57,21 +58,57 @@ type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 const CEFR_LEVELS_LIST: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 const QuizSkeleton = () => (
-  <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg animate-pulse">
-    <div className="h-4 bg-gray-700 rounded w-3/4 mb-4"></div>
+  <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
+    <AnimateTransition
+      show={true}
+      type="fade-in"
+      duration={400}
+      className="h-4 bg-gray-700 rounded w-3/4 mb-4 animate-pulse"
+    >
+      <div></div>
+    </AnimateTransition>
+
     <div className="space-y-3 mb-6">
-      <div className="h-3 bg-gray-700 rounded w-full"></div>
-      <div className="h-3 bg-gray-700 rounded w-full"></div>
-      <div className="h-3 bg-gray-700 rounded w-5/6"></div>
-      <div className="h-3 bg-gray-700 rounded w-4/6"></div>
-    </div>{' '}
-    <div className="h-4 bg-gray-700 rounded w-1/2 mb-4"></div> {/* Question Placeholder */}
+      {[1, 2, 3, 4].map((i) => (
+        <AnimateTransition
+          key={i}
+          show={true}
+          type="slide-right"
+          duration={400}
+          delay={i * 100}
+          className={`h-3 bg-gray-700 rounded animate-pulse ${
+            i === 3 ? 'w-5/6' : i === 4 ? 'w-4/6' : 'w-full'
+          }`}
+        >
+          <div></div>
+        </AnimateTransition>
+      ))}
+    </div>
+
+    <AnimateTransition
+      show={true}
+      type="fade-in"
+      duration={400}
+      delay={600}
+      className="h-4 bg-gray-700 rounded w-1/2 mb-4 animate-pulse"
+    >
+      <div></div>
+    </AnimateTransition>
+
     <div className="space-y-2">
-      <div className="h-10 bg-gray-700 rounded w-full"></div>
-      <div className="h-10 bg-gray-700 rounded w-full"></div>
-      <div className="h-10 bg-gray-700 rounded w-full"></div>
-      <div className="h-10 bg-gray-700 rounded w-full"></div>
-    </div>{' '}
+      {[1, 2, 3, 4].map((i) => (
+        <AnimateTransition
+          key={i}
+          show={true}
+          type="slide-left"
+          duration={500}
+          delay={600 + i * 150}
+          className="h-10 bg-gray-700 rounded w-full animate-pulse"
+        >
+          <div></div>
+        </AnimateTransition>
+      ))}
+    </div>
   </div>
 );
 
@@ -123,8 +160,7 @@ const TranslatableWord = memo(
       setIsHovered(false);
     }, []);
 
-    let combinedClassName =
-      'cursor-pointer transition-colors duration-200 px-1 -mx-1 relative group';
+    let combinedClassName = 'cursor-pointer transition-all duration-300 px-1 -mx-1 relative group';
     if (isRelevant) {
       combinedClassName += ' bg-yellow-300 text-black rounded';
     } else if (isCurrentWord) {
@@ -141,15 +177,19 @@ const TranslatableWord = memo(
         onMouseLeave={handleMouseLeave}
       >
         {word}
-        {isHovered && shouldTranslate && (
-          <span className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
-            {isLoading ? (
-              <span className="inline-block animate-pulse">{t('common.translating')}</span>
-            ) : (
-              <span className="font-medium">{translation || word}</span>
-            )}
-          </span>
-        )}
+        <AnimateTransition
+          show={isHovered && shouldTranslate}
+          type="scale-up"
+          duration={200}
+          unmountOnExit
+          className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm"
+        >
+          {isLoading ? (
+            <span className="inline-block animate-pulse">{t('common.translating')}</span>
+          ) : (
+            <span className="font-medium">{translation || word}</span>
+          )}
+        </AnimateTransition>
       </span>
     );
   }
@@ -194,6 +234,12 @@ export default function TextGenerator() {
 
   const [showQuestionSection, setShowQuestionSection] = useState<boolean>(false);
   const questionDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Add a ref for the content container to scroll to
+  const contentContainerRef = useRef<HTMLDivElement>(null);
+
+  // Add a state to control content display transitions
+  const [showContent, setShowContent] = useState<boolean>(true);
 
   useEffect(() => {
     setIsSpeechSupported(
@@ -447,183 +493,229 @@ export default function TextGenerator() {
     ]
   );
 
-  const generateText = useCallback(async () => {
-    stopPassageSpeech();
-    setLoading(true);
-    setError(null);
-    setQuizData(null);
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setShowExplanation(false);
-    setShowQuestionSection(false);
-    setCurrentWordIndex(null);
-    setRelevantTextRange(null); // Reset range
-    if (questionDelayTimeoutRef.current) {
-      clearTimeout(questionDelayTimeoutRef.current);
-    }
+  const generateText = useCallback(() => {
+    // First hide the current content with animation
+    setShowContent(false);
 
-    const levelToUse = cefrLevel;
+    // Wait for exit animation to complete before starting new content generation
+    setTimeout(() => {
+      stopPassageSpeech();
+      setLoading(true);
+      setError(null);
+      setQuizData(null);
+      setSelectedAnswer(null);
+      setIsAnswered(false);
+      setShowExplanation(false);
+      setShowQuestionSection(false);
+      setCurrentWordIndex(null);
+      setRelevantTextRange(null); // Reset range
+      if (questionDelayTimeoutRef.current) {
+        clearTimeout(questionDelayTimeoutRef.current);
+      }
 
-    const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
-    const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
+      const levelToUse = cefrLevel;
 
-    const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse}. The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.`;
+      const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
+      const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
 
-    const seed = Math.floor(Math.random() * 100);
+      const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse}. The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.`;
 
-    console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
-    console.log(
-      '[API] Passage Lang:',
-      passageLanguage,
-      'Question Lang:',
-      questionLanguage,
-      'Level:',
-      levelToUse
-    );
+      const seed = Math.floor(Math.random() * 100);
 
-    const MAX_RETRIES = 2;
-    let currentRetry = 0;
-    let forceCache = false;
+      console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
+      console.log(
+        '[API] Passage Lang:',
+        passageLanguage,
+        'Question Lang:',
+        questionLanguage,
+        'Level:',
+        levelToUse
+      );
 
-    async function attemptFetch() {
-      try {
-        const requestBody = {
-          prompt,
-          seed,
-          passageLanguage,
-          questionLanguage,
-          forceCache, // Add this parameter to the request
-        };
+      const MAX_RETRIES = 2;
+      let currentRetry = 0;
+      let forceCache = false;
 
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
+      async function attemptFetch() {
+        try {
+          const requestBody = {
+            prompt,
+            seed,
+            passageLanguage,
+            questionLanguage,
+            forceCache, // Add this parameter to the request
+          };
 
-        if (!response.ok) {
-          // Define a simple type for the expected error structure
-          type ErrorResponse = { error?: string; message?: string };
-          let errorData: ErrorResponse = {};
-          try {
-            // Try to parse the error response body
-            errorData = (await response.json()) as ErrorResponse;
-          } catch (parseError) {
-            console.warn('Could not parse error response JSON:', parseError);
-            // If parsing fails, use the status text or a default message
-            throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
-          }
-          // Use the parsed error message if available
-          throw new Error(
-            errorData.error || errorData.message || `HTTP error! status: ${response.status}`
-          );
-        }
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          });
 
-        // Await the JSON response first, then parse
-        const jsonResponse = (await response.json()) as unknown;
-        const data = apiResponseSchema.parse(jsonResponse);
-
-        if (data.error || !data.result) {
-          throw new Error(data.error || 'No result received');
-        }
-
-        // Clean up the string response from the AI before parsing
-        const jsonString = data.result.replace(/```json|```/g, '').trim();
-
-        // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
-        const parsedResult = z
-          .string()
-          .transform((str) => {
+          if (!response.ok) {
+            // Define a simple type for the expected error structure
+            type ErrorResponse = { error?: string; message?: string };
+            let errorData: ErrorResponse = {};
             try {
-              return JSON.parse(str) as unknown;
-            } catch (e) {
-              throw new Error(`Failed to parse JSON: ${String(e)}`);
+              // Try to parse the error response body
+              errorData = (await response.json()) as ErrorResponse;
+            } catch (parseError) {
+              console.warn('Could not parse error response JSON:', parseError);
+              // If parsing fails, use the status text or a default message
+              throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
             }
-          })
-          .pipe(quizDataSchema)
-          .safeParse(jsonString);
-
-        if (!parsedResult.success) {
-          console.error('Error parsing generated quiz JSON:', parsedResult.error);
-          throw new Error('Failed to parse the structure of the generated quiz.');
-        }
-
-        // No need to cast - Zod guarantees the type
-        const validatedData = parsedResult.data;
-
-        setQuizData(validatedData);
-        setGeneratedPassageLanguage(passageLanguage);
-        setGeneratedQuestionLanguage(questionLanguage);
-
-        // --- Calculate Dynamic Question Delay ---
-        const WPM = 300; // Change WPM estimate to 300
-        const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
-        const readingTimeMs = (wordCount / WPM) * 60 * 1000;
-        const bufferMs = 2000; // Reduce buffer further to 2 seconds
-        const minDelayMs = 2000; // Reduce minimum delay further to 2 seconds
-        const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
-        console.log(
-          `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
-        );
-        // --- End Calculate Delay ---
-
-        // Start timer to show question section using calculated delay
-        questionDelayTimeoutRef.current = setTimeout(() => {
-          setShowQuestionSection(true);
-        }, questionDelayMs); // Use dynamic delay
-
-        return true; // Indicate success
-      } catch (err: unknown) {
-        console.error(`Error during attempt ${currentRetry + 1}:`, err);
-        if (currentRetry < MAX_RETRIES) {
-          // If we have retries left, increment the counter and try again
-          currentRetry++;
-          console.log(`Retrying... Attempt ${currentRetry + 1} of ${MAX_RETRIES + 1}`);
-          return false; // Indicate failure, triggering a retry
-        } else if (!forceCache) {
-          // We've exhausted our retries, try the cache as last resort
-          console.log('Retries exhausted, trying to force cache retrieval');
-          forceCache = true;
-          currentRetry = 0; // Reset retry counter for the cache attempt
-          return false; // Indicate failure, triggering the cache attempt
-        } else {
-          // We've tried retries and cache, now show error
-          if (err instanceof Error) {
-            setError(`${t('common.errorPrefix')} ${err.message}`);
-          } else {
-            setError(t('practice.error'));
+            // Use the parsed error message if available
+            throw new Error(
+              errorData.error || errorData.message || `HTTP error! status: ${response.status}`
+            );
           }
-          throw err; // Re-throw to exit the retry loop
+
+          // Await the JSON response first, then parse
+          const jsonResponse = (await response.json()) as unknown;
+          const data = apiResponseSchema.parse(jsonResponse);
+
+          if (data.error || !data.result) {
+            throw new Error(data.error || 'No result received');
+          }
+
+          // Clean up the string response from the AI before parsing
+          const jsonString = data.result.replace(/```json|```/g, '').trim();
+
+          // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
+          const parsedResult = z
+            .string()
+            .transform((str) => {
+              try {
+                return JSON.parse(str) as unknown;
+              } catch (e) {
+                throw new Error(`Failed to parse JSON: ${String(e)}`);
+              }
+            })
+            .pipe(quizDataSchema)
+            .safeParse(jsonString);
+
+          if (!parsedResult.success) {
+            console.error('Error parsing generated quiz JSON:', parsedResult.error);
+            throw new Error('Failed to parse the structure of the generated quiz.');
+          }
+
+          // No need to cast - Zod guarantees the type
+          const validatedData = parsedResult.data;
+
+          setQuizData(validatedData);
+          setGeneratedPassageLanguage(passageLanguage);
+          setGeneratedQuestionLanguage(questionLanguage);
+
+          // --- Calculate Dynamic Question Delay ---
+          const WPM = 250; // Lower WPM for a quicker appearance
+          const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
+          const readingTimeMs = (wordCount / WPM) * 60 * 1000;
+          const bufferMs = 1500; // Further reduce buffer for a more responsive feel
+          const minDelayMs = 1500; // Shorter minimum delay
+          const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
+          console.log(
+            `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
+          );
+          // --- End Calculate Delay ---
+
+          // Start timer to show question section using calculated delay, but with a cross-fade effect
+          questionDelayTimeoutRef.current = setTimeout(() => {
+            // When it's time to show the question, first make sure content is visible
+            if (!showContent) setShowContent(true);
+
+            // Short delay to ensure content is visible before showing question
+            setTimeout(() => {
+              setShowQuestionSection(true);
+            }, 100);
+          }, questionDelayMs);
+
+          return true; // Indicate success
+        } catch (err: unknown) {
+          console.error(`Error during attempt ${currentRetry + 1}:`, err);
+          if (currentRetry < MAX_RETRIES) {
+            // If we have retries left, increment the counter and try again
+            currentRetry++;
+            console.log(`Retrying... Attempt ${currentRetry + 1} of ${MAX_RETRIES + 1}`);
+            return false; // Indicate failure, triggering a retry
+          } else if (!forceCache) {
+            // We've exhausted our retries, try the cache as last resort
+            console.log('Retries exhausted, trying to force cache retrieval');
+            forceCache = true;
+            currentRetry = 0; // Reset retry counter for the cache attempt
+            return false; // Indicate failure, triggering the cache attempt
+          } else {
+            // We've tried retries and cache, now show error
+            if (err instanceof Error) {
+              setError(`${t('common.errorPrefix')} ${err.message}`);
+            } else {
+              setError(t('practice.error'));
+            }
+            throw err; // Re-throw to exit the retry loop
+          }
         }
       }
-    }
 
-    try {
-      let success = false;
+      async function executeWithRetries() {
+        try {
+          let success = false;
 
-      // Keep trying until we succeed or exhaust all options
-      while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
-        success = await attemptFetch();
+          // Keep trying until we succeed or exhaust all options
+          while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
+            success = await attemptFetch();
 
-        // If not successful and still have retries, wait before next attempt
-        if (!success && currentRetry <= MAX_RETRIES) {
-          const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
-          console.log(`Waiting ${delay}ms before retry ${currentRetry + 1}...`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+            // If not successful and still have retries, wait before next attempt
+            if (!success && currentRetry <= MAX_RETRIES) {
+              const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
+              console.log(`Waiting ${delay}ms before retry ${currentRetry + 1}...`);
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+          }
+        } catch (err) {
+          // Final error handling is already done in attemptFetch
+          console.error('All attempts failed:', err);
+        } finally {
+          setLoading(false);
+          // Show the new content with animation after loading completes
+          setShowContent(true);
+
+          // Scroll to content after it becomes visible
+          setTimeout(() => {
+            if (contentContainerRef.current) {
+              contentContainerRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+              });
+            }
+          }, 100);
         }
       }
-    } catch (err) {
-      // Final error handling is already done in attemptFetch
-      console.error('All attempts failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [passageLanguage, questionLanguage, cefrLevel, stopPassageSpeech, t]);
 
-  // Create a properly typed click handler function for the Generate button
+      // Add the void operator to handle the floating promise
+      void executeWithRetries();
+    }, 300); // Wait for exit animation to complete
+  }, [
+    passageLanguage,
+    questionLanguage,
+    cefrLevel,
+    stopPassageSpeech,
+    t,
+    showContent,
+    contentContainerRef,
+  ]);
+
+  // Now update the generateTextHandler function to scroll to the content container
   const generateTextHandler = useCallback(() => {
+    // First scroll to the content area
+    if (contentContainerRef.current) {
+      contentContainerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+
+    // Then generate the text
     void generateText();
   }, [generateText]);
 
@@ -718,7 +810,7 @@ export default function TextGenerator() {
         }
       }
 
-      setTimeout(() => setShowExplanation(true), 300);
+      setTimeout(() => setShowExplanation(true), 100);
     },
     [isAnswered, quizData, stopPassageSpeech, status, generatedPassageLanguage, userStreak]
   );
@@ -750,7 +842,7 @@ export default function TextGenerator() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative">
+    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative" ref={contentContainerRef}>
       <div className="w-full max-w-3xl mx-auto my-8">
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -834,73 +926,87 @@ export default function TextGenerator() {
         {loading && !quizData && <QuizSkeleton />}
 
         {quizData && !loading && generatedPassageLanguage && generatedQuestionLanguage && (
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-              <div className="flex items-center space-x-2 text-lg font-semibold">
-                <BookOpenIcon className="w-5 h-5 text-blue-400" />
-                <span>{t('practice.passageTitle')}</span>
-              </div>
-
-              {isSpeechSupported && quizData.paragraph && (
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handlePlayPause}
-                    title={isSpeakingPassage && !isPaused ? t('common.pause') : t('common.play')}
-                    className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
-                    disabled={!quizData.paragraph}
-                  >
-                    {isSpeakingPassage && !isPaused ? (
-                      <HeroPauseIcon className="w-4 h-4" />
-                    ) : (
-                      <HeroPlayIcon className="w-4 h-4" />
-                    )}
-                  </button>
-                  {isSpeakingPassage && (
-                    <button
-                      onClick={handleStop}
-                      title={t('common.stop')}
-                      className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
-                    >
-                      <HeroStopIcon className="w-4 h-4" />
-                    </button>
-                  )}
-                  <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
-                    <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={volume}
-                      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                      title={t('common.volume')}
-                    />
-                  </div>
+          <AnimateTransition show={showContent} type="fade-in" duration={400} unmountOnExit>
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <div className="flex items-center space-x-2 text-lg font-semibold">
+                  <BookOpenIcon className="w-5 h-5 text-blue-400" />
+                  <span>{t('practice.passageTitle')}</span>
                 </div>
-              )}
-            </div>
 
-            <div
-              className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
-              dir={getTextDirection(generatedPassageLanguage)}
-            >
-              {/* Always use renderParagraphWithWordHover */}
-              {quizData && generatedPassageLanguage ? (
-                renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
-              ) : (
-                <div>{quizData?.paragraph}</div> // Fallback if needed
-              )}
-            </div>
-
-            {quizData && !showQuestionSection && (
-              <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
-                {t('practice.questionWillAppear')}
+                {isSpeechSupported && quizData.paragraph && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handlePlayPause}
+                      title={isSpeakingPassage && !isPaused ? t('common.pause') : t('common.play')}
+                      className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
+                      disabled={!quizData.paragraph}
+                    >
+                      {isSpeakingPassage && !isPaused ? (
+                        <HeroPauseIcon className="w-4 h-4" />
+                      ) : (
+                        <HeroPlayIcon className="w-4 h-4" />
+                      )}
+                    </button>
+                    {isSpeakingPassage && (
+                      <button
+                        onClick={handleStop}
+                        title={t('common.stop')}
+                        className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+                      >
+                        <HeroStopIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
+                      <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={volume}
+                        onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                        className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        title={t('common.volume')}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
 
-            {showQuestionSection && (
-              <>
+              <AnimateTransition
+                show={true}
+                type="fade-in"
+                duration={600}
+                className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
+              >
+                <div dir={getTextDirection(generatedPassageLanguage)}>
+                  {/* Always use renderParagraphWithWordHover */}
+                  {quizData && generatedPassageLanguage ? (
+                    renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
+                  ) : (
+                    <div>{quizData?.paragraph}</div> // Fallback if needed
+                  )}
+                </div>
+              </AnimateTransition>
+
+              {quizData && !showQuestionSection && (
+                <AnimateTransition
+                  show={true}
+                  type="fade-in"
+                  duration={400}
+                  className="mt-4 text-center text-gray-400 text-sm animate-pulse"
+                >
+                  {t('practice.questionWillAppear')}
+                </AnimateTransition>
+              )}
+
+              <AnimateTransition
+                show={showQuestionSection}
+                type="slide-up"
+                duration={500}
+                unmountOnExit
+              >
                 <div className="mt-6">
                   <h3
                     dir={getTextDirection(questionLanguage)}
@@ -909,189 +1015,214 @@ export default function TextGenerator() {
                     {quizData.question}
                   </h3>
                   <div className="space-y-3">
-                    {Object.entries(quizData.options).map(([key, value]) => (
-                      <button
+                    {Object.entries(quizData.options).map(([key, value], index) => (
+                      <AnimateTransition
                         key={key}
-                        onClick={handleAsyncClick(handleAnswerSelect, key)}
-                        disabled={isAnswered}
-                        dir={getTextDirection(questionLanguage)}
-                        className={`w-full text-left p-3 rounded transition-colors duration-200 ${
-                          isAnswered
-                            ? key === quizData.correctAnswer
-                              ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
-                              : key === selectedAnswer
-                                ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
-                                : 'bg-gray-700 border border-gray-600 text-gray-400'
-                            : selectedAnswer === key
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
-                              : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                        }`}
+                        show={showQuestionSection}
+                        type="slide-right"
+                        duration={400}
+                        delay={100 * index} // Stagger the animations
+                        className="w-full"
                       >
-                        <span className="font-semibold">{key}:</span> {value}
-                      </button>
+                        <button
+                          onClick={handleAsyncClick(handleAnswerSelect, key)}
+                          disabled={isAnswered}
+                          dir={getTextDirection(questionLanguage)}
+                          className={`w-full text-left p-3 rounded transition-colors duration-200 ${
+                            isAnswered
+                              ? key === quizData.correctAnswer
+                                ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
+                                : key === selectedAnswer
+                                  ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
+                                  : 'bg-gray-700 border border-gray-600 text-gray-400'
+                              : selectedAnswer === key
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
+                                : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="font-semibold">{key}:</span> {value}
+                        </button>
+                      </AnimateTransition>
                     ))}
                   </div>
                 </div>
 
-                {showExplanation && (
+                <AnimateTransition
+                  show={showExplanation}
+                  type="scale-up"
+                  duration={400}
+                  unmountOnExit
+                >
                   <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
                     <h4 className="text-lg font-semibold mb-3 text-blue-300">
                       {t('practice.explanation')}
                     </h4>
                     <div className="space-y-3 text-sm">
-                      {Object.entries(quizData.explanations).map(([key, explanation]) => (
-                        <div
+                      {Object.entries(quizData.explanations).map(([key, explanation], index) => (
+                        <AnimateTransition
                           key={key}
-                          className={`p-2 rounded ${key === quizData.correctAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== quizData.correctAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
+                          show={showExplanation}
+                          type="slide-left"
+                          duration={400}
+                          delay={100 * index} // Stagger the animations
+                          className="w-full"
                         >
-                          <strong
-                            className={`font-semibold ${key === quizData.correctAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
+                          <div
+                            className={`p-2 rounded ${key === quizData.correctAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== quizData.correctAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
                           >
-                            {key}:
-                          </strong>{' '}
-                          <span className="text-gray-300">{explanation}</span>
-                        </div>
+                            <strong
+                              className={`font-semibold ${key === quizData.correctAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
+                            >
+                              {key}:
+                            </strong>{' '}
+                            <span className="text-gray-300">{explanation}</span>
+                          </div>
+                        </AnimateTransition>
                       ))}
                     </div>
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                </AnimateTransition>
+              </AnimateTransition>
+            </div>
+          </AnimateTransition>
         )}
 
         {(!quizData || isAnswered) && (
-          <div className="mt-8">
-            {/* Add new progress section */}
-            {status === 'authenticated' && userStreak !== null && (
-              <div className="mb-6 p-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl border border-gray-700 shadow-lg">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  {t('practice.yourProgress')}
-                </h3>
+          <AnimateTransition show={showContent} type="fade-in" duration={400} delay={400}>
+            <div className="mt-8">
+              {/* Add new progress section */}
+              {status === 'authenticated' && userStreak !== null && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl border border-gray-700 shadow-lg">
+                  <h3 className="text-lg font-semibold text-white mb-3">
+                    {t('practice.yourProgress')}
+                  </h3>
 
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <span className="text-sm text-gray-400">{t('practice.currentStreak')}</span>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-400">{t('practice.currentStreak')}</span>
 
-                    {/* Progress bar for streak */}
-                    <div className="mt-2 w-full bg-gray-700 rounded-full h-2.5">
-                      <div
-                        className="bg-gradient-to-r from-yellow-500 to-orange-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                        style={{ width: `${Math.min(100, (userStreak / 5) * 100)}%` }}
-                      ></div>
-                    </div>
+                      {/* Progress bar for streak */}
+                      <div className="mt-2 w-full bg-gray-700 rounded-full h-2.5">
+                        <div
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                          style={{ width: `${Math.min(100, (userStreak / 5) * 100)}%` }}
+                        ></div>
+                      </div>
 
-                    {/* Simple streak indicator without numbers */}
-                    <div className="mt-3 flex justify-between items-center">
-                      {[1, 2, 3, 4, 5].map((position) => (
-                        <div key={position} className="flex flex-col items-center">
-                          <div
-                            className={`w-3 h-3 rounded-full
-                              ${position <= userStreak ? 'bg-yellow-500' : 'bg-gray-600'}
-                              transition-all duration-300`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Level progress section */}
-                  <div className="mt-6 pt-4 border-t border-gray-700">
-                    <span className="text-sm text-gray-400 block mb-2">{t('practice.level')}</span>
-                    <div className="flex items-center mb-4">
-                      <span className="text-xl font-bold text-white mr-2">{cefrLevel}</span>
-                      <span className="text-sm text-gray-300">
-                        - {t(`practice.cefr.levels.${cefrLevel}.name`)}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-300 mb-4">
-                      {t(`practice.cefr.levels.${cefrLevel}.description`)}
-                    </div>
-
-                    {/* Level labels above the progress indicators */}
-                    <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
-                      <span>A1</span>
-                      <span>A2</span>
-                      <span>B1</span>
-                      <span>B2</span>
-                      <span>C1</span>
-                      <span>C2</span>
-                    </div>
-
-                    <div className="flex justify-between items-center mb-1">
-                      {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level, index) => {
-                        const achieved =
-                          ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].indexOf(cefrLevel) >= index;
-                        const isCurrent = level === cefrLevel;
-                        return (
-                          <div key={level} className="flex flex-col items-center">
+                      {/* Simple streak indicator without numbers */}
+                      <div className="mt-3 flex justify-between items-center">
+                        {[1, 2, 3, 4, 5].map((position) => (
+                          <div key={position} className="flex flex-col items-center">
                             <div
-                              className={`w-3 h-3 rounded-full ${
-                                achieved ? 'bg-blue-500' : 'bg-gray-600'
-                              } ${isCurrent ? 'ring-1 ring-white ring-opacity-60' : ''}`}
-                              title={`${level}: ${t(`practice.cefr.levels.${level}.name`)}`}
+                              className={`w-3 h-3 rounded-full
+                                ${position <= userStreak ? 'bg-yellow-500' : 'bg-gray-600'}
+                                transition-all duration-300`}
                             />
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
 
-                    <div className="w-full bg-gray-700 rounded-full h-2.5 mt-1">
-                      {/* Calculate progress based on CEFR level */}
-                      {(() => {
-                        const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-                        const levelIndex = levels.indexOf(cefrLevel);
-                        const progress = ((levelIndex + 1) / 6) * 100;
-                        return (
-                          <div
-                            className="bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                            style={{ width: `${progress}%` }}
-                          ></div>
-                        );
-                      })()}
+                    {/* Level progress section */}
+                    <div className="mt-6 pt-4 border-t border-gray-700">
+                      <span className="text-sm text-gray-400 block mb-2">
+                        {t('practice.level')}
+                      </span>
+                      <div className="flex items-center mb-4">
+                        <span className="text-xl font-bold text-white mr-2">{cefrLevel}</span>
+                        <span className="text-sm text-gray-300">
+                          - {t(`practice.cefr.levels.${cefrLevel}.name`)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-300 mb-4">
+                        {t(`practice.cefr.levels.${cefrLevel}.description`)}
+                      </div>
+
+                      {/* Level labels above the progress indicators */}
+                      <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
+                        <span>A1</span>
+                        <span>A2</span>
+                        <span>B1</span>
+                        <span>B2</span>
+                        <span>C1</span>
+                        <span>C2</span>
+                      </div>
+
+                      <div className="flex justify-between items-center mb-1">
+                        {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level, index) => {
+                          const achieved =
+                            ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].indexOf(cefrLevel) >= index;
+                          const isCurrent = level === cefrLevel;
+                          return (
+                            <div key={level} className="flex flex-col items-center">
+                              <div
+                                className={`w-3 h-3 rounded-full ${
+                                  achieved ? 'bg-blue-500' : 'bg-gray-600'
+                                } ${isCurrent ? 'ring-1 ring-white ring-opacity-60' : ''}`}
+                                title={`${level}: ${t(`practice.cefr.levels.${level}.name`)}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="w-full bg-gray-700 rounded-full h-2.5 mt-1">
+                        {/* Calculate progress based on CEFR level */}
+                        {(() => {
+                          const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+                          const levelIndex = levels.indexOf(cefrLevel);
+                          const progress = ((levelIndex + 1) / 6) * 100;
+                          return (
+                            <div
+                              className="bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Only show the "Give me something to read" button when there's no content or user has answered */}
-            <button
-              onClick={generateTextHandler}
-              disabled={loading}
-              className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin -ml-1 mr-3 h-5 w-5 text-white">
-                    <svg
-                      className="h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  </div>
-                  {t('common.generating')}
-                </div>
-              ) : (
-                t('practice.generateNewText')
               )}
-            </button>
-          </div>
+
+              {/* Only show the "Give me something to read" button when there's no content or user has answered */}
+              <button
+                onClick={generateTextHandler}
+                disabled={loading}
+                className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
+              >
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin -ml-1 mr-3 h-5 w-5 text-white">
+                      <svg
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    </div>
+                    {t('common.generating')}
+                  </div>
+                ) : (
+                  t('practice.generateNewText')
+                )}
+              </button>
+            </div>
+          </AnimateTransition>
         )}
       </div>
     </div>

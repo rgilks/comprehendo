@@ -4,8 +4,9 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Session } from 'next-auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import AnimateTransition from './AnimateTransition';
 
 interface CustomSession extends Session {
   user?: {
@@ -27,10 +28,26 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
     status: 'loading' | 'authenticated' | 'unauthenticated';
   };
   const [isMounted, setIsMounted] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   if (!isMounted || status === 'loading') {
@@ -39,47 +56,88 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
 
   if (session) {
     return (
-      <div className="flex flex-wrap items-center gap-2 md:gap-4">
-        <div className="flex items-center gap-2">
-          {session.user?.image && (
-            <Image
-              src={session.user.image}
-              alt={session.user?.name || 'User'}
-              width={32}
-              height={32}
-              className="rounded-full"
-            />
-          )}
-          {variant === 'full' && <span className="text-white">{session.user?.name}</span>}
-        </div>
-        {session.user?.isAdmin && (
-          <Link
-            href="/admin"
-            className="px-2 py-1 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {t('navigation.admin')}
-          </Link>
-        )}
+      <div className="flex flex-wrap items-center gap-2 md:gap-4 relative" ref={userMenuRef}>
+        {/* User profile button */}
         <button
-          onClick={() => {
-            void signOut();
-          }}
-          className="px-2 py-1 md:px-4 md:py-2 text-sm md:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          onClick={() => setShowUserMenu(!showUserMenu)}
         >
-          {variant === 'full' ? t('auth.signOut') : 'Sign Out'}
+          <div className="flex items-center gap-2">
+            {session.user?.image && (
+              <Image
+                src={session.user.image}
+                alt={session.user?.name || 'User'}
+                width={32}
+                height={32}
+                className="rounded-full animate-scale-up"
+              />
+            )}
+            {variant === 'full' && <span className="text-white">{session.user?.name}</span>}
+          </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={`transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </button>
+
+        {/* Dropdown menu */}
+        <AnimateTransition
+          show={showUserMenu}
+          type="slide-down"
+          className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-10"
+          unmountOnExit
+        >
+          <div className="bg-gray-800 rounded-md shadow-xl border border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-700">
+              <p className="text-sm text-white">{session.user?.name}</p>
+              <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+            </div>
+            <div className="py-1">
+              {session.user?.isAdmin && (
+                <Link
+                  href="/admin"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
+                  onClick={() => setShowUserMenu(false)}
+                >
+                  {t('navigation.admin')}
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  void signOut();
+                  setShowUserMenu(false);
+                }}
+                className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
+              >
+                {t('auth.signOut')}
+              </button>
+            </div>
+          </div>
+        </AnimateTransition>
       </div>
     );
   }
 
   return (
-    <div className={`flex gap-3 ${variant === 'full' ? 'flex-col sm:flex-row' : 'flex-row'}`}>
+    <AnimateTransition
+      show={true}
+      type="scale-up"
+      className={`flex gap-3 ${variant === 'full' ? 'flex-col sm:flex-row' : 'flex-row'}`}
+    >
       {/* Google Button */}
       <button
         onClick={() => {
           void signIn('google');
         }}
-        className={`flex items-center justify-center transition-colors ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 gap-2'}`}
+        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 gap-2 hover:translate-y-[-2px]'}`}
         title={t('auth.signInGoogle')}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -108,7 +166,7 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
         onClick={() => {
           void signIn('github');
         }}
-        className={`flex items-center justify-center transition-colors ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 gap-2'}`}
+        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 gap-2 hover:translate-y-[-2px]'}`}
         title={t('auth.signInGitHub')}
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -116,6 +174,6 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
         </svg>
         {variant === 'full' && <span>{t('auth.signInGitHub')}</span>}
       </button>
-    </div>
+    </AnimateTransition>
   );
 }
