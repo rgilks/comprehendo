@@ -63,11 +63,15 @@
     "next": "Suivant",
     "readingTime": "Temps de lecture...",
     "answerQuestionBelow": "Répondez à la question ci-dessous",
-    "generateNewText": "Générer un nouveau texte",
+    "generateNewText": "Donnez-moi quelque chose à lire",
     "supportingTextPrefix": "Texte de soutien : ",
     "passageLanguageLabel": "Apprentissage",
     "questionWillAppear": "La question apparaîtra sous peu...",
-    "passageTitle": "Passage de lecture"
+    "passageTitle": "Passage de lecture",
+    "signInPrompt": {
+      "message": "Connectez-vous pour suivre vos progrès et consulter votre historique d'apprentissage !",
+      "dismiss": "Ignorer"
+    }
   },
   "admin": {
     "title": "Administration",

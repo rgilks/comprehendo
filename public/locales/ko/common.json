@@ -63,11 +63,15 @@
     "next": "다음",
     "readingTime": "읽기 시간...",
     "answerQuestionBelow": "아래 질문에 답하세요",
-    "generateNewText": "새 텍스트 생성",
+    "generateNewText": "읽을 거리를 주세요",
     "supportingTextPrefix": "지원 텍스트: ",
     "passageLanguageLabel": "학습",
-    "questionWillAppear": "질문이 곧 표시됩니다...",
-    "passageTitle": "읽기 지문"
+    "questionWillAppear": "질문이 곧 나타납니다...",
+    "passageTitle": "독해 지문",
+    "signInPrompt": {
+      "message": "로그인하여 진행 상황을 추적하고 학습 기록을 확인하세요!",
+      "dismiss": "닫기"
+    }
   },
   "admin": {
     "title": "관리",
