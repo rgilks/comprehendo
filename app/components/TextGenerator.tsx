@@ -10,6 +10,18 @@ import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 // } from '../../lib/constants';
 // import { HighlightedParagraph } from './HighlightedParagraph';
 import { z } from 'zod';
+import {
+  PlayIcon as HeroPlayIcon,
+  PauseIcon as HeroPauseIcon,
+  StopIcon as HeroStopIcon,
+  SpeakerWaveIcon,
+  InformationCircleIcon,
+  GlobeAltIcon,
+  ChatBubbleLeftRightIcon,
+  BookOpenIcon,
+  ArrowPathIcon,
+  PlusCircleIcon,
+} from '@heroicons/react/24/solid';
 
 // Simple Speaker Icon
 // const SpeakerIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
@@ -25,50 +37,50 @@ import { z } from 'zod';
 // );
 
 // --- NEW Icons for Controls ---
-const PlayIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={className}
-  >
-    <path
-      fillRule="evenodd"
-      d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
+// const PlayIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+//   <svg
+//     xmlns="http://www.w3.org/2000/svg"
+//     viewBox="0 0 24 24"
+//     fill="currentColor"
+//     className={className}
+//   >
+//     <path
+//       fillRule="evenodd"
+//       d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+//       clipRule="evenodd"
+//     />
+//   </svg>
+// );
 
-const PauseIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={className}
-  >
-    <path
-      fillRule="evenodd"
-      d="M6.75 5.25a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Zm9 0a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
+// const PauseIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+//   <svg
+//     xmlns="http://www.w3.org/2000/svg"
+//     viewBox="0 0 24 24"
+//     fill="currentColor"
+//     className={className}
+//   >
+//     <path
+//       fillRule="evenodd"
+//       d="M6.75 5.25a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Zm9 0a.75.75 0 0 1 .75.75V18a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Z"
+//       clipRule="evenodd"
+//     />
+//   </svg>
+// );
 
-const StopIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className={className}
-  >
-    <path
-      fillRule="evenodd"
-      d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
+// const StopIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
+//   <svg
+//     xmlns="http://www.w3.org/2000/svg"
+//     viewBox="0 0 24 24"
+//     fill="currentColor"
+//     className={className}
+//   >
+//     <path
+//       fillRule="evenodd"
+//       d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z"
+//       clipRule="evenodd"
+//     />
+//   </svg>
+// );
 // --- End Icons ---
 
 // Define Zod schema for QuizData
@@ -679,18 +691,7 @@ export default function TextGenerator() {
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               <span className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-1 text-blue-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1a1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <InformationCircleIcon className="h-5 w-5 mr-1 text-blue-400" aria-hidden="true" />
                 CEFR Level:{' '}
                 <span className="text-xs text-blue-300 ml-2">
                   What&apos;s your proficiency level?
@@ -722,18 +723,7 @@ export default function TextGenerator() {
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               <span className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-1 text-green-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.572-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <GlobeAltIcon className="h-5 w-5 mr-1 text-green-400" aria-hidden="true" />
                 Reading Passage Language:
               </span>
             </label>
@@ -757,18 +747,10 @@ export default function TextGenerator() {
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               <span className="flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                <ChatBubbleLeftRightIcon
                   className="h-5 w-5 mr-1 text-purple-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10c0 3.866-3.582 7-8 7a8.74 8.74 0 01-4.145-.993L.5 19.5l1.846-4.309A7.984 7.984 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zm-8-5c-3.309 0-6 2.239-6 5s2.691 5 6 5 6-2.239 6-5-2.691-5-6-5z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                  aria-hidden="true"
+                />
                 Question & Options Language:
               </span>
             </label>
@@ -807,14 +789,7 @@ export default function TextGenerator() {
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
           <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
             <h2 className="text-lg font-semibold text-white flex items-center">
-              <svg
-                className="h-5 w-5 mr-2 text-blue-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-              </svg>
+              <BookOpenIcon className="h-5 w-5 mr-2 text-blue-400" aria-hidden="true" />
               Reading Passage {passageLanguage !== 'English' && `(${LANGUAGES[passageLanguage]})`}
             </h2>
             <div className="flex space-x-2">
@@ -845,9 +820,9 @@ export default function TextGenerator() {
                     disabled={!quizData.paragraph}
                   >
                     {isSpeakingPassage && !isPaused ? (
-                      <PauseIcon className="w-4 h-4" />
+                      <HeroPauseIcon className="w-4 h-4" />
                     ) : (
-                      <PlayIcon className="w-4 h-4" />
+                      <HeroPlayIcon className="w-4 h-4" />
                     )}
                   </button>
                   {isSpeakingPassage && ( // Show Stop button only when speaking/paused
@@ -856,18 +831,11 @@ export default function TextGenerator() {
                       title="Stop"
                       className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
                     >
-                      <StopIcon className="w-4 h-4" />
+                      <HeroStopIcon className="w-4 h-4" />
                     </button>
                   )}
                   <div className="flex items-center space-x-2 bg-gray-700 rounded-full px-3 py-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="w-4 h-4 text-gray-300"
-                    >
-                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905h1.932l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 01-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
-                    </svg>
+                    <SpeakerWaveIcon className="w-4 h-4 text-gray-300" aria-hidden="true" />
                     <input
                       type="range"
                       min="0"
@@ -1003,26 +971,10 @@ export default function TextGenerator() {
         >
           {loading ? (
             <div className="flex items-center">
-              <svg
+              <ArrowPathIcon
                 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+                aria-hidden="true"
+              />
               Generating...
             </div>
           ) : quizData !== null && !isAnswered ? (
@@ -1034,18 +986,7 @@ export default function TextGenerator() {
             )
           ) : (
             <div className="flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <PlusCircleIcon className="h-5 w-5 mr-2" aria-hidden="true" />
               Generate New Quiz
             </div>
           )}
