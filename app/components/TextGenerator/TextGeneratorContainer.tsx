@@ -13,6 +13,7 @@ import ReadingPassage from './ReadingPassage';
 import QuizSection from './QuizSection';
 import ProgressTracker from './ProgressTracker';
 import Generator from './Generator';
+import ReactQueryAdapter from '../../../components/TextGenerator/ReactQueryAdapter';
 
 const TextGeneratorContainer = () => {
   const { language: contextLanguage } = useLanguage();
@@ -43,34 +44,32 @@ const TextGeneratorContainer = () => {
   }, [contextLanguage]);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative" ref={contentContainerRef}>
-      <div className="w-full max-w-3xl mx-auto my-8">
-        <LanguageSelector />
-        <LoginPrompt />
+    <div ref={contentContainerRef} className="w-full max-w-3xl mx-auto">
+      {/* React Query Adapter - provides React Query capabilities to the store */}
+      <ReactQueryAdapter />
+
+      <div className="mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+          <LanguageSelector />
+          <ProgressTracker />
+        </div>
+
+        {status === 'authenticated' ? null : <LoginPrompt />}
+
         <ErrorDisplay />
 
-        {loading && !quizData && <QuizSkeleton />}
-
-        <AnimateTransition
-          show={!!(quizData && !loading && showContent)}
-          type="fade-in"
-          duration={400}
-          unmountOnExit
-        >
-          {quizData && !loading && (
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-              <ReadingPassage />
-              <QuizSection />
-            </div>
+        <AnimateTransition show={showContent}>
+          {loading ? (
+            <QuizSkeleton />
+          ) : (
+            <>
+              {quizData && <ReadingPassage />}
+              {quizData && <QuizSection />}
+            </>
           )}
         </AnimateTransition>
 
-        {(!quizData || !loading) && (
-          <>
-            <ProgressTracker />
-            <Generator />
-          </>
-        )}
+        <Generator />
       </div>
     </div>
   );
