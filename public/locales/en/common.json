@@ -74,6 +74,7 @@
     },
     "leveledUp": "Leveled up to",
     "streakIncreased": "Streak increased to",
+    "streakCompleted": "Streak completed! Level up!",
     "progressUpdateError": "Failed to update progress"
   },
   "admin": {
