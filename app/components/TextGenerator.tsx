@@ -652,22 +652,31 @@ export default function TextGenerator() {
             const previousStreak = userStreak || 0;
             setUserStreak(progressData.currentStreak);
 
+            // First check for level up
             if (progressData.leveledUp) {
-              console.log('[Progress] Leveled up!', progressData);
               setCefrLevel(progressData.currentLevel);
               toast.success(`${t('practice.leveledUp')} ${progressData.currentLevel}! 🎉`, {
                 duration: 4000,
                 position: 'top-center',
               });
-            } else if (progressData.currentStreak > previousStreak) {
-              // Show toast notification for streak increase
+            }
+
+            // Then check for streak increase (handle separately)
+            const streakIncreased = progressData.currentStreak > previousStreak;
+            // Also show streak toast when user completes 5 correct answers and levels up (streak resets to 0)
+            const completedStreakAndLeveledUp = progressData.leveledUp && previousStreak >= 4;
+
+            if (streakIncreased) {
               toast.success(`${t('practice.streakIncreased')} ${progressData.currentStreak} 🔥`, {
                 duration: 3000,
                 position: 'top-center',
               });
-              console.log('[Progress] Updated streak:', progressData.currentStreak);
-            } else {
-              console.log('[Progress] Updated streak:', progressData.currentStreak);
+            } else if (completedStreakAndLeveledUp) {
+              // Special case when streak completes and user levels up
+              toast.success(`${t('practice.streakCompleted')} 🔥🎯`, {
+                duration: 3000,
+                position: 'top-center',
+              });
             }
           }
         } catch (err) {

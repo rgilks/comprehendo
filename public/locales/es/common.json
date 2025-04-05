@@ -74,6 +74,7 @@
     },
     "leveledUp": "Subiste al nivel",
     "streakIncreased": "Racha aumentada a",
+    "streakCompleted": "¡Racha completada! ¡Subiste de nivel!",
     "progressUpdateError": "Error al actualizar el progreso"
   },
   "admin": {
