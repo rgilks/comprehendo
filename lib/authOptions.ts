@@ -98,15 +98,14 @@ export const authOptions: NextAuthOptions = {
         token.provider = account.provider;
       } else {
         console.log(
-          '[AUTH JWT Callback] Conditions not met for setting isAdmin (account/user/email missing). Token:',
-          token
+          '[AUTH JWT Callback] Conditions not met for setting isAdmin (account/user/email missing).'
         );
       }
-      console.log('[AUTH JWT Callback] Returning token:', token);
+      // console.log('[AUTH JWT Callback] Returning token:', token);
       return token;
     },
     session({ session, token }: { session: Session; token: JWT }) {
-      console.log('[AUTH Session Callback] Invoked. Token received:', token);
+      // console.log('[AUTH Session Callback] Invoked. Token received:', token);
 
       if (session.user) {
         const isAdminValue = token.isAdmin as boolean | undefined;
@@ -115,7 +114,7 @@ export const authOptions: NextAuthOptions = {
       } else {
         console.log('[AUTH Session Callback] Session user object not found.');
       }
-      console.log('[AUTH Session Callback] Returning session:', session);
+      // console.log('[AUTH Session Callback] Returning session:', session);
       return session;
     },
   },

@@ -2,7 +2,6 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import Sentry from './lib/sentry';
 import { getToken } from 'next-auth/jwt';
-import type { NextRequest } from 'next/server';
 
 const locales = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
 const defaultLocale = 'en';
@@ -27,7 +26,7 @@ export default withAuth(
     // Handle admin authentication
     try {
       console.log(`[Middleware] Path: ${pathname}`);
-      console.log(`[Middleware] Token received:`, JSON.stringify(token, null, 2));
+      // console.log(`[Middleware] Token received:`, JSON.stringify(token, null, 2));
       const isAdminCheck = req.nextauth.token?.isAdmin;
       console.log(`[Middleware] isAdmin check result: ${isAdminCheck}`);
 
@@ -46,7 +45,7 @@ export default withAuth(
     callbacks: {
       authorized: async ({ token }) => {
         try {
-          console.log(`[Middleware Authorized CB] Token received:`, JSON.stringify(token, null, 2));
+          // console.log(`[Middleware Authorized CB] Token received:`, JSON.stringify(token, null, 2));
           const isAuthorized = !!token;
           console.log(`[Middleware Authorized CB] Is authorized (token exists)? ${isAuthorized}`);
           return isAuthorized;
