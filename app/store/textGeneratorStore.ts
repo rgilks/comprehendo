@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { z } from 'zod';
-import { type Language, LANGUAGES, SPEECH_LANGUAGES } from '../contexts/LanguageContext';
-import { type CEFRLevel } from '../config/language-guidance';
-import { getRandomTopicForLevel } from '../config/topics';
-import { getVocabularyGuidance, getGrammarGuidance } from '../config/language-guidance';
+import { type Language, LANGUAGES, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
+import { type CEFRLevel } from '@/config/language-guidance';
+import { getRandomTopicForLevel } from '@/config/topics';
+import { getVocabularyGuidance, getGrammarGuidance } from '@/config/language-guidance';
 
 // Quiz data schema
 const quizDataSchema = z.object({

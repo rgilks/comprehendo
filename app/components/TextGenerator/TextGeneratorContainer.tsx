@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useSession } from 'next-auth/react';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
-import AnimateTransition from '../AnimateTransition';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
+import AnimateTransition from '@/components/AnimateTransition';
 import LanguageSelector from './LanguageSelector';
 import LoginPrompt from './LoginPrompt';
 import ErrorDisplay from './ErrorDisplay';

@@ -1,9 +1,9 @@
 'use client';
 
-import TextGenerator from './components/TextGenerator';
+import TextGenerator from '@/components/TextGenerator';
 import Link from 'next/link';
-import AuthButton from './components/AuthButton';
-import { useLanguage, type Language } from './contexts/LanguageContext';
+import AuthButton from '@/components/AuthButton';
+import { useLanguage, type Language } from '@/contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 
 function LanguageSelector() {
