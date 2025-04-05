@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Sentry from './lib/sentry';
 import { getToken } from 'next-auth/jwt';
 
-const locales = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
+const locales = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi'];
 const defaultLocale = 'en';
 
 export default async function middleware(req: import('next/server').NextRequest) {

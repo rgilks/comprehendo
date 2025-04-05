@@ -13,7 +13,7 @@ void i18n.init({
   // Set initial language, although PageClientContent will override
   lng: 'en',
   fallbackLng: 'en', // Default fallback
-  supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'],
+  supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi'],
   ns: ['common'], // Specify default namespaces
   defaultNS: 'common',
   interpolation: {

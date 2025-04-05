@@ -4,36 +4,19 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import i18n from '../i18n.client'; // Import the client singleton directly
 // import { useTranslation } from 'react-i18next'; // Remove explicit import of client singleton
+// Import definitions from the central config file
+import {
+  type Language,
+  LANGUAGES,
+  SPEECH_LANGUAGES,
+  // RTL_LANGUAGES, // Removed as it's not used directly in this context
+  getTextDirection,
+} from '../config/languages';
 
-export type Language = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ru' | 'zh' | 'ja' | 'ko';
-
-export const LANGUAGES: Record<Language, string> = {
-  en: 'English',
-  es: 'Español',
-  fr: 'Français',
-  de: 'Deutsch',
-  it: 'Italiano',
-  pt: 'Português',
-  ru: 'Русский',
-  zh: '中文',
-  ja: '日本語',
-  ko: '한국어',
-};
-
-export const SPEECH_LANGUAGES: Record<Language, string> = {
-  en: 'en-US',
-  es: 'es-ES',
-  fr: 'fr-FR',
-  de: 'de-DE',
-  it: 'it-IT',
-  pt: 'pt-PT',
-  ru: 'ru-RU',
-  zh: 'zh-CN',
-  ja: 'ja-JP',
-  ko: 'ko-KR',
-};
-
-export const RTL_LANGUAGES: Language[] = [];
+// Remove local definitions
+// export type Language = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ru' | 'zh' | 'ja' | 'ko' | 'hi';
+// export const LANGUAGES: Record<Language, string> = { ... };
+// export const SPEECH_LANGUAGES: Record<Language, string> = { ... };
 
 interface LanguageContextType {
   language: Language;
@@ -105,6 +88,11 @@ export function useLanguage() {
   return context;
 }
 
-export function getTextDirection(language: Language) {
-  return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
-}
+// Keep getTextDirection export here if components directly import it from context
+// Or remove if they import directly from '../config/languages'
+export { getTextDirection, LANGUAGES, SPEECH_LANGUAGES, type Language };
+
+// Remove local getTextDirection implementation if it uses local RTL_LANGUAGES
+// export function getTextDirection(language: Language) {
+//   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
+// }
