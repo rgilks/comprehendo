@@ -1,0 +1,75 @@
+{
+  "brand": "Comprehendo",
+  "subtitle": "Apprendimento delle lingue con IA per migliorare la comprensione della lettura",
+  "navigation": {
+    "home": "Home",
+    "practice": "Pratica",
+    "admin": "Amministrazione"
+  },
+  "practice": {
+    "title": "Pratica di Lettura",
+    "level": "Livello",
+    "cefr": {
+      "title": "Personalizza la tua pratica",
+      "description": "Qual è il tuo livello di competenza?",
+      "levels": {
+        "A1": {
+          "name": "Principiante",
+          "description": "Frasi di base, domande semplici"
+        },
+        "A2": {
+          "name": "Elementare",
+          "description": "Argomenti familiari, frasi semplici"
+        },
+        "B1": {
+          "name": "Intermedio",
+          "description": "Questioni quotidiane, opinioni base"
+        },
+        "B2": {
+          "name": "Intermedio Superiore",
+          "description": "Discussioni tecniche, punti di vista chiari"
+        },
+        "C1": {
+          "name": "Avanzato",
+          "description": "Argomenti complessi, espressione spontanea"
+        },
+        "C2": {
+          "name": "Padronanza",
+          "description": "Quasi tutto, espressione sfumata"
+        }
+      }
+    },
+    "passageLanguage": "Lingua del testo",
+    "questionLanguage": "Lingua delle domande",
+    "generate": "Genera",
+    "loading": "Caricamento...",
+    "error": "Si è verificato un errore",
+    "tryAgain": "Riprova",
+    "passage": "Testo",
+    "question": "Domanda",
+    "options": {
+      "a": "Opzione A",
+      "b": "Opzione B",
+      "c": "Opzione C",
+      "d": "Opzione D"
+    },
+    "submit": "Invia",
+    "correct": "Corretto!",
+    "incorrect": "Incorretto",
+    "explanation": "Spiegazione",
+    "next": "Avanti"
+  },
+  "admin": {
+    "title": "Amministrazione",
+    "users": "Utenti",
+    "settings": "Impostazioni",
+    "logout": "Esci"
+  },
+  "common": {
+    "language": "Lingua",
+    "theme": "Tema",
+    "dark": "Scuro",
+    "light": "Chiaro",
+    "system": "Sistema"
+  }
+}

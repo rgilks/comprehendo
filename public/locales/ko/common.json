@@ -1,0 +1,75 @@
+{
+  "brand": "Comprehendo",
+  "subtitle": "AI 기반 언어 학습으로 독해력 향상",
+  "navigation": {
+    "home": "홈",
+    "practice": "연습",
+    "admin": "관리"
+  },
+  "practice": {
+    "title": "독해 연습",
+    "level": "수준",
+    "cefr": {
+      "title": "연습 맞춤 설정",
+      "description": "당신의 숙련도는 어느 수준입니까?",
+      "levels": {
+        "A1": {
+          "name": "입문",
+          "description": "기본 문구, 간단한 질문"
+        },
+        "A2": {
+          "name": "초급",
+          "description": "친숙한 주제, 간단한 문장"
+        },
+        "B1": {
+          "name": "중급",
+          "description": "일상적인 사항, 기본적인 의견"
+        },
+        "B2": {
+          "name": "중상급",
+          "description": "기술적 토론, 명확한 관점"
+        },
+        "C1": {
+          "name": "고급",
+          "description": "복잡한 주제, 자연스러운 표현"
+        },
+        "C2": {
+          "name": "숙달",
+          "description": "거의 모든 것, 미묘한 표현"
+        }
+      }
+    },
+    "passageLanguage": "지문 언어",
+    "questionLanguage": "질문 언어",
+    "generate": "생성",
+    "loading": "로딩 중...",
+    "error": "오류가 발생했습니다",
+    "tryAgain": "다시 시도",
+    "passage": "지문",
+    "question": "질문",
+    "options": {
+      "a": "선택지 A",
+      "b": "선택지 B",
+      "c": "선택지 C",
+      "d": "선택지 D"
+    },
+    "submit": "제출",
+    "correct": "정답!",
+    "incorrect": "오답",
+    "explanation": "설명",
+    "next": "다음"
+  },
+  "admin": {
+    "title": "관리",
+    "users": "사용자",
+    "settings": "설정",
+    "logout": "로그아웃"
+  },
+  "common": {
+    "language": "언어",
+    "theme": "테마",
+    "dark": "다크",
+    "light": "라이트",
+    "system": "시스템"
+  }
+}

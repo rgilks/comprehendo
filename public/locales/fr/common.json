@@ -1,0 +1,75 @@
+{
+  "brand": "Comprehendo",
+  "subtitle": "Apprentissage des langues avec IA pour améliorer la compréhension écrite",
+  "navigation": {
+    "home": "Accueil",
+    "practice": "Pratique",
+    "admin": "Administration"
+  },
+  "practice": {
+    "title": "Pratique de Lecture",
+    "level": "Niveau",
+    "cefr": {
+      "title": "Personnalisez votre pratique",
+      "description": "Quel est votre niveau de compétence ?",
+      "levels": {
+        "A1": {
+          "name": "Débutant",
+          "description": "Phrases de base, questions simples"
+        },
+        "A2": {
+          "name": "Élémentaire",
+          "description": "Sujets familiers, phrases simples"
+        },
+        "B1": {
+          "name": "Intermédiaire",
+          "description": "Questions courantes, opinions basiques"
+        },
+        "B2": {
+          "name": "Intermédiaire Supérieur",
+          "description": "Discussions techniques, points de vue clairs"
+        },
+        "C1": {
+          "name": "Avancé",
+          "description": "Sujets complexes, expression spontanée"
+        },
+        "C2": {
+          "name": "Maîtrise",
+          "description": "Presque tout, expression nuancée"
+        }
+      }
+    },
+    "passageLanguage": "Langue du texte",
+    "questionLanguage": "Langue des questions",
+    "generate": "Générer",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "tryAgain": "Réessayer",
+    "passage": "Texte",
+    "question": "Question",
+    "options": {
+      "a": "Option A",
+      "b": "Option B",
+      "c": "Option C",
+      "d": "Option D"
+    },
+    "submit": "Soumettre",
+    "correct": "Correct!",
+    "incorrect": "Incorrect",
+    "explanation": "Explication",
+    "next": "Suivant"
+  },
+  "admin": {
+    "title": "Administration",
+    "users": "Utilisateurs",
+    "settings": "Paramètres",
+    "logout": "Déconnexion"
+  },
+  "common": {
+    "language": "Langue",
+    "theme": "Thème",
+    "dark": "Sombre",
+    "light": "Clair",
+    "system": "Système"
+  }
+}

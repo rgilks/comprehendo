@@ -1,44 +1,72 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import i18n from '../i18n.client';
 
-export type Language = 'English' | 'Italian' | 'Spanish' | 'French' | 'German' | 'Hindi' | 'Hebrew';
+export type Language = 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'ru' | 'zh' | 'ja' | 'ko';
 
 export const LANGUAGES: Record<Language, string> = {
-  English: 'English',
-  Italian: 'Italiano',
-  Spanish: 'Español',
-  French: 'Français',
-  German: 'Deutsch',
-  Hindi: 'हिन्दी',
-  Hebrew: 'עברית',
+  en: 'English',
+  es: 'Español',
+  fr: 'Français',
+  de: 'Deutsch',
+  it: 'Italiano',
+  pt: 'Português',
+  ru: 'Русский',
+  zh: '中文',
+  ja: '日本語',
+  ko: '한국어',
 };
 
-export const RTL_LANGUAGES: Language[] = ['Hebrew'];
-
-export const BCP47_LANGUAGE_MAP: Record<Language, string> = {
-  English: 'en-US',
-  Italian: 'it-IT',
-  Spanish: 'es-ES',
-  French: 'fr-FR',
-  German: 'de-DE',
-  Hindi: 'hi-IN',
-  Hebrew: 'he-IL',
+export const SPEECH_LANGUAGES: Record<Language, string> = {
+  en: 'en-US',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  de: 'de-DE',
+  it: 'it-IT',
+  pt: 'pt-PT',
+  ru: 'ru-RU',
+  zh: 'zh-CN',
+  ja: 'ja-JP',
+  ko: 'ko-KR',
 };
+
+export const RTL_LANGUAGES: Language[] = [];
 
 interface LanguageContextType {
   language: Language;
-  setLanguage: (lang: Language) => void;
+  setLanguage: (lang: Language) => Promise<void>;
   languages: typeof LANGUAGES;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('English');
+export function LanguageProvider({
+  children,
+  initialLanguage,
+}: {
+  children: ReactNode;
+  initialLanguage: Language;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [language, setLanguage] = useState<Language>(initialLanguage);
+
+  const handleLanguageChange = async (lang: Language) => {
+    setLanguage(lang);
+    await i18n.changeLanguage(lang);
+
+    // Update the URL with the new language
+    const segments = pathname.split('/');
+    segments[1] = lang;
+    router.push(segments.join('/'));
+  };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, languages: LANGUAGES }}>
+    <LanguageContext.Provider
+      value={{ language, setLanguage: handleLanguageChange, languages: LANGUAGES }}
+    >
       {children}
     </LanguageContext.Provider>
   );
