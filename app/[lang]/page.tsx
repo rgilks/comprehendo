@@ -5,6 +5,8 @@ import Link from 'next/link';
 import AuthButton from '../components/AuthButton';
 import { useLanguage, type Language } from '../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
+import { LanguageProvider } from '../contexts/LanguageContext';
+import { notFound } from 'next/navigation';
 
 function LanguageSelector() {
   const { language, setLanguage, languages } = useLanguage();
@@ -71,6 +73,22 @@ function HomeContent() {
   );
 }
 
-export default function Home() {
-  return <HomeContent />;
+export default function LanguagePage({
+  params,
+  children,
+}: {
+  params: { lang: string };
+  children: React.ReactNode;
+}) {
+  // Validate language
+  const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
+  if (!validLanguages.includes(params.lang)) {
+    notFound();
+  }
+
+  return (
+    <LanguageProvider initialLanguage={params.lang as Language}>
+      <HomeContent />
+    </LanguageProvider>
+  );
 }
