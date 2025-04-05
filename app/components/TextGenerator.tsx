@@ -26,6 +26,7 @@ import { useSession } from 'next-auth/react';
 import AuthButton from './AuthButton';
 import AnimateTransition from './AnimateTransition';
 import { getRandomTopicForLevel } from '../config/topics';
+import { getVocabularyGuidance, type CEFRLevel } from '../config/vocabulary';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -53,8 +54,6 @@ const apiResponseSchema = z.object({
   result: z.string().optional(),
   error: z.string().optional(),
 });
-
-type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 const CEFR_LEVELS_LIST: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
@@ -519,10 +518,18 @@ export default function TextGenerator() {
       // Get a random topic appropriate for the current CEFR level
       const randomTopic = getRandomTopicForLevel(levelToUse);
 
+      // Get vocabulary guidance for the current level
+      const vocabGuidance = getVocabularyGuidance(levelToUse);
+
       const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
       const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
 
-      const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.`;
+      // Add vocabulary guidance to the prompt for A1 and A2 levels
+      const vocabInstructions = ['A1', 'A2'].includes(levelToUse)
+        ? `\n\nVocabulary guidance: ${vocabGuidance}`
+        : '';
+
+      const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.${vocabInstructions}`;
 
       const seed = Math.floor(Math.random() * 100);
 
