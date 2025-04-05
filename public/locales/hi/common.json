@@ -1,0 +1,111 @@
+{
+  "title": "कॉम्प्रिहेंडो",
+  "subtitle": "समझ पढ़ने के लिए AI संचालित भाषा सीखना",
+  "powered_by": "Google Gemini द्वारा संचालित",
+  "github": "गिटहब",
+  "brand": "कॉम्प्रिहेंडो",
+  "navigation": {
+    "home": "होम",
+    "practice": "अभ्यास",
+    "admin": "एडमिन"
+  },
+  "practice": {
+    "title": "पढ़ने का अभ्यास",
+    "level": "स्तर",
+    "cefr": {
+      "title": "कस्टम अभ्यास",
+      "description": "आपका भाषा स्तर क्या है?",
+      "levels": {
+        "A1": {
+          "name": "शुरुआती",
+          "description": "मूल वाक्यांश, सरल प्रश्न"
+        },
+        "A2": {
+          "name": "प्राथमिक",
+          "description": "परिचित विषय, सरल वाक्य"
+        },
+        "B1": {
+          "name": "मध्यवर्ती",
+          "description": "दैनिक मामले, बुनियादी राय"
+        },
+        "B2": {
+          "name": "उच्च-मध्यवर्ती",
+          "description": "तकनीकी चर्चा, स्पष्ट विचार"
+        },
+        "C1": {
+          "name": "उन्नत",
+          "description": "जटिल विषय, सहज अभिव्यक्ति"
+        },
+        "C2": {
+          "name": "प्रवीण",
+          "description": "लगभग सब कुछ, सूक्ष्म अभिव्यक्ति"
+        }
+      }
+    },
+    "passageLanguage": "गद्यांश भाषा",
+    "questionLanguage": "प्रश्न भाषा",
+    "generate": "उत्पन्न करें",
+    "loading": "लोड हो रहा है...",
+    "error": "एक त्रुटि हुई",
+    "tryAgain": "पुनः प्रयास करें",
+    "passage": "गद्यांश",
+    "question": "प्रश्न",
+    "options": {
+      "a": "विकल्प ए",
+      "b": "विकल्प बी",
+      "c": "विकल्प सी",
+      "d": "विकल्प डी"
+    },
+    "submit": "सबमिट करें",
+    "correct": "सही!",
+    "incorrect": "गलत",
+    "explanation": "स्पष्टीकरण",
+    "next": "अगला",
+    "readingTime": "पढ़ने का समय...",
+    "answerQuestionBelow": "नीचे दिए गए प्रश्न का उत्तर दें",
+    "generateNewText": "नया टेक्स्ट उत्पन्न करें",
+    "supportingTextPrefix": "सहायक पाठ:",
+    "passageLanguageLabel": "गद्यांश भाषा पढ़ना:",
+    "questionWillAppear": "प्रश्न बाद में दिखाई देगा...",
+    "passageTitle": "गद्यांश पढ़ना"
+  },
+  "admin": {
+    "title": "एडमिन",
+    "users": "उपयोगकर्ता",
+    "settings": "सेटिंग्स",
+    "logout": "लॉग आउट",
+    "light": "हल्का",
+    "system": "सिस्टम",
+    "translating": "अनुवाद हो रहा है...",
+    "errorPrefix": "त्रुटि:",
+    "generating": "उत्पन्न हो रहा है...",
+    "pause": "रोकें",
+    "play": "चलाएं",
+    "stop": "बंद करें",
+    "volume": "आवाज़"
+  },
+  "common": {
+    "language": "भाषा",
+    "theme": "थीम",
+    "dark": "गहरा",
+    "light": "हल्का",
+    "system": "सिस्टम",
+    "translating": "अनुवाद हो रहा है...",
+    "errorPrefix": "त्रुटि:",
+    "generating": "उत्पन्न हो रहा है...",
+    "pause": "रोकें",
+    "play": "चलाएं",
+    "stop": "बंद करें",
+    "volume": "आवाज़"
+  },
+  "loadingTranslations": "अनुवाद लोड हो रहा है...",
+  "pwa": {
+    "installPrompt": "त्वरित पहुँच के लिए कॉम्प्रिहेंडो स्थापित करें।",
+    "installButton": "ऐप इंस्टॉल करें"
+  },
+  "auth": {
+    "signOut": "साइन आउट",
+    "signInGitHub": "GitHub के साथ साइन इन करें",
+    "signInGoogle": "Google के साथ साइन इन करें"
+  }
+}

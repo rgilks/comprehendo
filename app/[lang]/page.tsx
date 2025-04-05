@@ -1,4 +1,4 @@
-import { type Language } from '../contexts/LanguageContext';
+import { type Language, LANGUAGES } from '../config/languages';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { initServerI18n } from '../i18n';
@@ -12,18 +12,10 @@ export function generateMetadata(): Metadata {
 }
 
 export function generateStaticParams() {
-  return [
-    { lang: 'en' },
-    { lang: 'es' },
-    { lang: 'fr' },
-    { lang: 'de' },
-    { lang: 'it' },
-    { lang: 'pt' },
-    { lang: 'ru' },
-    { lang: 'zh' },
-    { lang: 'ja' },
-    { lang: 'ko' },
-  ];
+  // Generate params from the single source of truth
+  return Object.keys(LANGUAGES).map((lang) => ({
+    lang,
+  }));
 }
 
 type PageProps = {
@@ -34,8 +26,8 @@ export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
   const lang = resolvedParams.lang as Language;
 
-  // Validate language
-  const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
+  // Validate language against the single source of truth
+  const validLanguages = Object.keys(LANGUAGES);
   if (!validLanguages.includes(lang)) {
     notFound();
   }
