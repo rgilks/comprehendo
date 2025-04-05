@@ -5,6 +5,7 @@ import { type Language, LANGUAGES, SPEECH_LANGUAGES } from '@/contexts/LanguageC
 import { type CEFRLevel } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { getVocabularyGuidance, getGrammarGuidance } from '@/config/language-guidance';
+import { ChatRequestParams } from '@/lib/api';
 
 // Quiz data schema
 const quizDataSchema = z.object({
@@ -47,6 +48,11 @@ interface UserProgressResponse {
   currentLevel: CEFRLevel;
   currentStreak: number;
   leveledUp?: boolean;
+}
+
+// When using React Query type-safely
+interface ReactQueryChatMutation {
+  mutateAsync: (params: ChatRequestParams) => Promise<string>;
 }
 
 interface TextGeneratorState {
@@ -454,6 +460,50 @@ export const useTextGeneratorStore = create(
               let forceCache = false;
               let success = false;
 
+              // Create chat mutation instance - needs to be done in component that uses this store
+              const chatMutation = {
+                mutateAsync: async (params: ChatRequestParams) => {
+                  try {
+                    const response = await fetch('/api/chat', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(params),
+                    });
+
+                    if (!response.ok) {
+                      // Define a simple type for the expected error structure
+                      type ErrorResponse = { error?: string; message?: string };
+                      let errorData: ErrorResponse = {};
+                      try {
+                        // Try to parse the error response body
+                        errorData = (await response.json()) as ErrorResponse;
+                      } catch (parseError) {
+                        console.warn('Could not parse error response JSON:', parseError);
+                        // If parsing fails, use the status text or a default message
+                        throw new Error(
+                          response.statusText || `HTTP error! status: ${response.status}`
+                        );
+                      }
+                      // Use the parsed error message if available
+                      throw new Error(
+                        errorData.error ||
+                          errorData.message ||
+                          `HTTP error! status: ${response.status}`
+                      );
+                    }
+
+                    // Await the JSON response first, then parse
+                    const jsonResponse = (await response.json()) as unknown;
+                    const data = apiResponseSchema.parse(jsonResponse);
+                    return data.result;
+                  } catch (error) {
+                    throw error;
+                  }
+                },
+              };
+
               // Keep trying until we succeed or exhaust all options
               while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
                 try {
@@ -465,46 +515,30 @@ export const useTextGeneratorStore = create(
                     forceCache,
                   };
 
-                  const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody),
-                  });
+                  // Try to get the React Query mutation if available from ReactQueryAdapter
+                  const reactQueryMutation =
+                    typeof window !== 'undefined'
+                      ? (window as Window & { __reactQueryChatMutation?: ReactQueryChatMutation })
+                          .__reactQueryChatMutation
+                      : undefined;
 
-                  if (!response.ok) {
-                    // Define a simple type for the expected error structure
-                    type ErrorResponse = { error?: string; message?: string };
-                    let errorData: ErrorResponse = {};
-                    try {
-                      // Try to parse the error response body
-                      errorData = (await response.json()) as ErrorResponse;
-                    } catch (parseError) {
-                      console.warn('Could not parse error response JSON:', parseError);
-                      // If parsing fails, use the status text or a default message
-                      throw new Error(
-                        response.statusText || `HTTP error! status: ${response.status}`
-                      );
-                    }
-                    // Use the parsed error message if available
-                    throw new Error(
-                      errorData.error ||
-                        errorData.message ||
-                        `HTTP error! status: ${response.status}`
-                    );
+                  // Use React Query mutation if available, otherwise use fetch directly
+                  let result: string | undefined;
+                  if (reactQueryMutation) {
+                    console.log('[API] Using React Query mutation');
+                    result = await reactQueryMutation.mutateAsync(requestBody);
+                  } else {
+                    console.log('[API] Using direct fetch');
+                    // Use the internal fetch implementation
+                    result = await chatMutation.mutateAsync(requestBody);
                   }
 
-                  // Await the JSON response first, then parse
-                  const jsonResponse = (await response.json()) as unknown;
-                  const data = apiResponseSchema.parse(jsonResponse);
-
-                  if (data.error || !data.result) {
-                    throw new Error(data.error || 'No result received');
+                  if (!result) {
+                    throw new Error('No result received');
                   }
 
                   // Clean up the string response from the AI before parsing
-                  const jsonString = data.result.replace(/```json|```/g, '').trim();
+                  const jsonString = result.replace(/```json|```/g, '').trim();
 
                   // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
                   const parsedResult = z
@@ -592,8 +626,8 @@ export const useTextGeneratorStore = create(
                   }
                 }
               }
-            } catch (err) {
-              console.error('All attempts failed:', err);
+            } catch (error) {
+              console.error('All attempts failed:', error);
             } finally {
               set((state) => {
                 state.loading = false;
@@ -601,8 +635,8 @@ export const useTextGeneratorStore = create(
               });
             }
           })();
-        } catch (err) {
-          console.error('Failed to start text generation:', err);
+        } catch (error) {
+          console.error('Failed to start text generation:', error);
           set((state) => {
             state.loading = false;
             state.showContent = true;

@@ -29,6 +29,8 @@
     "@heroicons/react": "^2.2.0",
     "@sentry/cli": "^2.43.0",
     "@sentry/nextjs": "^9.11.0",
+    "@tanstack/react-query": "^5.71.10",
+    "@tanstack/react-query-devtools": "^5.71.10",
     "better-sqlite3": "^11.9.1",
     "i18next": "^24.2.3",
     "i18next-resources-to-backend": "^1.2.1",
