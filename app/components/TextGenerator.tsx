@@ -26,6 +26,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';
 import AuthButton from './AuthButton';
+import { toast, Toaster } from 'react-hot-toast';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -141,9 +142,11 @@ TranslatableWord.displayName = 'TranslatableWord';
 
 export default function TextGenerator() {
   const { t } = useTranslation('common');
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [showLoginPrompt, setShowLoginPrompt] = useState(true);
-  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('B1');
+  const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('A1');
+  const [userStreak, setUserStreak] = useState<number | null>(null);
+  const [isProgressLoading, setIsProgressLoading] = useState<boolean>(false);
   const [passageLanguage, setPassageLanguage] = useState<Language>('en');
   const { language: questionLanguage } = useLanguage();
   const [quizData, setQuizData] = useState<QuizData | null>(null);
@@ -172,6 +175,36 @@ export default function TextGenerator() {
       'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
     );
   }, []);
+
+  useEffect(() => {
+    const fetchUserProgress = async () => {
+      if (status === 'authenticated') {
+        setIsProgressLoading(true);
+        try {
+          const response = await fetch(`/api/user/progress?language=${passageLanguage}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch user progress');
+          }
+          const data = await response.json();
+          if (data.currentLevel && CEFR_LEVELS_LIST.includes(data.currentLevel)) {
+            setCefrLevel(data.currentLevel as CEFRLevel);
+          }
+          setUserStreak(data.currentStreak ?? 0);
+          console.log(`[Progress] Fetched user progress for ${passageLanguage}:`, data);
+        } catch (err) {
+          console.error(`[Progress] Error fetching user progress for ${passageLanguage}:`, err);
+          setCefrLevel('A1');
+          setUserStreak(0);
+        } finally {
+          setIsProgressLoading(false);
+        }
+      } else {
+        setUserStreak(null);
+        setCefrLevel('A1');
+      }
+    };
+    void fetchUserProgress();
+  }, [status, passageLanguage]);
 
   const stopPassageSpeech = useCallback(() => {
     if (isSpeechSupported) {
@@ -373,141 +406,163 @@ export default function TextGenerator() {
     [speakText, getTranslation, currentWordIndex, t, isSpeakingPassage]
   );
 
-  const generateText = async () => {
+  const generateText = useCallback(async () => {
     stopPassageSpeech();
-    setGeneratedPassageLanguage(null);
-    setGeneratedQuestionLanguage(null);
     setLoading(true);
     setError(null);
+    setQuizData(null);
     setSelectedAnswer(null);
     setIsAnswered(false);
     setHighlightedParagraph(null);
     setShowExplanation(false);
-    setQuizData(null);
-
-    if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
     setShowQuestionSection(false);
-
-    const maxAttempts = 3;
-    const retryDelayMs = 1000;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        console.log(`Attempt ${attempt + 1} of ${maxAttempts} to generate text...`);
-        const seed = Math.floor(Math.random() * 100);
-        const responseResult: unknown = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: `Generate a reading comprehension paragraph in ${passageLanguage} and the corresponding multiple choice question, options, and explanations ONLY in ${questionLanguage} for CEFR level ${cefrLevel} language learners.`,
-            seed: seed,
-            passageLanguage: passageLanguage,
-            questionLanguage: questionLanguage,
-          }),
-        });
-
-        if (!(responseResult instanceof Response)) {
-          console.error('Fetch did not return a Response object.', responseResult);
-          throw new Error('Invalid response received from server.');
-        }
-        const response: Response = responseResult;
-
-        // Parse JSON directly into the validator
-        const parsedApiResponse = apiResponseSchema.safeParse(await response.json());
-
-        if (!parsedApiResponse.success) {
-          console.error('Invalid API response structure:', parsedApiResponse.error);
-          throw new Error('Received invalid data structure from server.');
-        }
-
-        const data = parsedApiResponse.data;
-
-        if (response.status === 429) {
-          setError(data.error || "You've reached the usage limit. Please try again later.");
-          setGeneratedPassageLanguage(null);
-          setGeneratedQuestionLanguage(null);
-          return;
-        }
-
-        if (!response.ok || !data.result) {
-          console.error('API Error Response:', data);
-          throw new Error(data.error || `API request failed with status ${response.status}`);
-        }
-
-        try {
-          const jsonString = data.result.replace(/```json|```/g, '').trim();
-          const parsedQuizData = quizDataSchema.safeParse(JSON.parse(jsonString));
-
-          if (!parsedQuizData.success) {
-            console.error('Error parsing generated quiz JSON:', parsedQuizData.error);
-            throw new Error('Failed to parse the structure of the generated quiz.');
-          }
-
-          setQuizData(parsedQuizData.data);
-          setHighlightedParagraph(parsedQuizData.data.paragraph);
-          setGeneratedPassageLanguage(passageLanguage);
-          setGeneratedQuestionLanguage(questionLanguage);
-          setError(null);
-
-          if (questionDelayTimeoutRef.current) clearTimeout(questionDelayTimeoutRef.current);
-          questionDelayTimeoutRef.current = setTimeout(() => {
-            setShowQuestionSection(true);
-          }, QUESTION_DELAY_MS);
-
-          console.log(`Successfully generated text on attempt ${attempt + 1}`);
-          break;
-        } catch (parseErr) {
-          console.error(`Attempt ${attempt + 1}: Error parsing inner JSON`, parseErr);
-          if (parseErr instanceof Error) throw parseErr;
-          else throw new Error('Failed to parse generated quiz content.');
-        }
-      } catch (err: unknown) {
-        console.error(`Attempt ${attempt + 1} failed:`, err);
-
-        if (attempt === maxAttempts - 1) {
-          console.error('All generation attempts failed.');
-          setGeneratedPassageLanguage(null);
-          setGeneratedQuestionLanguage(null);
-          if (err instanceof Error) {
-            setError(
-              err.message || 'Failed to generate text after multiple attempts. Please try again.'
-            );
-          } else {
-            setError('An unknown error occurred after multiple attempts.');
-          }
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-        }
-      }
-    } // End of for loop
-
-    setLoading(false);
-  };
-
-  const handleAnswerSelect = (answer: string) => {
-    if (isAnswered) return;
-
-    setSelectedAnswer(answer);
-    setIsAnswered(true);
-    setShowExplanation(true);
-  };
-
-  const generateNewQuiz = () => {
-    if (loading || (quizData !== null && !isAnswered)) {
-      console.log('Cannot generate new quiz while loading or previous question is unanswered.');
-      return;
-    }
-    stopPassageSpeech();
-    setShowQuestionSection(false);
+    setCurrentWordIndex(null);
     if (questionDelayTimeoutRef.current) {
       clearTimeout(questionDelayTimeoutRef.current);
     }
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setHighlightedParagraph(null);
-    setShowExplanation(false);
-    void generateText();
-  };
+
+    const levelToUse = cefrLevel;
+
+    const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
+    const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
+
+    const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse}. The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.`;
+
+    const seed = Math.floor(Math.random() * 100);
+
+    console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
+    console.log(
+      '[API] Passage Lang:',
+      passageLanguage,
+      'Question Lang:',
+      questionLanguage,
+      'Level:',
+      levelToUse
+    );
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt, seed, passageLanguage, questionLanguage }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await apiResponseSchema.parse(await response.json());
+
+      if (data.error || !data.result) {
+        throw new Error(data.error || 'No result received');
+      }
+
+      // Clean up the string response from the AI before parsing
+      const jsonString = data.result.replace(/```json|```/g, '').trim();
+
+      // Parse the cleaned string
+      const parsedResult = quizDataSchema.safeParse(JSON.parse(jsonString));
+
+      if (!parsedResult.success) {
+        console.error('Error parsing generated quiz JSON:', parsedResult.error);
+        throw new Error('Failed to parse the structure of the generated quiz.');
+      }
+
+      const validatedData = parsedResult.data;
+
+      setQuizData(validatedData);
+      setHighlightedParagraph(validatedData.paragraph);
+      setGeneratedPassageLanguage(passageLanguage);
+      setGeneratedQuestionLanguage(questionLanguage);
+
+      // --- Calculate Dynamic Question Delay ---
+      const WPM = 300; // Change WPM estimate to 300
+      const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
+      const readingTimeMs = (wordCount / WPM) * 60 * 1000;
+      const bufferMs = 2000; // Reduce buffer further to 2 seconds
+      const minDelayMs = 2000; // Reduce minimum delay further to 2 seconds
+      const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
+      console.log(
+        `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
+      );
+      // --- End Calculate Delay ---
+
+      // Start timer to show question section using calculated delay
+      questionDelayTimeoutRef.current = setTimeout(() => {
+        setShowQuestionSection(true);
+      }, questionDelayMs); // Use dynamic delay
+    } catch (err: unknown) {
+      console.error('Error generating text:', err);
+      if (err instanceof Error) {
+        setError(`${t('common.errorPrefix')} ${err.message}`);
+      } else {
+        setError(t('practice.error'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [passageLanguage, questionLanguage, cefrLevel, stopPassageSpeech, t]);
+
+  const handleAnswerSelect = useCallback(
+    async (answer: string) => {
+      if (isAnswered || !quizData) return;
+
+      stopPassageSpeech();
+      setSelectedAnswer(answer);
+      setIsAnswered(true);
+      setShowExplanation(false);
+
+      const isCorrect = answer === quizData.correctAnswer;
+
+      const regex = new RegExp(
+        `(${quizData.relevantText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\\\$&')})`,
+        'gi'
+      );
+      setHighlightedParagraph(
+        quizData.paragraph.replace(
+          regex,
+          `<mark class="bg-yellow-300 text-black px-1 rounded">$1</mark>`
+        )
+      );
+
+      if (status === 'authenticated') {
+        try {
+          const response = await fetch('/api/user/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isCorrect, language: generatedPassageLanguage }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update progress');
+          }
+
+          const progressData = await response.json();
+          setUserStreak(progressData.currentStreak);
+
+          if (progressData.leveledUp) {
+            console.log('[Progress] Leveled up!', progressData);
+            setCefrLevel(progressData.currentLevel as CEFRLevel);
+            toast.success(`${t('practice.leveledUp')} ${progressData.currentLevel}! 🎉`, {
+              duration: 4000,
+              position: 'top-center',
+            });
+          } else {
+            console.log('[Progress] Updated streak:', progressData.currentStreak);
+          }
+        } catch (err) {
+          console.error('[Progress] Error updating progress:', err);
+          toast.error(t('practice.progressUpdateError'), { duration: 3000 });
+        }
+      }
+
+      setTimeout(() => setShowExplanation(true), 300);
+    },
+    [isAnswered, quizData, stopPassageSpeech, status, t, generatedPassageLanguage]
+  );
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
@@ -526,14 +581,11 @@ export default function TextGenerator() {
   }, []);
 
   return (
-    <>
+    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+      <Toaster />
       <div className="w-full max-w-3xl mx-auto my-8">
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
-          {/* Grid for Labels (Row 1) and Selectors (Row 2) */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {' '}
-            {/* Two columns, gaps */}
-            {/* Row 1: Labels */}
             <label
               htmlFor="passage-language-select"
               className="block text-sm font-medium text-white col-span-1"
@@ -544,15 +596,14 @@ export default function TextGenerator() {
               </span>
             </label>
             <label
-              htmlFor="cefr-level-select"
+              htmlFor="cefr-level-display"
               className="block text-sm font-medium text-white col-span-1"
             >
               <span className="flex items-center">
-                <InformationCircleIcon className="h-5 w-5 mr-1 text-blue-400" aria-hidden="true" />
+                <BookOpenIcon className="h-4 w-4 mr-1.5 text-blue-400" />
                 {t('practice.level')}
               </span>
             </label>
-            {/* Row 2: Selectors */}
             <select
               id="passage-language-select"
               value={passageLanguage}
@@ -565,22 +616,32 @@ export default function TextGenerator() {
                 </option>
               ))}
             </select>
-            <select
-              id="cefr-level-select"
-              value={cefrLevel}
-              onChange={(e) => setCefrLevel(e.target.value as CEFRLevel)}
-              className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 transition-colors col-span-1"
+            <div
+              id="cefr-level-display"
+              className="relative w-full px-3 py-2 text-sm text-white bg-gray-800 border border-gray-700 rounded col-span-1 flex items-center justify-between cursor-default"
             >
-              {CEFR_LEVELS_LIST.map((level) => (
-                <option key={level} value={level}>
-                  {level} - {t(`practice.cefr.levels.${level}.name`)}
-                </option>
-              ))}
-            </select>
+              <span>
+                {cefrLevel} - {t(`practice.cefr.levels.${cefrLevel}.name`)}
+                {isProgressLoading && status === 'authenticated' && (
+                  <span className="ml-2 text-xs text-gray-400 animate-pulse">
+                    {t('common.loading')}
+                  </span>
+                )}
+              </span>
+
+              {/* Display Streak */}
+              {status === 'authenticated' && userStreak !== null && userStreak > 0 && (
+                <span
+                  className="text-xs font-semibold bg-yellow-500 text-black px-2 py-0.5 rounded-full shadow"
+                  title={`${t('practice.correctStreak')}: ${userStreak}`}
+                >
+                  🔥 {userStreak}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Login Prompt Banner */}
         {status === 'unauthenticated' && showLoginPrompt && (
           <div className="bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-700/70 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
             <p className="text-sm text-blue-100 flex-grow text-center sm:text-left order-2 sm:order-1">
@@ -612,17 +673,14 @@ export default function TextGenerator() {
 
         {loading && !quizData && <QuizSkeleton />}
 
-        {/* Reading Passage Section */}
         {quizData && !loading && generatedPassageLanguage && generatedQuestionLanguage && (
           <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-              {/* Title on the left */}
               <div className="flex items-center space-x-2 text-lg font-semibold">
                 <BookOpenIcon className="w-5 h-5 text-blue-400" />
                 <span>{t('practice.passageTitle')}</span>
               </div>
 
-              {/* Speech Controls on the right */}
               {isSpeechSupported && quizData.paragraph && (
                 <div className="flex items-center space-x-2">
                   <button
@@ -663,7 +721,6 @@ export default function TextGenerator() {
               )}
             </div>
 
-            {/* Passage Text */}
             <div
               className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
               dir={getTextDirection(generatedPassageLanguage)}
@@ -718,48 +775,37 @@ export default function TextGenerator() {
                 </div>
 
                 {showExplanation && (
-                  <div className="mt-6 pt-4 border-t border-gray-700">
-                    <h4 className="text-md font-semibold mb-3 text-white">
+                  <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
+                    <h4 className="text-lg font-semibold mb-3 text-blue-300">
                       {t('practice.explanation')}
                     </h4>
-                    <div className="space-y-3">
-                      {(
-                        Object.keys(quizData.explanations) as Array<
-                          keyof typeof quizData.explanations
-                        >
-                      ).map((key) => (
+                    <div className="space-y-3 text-sm">
+                      {Object.entries(quizData.explanations).map(([key, explanation]) => (
                         <div
                           key={key}
-                          className={`p-3 rounded border ${
-                            key === quizData.correctAnswer
-                              ? 'bg-green-900 border-green-700'
-                              : key === selectedAnswer
-                                ? 'bg-red-900 border-red-700'
-                                : 'bg-gray-750 border-gray-600'
-                          }`}
+                          className={`p-2 rounded ${key === quizData.correctAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== quizData.correctAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
                         >
-                          <p className="text-sm text-gray-200">
-                            <strong
-                              className={`font-semibold ${
-                                key === quizData.correctAnswer
-                                  ? 'text-green-300'
-                                  : key === selectedAnswer
-                                    ? 'text-red-300'
-                                    : 'text-gray-300'
-                              }`}
-                            >
-                              {key}. {quizData.options[key]}:
-                            </strong>
-                            <span className="ml-1">{quizData.explanations[key]}</span>
-                          </p>
-                          {key === quizData.correctAnswer && quizData.relevantText && (
-                            <p className="text-xs text-gray-400 mt-1 italic">
-                              {t('practice.supportingTextPrefix')}&quot;{quizData.relevantText}
-                              &quot;
-                            </p>
-                          )}
+                          <strong
+                            className={`font-semibold ${key === quizData.correctAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
+                          >
+                            {key}:
+                          </strong>{' '}
+                          <span className="text-gray-300">{explanation}</span>
                         </div>
                       ))}
+                      {quizData.relevantText && (
+                        <div className="mt-3 pt-3 border-t border-gray-600">
+                          <p className="text-xs text-gray-400 italic">
+                            {t('practice.supportingTextPrefix')}
+                          </p>
+                          <p
+                            className="text-sm text-gray-300 font-mono bg-gray-800 p-2 rounded border border-gray-600/50"
+                            dir={getTextDirection(generatedPassageLanguage || 'en')}
+                          >
+                            "{quizData.relevantText}"
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -768,11 +814,10 @@ export default function TextGenerator() {
           </div>
         )}
 
-        {/* Conditionally render the button initially OR after the question is answered */}
         {(!quizData || isAnswered) && (
           <div className="mt-8">
             <button
-              onClick={generateNewQuiz}
+              onClick={generateText}
               disabled={loading}
               className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
             >
@@ -791,6 +836,6 @@ export default function TextGenerator() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
