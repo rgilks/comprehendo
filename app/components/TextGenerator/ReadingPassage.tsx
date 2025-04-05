@@ -20,7 +20,11 @@ const ReadingPassage = () => {
     isSpeakingPassage,
     relevantTextRange,
     generatedPassageLanguage,
+    generatedQuestionLanguage,
   } = useTextGeneratorStore();
+
+  // Use the store's question language if available, otherwise use the context
+  const actualQuestionLanguage = generatedQuestionLanguage || questionLanguage;
 
   const renderParagraphWithWordHover = useCallback(
     (paragraph: string, lang: Language) => {
@@ -50,14 +54,14 @@ const ReadingPassage = () => {
             key={index}
             word={segment}
             fromLang={lang}
-            toLang={questionLanguage}
+            toLang={actualQuestionLanguage}
             isCurrentWord={isCurrent}
             isRelevant={isRelevant}
           />
         );
       });
     },
-    [currentWordIndex, isSpeakingPassage, relevantTextRange, questionLanguage]
+    [currentWordIndex, isSpeakingPassage, relevantTextRange, actualQuestionLanguage]
   );
 
   if (!quizData || !generatedPassageLanguage) {

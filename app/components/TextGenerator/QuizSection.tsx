@@ -9,7 +9,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 const QuizSection = () => {
   const { t } = useTranslation('common');
-  const { language: questionLanguage } = useLanguage();
+  const { language: contextQuestionLanguage } = useLanguage();
   const {
     quizData,
     selectedAnswer,
@@ -17,7 +17,11 @@ const QuizSection = () => {
     showExplanation,
     showQuestionSection,
     handleAnswerSelect,
+    generatedQuestionLanguage,
   } = useTextGeneratorStore();
+
+  // Use the store's question language if available, otherwise use the context
+  const questionLanguage = generatedQuestionLanguage || contextQuestionLanguage;
 
   const handleAsyncClick = useCallback(
     (answer: string) => (event: React.MouseEvent<HTMLButtonElement>) => {

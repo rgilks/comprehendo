@@ -38,7 +38,7 @@ const Generator = () => {
           className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${
             loading
               ? 'bg-gray-600 cursor-not-allowed opacity-70'
-              : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'
+              : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-green-600 hover:from-blue-700 hover:via-indigo-700 hover:to-green-700'
           } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
         >
           {loading ? (
