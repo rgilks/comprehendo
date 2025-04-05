@@ -4,6 +4,7 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Session } from 'next-auth';
+import { useState, useEffect } from 'react';
 
 interface CustomSession extends Session {
   user?: {
@@ -19,8 +20,13 @@ export default function AuthButton() {
     data: CustomSession | null;
     status: 'loading' | 'authenticated' | 'unauthenticated';
   };
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (status === 'loading') {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || status === 'loading') {
     return <div className="animate-pulse bg-gray-700 h-10 w-32 rounded-lg"></div>;
   }
 
