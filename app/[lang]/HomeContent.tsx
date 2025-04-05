@@ -15,9 +15,13 @@ export default function HomeContent() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-green-700/10 via-transparent to-transparent pointer-events-none"></div>
 
       <div className="z-10 w-full max-w-5xl">
-        <div className="flex justify-between items-center mb-8">
-          <LanguageSelector />
-          <AuthButton variant="icon-only" />
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4 md:mb-8">
+          <div className="flex-shrink-0">
+            <LanguageSelector />
+          </div>
+          <div className="flex-shrink-0">
+            <AuthButton variant="icon-only" />
+          </div>
         </div>
 
         <div className="text-center py-10 md:py-16 fade-in">

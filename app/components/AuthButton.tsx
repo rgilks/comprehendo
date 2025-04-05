@@ -39,7 +39,7 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
 
   if (session) {
     return (
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 md:gap-4">
         <div className="flex items-center gap-2">
           {session.user?.image && (
             <Image
@@ -50,12 +50,12 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
               className="rounded-full"
             />
           )}
-          <span className="text-white">{session.user?.name}</span>
+          {variant === 'full' && <span className="text-white">{session.user?.name}</span>}
         </div>
         {session.user?.isAdmin && (
           <Link
             href="/admin"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-2 py-1 md:px-4 md:py-2 text-sm md:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             {t('navigation.admin')}
           </Link>
@@ -64,9 +64,9 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
           onClick={() => {
             void signOut();
           }}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          className="px-2 py-1 md:px-4 md:py-2 text-sm md:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
-          {t('auth.signOut')}
+          {variant === 'full' ? t('auth.signOut') : 'Sign Out'}
         </button>
       </div>
     );
