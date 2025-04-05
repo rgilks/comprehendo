@@ -511,9 +511,15 @@ export default function TextGenerator() {
       return;
     }
     stopPassageSpeech();
-    generateText().catch((error) => {
-      console.error('Error explicitly caught from generateNewQuiz:', error);
-    });
+    setShowQuestionSection(false);
+    if (questionDelayTimeoutRef.current) {
+      clearTimeout(questionDelayTimeoutRef.current);
+    }
+    setSelectedAnswer(null);
+    setIsAnswered(false);
+    setHighlightedParagraph(null);
+    setShowExplanation(false);
+    void generateText();
   };
 
   const handleVolumeChange = useCallback((newVolume: number) => {
@@ -803,7 +809,7 @@ export default function TextGenerator() {
             ) : (
               <div className="flex items-center">
                 <PlusCircleIcon className="h-5 w-5 mr-2" aria-hidden="true" />
-                Generate New Quiz
+                Generate New Text
               </div>
             )}
           </button>
