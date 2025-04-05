@@ -80,6 +80,7 @@ const QuizSkeleton = () => (
 interface TranslatableWordProps {
   word: string;
   fromLang: Language;
+  toLang: Language;
   isCurrentWord: boolean;
   isRelevant: boolean;
   onSpeak: () => void;
@@ -91,6 +92,7 @@ const TranslatableWord = memo(
   ({
     word,
     fromLang,
+    toLang,
     isCurrentWord,
     isRelevant,
     onSpeak,
@@ -108,7 +110,7 @@ const TranslatableWord = memo(
           setIsLoading(true);
           try {
             const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
-            const targetLang = SPEECH_LANGUAGES['en'].split('-')[0];
+            const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
             const result = await onTranslate(word, sourceLang, targetLang);
             setTranslation(result);
           } finally {
@@ -116,7 +118,7 @@ const TranslatableWord = memo(
           }
         })();
       }
-    }, [word, fromLang, onTranslate, translation, isLoading]);
+    }, [word, fromLang, toLang, onTranslate, translation, isLoading]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
@@ -426,6 +428,7 @@ export default function TextGenerator() {
             key={index}
             word={segment}
             fromLang={lang}
+            toLang={questionLanguage}
             isCurrentWord={isCurrent}
             isRelevant={isRelevant} // Pass the calculated relevance
             onSpeak={() => speakText(segment, lang)}
@@ -441,7 +444,8 @@ export default function TextGenerator() {
       currentWordIndex,
       t,
       isSpeakingPassage,
-      relevantTextRange, // Add relevantTextRange dependency
+      relevantTextRange,
+      questionLanguage, // Add questionLanguage dependency
     ]
   );
 
