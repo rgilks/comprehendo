@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';
 import AuthButton from './AuthButton';
 import AnimateTransition from './AnimateTransition';
+import { getRandomTopicForLevel } from '../config/topics';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -515,10 +516,13 @@ export default function TextGenerator() {
 
       const levelToUse = cefrLevel;
 
+      // Get a random topic appropriate for the current CEFR level
+      const randomTopic = getRandomTopicForLevel(levelToUse);
+
       const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
       const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
 
-      const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse}. The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.`;
+      const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.`;
 
       const seed = Math.floor(Math.random() * 100);
 
@@ -529,7 +533,9 @@ export default function TextGenerator() {
         'Question Lang:',
         questionLanguage,
         'Level:',
-        levelToUse
+        levelToUse,
+        'Topic:',
+        randomTopic
       );
 
       const MAX_RETRIES = 2;
