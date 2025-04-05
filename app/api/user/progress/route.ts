@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession, Session } from 'next-auth/next';
+import { getServerSession } from 'next-auth/next';
+import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
@@ -34,8 +35,9 @@ export async function POST(request: Request) {
   const userId = sessionUser.dbId;
 
   try {
-    const body = await request.json();
-    const parsedBody = postRequestBodySchema.safeParse(body);
+    const rawBody: unknown = await request.json();
+    // Now parse/validate the unknown type
+    const parsedBody = postRequestBodySchema.safeParse(rawBody);
 
     if (!parsedBody.success) {
       return NextResponse.json(

@@ -135,7 +135,7 @@ const TranslatableWord = memo(
     return (
       <span
         className={combinedClassName}
-        onClick={() => void onSpeak()}
+        onClick={onSpeak}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -204,17 +204,37 @@ export default function TextGenerator() {
     const fetchUserProgress = async () => {
       if (status === 'authenticated') {
         setIsProgressLoading(true);
+        let data: UserProgressResponse | null = null;
         try {
           const response = await fetch(`/api/user/progress?language=${passageLanguage}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch user progress');
+
+          if (response.ok) {
+            const rawData: unknown = await response.json();
+            data = rawData as UserProgressResponse; // Assign typed data if ok
+          } else {
+            // Handle error response
+            let errorMsg = `Failed to fetch user progress (${response.status})`;
+            try {
+              // Try reading error response as text first
+              const errorText = await response.text();
+              // Attempt to parse the text as JSON
+              const errorData = JSON.parse(errorText) as { message?: string; error?: string }; // Type the parsed result
+              errorMsg = errorData?.message || errorData?.error || errorMsg;
+            } catch (errorParsingOrReadingError: unknown) {
+              console.warn(
+                '[Progress Fetch] Could not parse error response JSON or read text:',
+                errorParsingOrReadingError
+              );
+              // Use the status code based message if parsing fails
+            }
+            throw new Error(errorMsg);
           }
-          // Type the response data
-          const data: UserProgressResponse = await response.json();
-          if (data.currentLevel && CEFR_LEVELS_LIST.includes(data.currentLevel)) {
+
+          // Use the typed data variable now
+          if (data && data.currentLevel && CEFR_LEVELS_LIST.includes(data.currentLevel)) {
             setCefrLevel(data.currentLevel);
           }
-          setUserStreak(data.currentStreak ?? 0);
+          setUserStreak(data?.currentStreak ?? 0);
           console.log(`[Progress] Fetched user progress for ${passageLanguage}:`, data);
         } catch (err) {
           console.error(`[Progress] Error fetching user progress for ${passageLanguage}:`, err);
@@ -469,11 +489,26 @@ export default function TextGenerator() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        // Define a simple type for the expected error structure
+        type ErrorResponse = { error?: string; message?: string };
+        let errorData: ErrorResponse = {};
+        try {
+          // Try to parse the error response body
+          errorData = (await response.json()) as ErrorResponse;
+        } catch (parseError) {
+          console.warn('Could not parse error response JSON:', parseError);
+          // If parsing fails, use the status text or a default message
+          throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
+        }
+        // Use the parsed error message if available
+        throw new Error(
+          errorData.error || errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
-      const data = await apiResponseSchema.parse(await response.json());
+      // Await the JSON response first, then parse
+      const jsonResponse = (await response.json()) as unknown;
+      const data = apiResponseSchema.parse(jsonResponse);
 
       if (data.error || !data.result) {
         throw new Error(data.error || 'No result received');
@@ -482,36 +517,56 @@ export default function TextGenerator() {
       // Clean up the string response from the AI before parsing
       const jsonString = data.result.replace(/```json|```/g, '').trim();
 
-      // Parse the cleaned string
-      const parsedResult = quizDataSchema.safeParse(JSON.parse(jsonString));
+      try {
+        // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
+        const parsedResult = z
+          .string()
+          .transform((str) => {
+            try {
+              return JSON.parse(str) as unknown;
+            } catch (e) {
+              throw new Error(`Failed to parse JSON: ${String(e)}`);
+            }
+          })
+          .pipe(quizDataSchema)
+          .safeParse(jsonString);
 
-      if (!parsedResult.success) {
-        console.error('Error parsing generated quiz JSON:', parsedResult.error);
-        throw new Error('Failed to parse the structure of the generated quiz.');
+        if (!parsedResult.success) {
+          console.error('Error parsing generated quiz JSON:', parsedResult.error);
+          throw new Error('Failed to parse the structure of the generated quiz.');
+        }
+
+        // No need to cast - Zod guarantees the type
+        const validatedData = parsedResult.data;
+
+        setQuizData(validatedData);
+        setGeneratedPassageLanguage(passageLanguage);
+        setGeneratedQuestionLanguage(questionLanguage);
+
+        // --- Calculate Dynamic Question Delay ---
+        const WPM = 300; // Change WPM estimate to 300
+        const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
+        const readingTimeMs = (wordCount / WPM) * 60 * 1000;
+        const bufferMs = 2000; // Reduce buffer further to 2 seconds
+        const minDelayMs = 2000; // Reduce minimum delay further to 2 seconds
+        const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
+        console.log(
+          `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
+        );
+        // --- End Calculate Delay ---
+
+        // Start timer to show question section using calculated delay
+        questionDelayTimeoutRef.current = setTimeout(() => {
+          setShowQuestionSection(true);
+        }, questionDelayMs); // Use dynamic delay
+      } catch (err: unknown) {
+        console.error('Error parsing generated quiz JSON:', err);
+        if (err instanceof Error) {
+          setError(`${t('common.errorPrefix')} ${err.message}`);
+        } else {
+          setError(t('practice.error'));
+        }
       }
-
-      const validatedData = parsedResult.data;
-
-      setQuizData(validatedData);
-      setGeneratedPassageLanguage(passageLanguage);
-      setGeneratedQuestionLanguage(questionLanguage);
-
-      // --- Calculate Dynamic Question Delay ---
-      const WPM = 300; // Change WPM estimate to 300
-      const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
-      const readingTimeMs = (wordCount / WPM) * 60 * 1000;
-      const bufferMs = 2000; // Reduce buffer further to 2 seconds
-      const minDelayMs = 2000; // Reduce minimum delay further to 2 seconds
-      const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
-      console.log(
-        `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
-      );
-      // --- End Calculate Delay ---
-
-      // Start timer to show question section using calculated delay
-      questionDelayTimeoutRef.current = setTimeout(() => {
-        setShowQuestionSection(true);
-      }, questionDelayMs); // Use dynamic delay
     } catch (err: unknown) {
       console.error('Error generating text:', err);
       if (err instanceof Error) {
@@ -523,6 +578,11 @@ export default function TextGenerator() {
       setLoading(false);
     }
   }, [passageLanguage, questionLanguage, cefrLevel, stopPassageSpeech, t]);
+
+  // Create a properly typed click handler function
+  const handleGenerateClick = useCallback(() => {
+    void generateText();
+  }, [generateText]);
 
   const handleAnswerSelect = useCallback(
     async (answer: string) => {
@@ -554,6 +614,7 @@ export default function TextGenerator() {
       }
 
       if (status === 'authenticated') {
+        let progressData: UserProgressResponse | null = null;
         try {
           const response = await fetch('/api/user/progress', {
             method: 'POST',
@@ -564,23 +625,37 @@ export default function TextGenerator() {
             }),
           });
 
-          if (!response.ok) {
-            throw new Error('Failed to update progress');
+          if (response.ok) {
+            progressData = (await response.json()) as UserProgressResponse;
+          } else {
+            let errorMsg = `Failed to update progress (${response.status})`;
+            try {
+              const errorText = await response.text();
+              const errorData = JSON.parse(errorText) as { message?: string; error?: string }; // Type the parsed result
+              errorMsg = errorData?.message || errorData?.error || errorMsg;
+            } catch (errorParsingOrReadingError: unknown) {
+              console.warn(
+                '[Progress Update] Could not parse error response JSON or read text:',
+                errorParsingOrReadingError
+              );
+            }
+            throw new Error(errorMsg);
           }
 
-          // Type the response data
-          const progressData: UserProgressResponse = await response.json();
-          setUserStreak(progressData.currentStreak);
+          // Use the typed progressData variable
+          if (progressData) {
+            setUserStreak(progressData.currentStreak);
 
-          if (progressData.leveledUp) {
-            console.log('[Progress] Leveled up!', progressData);
-            setCefrLevel(progressData.currentLevel);
-            toast.success(`${t('practice.leveledUp')} ${progressData.currentLevel}! 🎉`, {
-              duration: 4000,
-              position: 'top-center',
-            });
-          } else {
-            console.log('[Progress] Updated streak:', progressData.currentStreak);
+            if (progressData.leveledUp) {
+              console.log('[Progress] Leveled up!', progressData);
+              setCefrLevel(progressData.currentLevel);
+              toast.success(`${t('practice.leveledUp')} ${progressData.currentLevel}! 🎉`, {
+                duration: 4000,
+                position: 'top-center',
+              });
+            } else {
+              console.log('[Progress] Updated streak:', progressData.currentStreak);
+            }
           }
         } catch (err) {
           console.error('[Progress] Error updating progress:', err);
@@ -781,6 +856,7 @@ export default function TextGenerator() {
                     {Object.entries(quizData.options).map(([key, value]) => (
                       <button
                         key={key}
+                        /* eslint-disable-next-line @typescript-eslint/no-misused-promises */
                         onClick={() => handleAnswerSelect(key)}
                         disabled={isAnswered}
                         dir={getTextDirection(questionLanguage)}
@@ -830,7 +906,7 @@ export default function TextGenerator() {
                             className="text-sm text-gray-300 font-mono bg-gray-800 p-2 rounded border border-gray-600/50"
                             dir={getTextDirection(generatedPassageLanguage || 'en')}
                           >
-                            "{quizData.relevantText}"
+                            &quot;{quizData.relevantText}&quot;
                           </p>
                         </div>
                       )}
@@ -845,7 +921,7 @@ export default function TextGenerator() {
         {(!quizData || isAnswered) && (
           <div className="mt-8">
             <button
-              onClick={() => void generateText()}
+              onClick={handleGenerateClick}
               disabled={loading}
               className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
             >

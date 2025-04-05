@@ -120,10 +120,9 @@ export const authOptions: NextAuthOptions = {
               `[AUTH Session Callback] Assigned internal dbId=${userRecord.id} to session user.`
             );
           } else {
-            // Ensure token.provider is treated as string
-            const providerStr = String(token.provider);
+            // Use type assertion for provider
             console.warn(
-              `[AUTH Session Callback] Could not find user with provider_id=${token.sub} and provider=${providerStr} to assign dbId.`
+              `[AUTH Session Callback] Could not find user with provider_id=${token.sub} and provider=${token.provider as string} to assign dbId.`
             );
           }
         } catch (error) {
