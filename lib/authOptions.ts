@@ -107,12 +107,34 @@ export const authOptions: NextAuthOptions = {
     session({ session, token }: { session: Session; token: JWT }) {
       // console.log('[AUTH Session Callback] Invoked. Token received:', token);
 
-      if (session.user) {
+      if (session.user && token.sub && token.provider) {
+        try {
+          // Fetch the internal database ID using provider_id (token.sub) and provider
+          const userRecord = db
+            .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
+            .get(token.sub, token.provider) as { id: number } | undefined;
+
+          if (userRecord) {
+            (session.user as { dbId?: number }).dbId = userRecord.id;
+            console.log(
+              `[AUTH Session Callback] Assigned internal dbId=${userRecord.id} to session user.`
+            );
+          } else {
+            console.warn(
+              `[AUTH Session Callback] Could not find user with provider_id=${token.sub} and provider=${token.provider} to assign dbId.`
+            );
+          }
+        } catch (error) {
+          console.error('[AUTH Session Callback] Error fetching internal user ID:', error);
+        }
+
         const isAdminValue = token.isAdmin as boolean | undefined;
         (session.user as { isAdmin?: boolean }).isAdmin = isAdminValue;
         console.log(`[AUTH Session Callback] Assigning isAdmin=${isAdminValue} to session user.`);
       } else {
-        console.log('[AUTH Session Callback] Session user object not found.');
+        console.log(
+          '[AUTH Session Callback] Session user object, token.sub, or token.provider not found.'
+        );
       }
       // console.log('[AUTH Session Callback] Returning session:', session);
       return session;
