@@ -71,7 +71,10 @@
     "signInPrompt": {
       "message": "Sign in to track your progress and see your learning history!",
       "dismiss": "Dismiss"
-    }
+    },
+    "leveledUp": "Leveled up to",
+    "streakIncreased": "Streak increased to",
+    "progressUpdateError": "Failed to update progress"
   },
   "admin": {
     "title": "Admin",

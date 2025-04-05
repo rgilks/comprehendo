@@ -71,7 +71,10 @@
     "signInPrompt": {
       "message": "¡Inicia sesión para seguir tu progreso y ver tu historial de aprendizaje!",
       "dismiss": "Descartar"
-    }
+    },
+    "leveledUp": "Subiste al nivel",
+    "streakIncreased": "Racha aumentada a",
+    "progressUpdateError": "Error al actualizar el progreso"
   },
   "admin": {
     "title": "Administración",
