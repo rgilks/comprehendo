@@ -65,7 +65,7 @@
     "answerQuestionBelow": "下の質問に答えてください",
     "generateNewText": "新しいテキストを生成",
     "supportingTextPrefix": "サポートテキスト: ",
-    "passageLanguageLabel": "読解文章の言語:",
+    "passageLanguageLabel": "学習",
     "questionWillAppear": "質問はまもなく表示されます...",
     "passageTitle": "読解文章"
   },

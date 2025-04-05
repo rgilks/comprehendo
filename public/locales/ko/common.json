@@ -65,7 +65,7 @@
     "answerQuestionBelow": "아래 질문에 답하세요",
     "generateNewText": "새 텍스트 생성",
     "supportingTextPrefix": "지원 텍스트: ",
-    "passageLanguageLabel": "읽기 지문 언어:",
+    "passageLanguageLabel": "학습",
     "questionWillAppear": "질문이 곧 표시됩니다...",
     "passageTitle": "읽기 지문"
   },
