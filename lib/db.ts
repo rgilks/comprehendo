@@ -7,6 +7,16 @@ const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
 let db: Database.Database;
 
+// Define ColumnInfo interface centrally
+interface ColumnInfo {
+  cid: number;
+  name: string;
+  type: string;
+  notnull: number;
+  dflt_value: string | null;
+  pk: number;
+}
+
 const isBuildPhase =
   process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
@@ -44,7 +54,7 @@ try {
       language TEXT NOT NULL,
       level TEXT NOT NULL,
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      user_id INTEGER REFERENCES users(id) -- Ensure user_id exists here too
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE -- Added ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS users (
@@ -56,61 +66,84 @@ try {
       image TEXT,
       first_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      -- removed current_cefr_level and correct_streak
       UNIQUE(provider_id, provider)
+    );
+    
+    CREATE TABLE IF NOT EXISTS user_language_progress (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      language_code TEXT NOT NULL,
+      cefr_level TEXT NOT NULL DEFAULT 'A1',
+      correct_streak INTEGER NOT NULL DEFAULT 0,
+      last_practiced TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, language_code)
     );
 
     -- Add indexes for sorting performance in admin view
     CREATE INDEX IF NOT EXISTS idx_generated_content_created_at ON generated_content(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_usage_stats_timestamp ON usage_stats(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
+    CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
   `);
 
+  // --- Column Migration/Cleanup ---
+
+  // Check and remove old columns from 'users' table if they exist
   try {
-    interface ColumnInfo {
-      cid: number;
-      name: string;
-      type: string;
-      notnull: number;
-      dflt_value: string | null;
-      pk: number;
+    const userColumns = db.prepare('PRAGMA table_info(users)').all() as ColumnInfo[];
+    const hasOldLevelColumn = userColumns.some((col) => col.name === 'current_cefr_level');
+    const hasOldStreakColumn = userColumns.some((col) => col.name === 'correct_streak');
+
+    // Use ALTER TABLE DROP COLUMN (Requires SQLite 3.35.0+)
+    if (hasOldLevelColumn) {
+      console.log('[DB] Dropping old current_cefr_level column from users table');
+      // Wrap in another try-catch in case DROP COLUMN isn't supported
+      try {
+        db.exec('ALTER TABLE users DROP COLUMN current_cefr_level');
+      } catch (dropError) {
+        console.warn(
+          '[DB] Could not drop current_cefr_level column (might require manual migration or newer SQLite): ',
+          dropError
+        );
+      }
     }
+    if (hasOldStreakColumn) {
+      console.log('[DB] Dropping old correct_streak column from users table');
+      try {
+        db.exec('ALTER TABLE users DROP COLUMN correct_streak');
+      } catch (dropError) {
+        console.warn(
+          '[DB] Could not drop correct_streak column (might require manual migration or newer SQLite): ',
+          dropError
+        );
+      }
+    }
+  } catch (error) {
+    console.warn('[DB] Error checking for old user progress columns:', error);
+  }
 
-    const columns = db.prepare('PRAGMA table_info(usage_stats)').all() as ColumnInfo[];
-
-    const hasUserIdColumn = columns.some((column) => column.name === 'user_id');
-
-    if (!hasUserIdColumn) {
+  // Check for user_id in usage_stats
+  try {
+    const usageStatsColumns = db.prepare('PRAGMA table_info(usage_stats)').all() as ColumnInfo[];
+    if (!usageStatsColumns.some((column) => column.name === 'user_id')) {
       console.log('[DB] Adding user_id column to usage_stats table');
-      db.exec(`
-        ALTER TABLE usage_stats 
-        ADD COLUMN user_id INTEGER REFERENCES users(id)
-      `);
+      db.exec(
+        `ALTER TABLE usage_stats ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`
+      );
       console.log('[DB] Column added successfully');
     }
   } catch (error) {
-    console.error('[DB] Error checking or adding column:', error);
+    console.error('[DB] Error checking or adding user_id column to usage_stats:', error);
   }
 
+  // Check for question_language in generated_content
   try {
-    interface ColumnInfo {
-      cid: number;
-      name: string;
-      type: string;
-      notnull: number;
-      dflt_value: string | null;
-      pk: number;
-    }
-
-    const columns = db.prepare('PRAGMA table_info(generated_content)').all() as ColumnInfo[];
-
-    const hasQuestionLangColumn = columns.some((column) => column.name === 'question_language');
-
-    if (!hasQuestionLangColumn) {
+    const generatedContentColumns = db
+      .prepare('PRAGMA table_info(generated_content)')
+      .all() as ColumnInfo[];
+    if (!generatedContentColumns.some((column) => column.name === 'question_language')) {
       console.log('[DB] Adding question_language column to generated_content table');
-      db.exec(`
-        ALTER TABLE generated_content 
-        ADD COLUMN question_language TEXT
-      `);
+      db.exec(`ALTER TABLE generated_content ADD COLUMN question_language TEXT`);
       console.log('[DB] Column added successfully');
     }
   } catch (error) {
@@ -119,6 +152,7 @@ try {
 
   console.log('[DB] Schema initialization complete');
 
+  // Proxy for logging (keep as is)
   const dbProxy = new Proxy(db, {
     get(target, prop) {
       if (prop === 'prepare') {
@@ -149,6 +183,7 @@ try {
                   } else if (stmtProp === 'all') {
                     return stmtTarget.all(...args);
                   }
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                   return Reflect.get(stmtTarget, stmtProp);
                 };
               }
