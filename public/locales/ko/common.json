@@ -1,6 +1,9 @@
 {
-  "brand": "Comprehendo",
+  "title": "Comprehendo",
   "subtitle": "AI 기반 언어 학습으로 독해력 향상",
+  "powered_by": "Google Gemini 제공",
+  "github": "GitHub",
+  "brand": "Comprehendo",
   "navigation": {
     "home": "홈",
     "practice": "연습",
@@ -57,19 +60,52 @@
     "correct": "정답!",
     "incorrect": "오답",
     "explanation": "설명",
-    "next": "다음"
+    "next": "다음",
+    "readingTime": "읽기 시간...",
+    "answerQuestionBelow": "아래 질문에 답하세요",
+    "generateNewText": "새 텍스트 생성",
+    "supportingTextPrefix": "지원 텍스트: ",
+    "passageLanguageLabel": "읽기 지문 언어:",
+    "questionWillAppear": "질문이 곧 표시됩니다...",
+    "passageTitle": "읽기 지문"
   },
   "admin": {
     "title": "관리",
     "users": "사용자",
     "settings": "설정",
-    "logout": "로그아웃"
+    "logout": "로그아웃",
+    "light": "라이트",
+    "system": "시스템",
+    "translating": "번역 중...",
+    "errorPrefix": "오류: ",
+    "generating": "생성 중...",
+    "pause": "일시 중지",
+    "play": "재생",
+    "stop": "중지",
+    "volume": "볼륨"
   },
   "common": {
     "language": "언어",
     "theme": "테마",
     "dark": "다크",
     "light": "라이트",
-    "system": "시스템"
+    "system": "시스템",
+    "translating": "번역 중...",
+    "errorPrefix": "오류: ",
+    "generating": "생성 중...",
+    "pause": "일시 중지",
+    "play": "재생",
+    "stop": "중지",
+    "volume": "볼륨"
+  },
+  "loadingTranslations": "번역 로딩 중...",
+  "pwa": {
+    "installPrompt": "빠른 액세스를 위해 Comprehendo를 설치하세요.",
+    "installButton": "앱 설치"
+  },
+  "auth": {
+    "signOut": "로그아웃",
+    "signInGitHub": "GitHub로 로그인",
+    "signInGoogle": "Google로 로그인"
   }
 }

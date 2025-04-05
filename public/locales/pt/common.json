@@ -1,6 +1,9 @@
 {
-  "brand": "Comprehendo",
+  "title": "Comprehendo",
   "subtitle": "Aprendizagem de idiomas com IA para melhorar a compreensão de leitura",
+  "powered_by": "Desenvolvido por Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
   "navigation": {
     "home": "Início",
     "practice": "Praticar",
@@ -57,19 +60,52 @@
     "correct": "Correto!",
     "incorrect": "Incorreto",
     "explanation": "Explicação",
-    "next": "Próximo"
+    "next": "Próximo",
+    "readingTime": "Tempo de leitura...",
+    "answerQuestionBelow": "Responda à pergunta abaixo",
+    "generateNewText": "Gerar Novo Texto",
+    "supportingTextPrefix": "Texto de apoio: ",
+    "passageLanguageLabel": "Idioma da Passagem de Leitura:",
+    "questionWillAppear": "A pergunta aparecerá em breve...",
+    "passageTitle": "Passagem de Leitura"
   },
   "admin": {
     "title": "Administração",
     "users": "Usuários",
     "settings": "Configurações",
-    "logout": "Sair"
+    "logout": "Sair",
+    "light": "Claro",
+    "system": "Sistema",
+    "translating": "Traduzindo...",
+    "errorPrefix": "Erro:",
+    "generating": "Gerando...",
+    "pause": "Pausar",
+    "play": "Reproduzir",
+    "stop": "Parar",
+    "volume": "Volume"
   },
   "common": {
     "language": "Idioma",
     "theme": "Tema",
     "dark": "Escuro",
     "light": "Claro",
-    "system": "Sistema"
+    "system": "Sistema",
+    "translating": "Traduzindo...",
+    "errorPrefix": "Erro:",
+    "generating": "Gerando...",
+    "pause": "Pausar",
+    "play": "Reproduzir",
+    "stop": "Parar",
+    "volume": "Volume"
+  },
+  "loadingTranslations": "Carregando traduções...",
+  "pwa": {
+    "installPrompt": "Instale o Comprehendo para acesso rápido.",
+    "installButton": "Instalar Aplicativo"
+  },
+  "auth": {
+    "signOut": "Sair",
+    "signInGitHub": "Entrar com GitHub",
+    "signInGoogle": "Entrar com Google"
   }
 }

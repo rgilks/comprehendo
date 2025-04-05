@@ -14,9 +14,7 @@ const i18nConfig = {
   interpolation: {
     escapeValue: false, // React already safes from xss
   },
-  react: {
-    useSuspense: false, // Recommended false for SSR
-  },
+  // Removed react: { useSuspense: false } from base config, set explicitly in init
 };
 
 export async function initServerI18n(
@@ -35,7 +33,10 @@ export async function initServerI18n(
       ...i18nConfig,
       lng: language,
       ns: namespaces,
-      preload: i18nConfig.supportedLngs, // Preload all languages on server
+      // Remove preload: i18nConfig.supportedLngs,
+      react: {
+        useSuspense: false, // Explicitly set useSuspense: false for SSR
+      },
     });
   return i18nInstance;
 }

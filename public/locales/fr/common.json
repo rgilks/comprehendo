@@ -1,6 +1,9 @@
 {
-  "brand": "Comprehendo",
+  "title": "Comprehendo",
   "subtitle": "Apprentissage des langues avec IA pour améliorer la compréhension écrite",
+  "powered_by": "Propulsé par Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
   "navigation": {
     "home": "Accueil",
     "practice": "Pratique",
@@ -57,19 +60,52 @@
     "correct": "Correct!",
     "incorrect": "Incorrect",
     "explanation": "Explication",
-    "next": "Suivant"
+    "next": "Suivant",
+    "readingTime": "Temps de lecture...",
+    "answerQuestionBelow": "Répondez à la question ci-dessous",
+    "generateNewText": "Générer un nouveau texte",
+    "supportingTextPrefix": "Texte de soutien : ",
+    "passageLanguageLabel": "Langue du passage de lecture :",
+    "questionWillAppear": "La question apparaîtra sous peu...",
+    "passageTitle": "Passage de lecture"
   },
   "admin": {
     "title": "Administration",
     "users": "Utilisateurs",
     "settings": "Paramètres",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "light": "Clair",
+    "system": "Système",
+    "translating": "Traduction en cours...",
+    "errorPrefix": "Erreur : ",
+    "generating": "Génération en cours...",
+    "pause": "Pause",
+    "play": "Jouer",
+    "stop": "Arrêter",
+    "volume": "Volume"
   },
   "common": {
     "language": "Langue",
     "theme": "Thème",
     "dark": "Sombre",
     "light": "Clair",
-    "system": "Système"
+    "system": "Système",
+    "translating": "Traduction en cours...",
+    "errorPrefix": "Erreur : ",
+    "generating": "Génération en cours...",
+    "pause": "Pause",
+    "play": "Jouer",
+    "stop": "Arrêter",
+    "volume": "Volume"
+  },
+  "loadingTranslations": "Chargement des traductions...",
+  "pwa": {
+    "installPrompt": "Installez Comprehendo pour un accès rapide.",
+    "installButton": "Installer l'application"
+  },
+  "auth": {
+    "signOut": "Se déconnecter",
+    "signInGitHub": "Se connecter avec GitHub",
+    "signInGoogle": "Se connecter avec Google"
   }
 }

@@ -1,6 +1,9 @@
 {
-  "brand": "Comprehendo",
+  "title": "Comprehendo",
   "subtitle": "Изучение языков с ИИ для улучшения понимания прочитанного",
+  "powered_by": "Работает на Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
   "navigation": {
     "home": "Главная",
     "practice": "Практика",
@@ -57,19 +60,52 @@
     "correct": "Правильно!",
     "incorrect": "Неправильно",
     "explanation": "Объяснение",
-    "next": "Далее"
+    "next": "Далее",
+    "readingTime": "Время чтения...",
+    "answerQuestionBelow": "Ответьте на вопрос ниже",
+    "generateNewText": "Сгенерировать новый текст",
+    "supportingTextPrefix": "Вспомогательный текст: ",
+    "passageLanguageLabel": "Язык текста для чтения:",
+    "questionWillAppear": "Вопрос появится в ближайшее время...",
+    "passageTitle": "Текст для чтения"
   },
   "admin": {
     "title": "Администрирование",
     "users": "Пользователи",
     "settings": "Настройки",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "light": "Светлый",
+    "system": "Система",
+    "translating": "Перевод...",
+    "errorPrefix": "Ошибка:",
+    "generating": "Генерация...",
+    "pause": "Пауза",
+    "play": "Воспроизвести",
+    "stop": "Стоп",
+    "volume": "Громкость"
   },
   "common": {
     "language": "Язык",
     "theme": "Тема",
     "dark": "Тёмная",
-    "light": "Светлая",
-    "system": "Системная"
+    "light": "Светлый",
+    "system": "Система",
+    "translating": "Перевод...",
+    "errorPrefix": "Ошибка:",
+    "generating": "Генерация...",
+    "pause": "Пауза",
+    "play": "Воспроизвести",
+    "stop": "Стоп",
+    "volume": "Громкость"
+  },
+  "loadingTranslations": "Загрузка переводов...",
+  "pwa": {
+    "installPrompt": "Установите Comprehendo для быстрого доступа.",
+    "installButton": "Установить приложение"
+  },
+  "auth": {
+    "signOut": "Выйти",
+    "signInGitHub": "Войти через GitHub",
+    "signInGoogle": "Войти через Google"
   }
 }
