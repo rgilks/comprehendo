@@ -1,0 +1,75 @@
+{
+  "brand": "Comprehendo",
+  "subtitle": "Aprendizagem de idiomas com IA para melhorar a compreensão de leitura",
+  "navigation": {
+    "home": "Início",
+    "practice": "Praticar",
+    "admin": "Administração"
+  },
+  "practice": {
+    "title": "Prática de Leitura",
+    "level": "Nível",
+    "cefr": {
+      "title": "Personalize sua Prática",
+      "description": "Qual é o seu nível de proficiência?",
+      "levels": {
+        "A1": {
+          "name": "Iniciante",
+          "description": "Frases básicas, perguntas simples"
+        },
+        "A2": {
+          "name": "Elementar",
+          "description": "Tópicos familiares, frases simples"
+        },
+        "B1": {
+          "name": "Intermediário",
+          "description": "Assuntos rotineiros, opiniões básicas"
+        },
+        "B2": {
+          "name": "Intermediário Superior",
+          "description": "Discussões técnicas, pontos de vista claros"
+        },
+        "C1": {
+          "name": "Avançado",
+          "description": "Tópicos complexos, expressão espontânea"
+        },
+        "C2": {
+          "name": "Proficiência",
+          "description": "Praticamente tudo, expressão com nuances"
+        }
+      }
+    },
+    "passageLanguage": "Idioma do texto",
+    "questionLanguage": "Idioma das perguntas",
+    "generate": "Gerar",
+    "loading": "Carregando...",
+    "error": "Ocorreu um erro",
+    "tryAgain": "Tentar novamente",
+    "passage": "Texto",
+    "question": "Pergunta",
+    "options": {
+      "a": "Opção A",
+      "b": "Opção B",
+      "c": "Opção C",
+      "d": "Opção D"
+    },
+    "submit": "Enviar",
+    "correct": "Correto!",
+    "incorrect": "Incorreto",
+    "explanation": "Explicação",
+    "next": "Próximo"
+  },
+  "admin": {
+    "title": "Administração",
+    "users": "Usuários",
+    "settings": "Configurações",
+    "logout": "Sair"
+  },
+  "common": {
+    "language": "Idioma",
+    "theme": "Tema",
+    "dark": "Escuro",
+    "light": "Claro",
+    "system": "Sistema"
+  }
+}

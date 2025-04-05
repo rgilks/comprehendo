@@ -3,6 +3,8 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from './AuthProvider';
 import ClientPWAWrapper from './components/ClientPWAWrapper';
+import { LanguageProvider, type Language } from './contexts/LanguageContext';
+import { cookies } from 'next/headers';
 
 const poppins = Poppins({
   weight: ['400', '500', '600', '700'],
@@ -44,21 +46,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const locale = (cookieStore.get('NEXT_LOCALE')?.value || 'en') as Language;
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="icon" href="/icons/icon-192x192.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={poppins.className}>
-        <AuthProvider>{children}</AuthProvider>
-        <ClientPWAWrapper />
+        <AuthProvider>
+          <LanguageProvider initialLanguage={locale}>
+            {children}
+            <ClientPWAWrapper />
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

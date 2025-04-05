@@ -1,0 +1,78 @@
+{
+  "title": "Comprehendo",
+  "subtitle": "Aprendizaje de idiomas con IA para mejorar la comprensión lectora",
+  "powered_by": "Desarrollado por Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
+  "navigation": {
+    "home": "Inicio",
+    "practice": "Práctica",
+    "admin": "Administración"
+  },
+  "practice": {
+    "title": "Práctica de Lectura",
+    "level": "Nivel",
+    "cefr": {
+      "title": "Personaliza tu Práctica",
+      "description": "¿Cuál es tu nivel de competencia?",
+      "levels": {
+        "A1": {
+          "name": "Principiante",
+          "description": "Frases básicas, preguntas simples"
+        },
+        "A2": {
+          "name": "Elemental",
+          "description": "Temas familiares, oraciones simples"
+        },
+        "B1": {
+          "name": "Intermedio",
+          "description": "Asuntos cotidianos, opiniones básicas"
+        },
+        "B2": {
+          "name": "Intermedio Superior",
+          "description": "Discusiones técnicas, puntos de vista claros"
+        },
+        "C1": {
+          "name": "Avanzado",
+          "description": "Temas complejos, expresión espontánea"
+        },
+        "C2": {
+          "name": "Dominio",
+          "description": "Casi todo, expresión matizada"
+        }
+      }
+    },
+    "passageLanguage": "Idioma del texto",
+    "questionLanguage": "Idioma de las preguntas",
+    "generate": "Generar",
+    "loading": "Cargando...",
+    "error": "Ha ocurrido un error",
+    "tryAgain": "Intentar de nuevo",
+    "passage": "Texto",
+    "question": "Pregunta",
+    "options": {
+      "a": "Opción A",
+      "b": "Opción B",
+      "c": "Opción C",
+      "d": "Opción D"
+    },
+    "submit": "Enviar",
+    "correct": "¡Correcto!",
+    "incorrect": "Incorrecto",
+    "explanation": "Explicación",
+    "next": "Siguiente"
+  },
+  "admin": {
+    "title": "Administración",
+    "users": "Usuarios",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión"
+  },
+  "common": {
+    "language": "Idioma",
+    "theme": "Tema",
+    "dark": "Oscuro",
+    "light": "Claro",
+    "system": "Sistema"
+  }
+}
