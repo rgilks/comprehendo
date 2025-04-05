@@ -1,4 +1,4 @@
-import { type Language, LANGUAGES } from '../config/languages';
+import { type Language, LANGUAGES } from '@/config/languages';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { initServerI18n } from '../i18n';
@@ -35,6 +35,9 @@ export default async function Page({ params }: PageProps) {
   // Initialize i18n for the server request
   const i18nInstance = await initServerI18n(lang, 'common');
 
+  // Safely access store data with proper type casting
+  const resources = i18nInstance?.store?.data || {};
+
   // Pass language and initial store data (resources) instead of the full instance
-  return <PageClientContent initialLanguage={lang} initialI18nStore={i18nInstance.store.data} />;
+  return <PageClientContent initialLanguage={lang} initialI18nStore={resources} />;
 }

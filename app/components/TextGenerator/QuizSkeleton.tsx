@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import AnimateTransition from '../AnimateTransition';
+import AnimateTransition from '@/components/AnimateTransition';
 
 const QuizSkeleton = () => (
   <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">

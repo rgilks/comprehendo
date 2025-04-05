@@ -1,11 +1,11 @@
 'use server';
 
-import db from '../../lib/db';
-import { unstable_getServerSession } from 'next-auth/next';
-import { authOptions } from '../../lib/authOptions';
+import db from '@/lib/db';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 
 async function isAdmin(): Promise<boolean> {
-  const session = await unstable_getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
   return (session?.user as { isAdmin?: boolean })?.isAdmin === true;
 }
 

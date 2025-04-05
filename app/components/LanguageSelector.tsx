@@ -1,7 +1,9 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
-import { useLanguage } from '../contexts/LanguageContext';
-import type { Language } from '../contexts/LanguageContext';
-import AnimateTransition from './AnimateTransition';
+import { useLanguage } from '@/contexts/LanguageContext';
+import type { Language } from '@/contexts/LanguageContext';
+import AnimateTransition from '@/components/AnimateTransition';
 
 export default function LanguageSelector() {
   const { language, setLanguage, languages } = useLanguage();
