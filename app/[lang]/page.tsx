@@ -1,9 +1,8 @@
-import { LanguageProvider, type Language } from '../contexts/LanguageContext';
+import { type Language } from '../contexts/LanguageContext';
 import { notFound } from 'next/navigation';
-import HomeContent from './HomeContent';
 import type { Metadata } from 'next';
 import { initServerI18n } from '../i18n';
-import { Suspense } from 'react';
+import PageClientContent from './PageClientContent';
 
 export function generateMetadata(): Metadata {
   return {
@@ -41,14 +40,9 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  // Initialize i18n on the server (still needed for correct SSR HTML)
-  await initServerI18n(lang, 'common');
+  // Initialize i18n for the server request
+  const i18nInstance = await initServerI18n(lang, 'common');
 
-  return (
-    <LanguageProvider initialLanguage={lang}>
-      <Suspense fallback={<div>Loading translations...</div>}>
-        <HomeContent />
-      </Suspense>
-    </LanguageProvider>
-  );
+  // Pass language and initial store data (resources) instead of the full instance
+  return <PageClientContent initialLanguage={lang} initialI18nStore={i18nInstance.store.data} />;
 }

@@ -1,6 +1,9 @@
 {
-  "brand": "Comprehendo",
+  "title": "Comprehendo",
   "subtitle": "KI-gestütztes Sprachenlernen zur Verbesserung des Leseverständnisses",
+  "powered_by": "Unterstützt von Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
   "navigation": {
     "home": "Startseite",
     "practice": "Üben",
@@ -57,19 +60,52 @@
     "correct": "Richtig!",
     "incorrect": "Falsch",
     "explanation": "Erklärung",
-    "next": "Weiter"
+    "next": "Weiter",
+    "readingTime": "Lesezeit...",
+    "answerQuestionBelow": "Beantworten Sie die Frage unten",
+    "generateNewText": "Neuen Text generieren",
+    "supportingTextPrefix": "Unterstützender Text: ",
+    "passageLanguageLabel": "Sprache des Lesetextes:",
+    "questionWillAppear": "Frage erscheint in Kürze...",
+    "passageTitle": "Lesetext"
   },
   "admin": {
     "title": "Verwaltung",
     "users": "Benutzer",
     "settings": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "light": "Hell",
+    "system": "System",
+    "translating": "Übersetzen...",
+    "errorPrefix": "Fehler:",
+    "generating": "Generieren...",
+    "pause": "Pause",
+    "play": "Abspielen",
+    "stop": "Stopp",
+    "volume": "Lautstärke"
   },
   "common": {
     "language": "Sprache",
     "theme": "Design",
     "dark": "Dunkel",
     "light": "Hell",
-    "system": "System"
+    "system": "System",
+    "translating": "Übersetzen...",
+    "errorPrefix": "Fehler:",
+    "generating": "Generieren...",
+    "pause": "Pause",
+    "play": "Abspielen",
+    "stop": "Stopp",
+    "volume": "Lautstärke"
+  },
+  "loadingTranslations": "Übersetzungen werden geladen...",
+  "pwa": {
+    "installPrompt": "Installieren Sie Comprehendo für schnellen Zugriff.",
+    "installButton": "App installieren"
+  },
+  "auth": {
+    "signOut": "Abmelden",
+    "signInGitHub": "Mit GitHub anmelden",
+    "signInGoogle": "Mit Google anmelden"
   }
 }

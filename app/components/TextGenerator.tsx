@@ -81,10 +81,11 @@ interface TranslatableWordProps {
   isCurrentWord: boolean;
   onSpeak: () => void;
   onTranslate: (word: string, sourceLang: string, targetLang: string) => Promise<string>;
+  t: (key: string) => string;
 }
 
 const TranslatableWord = memo(
-  ({ word, fromLang, isCurrentWord, onSpeak, onTranslate }: TranslatableWordProps) => {
+  ({ word, fromLang, isCurrentWord, onSpeak, onTranslate, t }: TranslatableWordProps) => {
     const [isHovered, setIsHovered] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -123,7 +124,7 @@ const TranslatableWord = memo(
         {isHovered && (
           <span className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
             {isLoading ? (
-              <span className="inline-block animate-pulse">Translating...</span>
+              <span className="inline-block animate-pulse">{t('common.translating')}</span>
             ) : (
               <span className="font-medium">{translation || word}</span>
             )}
@@ -343,47 +344,29 @@ export default function TextGenerator() {
   );
 
   const renderParagraphWithWordHover = useCallback(
-    (paragraphHtml: string | null, langType: Language) => {
-      if (!paragraphHtml) return null;
-      if (!isSpeechSupported) {
+    (paragraph: string, lang: Language) => {
+      const words = paragraph.split(/(\s+)/); // Split by spaces, keeping spaces
+      return words.map((segment, index) => {
+        // Check if the segment is whitespace
+        if (/^\s+$/.test(segment)) {
+          return <span key={index}>{segment}</span>;
+        }
+        // Treat non-whitespace segments as words
+        const wordIndex = words.slice(0, index + 1).filter((s) => !/^\s+$/.test(s)).length - 1;
         return (
-          <div
-            dir={getTextDirection(langType)}
-            className="text-gray-200 leading-relaxed mb-6"
-            dangerouslySetInnerHTML={{ __html: paragraphHtml }}
+          <TranslatableWord
+            key={index}
+            word={segment}
+            fromLang={lang}
+            isCurrentWord={currentWordIndex === wordIndex && isSpeakingPassage}
+            onSpeak={() => speakText(segment, lang)}
+            onTranslate={getTranslation}
+            t={t}
           />
         );
-      }
-
-      const segments = paragraphHtml.split(/(\<[^>]+\>|\s+)/).filter(Boolean);
-      let wordCounter = 0;
-
-      return (
-        <div dir={getTextDirection(langType)} className="text-gray-200 leading-relaxed mb-6">
-          {segments.map((segment, index) => {
-            if (segment.match(/^\s+$/)) {
-              return <span key={index}>{segment}</span>;
-            }
-            if (segment.startsWith('<')) {
-              return <span key={index} dangerouslySetInnerHTML={{ __html: segment }} />;
-            }
-            const isCurrentWord = wordCounter === currentWordIndex;
-            wordCounter++;
-            return (
-              <TranslatableWord
-                key={index}
-                word={segment}
-                fromLang={langType}
-                isCurrentWord={isCurrentWord}
-                onSpeak={() => speakText(segment, langType)}
-                onTranslate={getTranslation}
-              />
-            );
-          })}
-        </div>
-      );
+      });
     },
-    [isSpeechSupported, speakText, getTranslation, currentWordIndex]
+    [speakText, getTranslation, currentWordIndex, t, isSpeakingPassage]
   );
 
   const generateText = async () => {
@@ -586,7 +569,7 @@ export default function TextGenerator() {
               <label className="block text-sm font-medium text-white mb-2">
                 <span className="flex items-center">
                   <GlobeAltIcon className="h-5 w-5 mr-1 text-green-400" aria-hidden="true" />
-                  Reading Passage Language:
+                  {t('practice.passageLanguageLabel')}
                 </span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
@@ -613,7 +596,7 @@ export default function TextGenerator() {
             className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded relative mb-6 shadow-md"
             role="alert"
           >
-            <strong className="font-bold">Error:</strong>
+            <strong className="font-bold">{t('common.errorPrefix')}</strong>
             <span className="block sm:inline ml-2">{error}</span>
           </div>
         )}
@@ -625,7 +608,8 @@ export default function TextGenerator() {
             <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
               <h2 className="text-lg font-semibold text-white flex items-center">
                 <BookOpenIcon className="h-5 w-5 mr-2 text-blue-400" aria-hidden="true" />
-                Reading Passage {passageLanguage !== 'en' && `(${LANGUAGES[passageLanguage]})`}
+                {t('practice.passageTitle')}{' '}
+                {passageLanguage !== 'en' && `(${LANGUAGES[passageLanguage]})`}
               </h2>
               <div className="flex space-x-2">
                 <span className="text-sm bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 rounded-full shadow-sm">
@@ -643,14 +627,14 @@ export default function TextGenerator() {
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-semibold text-white">
-                  Reading Passage ({passageLanguage})
+                  {t('practice.passageTitle')} ({LANGUAGES[passageLanguage]})
                 </h3>
                 {/* --- UPDATED Speech Controls --- */}
                 {isSpeechSupported && quizData.paragraph && (
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={handlePlayPause}
-                      title={isSpeakingPassage && !isPaused ? 'Pause' : 'Play'}
+                      title={isSpeakingPassage && !isPaused ? t('common.pause') : t('common.play')}
                       className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
                       disabled={!quizData.paragraph}
                     >
@@ -663,7 +647,7 @@ export default function TextGenerator() {
                     {isSpeakingPassage && ( // Show Stop button only when speaking/paused
                       <button
                         onClick={handleStop}
-                        title="Stop"
+                        title={t('common.stop')}
                         className="flex items-center justify-center p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
                       >
                         <HeroStopIcon className="w-4 h-4" />
@@ -679,7 +663,7 @@ export default function TextGenerator() {
                         value={volume}
                         onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
                         className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                        title="Volume"
+                        title={t('common.volume')}
                       />
                     </div>
                   </div>
@@ -699,7 +683,7 @@ export default function TextGenerator() {
 
             {quizData && !showQuestionSection && (
               <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
-                Question will appear shortly...
+                {t('practice.questionWillAppear')}
               </div>
             )}
 
@@ -739,7 +723,9 @@ export default function TextGenerator() {
 
                 {showExplanation && (
                   <div className="mt-6 pt-4 border-t border-gray-700">
-                    <h4 className="text-md font-semibold mb-3 text-white">Explanations</h4>
+                    <h4 className="text-md font-semibold mb-3 text-white">
+                      {t('practice.explanation')}
+                    </h4>
                     <div className="space-y-3">
                       {(
                         Object.keys(quizData.explanations) as Array<
@@ -772,7 +758,8 @@ export default function TextGenerator() {
                           </p>
                           {key === quizData.correctAnswer && quizData.relevantText && (
                             <p className="text-xs text-gray-400 mt-1 italic">
-                              Supporting text: &quot;{quizData.relevantText}&quot;
+                              {t('practice.supportingTextPrefix')}&quot;{quizData.relevantText}
+                              &quot;
                             </p>
                           )}
                         </div>
@@ -798,18 +785,18 @@ export default function TextGenerator() {
                   className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
                   aria-hidden="true"
                 />
-                Generating...
+                {t('common.generating')}
               </div>
             ) : quizData !== null && !isAnswered ? (
               showQuestionSection ? (
-                'Answer the question below'
+                t('practice.answerQuestionBelow')
               ) : (
-                'Reading time...'
+                t('practice.readingTime')
               )
             ) : (
               <div className="flex items-center">
                 <PlusCircleIcon className="h-5 w-5 mr-2" aria-hidden="true" />
-                Generate New Text
+                {t('practice.generateNewText')}
               </div>
             )}
           </button>
