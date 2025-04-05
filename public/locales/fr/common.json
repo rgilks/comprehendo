@@ -65,7 +65,7 @@
     "answerQuestionBelow": "Répondez à la question ci-dessous",
     "generateNewText": "Générer un nouveau texte",
     "supportingTextPrefix": "Texte de soutien : ",
-    "passageLanguageLabel": "Langue du passage de lecture :",
+    "passageLanguageLabel": "Apprentissage",
     "questionWillAppear": "La question apparaîtra sous peu...",
     "passageTitle": "Passage de lecture"
   },

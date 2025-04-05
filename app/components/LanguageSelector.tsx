@@ -26,30 +26,36 @@ export default function LanguageSelector() {
   }, []);
 
   return (
-    <div className="absolute top-4 left-4 relative inline-block text-left z-30" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-transparent text-white text-sm border border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer inline-flex justify-between items-center w-auto min-w-[100px]"
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-      >
-        {languages[language]}
-        {/* Basic Chevron Down Icon */}
-        <svg
-          className="-mr-1 ml-2 h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
+    <div className="relative inline-block text-left z-30" ref={dropdownRef}>
+      <div className="flex items-center space-x-2">
+        <label htmlFor="language-select-button" className="text-sm text-gray-400">
+          Language:
+        </label>
+        <button
+          id="language-select-button"
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="bg-transparent text-white text-sm border border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer inline-flex justify-between items-center w-auto min-w-[100px]"
+          aria-haspopup="true"
+          aria-expanded={isOpen}
         >
-          <path
-            fillRule="evenodd"
-            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-            clipRule="evenodd"
-          />
-        </svg>
-      </button>
+          {languages[language]}
+          {/* Basic Chevron Down Icon */}
+          <svg
+            className="-mr-1 ml-2 h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
 
       {isOpen && (
         <div

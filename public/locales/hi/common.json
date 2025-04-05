@@ -63,11 +63,11 @@
     "next": "अगला",
     "readingTime": "पढ़ने का समय...",
     "answerQuestionBelow": "नीचे दिए गए प्रश्न का उत्तर दें",
-    "generateNewText": "नया टेक्स्ट उत्पन्न करें",
-    "supportingTextPrefix": "सहायक पाठ:",
-    "passageLanguageLabel": "गद्यांश भाषा पढ़ना:",
-    "questionWillAppear": "प्रश्न बाद में दिखाई देगा...",
-    "passageTitle": "गद्यांश पढ़ना"
+    "generateNewText": "नया पाठ उत्पन्न करें",
+    "supportingTextPrefix": "समर्थन पाठ: ",
+    "passageLanguageLabel": "सीखना",
+    "questionWillAppear": "प्रश्न शीघ्र ही दिखाई देगा...",
+    "passageTitle": "पढ़ने का गद्यांश"
   },
   "admin": {
     "title": "एडमिन",
