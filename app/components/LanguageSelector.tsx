@@ -27,22 +27,25 @@ export default function LanguageSelector() {
 
   return (
     <div className="relative inline-block text-left z-30" ref={dropdownRef}>
-      <div className="flex items-center space-x-2">
-        <label htmlFor="language-select-button" className="text-sm text-gray-400">
+      <div className="flex items-center space-x-1 md:space-x-2">
+        <label
+          htmlFor="language-select-button"
+          className="text-xs md:text-sm text-gray-400 hidden xs:inline"
+        >
           Language:
         </label>
         <button
           id="language-select-button"
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="bg-transparent text-white text-sm border border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer inline-flex justify-between items-center w-auto min-w-[100px]"
+          className="bg-transparent text-white text-xs md:text-sm border border-gray-600 rounded-md px-1 py-0.5 md:px-2 md:py-1 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer inline-flex justify-between items-center w-auto min-w-[80px] md:min-w-[100px]"
           aria-haspopup="true"
           aria-expanded={isOpen}
         >
           {languages[language]}
           {/* Basic Chevron Down Icon */}
           <svg
-            className="-mr-1 ml-2 h-4 w-4"
+            className="-mr-1 ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
