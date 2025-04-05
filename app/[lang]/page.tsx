@@ -10,7 +10,22 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default function LanguagePage({ params }: { params: { lang: string } }) {
+export function generateStaticParams() {
+  return [
+    { lang: 'en' },
+    { lang: 'es' },
+    { lang: 'fr' },
+    { lang: 'de' },
+    { lang: 'it' },
+    { lang: 'pt' },
+    { lang: 'ru' },
+    { lang: 'zh' },
+    { lang: 'ja' },
+    { lang: 'ko' },
+  ];
+}
+
+export default function Page({ params }: { params: { lang: string } }) {
   // Validate language
   const validLanguages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko'];
   if (!validLanguages.includes(params.lang)) {
