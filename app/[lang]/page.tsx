@@ -1,5 +1,3 @@
-'use client';
-
 import { LanguageProvider, type Language } from '../contexts/LanguageContext';
 import { notFound } from 'next/navigation';
 import HomeContent from './HomeContent';
