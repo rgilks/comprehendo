@@ -1,7 +1,7 @@
-import { createInstance, type i18n as i18nInstance } from 'i18next';
-import resourcesToBackend from 'i18next-resources-to-backend';
+import { createInstance, type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next/initReactI18next';
-import { type Language } from './contexts/LanguageContext'; // Assuming Language type is here
+import resourcesToBackend from 'i18next-resources-to-backend';
+import { type Language } from '@/contexts/LanguageContext'; // Assuming Language type is here
 // import i18nConfig from '../../i18n.config'; // If you have a central config file
 
 // Default configuration (consider moving to a separate config file like i18n.config.ts)
@@ -20,7 +20,7 @@ const i18nConfig = {
 export async function initServerI18n(
   language: Language,
   namespaces: string | string[] = i18nConfig.ns
-): Promise<i18nInstance> {
+): Promise<i18n> {
   const i18nInstance = createInstance();
   await i18nInstance
     .use(initReactI18next)

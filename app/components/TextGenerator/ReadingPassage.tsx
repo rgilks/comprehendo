@@ -3,12 +3,12 @@
 import React, { useCallback } from 'react';
 import { BookOpenIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
-import { getTextDirection, type Language } from '../../contexts/LanguageContext';
-import useTextGeneratorStore from '../../store/textGeneratorStore';
-import AnimateTransition from '../AnimateTransition';
+import { getTextDirection, type Language } from '@/contexts/LanguageContext';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
+import AnimateTransition from '@/components/AnimateTransition';
 import TranslatableWord from './TranslatableWord';
 import AudioControls from './AudioControls';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const ReadingPassage = () => {
   const { t } = useTranslation('common');
