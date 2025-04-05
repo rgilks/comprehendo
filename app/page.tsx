@@ -12,7 +12,9 @@ function LanguageSelector() {
   return (
     <select
       value={language}
-      onChange={(e) => setLanguage(e.target.value as Language)}
+      onChange={(e) => {
+        void setLanguage(e.target.value as Language);
+      }}
       className="absolute top-4 left-4 bg-transparent text-white text-sm border border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer"
     >
       {(Object.keys(languages) as Language[]).map((lang) => (
