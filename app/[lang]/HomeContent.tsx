@@ -14,9 +14,8 @@ export default function HomeContent() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-700/10 via-transparent to-transparent pointer-events-none"></div>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-green-700/10 via-transparent to-transparent pointer-events-none"></div>
 
-      <LanguageSelector />
-
       <div className="z-10 w-full max-w-5xl">
+        <LanguageSelector />
         <div className="flex justify-end mb-4">
           <AuthButton />
         </div>
