@@ -69,13 +69,12 @@ const ReadingPassage = () => {
   }
 
   return (
-    <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg mb-6">
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <div className="flex items-center space-x-2 text-lg font-semibold">
-          <BookOpenIcon className="w-5 h-5 text-blue-400" />
-          <span>{t('practice.passageTitle')}</span>
+    <>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center text-blue-400">
+          <BookOpenIcon className="w-5 h-5 mr-2" />
+          <span className="text-lg font-medium">{t('practice.passageTitle')}</span>
         </div>
-
         <AudioControls />
       </div>
 
@@ -100,7 +99,7 @@ const ReadingPassage = () => {
           {t('practice.questionWillAppear')}
         </AnimateTransition>
       )}
-    </div>
+    </>
   );
 };
 
