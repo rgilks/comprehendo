@@ -214,8 +214,17 @@ npm run format
 # Check formatting without making changes
 npm run format:check
 
-# Run tests
+# Run all tests
 npm run test
+
+# Run tests in watch mode (useful during development)
+npm run test:watch
+
+# Run specific test suites
+npm run test:components  # Component tests
+npm run test:app         # App directory tests
+npm run test:lib         # Library tests
+npm run test:unit        # All unit tests across directories
 
 # Run ESLint
 npm run lint
@@ -223,6 +232,16 @@ npm run lint
 # Verify code (format + lint + build checks)
 npm run verify
 ```
+
+### Testing Strategy
+
+Comprehendo uses a co-located testing approach, where test files are placed in the same directory as the code they test:
+
+- Tests are named using the `.test.tsx` or `.test.ts` extension
+- Tests are located next to the files they're testing (e.g., `Button.tsx` and `Button.test.tsx`)
+- This approach makes tests easy to find and maintain alongside the component or utility being tested
+
+Jest is configured to automatically find and run these test files across the codebase.
 
 Git hooks (powered by Husky) automatically run on commit and push:
 
