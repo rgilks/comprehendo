@@ -124,7 +124,6 @@ interface TranslatableWordProps {
   isRelevant: boolean;
   onSpeak: () => void;
   onTranslate: (word: string, sourceLang: string, targetLang: string) => Promise<string>;
-  t: (key: string) => string;
 }
 
 const TranslatableWord = memo(
@@ -136,7 +135,6 @@ const TranslatableWord = memo(
     isRelevant,
     onSpeak,
     onTranslate,
-    t,
   }: TranslatableWordProps) => {
     const [isHovered, setIsHovered] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
@@ -173,6 +171,9 @@ const TranslatableWord = memo(
       combinedClassName += ' hover:text-blue-400';
     }
 
+    // Only show translation popup when not loading and translation is available
+    const showTranslation = isHovered && shouldTranslate && !isLoading && translation !== null;
+
     return (
       <span
         className={combinedClassName}
@@ -182,17 +183,13 @@ const TranslatableWord = memo(
       >
         {word}
         <AnimateTransition
-          show={isHovered && shouldTranslate}
+          show={showTranslation}
           type="scale-up"
           duration={200}
           unmountOnExit
           className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm"
         >
-          {isLoading ? (
-            <span className="inline-block animate-pulse">{t('common.translating')}</span>
-          ) : (
-            <span className="font-medium">{translation || word}</span>
-          )}
+          <span className="font-medium">{translation || word}</span>
         </AnimateTransition>
       </span>
     );
@@ -481,7 +478,6 @@ export default function TextGenerator() {
             isRelevant={isRelevant} // Pass the calculated relevance
             onSpeak={() => speakText(segment, lang)}
             onTranslate={getTranslation}
-            t={t}
           />
         );
       });
@@ -490,7 +486,6 @@ export default function TextGenerator() {
       speakText,
       getTranslation,
       currentWordIndex,
-      t,
       isSpeakingPassage,
       relevantTextRange,
       questionLanguage, // Add questionLanguage dependency
