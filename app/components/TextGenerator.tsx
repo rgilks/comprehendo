@@ -25,7 +25,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';
 import AuthButton from './AuthButton';
-import { toast, Toaster } from 'react-hot-toast';
 
 const quizDataSchema = z.object({
   paragraph: z.string(),
@@ -621,6 +620,13 @@ export default function TextGenerator() {
       if (status === 'authenticated') {
         let progressData: UserProgressResponse | null = null;
         try {
+          // Log the language being sent to ensure it's correct
+          console.log(`[Progress] Sending update with language: ${generatedPassageLanguage}`);
+
+          if (!generatedPassageLanguage) {
+            throw new Error('Missing passage language');
+          }
+
           const response = await fetch('/api/user/progress', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -655,10 +661,6 @@ export default function TextGenerator() {
             // First check for level up
             if (progressData.leveledUp) {
               setCefrLevel(progressData.currentLevel);
-              toast.success(`${t('practice.leveledUp')} ${progressData.currentLevel}! 🎉`, {
-                duration: 4000,
-                position: 'top-center',
-              });
             }
 
             // Then check for streak increase (handle separately)
@@ -667,21 +669,13 @@ export default function TextGenerator() {
             const completedStreakAndLeveledUp = progressData.leveledUp && previousStreak >= 4;
 
             if (streakIncreased) {
-              toast.success(`${t('practice.streakIncreased')} ${progressData.currentStreak} 🔥`, {
-                duration: 3000,
-                position: 'top-center',
-              });
+              // Remove toast call
             } else if (completedStreakAndLeveledUp) {
-              // Special case when streak completes and user levels up
-              toast.success(`${t('practice.streakCompleted')} 🔥🎯`, {
-                duration: 3000,
-                position: 'top-center',
-              });
+              // Remove toast call
             }
           }
         } catch (err) {
           console.error('[Progress] Error updating progress:', err);
-          toast.error(t('practice.progressUpdateError'), { duration: 3000 });
         }
       }
 
@@ -707,8 +701,7 @@ export default function TextGenerator() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
-      <Toaster />
+    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative">
       <div className="w-full max-w-3xl mx-auto my-8">
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -756,12 +749,13 @@ export default function TextGenerator() {
               </span>
 
               {/* Display Streak */}
-              {status === 'authenticated' && userStreak !== null && userStreak > 0 && (
+              {status === 'authenticated' && userStreak !== null && (
                 <span
-                  className="text-xs font-semibold bg-yellow-500 text-black px-2 py-0.5 rounded-full shadow"
+                  className={`text-xs font-semibold ${userStreak > 0 ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-white'} px-2 py-0.5 rounded-full shadow flex items-center`}
                   title={`${t('practice.correctStreak')}: ${userStreak}`}
                 >
-                  🔥 {userStreak}
+                  {userStreak > 0 && <span className="mr-1">🔥</span>}
+                  {userStreak}
                 </span>
               )}
             </div>
@@ -919,19 +913,6 @@ export default function TextGenerator() {
                           <span className="text-gray-300">{explanation}</span>
                         </div>
                       ))}
-                      {quizData.relevantText && (
-                        <div className="mt-3 pt-3 border-t border-gray-600">
-                          <p className="text-xs text-gray-400 italic">
-                            {t('practice.supportingTextPrefix')}
-                          </p>
-                          <p
-                            className="text-sm text-gray-300 font-mono bg-gray-800 p-2 rounded border border-gray-600/50"
-                            dir={getTextDirection(generatedPassageLanguage || 'en')}
-                          >
-                            &quot;{quizData.relevantText}&quot;
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
@@ -942,6 +923,48 @@ export default function TextGenerator() {
 
         {(!quizData || isAnswered) && (
           <div className="mt-8">
+            {/* Add new progress section */}
+            {status === 'authenticated' && userStreak !== null && (
+              <div className="mb-6 p-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl border border-gray-700 shadow-lg">
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  {t('practice.yourProgress')}
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-400">{t('practice.level')}</span>
+                    <div className="mt-1 flex items-center">
+                      <span className="text-xl font-bold text-white mr-2">{cefrLevel}</span>
+                      <span className="text-sm text-gray-300">
+                        - {t(`practice.cefr.levels.${cefrLevel}.name`)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-400">{t('practice.currentStreak')}</span>
+                    <div className="mt-1 flex items-center">
+                      {userStreak > 0 ? (
+                        <>
+                          <span className="text-xl font-bold text-yellow-500 mr-2">
+                            {userStreak}
+                          </span>
+                          <span className="text-yellow-500">🔥</span>
+                        </>
+                      ) : (
+                        <span className="text-xl font-bold text-gray-400">0</span>
+                      )}
+                      <span className="ml-2 text-sm text-gray-300">/ 5</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {userStreak === 0
+                        ? t('practice.startStreak')
+                        : userStreak >= 4
+                          ? t('practice.almostLevelUp')
+                          : t('practice.keepGoing')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <button
               onClick={handleGenerateClick}
               disabled={loading}
