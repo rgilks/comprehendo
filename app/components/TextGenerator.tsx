@@ -8,7 +8,6 @@ import {
   PauseIcon as HeroPauseIcon,
   StopIcon as HeroStopIcon,
   SpeakerWaveIcon,
-  InformationCircleIcon,
   GlobeAltIcon,
   BookOpenIcon,
   ArrowPathIcon,
@@ -82,13 +81,22 @@ interface TranslatableWordProps {
   word: string;
   fromLang: Language;
   isCurrentWord: boolean;
+  isRelevant: boolean;
   onSpeak: () => void;
   onTranslate: (word: string, sourceLang: string, targetLang: string) => Promise<string>;
   t: (key: string) => string;
 }
 
 const TranslatableWord = memo(
-  ({ word, fromLang, isCurrentWord, onSpeak, onTranslate, t }: TranslatableWordProps) => {
+  ({
+    word,
+    fromLang,
+    isCurrentWord,
+    isRelevant,
+    onSpeak,
+    onTranslate,
+    t,
+  }: TranslatableWordProps) => {
     const [isHovered, setIsHovered] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -114,11 +122,19 @@ const TranslatableWord = memo(
       setIsHovered(false);
     }, []);
 
+    let combinedClassName =
+      'cursor-pointer transition-colors duration-200 px-1 -mx-1 relative group';
+    if (isRelevant) {
+      combinedClassName += ' bg-yellow-300 text-black rounded';
+    } else if (isCurrentWord) {
+      combinedClassName += ' bg-blue-500 text-white rounded';
+    } else {
+      combinedClassName += ' hover:text-blue-400';
+    }
+
     return (
       <span
-        className={`cursor-pointer transition-colors duration-200 px-1 -mx-1 relative group ${
-          isCurrentWord ? 'bg-blue-500 text-white rounded' : 'hover:text-blue-400'
-        }`}
+        className={combinedClassName}
         onClick={() => void onSpeak()}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -140,9 +156,16 @@ const TranslatableWord = memo(
 
 TranslatableWord.displayName = 'TranslatableWord';
 
+// Interface for API progress response
+interface UserProgressResponse {
+  currentLevel: CEFRLevel;
+  currentStreak: number;
+  leveledUp?: boolean; // Optional for GET response
+}
+
 export default function TextGenerator() {
   const { t } = useTranslation('common');
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [showLoginPrompt, setShowLoginPrompt] = useState(true);
   const [cefrLevel, setCefrLevel] = useState<CEFRLevel>('A1');
   const [userStreak, setUserStreak] = useState<number | null>(null);
@@ -154,8 +177,10 @@ export default function TextGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
-  const [highlightedParagraph, setHighlightedParagraph] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
+  const [relevantTextRange, setRelevantTextRange] = useState<{ start: number; end: number } | null>(
+    null
+  );
   const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(false);
   const [isSpeakingPassage, setIsSpeakingPassage] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -166,7 +191,6 @@ export default function TextGenerator() {
   const [generatedQuestionLanguage, setGeneratedQuestionLanguage] = useState<Language | null>(null);
   const [volume, setVolume] = useState(0.5);
 
-  const QUESTION_DELAY_MS = 20000;
   const [showQuestionSection, setShowQuestionSection] = useState<boolean>(false);
   const questionDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -185,9 +209,10 @@ export default function TextGenerator() {
           if (!response.ok) {
             throw new Error('Failed to fetch user progress');
           }
-          const data = await response.json();
+          // Type the response data
+          const data: UserProgressResponse = await response.json();
           if (data.currentLevel && CEFR_LEVELS_LIST.includes(data.currentLevel)) {
-            setCefrLevel(data.currentLevel as CEFRLevel);
+            setCefrLevel(data.currentLevel);
           }
           setUserStreak(data.currentStreak ?? 0);
           console.log(`[Progress] Fetched user progress for ${passageLanguage}:`, data);
@@ -310,34 +335,6 @@ export default function TextGenerator() {
     stopPassageSpeech();
   }, [stopPassageSpeech]);
 
-  const highlightRelevantText = useCallback(() => {
-    if (quizData && showExplanation && quizData.relevantText) {
-      try {
-        const escapedText = quizData.relevantText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`(${escapedText})`, 'gi');
-        const highlighted = quizData.paragraph.replace(
-          regex,
-          '<mark class="bg-yellow-300 text-black px-1 rounded">$1</mark>'
-        );
-        setHighlightedParagraph(highlighted);
-      } catch (e) {
-        console.error('Error creating regex or highlighting text:', e);
-        setHighlightedParagraph(quizData.paragraph);
-      }
-    } else {
-      setHighlightedParagraph(quizData?.paragraph || null);
-    }
-  }, [quizData, showExplanation]);
-
-  useEffect(() => {
-    if (showExplanation) {
-      highlightRelevantText();
-    }
-    if (!showExplanation && quizData) {
-      setHighlightedParagraph(quizData.paragraph);
-    }
-  }, [showExplanation, highlightRelevantText, quizData]);
-
   useEffect(() => {
     return () => {
       stopPassageSpeech();
@@ -380,22 +377,37 @@ export default function TextGenerator() {
     []
   );
 
+  // Modified render function
   const renderParagraphWithWordHover = useCallback(
     (paragraph: string, lang: Language) => {
       const words = paragraph.split(/(\s+)/); // Split by spaces, keeping spaces
+      let currentPos = 0;
       return words.map((segment, index) => {
-        // Check if the segment is whitespace
+        const segmentStart = currentPos;
+        const segmentEnd = currentPos + segment.length;
+        currentPos = segmentEnd; // Update position for next segment
+
         if (/^\s+$/.test(segment)) {
           return <span key={index}>{segment}</span>;
         }
-        // Treat non-whitespace segments as words
+
+        // Calculate word index based on non-whitespace segments
         const wordIndex = words.slice(0, index + 1).filter((s) => !/^\s+$/.test(s)).length - 1;
+        const isCurrent = currentWordIndex === wordIndex && isSpeakingPassage;
+
+        // Determine relevance based on character range overlap
+        const isRelevant =
+          relevantTextRange !== null &&
+          segmentStart >= relevantTextRange.start &&
+          segmentEnd <= relevantTextRange.end;
+
         return (
           <TranslatableWord
             key={index}
             word={segment}
             fromLang={lang}
-            isCurrentWord={currentWordIndex === wordIndex && isSpeakingPassage}
+            isCurrentWord={isCurrent}
+            isRelevant={isRelevant} // Pass the calculated relevance
             onSpeak={() => speakText(segment, lang)}
             onTranslate={getTranslation}
             t={t}
@@ -403,7 +415,14 @@ export default function TextGenerator() {
         );
       });
     },
-    [speakText, getTranslation, currentWordIndex, t, isSpeakingPassage]
+    [
+      speakText,
+      getTranslation,
+      currentWordIndex,
+      t,
+      isSpeakingPassage,
+      relevantTextRange, // Add relevantTextRange dependency
+    ]
   );
 
   const generateText = useCallback(async () => {
@@ -413,10 +432,10 @@ export default function TextGenerator() {
     setQuizData(null);
     setSelectedAnswer(null);
     setIsAnswered(false);
-    setHighlightedParagraph(null);
     setShowExplanation(false);
     setShowQuestionSection(false);
     setCurrentWordIndex(null);
+    setRelevantTextRange(null); // Reset range
     if (questionDelayTimeoutRef.current) {
       clearTimeout(questionDelayTimeoutRef.current);
     }
@@ -474,7 +493,6 @@ export default function TextGenerator() {
       const validatedData = parsedResult.data;
 
       setQuizData(validatedData);
-      setHighlightedParagraph(validatedData.paragraph);
       setGeneratedPassageLanguage(passageLanguage);
       setGeneratedQuestionLanguage(questionLanguage);
 
@@ -514,38 +532,49 @@ export default function TextGenerator() {
       setSelectedAnswer(answer);
       setIsAnswered(true);
       setShowExplanation(false);
+      setRelevantTextRange(null); // Reset range initially
 
-      const isCorrect = answer === quizData.correctAnswer;
-
-      const regex = new RegExp(
-        `(${quizData.relevantText.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\\\$&')})`,
-        'gi'
-      );
-      setHighlightedParagraph(
-        quizData.paragraph.replace(
-          regex,
-          `<mark class="bg-yellow-300 text-black px-1 rounded">$1</mark>`
-        )
-      );
+      // Find and set the relevant text range
+      if (quizData.relevantText && quizData.paragraph) {
+        const startIndex = quizData.paragraph.indexOf(quizData.relevantText);
+        if (startIndex !== -1) {
+          setRelevantTextRange({
+            start: startIndex,
+            end: startIndex + quizData.relevantText.length,
+          });
+          console.log(
+            `[Highlight] Relevant text range found: ${startIndex} - ${startIndex + quizData.relevantText.length}`
+          );
+        } else {
+          console.warn(
+            '[Highlight] Relevant text not found exactly in paragraph:',
+            quizData.relevantText
+          );
+        }
+      }
 
       if (status === 'authenticated') {
         try {
           const response = await fetch('/api/user/progress', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isCorrect, language: generatedPassageLanguage }),
+            body: JSON.stringify({
+              isCorrect: answer === quizData.correctAnswer,
+              language: generatedPassageLanguage,
+            }),
           });
 
           if (!response.ok) {
             throw new Error('Failed to update progress');
           }
 
-          const progressData = await response.json();
+          // Type the response data
+          const progressData: UserProgressResponse = await response.json();
           setUserStreak(progressData.currentStreak);
 
           if (progressData.leveledUp) {
             console.log('[Progress] Leveled up!', progressData);
-            setCefrLevel(progressData.currentLevel as CEFRLevel);
+            setCefrLevel(progressData.currentLevel);
             toast.success(`${t('practice.leveledUp')} ${progressData.currentLevel}! 🎉`, {
               duration: 4000,
               position: 'top-center',
@@ -725,12 +754,11 @@ export default function TextGenerator() {
               className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
               dir={getTextDirection(generatedPassageLanguage)}
             >
-              {highlightedParagraph ? (
-                <div dangerouslySetInnerHTML={{ __html: highlightedParagraph }} />
-              ) : generatedPassageLanguage ? (
+              {/* Always use renderParagraphWithWordHover */}
+              {quizData && generatedPassageLanguage ? (
                 renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)
               ) : (
-                <div>{quizData.paragraph}</div>
+                <div>{quizData?.paragraph}</div> // Fallback if needed
               )}
             </div>
 
@@ -817,7 +845,7 @@ export default function TextGenerator() {
         {(!quizData || isAnswered) && (
           <div className="mt-8">
             <button
-              onClick={generateText}
+              onClick={() => void generateText()}
               disabled={loading}
               className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${loading ? 'bg-gray-600 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 hover:from-blue-600 hover:via-indigo-600 hover:to-green-600'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center`}
             >
