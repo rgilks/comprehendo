@@ -91,7 +91,7 @@ interface TextGeneratorState {
   setCefrLevel: (level: CEFRLevel) => void;
   setVolumeLevel: (volume: number) => void;
   fetchUserProgress: () => Promise<void>;
-  generateText: () => Promise<void>;
+  generateText: () => void;
   handleAnswerSelect: (answer: string) => Promise<void>;
   stopPassageSpeech: () => void;
   handlePlayPause: () => void;
@@ -330,14 +330,15 @@ export const useTextGeneratorStore = create<TextGeneratorState>((set, get) => ({
   },
 
   // Generate text
-  generateText: async () => {
+  generateText: () => {
     const { stopPassageSpeech, passageLanguage, cefrLevel, questionDelayTimeoutRef } = get();
 
     // First hide content with animation
     set({ showContent: false });
 
-    // Wait for exit animation to complete
-    setTimeout(async () => {
+    // Wait for exit animation to complete before starting new content generation
+    // Using a regular timeout instead of async/await to avoid React state issues
+    setTimeout(() => {
       stopPassageSpeech();
       set({
         loading: true,
@@ -362,177 +363,188 @@ export const useTextGeneratorStore = create<TextGeneratorState>((set, get) => ({
         // Get a random topic appropriate for the current CEFR level
         const randomTopic = getRandomTopicForLevel(levelToUse);
 
-        // Get vocabulary and grammar guidance for the current level
-        const vocabGuidance = getVocabularyGuidance(levelToUse);
-        const grammarGuidance = getGrammarGuidance(levelToUse);
-
-        const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
-        // We need to get the questionLanguage from the context at runtime
-        // This will be provided by the component
-        const questionLanguage = get().generatedQuestionLanguage || 'en';
-        const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
-
-        // Add language guidance to the prompt for A1 and A2 levels
-        let languageInstructions = '';
-        if (['A1', 'A2'].includes(levelToUse)) {
-          languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
-        }
-
-        const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
-
-        const seed = Math.floor(Math.random() * 100);
-
-        console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
-        console.log(
-          '[API] Passage Lang:',
-          passageLanguage,
-          'Question Lang:',
-          questionLanguage,
-          'Level:',
-          levelToUse,
-          'Topic:',
-          randomTopic
-        );
-
-        const MAX_RETRIES = 2;
-        let currentRetry = 0;
-        let forceCache = false;
-        let success = false;
-
-        // Keep trying until we succeed or exhaust all options
-        while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
+        // This function is intentionally not async/await since it manages its own
+        // async flow with promises and uses the store's state through closures
+        void (async () => {
           try {
-            const requestBody = {
-              prompt,
-              seed,
-              passageLanguage,
-              questionLanguage,
-              forceCache,
-            };
+            // Get vocabulary and grammar guidance for the current level
+            const vocabGuidance = getVocabularyGuidance(levelToUse);
+            const grammarGuidance = getGrammarGuidance(levelToUse);
 
-            const response = await fetch('/api/chat', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(requestBody),
-            });
+            const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
+            // We need to get the questionLanguage from the context at runtime
+            // This will be provided by the component
+            const questionLanguage = get().generatedQuestionLanguage || 'en';
+            const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
 
-            if (!response.ok) {
-              // Define a simple type for the expected error structure
-              type ErrorResponse = { error?: string; message?: string };
-              let errorData: ErrorResponse = {};
-              try {
-                // Try to parse the error response body
-                errorData = (await response.json()) as ErrorResponse;
-              } catch (parseError) {
-                console.warn('Could not parse error response JSON:', parseError);
-                // If parsing fails, use the status text or a default message
-                throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
-              }
-              // Use the parsed error message if available
-              throw new Error(
-                errorData.error || errorData.message || `HTTP error! status: ${response.status}`
-              );
+            // Add language guidance to the prompt for A1 and A2 levels
+            let languageInstructions = '';
+            if (['A1', 'A2'].includes(levelToUse)) {
+              languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
             }
 
-            // Await the JSON response first, then parse
-            const jsonResponse = (await response.json()) as unknown;
-            const data = apiResponseSchema.parse(jsonResponse);
+            const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
 
-            if (data.error || !data.result) {
-              throw new Error(data.error || 'No result received');
-            }
+            const seed = Math.floor(Math.random() * 100);
 
-            // Clean up the string response from the AI before parsing
-            const jsonString = data.result.replace(/```json|```/g, '').trim();
-
-            // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
-            const parsedResult = z
-              .string()
-              .transform((str) => {
-                try {
-                  return JSON.parse(str) as unknown;
-                } catch (e) {
-                  throw new Error(`Failed to parse JSON: ${String(e)}`);
-                }
-              })
-              .pipe(quizDataSchema)
-              .safeParse(jsonString);
-
-            if (!parsedResult.success) {
-              console.error('Error parsing generated quiz JSON:', parsedResult.error);
-              throw new Error('Failed to parse the structure of the generated quiz.');
-            }
-
-            // No need to cast - Zod guarantees the type
-            const validatedData = parsedResult.data;
-
-            set({
-              quizData: validatedData,
-              generatedPassageLanguage: passageLanguage,
-            });
-
-            // --- Calculate Dynamic Question Delay ---
-            const WPM = 250; // Lower WPM for a quicker appearance
-            const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
-            const readingTimeMs = (wordCount / WPM) * 60 * 1000;
-            const bufferMs = 1500; // Further reduce buffer for a more responsive feel
-            const minDelayMs = 1500; // Shorter minimum delay
-            const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
+            console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
             console.log(
-              `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
+              '[API] Passage Lang:',
+              passageLanguage,
+              'Question Lang:',
+              questionLanguage,
+              'Level:',
+              levelToUse,
+              'Topic:',
+              randomTopic
             );
-            // --- End Calculate Delay ---
 
-            // Start timer to show question section using calculated delay, but with a cross-fade effect
-            const timeoutId = setTimeout(() => {
-              // When it's time to show the question, first make sure content is visible
-              if (!get().showContent) set({ showContent: true });
+            const MAX_RETRIES = 2;
+            let currentRetry = 0;
+            let forceCache = false;
+            let success = false;
 
-              // Short delay to ensure content is visible before showing question
-              setTimeout(() => {
-                set({ showQuestionSection: true });
-              }, 100);
-            }, questionDelayMs);
+            // Keep trying until we succeed or exhaust all options
+            while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
+              try {
+                const requestBody = {
+                  prompt,
+                  seed,
+                  passageLanguage,
+                  questionLanguage,
+                  forceCache,
+                };
 
-            set({ questionDelayTimeoutRef: timeoutId });
-            success = true;
-          } catch (err) {
-            console.error(`Error during attempt ${currentRetry + 1}:`, err);
-            if (currentRetry < MAX_RETRIES) {
-              // If we have retries left, increment the counter and try again
-              currentRetry++;
-              console.log(`Retrying... Attempt ${currentRetry + 1} of ${MAX_RETRIES + 1}`);
-              const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
-              await new Promise((resolve) => setTimeout(resolve, delay));
-            } else if (!forceCache) {
-              // We've exhausted our retries, try the cache as last resort
-              console.log('Retries exhausted, trying to force cache retrieval');
-              forceCache = true;
-              currentRetry = 0; // Reset retry counter for the cache attempt
-            } else {
-              // We've tried retries and cache, now show error
-              if (err instanceof Error) {
-                set({ error: err.message });
-              } else {
-                set({ error: 'An error occurred during text generation' });
+                const response = await fetch('/api/chat', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(requestBody),
+                });
+
+                if (!response.ok) {
+                  // Define a simple type for the expected error structure
+                  type ErrorResponse = { error?: string; message?: string };
+                  let errorData: ErrorResponse = {};
+                  try {
+                    // Try to parse the error response body
+                    errorData = (await response.json()) as ErrorResponse;
+                  } catch (parseError) {
+                    console.warn('Could not parse error response JSON:', parseError);
+                    // If parsing fails, use the status text or a default message
+                    throw new Error(
+                      response.statusText || `HTTP error! status: ${response.status}`
+                    );
+                  }
+                  // Use the parsed error message if available
+                  throw new Error(
+                    errorData.error || errorData.message || `HTTP error! status: ${response.status}`
+                  );
+                }
+
+                // Await the JSON response first, then parse
+                const jsonResponse = (await response.json()) as unknown;
+                const data = apiResponseSchema.parse(jsonResponse);
+
+                if (data.error || !data.result) {
+                  throw new Error(data.error || 'No result received');
+                }
+
+                // Clean up the string response from the AI before parsing
+                const jsonString = data.result.replace(/```json|```/g, '').trim();
+
+                // Use Zod's pipeline for safe JSON parsing - this avoids direct JSON.parse entirely
+                const parsedResult = z
+                  .string()
+                  .transform((str) => {
+                    try {
+                      return JSON.parse(str) as unknown;
+                    } catch (e) {
+                      throw new Error(`Failed to parse JSON: ${String(e)}`);
+                    }
+                  })
+                  .pipe(quizDataSchema)
+                  .safeParse(jsonString);
+
+                if (!parsedResult.success) {
+                  console.error('Error parsing generated quiz JSON:', parsedResult.error);
+                  throw new Error('Failed to parse the structure of the generated quiz.');
+                }
+
+                // No need to cast - Zod guarantees the type
+                const validatedData = parsedResult.data;
+
+                set({
+                  quizData: validatedData,
+                  generatedPassageLanguage: passageLanguage,
+                });
+
+                // --- Calculate Dynamic Question Delay ---
+                const WPM = 250; // Lower WPM for a quicker appearance
+                const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
+                const readingTimeMs = (wordCount / WPM) * 60 * 1000;
+                const bufferMs = 1500; // Further reduce buffer for a more responsive feel
+                const minDelayMs = 1500; // Shorter minimum delay
+                const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
+                console.log(
+                  `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
+                );
+                // --- End Calculate Delay ---
+
+                // Start timer to show question section using calculated delay, but with a cross-fade effect
+                const timeoutId = setTimeout(() => {
+                  // When it's time to show the question, first make sure content is visible
+                  if (!get().showContent) set({ showContent: true });
+
+                  // Short delay to ensure content is visible before showing question
+                  setTimeout(() => {
+                    set({ showQuestionSection: true });
+                  }, 100);
+                }, questionDelayMs);
+
+                set({ questionDelayTimeoutRef: timeoutId });
+                success = true;
+              } catch (err) {
+                console.error(`Error during attempt ${currentRetry + 1}:`, err);
+                if (currentRetry < MAX_RETRIES) {
+                  // If we have retries left, increment the counter and try again
+                  currentRetry++;
+                  console.log(`Retrying... Attempt ${currentRetry + 1} of ${MAX_RETRIES + 1}`);
+                  const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
+                  await new Promise((resolve) => setTimeout(resolve, delay));
+                } else if (!forceCache) {
+                  // We've exhausted our retries, try the cache as last resort
+                  console.log('Retries exhausted, trying to force cache retrieval');
+                  forceCache = true;
+                  currentRetry = 0; // Reset retry counter for the cache attempt
+                } else {
+                  // We've tried retries and cache, now show error
+                  if (err instanceof Error) {
+                    set({ error: err.message });
+                  } else {
+                    set({ error: 'An error occurred during text generation' });
+                  }
+                  throw err; // Re-throw to exit the retry loop
+                }
               }
-              throw err; // Re-throw to exit the retry loop
             }
+          } catch (err) {
+            console.error('All attempts failed:', err);
+          } finally {
+            set({ loading: false, showContent: true });
           }
-        }
+        })();
       } catch (err) {
-        console.error('All attempts failed:', err);
-      } finally {
-        set({ loading: false, showContent: true });
+        console.error('Failed to start text generation:', err);
+        set({ loading: false, showContent: true, error: 'Failed to start generation process' });
       }
     }, 300);
   },
 
   // Handle answer selection
   handleAnswerSelect: async (answer) => {
-    const { quizData, isAnswered, stopPassageSpeech, generatedPassageLanguage, userStreak } = get();
+    const { quizData, isAnswered, stopPassageSpeech, generatedPassageLanguage } = get();
 
     if (isAnswered || !quizData) return;
 
