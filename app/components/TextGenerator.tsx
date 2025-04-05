@@ -12,7 +12,6 @@ import {
   GlobeAltIcon,
   BookOpenIcon,
   ArrowPathIcon,
-  PlusCircleIcon,
 } from '@heroicons/react/24/solid';
 
 import {
