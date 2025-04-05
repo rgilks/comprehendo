@@ -75,7 +75,13 @@
     "leveledUp": "Leveled up to",
     "streakIncreased": "Streak increased to",
     "streakCompleted": "Streak completed! Level up!",
-    "progressUpdateError": "Failed to update progress"
+    "correctStreak": "Correct answers streak",
+    "progressUpdateError": "Failed to update progress",
+    "yourProgress": "Your Progress",
+    "currentStreak": "Current Streak",
+    "startStreak": "Answer correctly to start a streak",
+    "keepGoing": "Keep going! Answer more questions correctly",
+    "almostLevelUp": "One more correct answer to level up!"
   },
   "admin": {
     "title": "Admin",

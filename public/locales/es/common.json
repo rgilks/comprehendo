@@ -75,7 +75,13 @@
     "leveledUp": "Subiste al nivel",
     "streakIncreased": "Racha aumentada a",
     "streakCompleted": "¡Racha completada! ¡Subiste de nivel!",
-    "progressUpdateError": "Error al actualizar el progreso"
+    "correctStreak": "Racha de respuestas correctas",
+    "progressUpdateError": "Error al actualizar el progreso",
+    "yourProgress": "Tu Progreso",
+    "currentStreak": "Racha Actual",
+    "startStreak": "Responde correctamente para iniciar una racha",
+    "keepGoing": "¡Sigue así! Responde más preguntas correctamente",
+    "almostLevelUp": "¡Una respuesta correcta más para subir de nivel!"
   },
   "admin": {
     "title": "Administración",
