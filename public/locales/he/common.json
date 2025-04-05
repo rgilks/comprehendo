@@ -63,11 +63,15 @@
     "next": "הבא",
     "readingTime": "זמן קריאה...",
     "answerQuestionBelow": "ענה/י על השאלה הבאה:",
-    "generateNewText": "צור טקסט חדש",
+    "generateNewText": "תן לי משהו לקרוא",
     "supportingTextPrefix": "טקסט תומך: ",
-    "passageLanguageLabel": "למידה",
-    "questionWillAppear": "השאלה תופיע מיד...",
-    "passageTitle": "טקסט לקריאה"
+    "passageLanguageLabel": "לימוד",
+    "questionWillAppear": "שאלה תופיע בקרוב...",
+    "passageTitle": "קטע קריאה",
+    "signInPrompt": {
+      "message": "היכנס כדי לעקוב אחר ההתקדמות שלך ולראות את היסטוריית הלמידה שלך!",
+      "dismiss": "התעלם"
+    }
   },
   "admin": {
     "title": "ניהול",

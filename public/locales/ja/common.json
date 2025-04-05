@@ -63,11 +63,15 @@
     "next": "次へ",
     "readingTime": "読書時間...",
     "answerQuestionBelow": "下の質問に答えてください",
-    "generateNewText": "新しいテキストを生成",
+    "generateNewText": "読むものをください",
     "supportingTextPrefix": "サポートテキスト: ",
     "passageLanguageLabel": "学習",
     "questionWillAppear": "質問はまもなく表示されます...",
-    "passageTitle": "読解文章"
+    "passageTitle": "読解文章",
+    "signInPrompt": {
+      "message": "サインインして進捗状況を追跡し、学習履歴を確認しましょう！",
+      "dismiss": "閉じる"
+    }
   },
   "admin": {
     "title": "管理",

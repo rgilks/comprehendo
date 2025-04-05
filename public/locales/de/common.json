@@ -63,11 +63,15 @@
     "next": "Weiter",
     "readingTime": "Lesezeit...",
     "answerQuestionBelow": "Beantworten Sie die Frage unten",
-    "generateNewText": "Neuen Text generieren",
+    "generateNewText": "Gib mir etwas zu lesen",
     "supportingTextPrefix": "Unterstützender Text: ",
     "passageLanguageLabel": "Lernen",
     "questionWillAppear": "Frage erscheint in Kürze...",
-    "passageTitle": "Lesetext"
+    "passageTitle": "Lesetext",
+    "signInPrompt": {
+      "message": "Melden Sie sich an, um Ihren Fortschritt zu verfolgen und Ihren Lernverlauf anzuzeigen!",
+      "dismiss": "Verwerfen"
+    }
   },
   "admin": {
     "title": "Verwaltung",

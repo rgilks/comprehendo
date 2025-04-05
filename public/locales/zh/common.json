@@ -63,11 +63,15 @@
     "next": "下一步",
     "readingTime": "阅读时间...",
     "answerQuestionBelow": "回答以下问题",
-    "generateNewText": "生成新文本",
+    "generateNewText": "给我一些阅读材料",
     "supportingTextPrefix": "支持文本：",
     "passageLanguageLabel": "学习",
-    "questionWillAppear": "问题稍后出现...",
-    "passageTitle": "阅读文章"
+    "questionWillAppear": "问题即将出现...",
+    "passageTitle": "阅读段落",
+    "signInPrompt": {
+      "message": "登录以跟踪您的进度并查看您的学习历史！",
+      "dismiss": "忽略"
+    }
   },
   "admin": {
     "title": "管理",

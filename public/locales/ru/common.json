@@ -63,11 +63,15 @@
     "next": "Далее",
     "readingTime": "Время чтения...",
     "answerQuestionBelow": "Ответьте на вопрос ниже",
-    "generateNewText": "Сгенерировать новый текст",
+    "generateNewText": "Дай мне что-нибудь почитать",
     "supportingTextPrefix": "Вспомогательный текст: ",
-    "passageLanguageLabel": "Изучение",
+    "passageLanguageLabel": "Обучение",
     "questionWillAppear": "Вопрос появится в ближайшее время...",
-    "passageTitle": "Текст для чтения"
+    "passageTitle": "Текст для чтения",
+    "signInPrompt": {
+      "message": "Войдите, чтобы отслеживать свой прогресс и просматривать историю обучения!",
+      "dismiss": "Закрыть"
+    }
   },
   "admin": {
     "title": "Администрирование",
