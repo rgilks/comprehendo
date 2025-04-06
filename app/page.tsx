@@ -6,7 +6,7 @@ import AuthButton from '@/components/AuthButton';
 import { useLanguage, type Language } from '@/contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 
-function LanguageSelector() {
+const LanguageSelector = () => {
   const { language, setLanguage, languages } = useLanguage();
 
   return (
@@ -24,9 +24,9 @@ function LanguageSelector() {
       ))}
     </select>
   );
-}
+};
 
-function HomeContent() {
+const HomeContent = () => {
   const { t } = useTranslation('common');
 
   return (
@@ -69,7 +69,7 @@ function HomeContent() {
       </div>
     </main>
   );
-}
+};
 
 export default function Home() {
   return <HomeContent />;

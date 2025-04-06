@@ -13,10 +13,7 @@ interface PageClientContentProps {
   initialI18nStore: Resource; // Receive the store data (resources)
 }
 
-export default function PageClientContent({
-  initialLanguage,
-  initialI18nStore,
-}: PageClientContentProps) {
+const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientContentProps) => {
   const { t } = useTranslation();
   // Ensure resources for the initial language are loaded idempotently
   Object.keys(initialI18nStore).forEach((lang) => {
@@ -58,4 +55,6 @@ export default function PageClientContent({
       </LanguageProvider>
     </I18nextProvider>
   );
-}
+};
+
+export default PageClientContent;

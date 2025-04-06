@@ -64,7 +64,7 @@ const quizDataSchema = z.object({
 /**
  * Check if the user has exceeded rate limits
  */
-export async function checkRateLimit(ip: string): Promise<boolean> {
+export const checkRateLimit = async (ip: string): Promise<boolean> => {
   try {
     // Initialize DB table if not exists
     await Promise.resolve(
@@ -135,18 +135,18 @@ export async function checkRateLimit(ip: string): Promise<boolean> {
     console.error('[API] Error checking rate limit:', error);
     return false;
   }
-}
+};
 
 /**
  * Get cached exercise content if available
  */
-export async function getCachedExercise(
+export const getCachedExercise = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   seedValue: number,
   forceCache: boolean = false
-): Promise<GeneratedContentRow | undefined> {
+): Promise<GeneratedContentRow | undefined> => {
   try {
     // Function to get cached content with specific level
     const getCachedContent = (specificLevel: string) => {
@@ -238,17 +238,17 @@ export async function getCachedExercise(
     console.error('[API] Error getting cached exercise:', error);
     return undefined;
   }
-}
+};
 
 /**
  * Save the generated content to the database
  */
-export async function saveGeneratedContent(
+export const saveGeneratedContent = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   content: string
-): Promise<number | undefined> {
+): Promise<number | undefined> => {
   try {
     // Extract questions from content to save separately
     let questions = '';
@@ -321,17 +321,17 @@ export async function saveGeneratedContent(
     console.error('[API] Error saving content to database:', error);
     return undefined;
   }
-}
+};
 
 /**
  * Log usage statistics
  */
-export async function logUsageStats(
+export const logUsageStats = async (
   userId: number | null,
   ip: string,
   language: string,
   level: string
-): Promise<void> {
+): Promise<void> => {
   if (userId) {
     try {
       db.prepare(
@@ -351,12 +351,12 @@ export async function logUsageStats(
       console.error('[API] Error logging usage stats:', error);
     }
   }
-}
+};
 
 /**
  * Generate content with OpenAI
  */
-export async function generateWithOpenAI(prompt: string, model: ModelConfig): Promise<string> {
+export const generateWithOpenAI = async (prompt: string, model: ModelConfig): Promise<string> => {
   try {
     const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
@@ -379,12 +379,12 @@ export async function generateWithOpenAI(prompt: string, model: ModelConfig): Pr
     console.error('[API] OpenAI generation error:', error);
     throw new Error('Error generating content with OpenAI');
   }
-}
+};
 
 /**
  * Generate content with Google AI
  */
-export async function generateWithGoogleAI(prompt: string, model: ModelConfig): Promise<string> {
+export const generateWithGoogleAI = async (prompt: string, model: ModelConfig): Promise<string> => {
   try {
     const genAI = getGoogleAIClient();
     const generativeModel = genAI.getGenerativeModel({
@@ -421,12 +421,12 @@ CRITICAL INSTRUCTION: The question, options, and explanations MUST be in the que
     console.error('[API] Google AI generation error:', error);
     throw new Error('Error generating content with Google AI');
   }
-}
+};
 
 /**
  * Helper function to process and validate AI responses
  */
-export async function processAIResponse(content: string): Promise<string> {
+export const processAIResponse = async (content: string): Promise<string> => {
   // Remove markdown formatting
   content = content.replace(/```json|```/g, '').trim();
 
@@ -530,20 +530,20 @@ export async function processAIResponse(content: string): Promise<string> {
 
     return JSON.stringify(fallbackData);
   }
-}
+};
 
 /**
  * Extract CEFR level from prompt
  */
-export async function extractCEFRLevel(prompt: string): Promise<string> {
+export const extractCEFRLevel = async (prompt: string): Promise<string> => {
   const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
   return cefrLevelMatch?.[1] ?? 'unknown';
-}
+};
 
 /**
  * Get user ID if user is authenticated
  */
-export async function getAuthenticatedUserId(): Promise<number | null> {
+export const getAuthenticatedUserId = async (): Promise<number | null> => {
   try {
     const session = await getServerSession();
 
@@ -572,12 +572,12 @@ export async function getAuthenticatedUserId(): Promise<number | null> {
     console.error('[API] Error getting authenticated user:', error);
     return null;
   }
-}
+};
 
 /**
  * Main function to generate exercise response
  */
-export async function generateExerciseResponse(params: ExerciseRequestParams) {
+export const generateExerciseResponse = async (params: ExerciseRequestParams) => {
   try {
     // Validate request parameters
     const parsedBody = exerciseRequestBodySchema.safeParse(params);
@@ -653,4 +653,4 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
     console.error('[API] Error in generateExerciseResponse:', error);
     throw error;
   }
-}
+};

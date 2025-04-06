@@ -4,19 +4,19 @@ import type { Metadata } from 'next';
 import { initServerI18n } from '../i18n';
 import PageClientContent from './PageClientContent';
 
-export function generateMetadata(): Metadata {
+export const generateMetadata = (): Metadata => {
   return {
     title: 'Comprehendo',
     description: 'An AI-powered language learning tool',
   };
-}
+};
 
-export function generateStaticParams() {
+export const generateStaticParams = () => {
   // Generate params from the single source of truth
   return Object.keys(LANGUAGES).map((lang) => ({
     lang,
   }));
-}
+};
 
 type PageProps = {
   params: Promise<{ lang: string }>;

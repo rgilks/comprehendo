@@ -3,6 +3,8 @@
 import React from 'react';
 import TextGeneratorContainer from './TextGenerator/index';
 
-export default function TextGenerator() {
+const TextGenerator = () => {
   return <TextGeneratorContainer />;
-}
+};
+
+export default TextGenerator;

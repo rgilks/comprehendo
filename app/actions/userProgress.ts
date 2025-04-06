@@ -34,7 +34,7 @@ export interface ProgressResponse {
 }
 
 // Update progress - equivalent to POST handler
-export async function updateProgress(params: UpdateProgressParams): Promise<ProgressResponse> {
+export const updateProgress = async (params: UpdateProgressParams): Promise<ProgressResponse> => {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as SessionUser | undefined;
 
@@ -171,10 +171,10 @@ export async function updateProgress(params: UpdateProgressParams): Promise<Prog
       error: 'An error occurred while updating progress',
     };
   }
-}
+};
 
 // Get progress - equivalent to GET handler
-export async function getProgress(params: GetProgressParams): Promise<ProgressResponse> {
+export const getProgress = async (params: GetProgressParams): Promise<ProgressResponse> => {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as SessionUser | undefined;
 
@@ -257,4 +257,4 @@ export async function getProgress(params: GetProgressParams): Promise<ProgressRe
       error: 'An error occurred while fetching progress',
     };
   }
-}
+};

@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import type { Language } from '@/contexts/LanguageContext';
 import AnimateTransition from '@/components/AnimateTransition';
 
-export default function LanguageSelector() {
+const LanguageSelector = () => {
   const { language, setLanguage, languages } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -91,4 +91,6 @@ export default function LanguageSelector() {
       </AnimateTransition>
     </div>
   );
-}
+};
+
+export default LanguageSelector;

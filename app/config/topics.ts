@@ -220,7 +220,7 @@ export const topicsByLevel: CEFRTopics = {
  * @param level CEFR level (A1, A2, B1, B2, C1, C2)
  * @returns Array of topics suitable for the level
  */
-export function getTopicsForLevel(level: string): string[] {
+export const getTopicsForLevel = (level: string): string[] => {
   // Get topics for the specific level
   const levelTopics = topicsByLevel[level];
 
@@ -230,14 +230,14 @@ export function getTopicsForLevel(level: string): string[] {
 
   // Flatten the topics from all categories at this level
   return levelTopics.flatMap((category) => category.topics);
-}
+};
 
 /**
  * Get a random topic for a specific CEFR level
  * @param level CEFR level (A1, A2, B1, B2, C1, C2)
  * @returns A random topic suitable for the level
  */
-export function getRandomTopicForLevel(level: string): string {
+export const getRandomTopicForLevel = (level: string): string => {
   const topics = getTopicsForLevel(level);
 
   if (topics.length === 0) {
@@ -246,14 +246,14 @@ export function getRandomTopicForLevel(level: string): string {
 
   const randomIndex = Math.floor(Math.random() * topics.length);
   return topics[randomIndex];
-}
+};
 
 /**
  * Get all topics from all levels
  * @returns Array of all topics
  */
-export function getAllTopics(): string[] {
+export const getAllTopics = (): string[] => {
   return Object.values(topicsByLevel).flatMap((categories) =>
     categories.flatMap((category) => category.topics)
   );
-}
+};

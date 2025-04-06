@@ -12,14 +12,14 @@ interface AnimatedListProps {
   itemClassName?: string;
 }
 
-export default function AnimatedList({
+const AnimatedList = ({
   items,
   visible,
   animationType = 'slide-up',
   staggerDelay = 100,
   className = '',
   itemClassName = '',
-}: AnimatedListProps) {
+}: AnimatedListProps) => {
   return (
     <div className={className}>
       {items.map((item, index) => (
@@ -35,7 +35,9 @@ export default function AnimatedList({
       ))}
     </div>
   );
-}
+};
+
+export default AnimatedList;
 
 // Example usage:
 // const items = ['Item 1', 'Item 2', 'Item 3'].map(item => <div className="p-4 bg-gray-800 mb-2 rounded">{item}</div>);

@@ -97,13 +97,13 @@ export const grammarGuidance: Record<CEFRLevel, string> = {
 /**
  * Get vocabulary guidance for a specific CEFR level
  */
-export function getVocabularyGuidance(level: CEFRLevel): string {
+export const getVocabularyGuidance = (level: CEFRLevel): string => {
   return vocabularyGuidance[level] || '';
-}
+};
 
 /**
  * Get grammar guidance for a specific CEFR level
  */
-export function getGrammarGuidance(level: CEFRLevel): string {
+export const getGrammarGuidance = (level: CEFRLevel): string => {
   return grammarGuidance[level] || '';
-}
+};

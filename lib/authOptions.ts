@@ -59,7 +59,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {},
   callbacks: {
-    signIn({ user, account }: { user: User | AdapterUser; account: Account | null }) {
+    signIn: ({ user, account }: { user: User | AdapterUser; account: Account | null }) => {
       try {
         if (user && account) {
           db.prepare(
@@ -89,7 +89,15 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-    jwt({ token, user, account }: { token: JWT; user?: UserWithEmail; account?: Account | null }) {
+    jwt: ({
+      token,
+      user,
+      account,
+    }: {
+      token: JWT;
+      user?: UserWithEmail;
+      account?: Account | null;
+    }) => {
       console.log('[AUTH JWT Callback] Invoked.');
 
       if (account && user && user.email) {
@@ -121,7 +129,7 @@ export const authOptions: NextAuthOptions = {
       // console.log('[AUTH JWT Callback] Returning token:', token);
       return token;
     },
-    session({ session, token }: { session: Session; token: JWT }) {
+    session: ({ session, token }: { session: Session; token: JWT }) => {
       // console.log('[AUTH Session Callback] Invoked. Token received:', token);
 
       if (session.user && token.sub && token.provider) {

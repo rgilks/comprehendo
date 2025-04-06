@@ -86,7 +86,7 @@ jest.mock('next/server', () => {
     }
   }
 
-  function createResponse(body, status = 200) {
+  const createResponse = (body, status = 200) => {
     const stringifiedBody = typeof body === 'string' ? body : JSON.stringify(body);
 
     return {
@@ -95,7 +95,7 @@ jest.mock('next/server', () => {
       json: async () => body,
       _body: stringifiedBody,
     };
-  }
+  };
 
   return {
     NextRequest,

@@ -4,7 +4,7 @@ import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 
-async function isAdmin(): Promise<boolean> {
+const isAdmin = async (): Promise<boolean> => {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
@@ -17,13 +17,13 @@ async function isAdmin(): Promise<boolean> {
     .filter((email) => email);
 
   return adminEmails.includes(session.user.email);
-}
+};
 
 interface TableNameResult {
   name: string;
 }
 
-function getAllTableNames(): string[] {
+const getAllTableNames = (): string[] => {
   try {
     const tables = db
       .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
@@ -33,7 +33,7 @@ function getAllTableNames(): string[] {
     console.error('[Admin Actions] Error fetching table names:', error);
     return [];
   }
-}
+};
 
 interface PaginatedTableData {
   data: Record<string, unknown>[];
@@ -46,19 +46,19 @@ interface CountResult {
   totalRows: number;
 }
 
-export async function getTableNames(): Promise<{ error?: string; data?: string[] }> {
+export const getTableNames = async (): Promise<{ error?: string; data?: string[] }> => {
   if (!(await isAdmin())) {
     return { error: 'Unauthorized' };
   }
   const tableNames = getAllTableNames();
   return { data: tableNames };
-}
+};
 
-export async function getTableData(
+export const getTableData = async (
   tableName: string,
   page: number = 1,
   limit: number = 10 // Default to 10 rows per page
-): Promise<{ error?: string; data?: PaginatedTableData }> {
+): Promise<{ error?: string; data?: PaginatedTableData }> => {
   if (!(await isAdmin())) {
     return { error: 'Unauthorized' };
   }
@@ -105,4 +105,4 @@ export async function getTableData(
     console.error(`[Admin Actions] Error fetching paginated data for table ${tableName}:`, error);
     return { error: 'Failed to fetch table data' };
   }
-}
+};
