@@ -8,8 +8,10 @@ import {
   ChevronLeftIcon as HeroChevronLeftIcon,
   ChevronRightIcon as HeroChevronRightIcon,
 } from '@heroicons/react/24/solid';
+import { useSession } from 'next-auth/react';
 
 export default function AdminPage() {
+  const { data: session, status } = useSession();
   const [tableNames, setTableNames] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [tableData, setTableData] = useState<Record<string, unknown>[]>([]);
@@ -194,141 +196,158 @@ export default function AdminPage() {
           </Link>
         </div>
 
-        {selectedRowData ? (
-          <RowDetailView rowData={selectedRowData} onBack={handleBackFromDetail} />
+        {status === 'loading' ? (
+          <p>Loading authentication status...</p>
+        ) : status === 'unauthenticated' || !session?.user ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h2 className="font-bold">Unauthorized</h2>
+            <p>You must be logged in to access the admin area.</p>
+          </div>
+        ) : !(session.user as { isAdmin?: boolean })?.isAdmin ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <h2 className="font-bold">Unauthorized</h2>
+            <p>You do not have admin permissions.</p>
+          </div>
         ) : (
           <>
-            {isLoadingTables && <p>Loading table names...</p>}
-            {error && !selectedTable && (
-              <p className="text-red-500">Error loading tables: {error}</p>
-            )}
-
-            {!isLoadingTables && tableNames.length > 0 && (
-              <div className="mb-6">
-                <div className="flex gap-3 overflow-x-auto whitespace-nowrap py-2">
-                  {tableNames.map((name) => (
-                    <button
-                      key={name}
-                      onClick={() => handleTableSelect(name)}
-                      className={`${buttonBaseClass} ${selectedTable === name ? primaryButtonClass : secondaryButtonClass}`}
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {selectedTable && (
-              <div className="min-h-[340px]">
-                {error && (
-                  <p className="text-red-500 mb-4">
-                    Error loading data for {selectedTable}: {error}
-                  </p>
+            {selectedRowData ? (
+              <RowDetailView rowData={selectedRowData} onBack={handleBackFromDetail} />
+            ) : (
+              <>
+                {isLoadingTables && <p>Loading table names...</p>}
+                {error && !selectedTable && (
+                  <p className="text-red-500">Error loading tables: {error}</p>
                 )}
 
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 mb-4 text-sm min-h-[38px]">
-                  {currentPage === 1 ? (
-                    <button
-                      onClick={handleRefresh}
-                      disabled={isLoadingData || !!error}
-                      className={`${refreshButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''} px-3 py-1 sm:px-4 sm:py-2`}
-                    >
-                      <HeroRefreshIcon className="h-4 w-4" aria-hidden="true" />
-                      <span>{isLoadingData ? 'Refreshing...' : 'Refresh'}</span>{' '}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handlePreviousPage}
-                      disabled={currentPage <= 1 || isLoadingData}
-                      className={secondaryButtonClass}
-                    >
-                      <HeroChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  )}
+                {!isLoadingTables && tableNames.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex gap-3 overflow-x-auto whitespace-nowrap py-2">
+                      {tableNames.map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => handleTableSelect(name)}
+                          className={`${buttonBaseClass} ${selectedTable === name ? primaryButtonClass : secondaryButtonClass}`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                  <span
-                    className={`text-gray-300 ${totalRows === 0 || !!error ? 'invisible' : ''}`}
-                  >
-                    Page {currentPage} of {totalPages} (Total: {totalRows} rows)
-                  </span>
-                  <button
-                    onClick={handleNextPage}
-                    disabled={currentPage >= totalPages || isLoadingData}
-                    className={secondaryButtonClass}
-                  >
-                    <HeroChevronRightIcon className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
+                {selectedTable && (
+                  <div className="min-h-[340px]">
+                    {error && (
+                      <p className="text-red-500 mb-4">
+                        Error loading data for {selectedTable}: {error}
+                      </p>
+                    )}
 
-                <div
-                  className={`overflow-x-auto relative ${isLoadingData ? 'opacity-60' : ''} transition-opacity duration-200`}
-                >
-                  {!error && (
-                    <table className="min-w-full bg-white border border-gray-300">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          {tableData.length > 0 ? (
-                            Object.keys(tableData[0]).map((key) => (
-                              <th
-                                key={key}
-                                className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold"
-                              >
-                                {key}
-                              </th>
-                            ))
-                          ) : (
-                            <th className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold">
-                              &nbsp;
-                            </th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody style={{ minHeight: `${minBodyHeight}px` }}>
-                        {!isLoadingData && tableData.length > 0
-                          ? tableData.map((row, rowIndex) => (
-                              <tr
-                                key={rowIndex}
-                                className="hover:bg-gray-50 cursor-pointer"
-                                onClick={() => setSelectedRowData(row)}
-                              >
-                                {Object.values(row).map((value, colIndex) => (
-                                  <td
-                                    key={colIndex}
-                                    className="py-1 px-2 sm:py-2 sm:px-4 border-b text-gray-900 text-sm"
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 mb-4 text-sm min-h-[38px]">
+                      {currentPage === 1 ? (
+                        <button
+                          onClick={handleRefresh}
+                          disabled={isLoadingData || !!error}
+                          className={`${refreshButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''} px-3 py-1 sm:px-4 sm:py-2`}
+                        >
+                          <HeroRefreshIcon className="h-4 w-4" aria-hidden="true" />
+                          <span>{isLoadingData ? 'Refreshing...' : 'Refresh'}</span>{' '}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage <= 1 || isLoadingData}
+                          className={secondaryButtonClass}
+                        >
+                          <HeroChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      )}
+
+                      <span
+                        className={`text-gray-300 ${totalRows === 0 || !!error ? 'invisible' : ''}`}
+                      >
+                        Page {currentPage} of {totalPages} (Total: {totalRows} rows)
+                      </span>
+                      <button
+                        onClick={handleNextPage}
+                        disabled={currentPage >= totalPages || isLoadingData}
+                        className={secondaryButtonClass}
+                      >
+                        <HeroChevronRightIcon className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+
+                    <div
+                      className={`overflow-x-auto relative ${isLoadingData ? 'opacity-60' : ''} transition-opacity duration-200`}
+                    >
+                      {!error && (
+                        <table className="min-w-full bg-white border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              {tableData.length > 0 ? (
+                                Object.keys(tableData[0]).map((key) => (
+                                  <th
+                                    key={key}
+                                    className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold"
                                   >
-                                    {typeof value === 'string'
-                                      ? value.length > 100
-                                        ? `${value.substring(0, 100)}...`
-                                        : value
-                                      : value === null || value === undefined
-                                        ? 'NULL'
-                                        : typeof value === 'object' && value !== null
-                                          ? JSON.stringify(value)
-                                          : typeof value === 'number' || typeof value === 'boolean'
-                                            ? String(value)
-                                            : '[Complex Value]'}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))
-                          : !error && (
-                              <tr>
-                                <td
-                                  colSpan={
-                                    tableData.length > 0 ? Object.keys(tableData[0]).length : 1
-                                  }
-                                  className="py-4 px-4 text-center text-gray-500"
-                                >
-                                  {isLoadingData ? '' : 'No data found in this table.'}
-                                </td>
-                              </tr>
-                            )}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
+                                    {key}
+                                  </th>
+                                ))
+                              ) : (
+                                <th className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold">
+                                  &nbsp;
+                                </th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody style={{ minHeight: `${minBodyHeight}px` }}>
+                            {!isLoadingData && tableData.length > 0
+                              ? tableData.map((row, rowIndex) => (
+                                  <tr
+                                    key={rowIndex}
+                                    className="hover:bg-gray-50 cursor-pointer"
+                                    onClick={() => setSelectedRowData(row)}
+                                  >
+                                    {Object.values(row).map((value, colIndex) => (
+                                      <td
+                                        key={colIndex}
+                                        className="py-1 px-2 sm:py-2 sm:px-4 border-b text-gray-900 text-sm"
+                                      >
+                                        {typeof value === 'string'
+                                          ? value.length > 100
+                                            ? `${value.substring(0, 100)}...`
+                                            : value
+                                          : value === null || value === undefined
+                                            ? 'NULL'
+                                            : typeof value === 'object' && value !== null
+                                              ? JSON.stringify(value)
+                                              : typeof value === 'number' ||
+                                                  typeof value === 'boolean'
+                                                ? String(value)
+                                                : '[Complex Value]'}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))
+                              : !error && (
+                                  <tr>
+                                    <td
+                                      colSpan={
+                                        tableData.length > 0 ? Object.keys(tableData[0]).length : 1
+                                      }
+                                      className="py-4 px-4 text-center text-gray-500"
+                                    >
+                                      {isLoadingData ? '' : 'No data found in this table.'}
+                                    </td>
+                                  </tr>
+                                )}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
