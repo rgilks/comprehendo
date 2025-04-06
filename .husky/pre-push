@@ -2,4 +2,16 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 echo "Running pre-push checks..."
-npm run check
+npm run format
+npm run lint
+npm run test
+
+# Stop any running dev server on port 3000
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+echo "Stopped any running server on port 3000"
+
+# Build to ensure no build errors
+npm run build
+
+# After push completes, restart dev server
+(sleep 2 && npm run dev &) &
