@@ -28,6 +28,7 @@ const chatRequestBodySchema = z.object({
   passageLanguage: z.string(),
   questionLanguage: z.string(),
   forceCache: z.boolean().optional(),
+  languageRequirement: z.string().optional(),
 });
 
 export type ChatRequestParams = z.infer<typeof chatRequestBodySchema>;
@@ -422,7 +423,7 @@ async function generateWithOpenAI(prompt: string, model: ModelConfig): Promise<s
         {
           role: 'system',
           content:
-            'You are a language learning assistant that creates reading comprehension exercises. Always format your response as valid JSON without markdown code blocks. The JSON must include: paragraph, question, options (A,B,C,D), explanations (A,B,C,D), correctAnswer, relevantText, and topic fields.',
+            'You are a language learning assistant that creates reading comprehension exercises. Always format your response as valid JSON without markdown code blocks. The JSON must include: paragraph, question, options (A,B,C,D), explanations (A,B,C,D), correctAnswer, relevantText, and topic fields. IMPORTANT: Make sure the question, options, and explanations are in the question language specified in the prompt, NOT in the passage language.',
         },
         { role: 'user', content: prompt },
       ],
@@ -454,13 +455,15 @@ async function generateWithGoogleAI(prompt: string, model: ModelConfig): Promise
               text: `${prompt} 
 IMPORTANT: Respond with valid JSON only, no markdown formatting or code blocks.
 The JSON must include these exact fields:
-- paragraph: the text passage
-- question: the comprehension question
-- options: an object with keys A, B, C, D containing answer choices
-- explanations: an object with keys A, B, C, D explaining each answer
+- paragraph: the text passage (in the passage language)
+- question: the comprehension question (in the question language)
+- options: an object with keys A, B, C, D containing answer choices (in the question language)
+- explanations: an object with keys A, B, C, D explaining each answer (in the question language)
 - correctAnswer: one of "A", "B", "C", or "D"
-- relevantText: the part of paragraph that answers the question
-- topic: a brief description of the topic`,
+- relevantText: the part of paragraph that answers the question (in the passage language)
+- topic: a brief description of the topic
+
+CRITICAL INSTRUCTION: The question, options, and explanations MUST be in the question language mentioned in the prompt, NOT in the passage language. This is essential for user experience.`,
             },
           ],
         },

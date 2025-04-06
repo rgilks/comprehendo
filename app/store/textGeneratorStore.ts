@@ -403,8 +403,7 @@ export const useTextGeneratorStore = create(
               const grammarGuidance = getGrammarGuidance(levelToUse);
 
               const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
-              // We need to get the questionLanguage from the context at runtime
-              // This will be provided by the component
+              // Get the user's selected language (interface language) for questions
               const questionLanguage = get().generatedQuestionLanguage || 'en';
               const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
 
@@ -414,7 +413,7 @@ export const useTextGeneratorStore = create(
                 languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
               }
 
-              const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. Format the question, options, and explanations in ${questionLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
+              const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. FORMAT THE QUESTION, OPTIONS, AND EXPLANATIONS IN ${questionLanguageName}. This is extremely important - the question and all answer options must be in ${questionLanguageName}, not in ${passageLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
 
               const seed = Math.floor(Math.random() * 100);
 
@@ -444,6 +443,7 @@ export const useTextGeneratorStore = create(
                     passageLanguage,
                     questionLanguage,
                     forceCache,
+                    languageRequirement: `Generate passage in ${passageLanguageName}, but questions/options/explanations in ${questionLanguageName}`,
                   };
 
                   // Use server action directly
