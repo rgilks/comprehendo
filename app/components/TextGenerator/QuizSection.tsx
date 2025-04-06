@@ -17,11 +17,11 @@ const QuizSection = () => {
     showExplanation,
     showQuestionSection,
     handleAnswerSelect,
-    generatedQuestionLanguage,
   } = useTextGeneratorStore();
 
-  // Use the store's question language if available, otherwise use the context
-  const questionLanguage = generatedQuestionLanguage || contextQuestionLanguage;
+  // Use the context language (user's selected language) instead of the generated question language
+  // This ensures questions and answers appear in the user's interface language
+  const questionLanguage = contextQuestionLanguage;
 
   const handleAsyncClick = useCallback(
     (answer: string) => (event: React.MouseEvent<HTMLButtonElement>) => {

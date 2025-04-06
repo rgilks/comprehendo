@@ -40,13 +40,17 @@ const TextGeneratorContainer = () => {
     if (status === 'authenticated') {
       void fetchUserProgress();
     }
-  }, [status, fetchUserProgress]);
 
-  // Update the store when question language changes, but only once on mount
-  // and when the contextLanguage changes to prevent infinite updates
+    // Always ensure the question language is set to the user's interface language
+    useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
+  }, [status, fetchUserProgress, contextLanguage]);
+
+  // Update passage language when context language changes, but only initially
   useEffect(() => {
+    // Set the user's interface language as the question language
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
 
+    // Also set the passage language (learning language) to the context language initially, only on first load
     const { setPassageLanguage } = useTextGeneratorStore.getState();
     setPassageLanguage(contextLanguage);
   }, [contextLanguage]);
