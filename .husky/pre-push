@@ -6,6 +6,10 @@ npm run format
 npm run lint
 npm run test
 
-NEXT_TELEMETRY_DISABLED=1 npx next build --no-lint --output-standalone .next-validate
+# Create a temporary directory for the build output
+BUILD_DIR=".next-validation"
+mkdir -p $BUILD_DIR
 
-rm -rf .next-validate
+NEXT_TELEMETRY_DISABLED=1 NEXT_DIST_DIR=$BUILD_DIR npx next build --no-lint
+
+rm -rf $BUILD_DIR
