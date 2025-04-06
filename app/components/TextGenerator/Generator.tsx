@@ -7,7 +7,7 @@ import AnimateTransition from '@/components/AnimateTransition';
 
 const Generator = () => {
   const { t } = useTranslation('common');
-  const { loading, quizData, isAnswered, showContent, generateText } = useTextGeneratorStore();
+  const { loading, quizData, isAnswered, generateText } = useTextGeneratorStore();
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
   // Handle text generation with scroll
@@ -24,13 +24,17 @@ const Generator = () => {
     void generateText();
   }, [generateText]);
 
-  // Only show the button when there's no content or user has answered
-  if (quizData && !isAnswered) {
-    return null;
-  }
+  // Determine if generator button should be visible
+  const showGeneratorButton = (isAnswered || !quizData) && !loading;
 
   return (
-    <AnimateTransition show={showContent} type="fade-in" duration={400} delay={400}>
+    <AnimateTransition
+      show={showGeneratorButton}
+      type="fade-in"
+      duration={400}
+      delay={200}
+      unmountOnExit
+    >
       <div className="mt-8">
         <button
           onClick={generateTextHandler}
