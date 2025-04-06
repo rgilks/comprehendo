@@ -24,10 +24,28 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Responsive Design**: Optimized for both desktop and mobile devices
 - **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback
 - **Cost-Control System**: Intelligent rate limiting and caching to manage API costs
-- **Robust Validation**: Uses Zod for request validation on API routes.
+- **Robust Validation**: Uses Zod for request validation on API routes
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions
 - **Continuous Deployment**: Automatic deployment to Fly.io when code is pushed to main branch
-- **Admin Panel**: A secure area for administrators to view application data (usage stats, generated content, users).
+- **Admin Panel**: A secure area for administrators to view application data (usage stats, generated content, users)
+- **Internationalization**: Full i18n support for UI elements
+- **PWA Support**: Progressive Web App features for mobile installation
+- **Sentry Integration**: Real-time error tracking and monitoring
+- **Multi-language Interface**: Localized UI for different user languages
+
+## Technology Stack
+
+- **Next.js 15.3.0**: Latest version with App Router support
+- **React 19.0.0**: Latest major version with improved rendering performance
+- **Tailwind CSS 3.4.1**: Utility-first CSS framework
+- **next-auth 4.24.11**: Authentication solution for Next.js
+- **OpenAI SDK**: For GPT-3.5 Turbo integration
+- **Google Generative AI SDK**: For Gemini 2.0 integration
+- **SQLite with better-sqlite3**: Lightweight database solution
+- **Zod**: TypeScript-first schema validation
+- **i18next**: Internationalization framework
+- **Sentry**: Error tracking and performance monitoring
+- **zustand**: Lightweight state management
 
 ## How It Works
 
@@ -40,12 +58,13 @@ Comprehendo is an AI-powered language learning application designed to help user
 
 ## API Cost Management
 
-Comprehendo implements several strategies to manage OpenAI API costs:
+Comprehendo implements several strategies to manage AI API costs:
 
 - **Rate Limiting**: Users are limited to 100 requests per hour to prevent excessive API usage
 - **Response Caching**: Successful API responses are cached for 24 hours to reduce duplicate calls
 - **Intelligent Seed System**: Random seeds create variety in cached responses to avoid repetitive content
 - **Graceful Error Handling**: User-friendly messages when rate limits are reached
+- **Multi-model Support**: Switch between different AI providers based on cost considerations
 
 ## CEFR Levels Explained
 
@@ -220,17 +239,17 @@ npm run test
 # Run tests in watch mode (useful during development)
 npm run test:watch
 
-# Run specific test suites
-npm run test:components  # Component tests
-npm run test:app         # App directory tests
-npm run test:lib         # Library tests
-npm run test:unit        # All unit tests across directories
-
 # Run ESLint
 npm run lint
 
 # Verify code (format + lint + build checks)
 npm run verify
+
+# Check for dependency updates
+npm run deps
+
+# Update dependencies to latest versions
+npm run deps:update
 ```
 
 ### Testing Strategy
@@ -249,19 +268,6 @@ Git hooks (powered by Husky) automatically run on commit and push:
 - **Pre-push**: Runs full formatting, linting, and build verification
 
 This approach allows for fast local development while ensuring that code pushed to the repository meets quality standards.
-
-## Technology Stack
-
-- **Framework**: Next.js 15 (React 19)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS with custom animations
-- **Authentication**: NextAuth.js with GitHub and Google OAuth providers
-- **Database**: SQLite (via better-sqlite3)
-- **AI Integration**:
-  - OpenAI API (GPT-3.5-turbo)
-  - Google Generative AI (Gemini 2.0 Flash-Lite)
-- **Validation**: Zod
-- **Deployment**: Configured for Fly.io with GitHub Actions CI/CD
 
 ## Production Considerations
 
