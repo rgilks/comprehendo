@@ -79,7 +79,7 @@
     "progressUpdateError": "Failed to update progress",
     "yourProgress": "Your Progress",
     "currentStreak": "Current Streak",
-    "startStreak": "Answer correctly to start a streak",
+    "startStreak": "",
     "keepGoing": "Keep going! Answer more questions correctly",
     "almostLevelUp": "One more correct answer to level up!"
   },
