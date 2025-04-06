@@ -10,7 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
-export default function PWAInstall() {
+const PWAInstall = () => {
   const [showInstallButton, setShowInstallButton] = useState(false);
   const { t } = useTranslation();
 
@@ -62,4 +62,6 @@ export default function PWAInstall() {
       </button>
     </div>
   );
-}
+};
+
+export default PWAInstall;

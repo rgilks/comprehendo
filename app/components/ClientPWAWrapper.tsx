@@ -6,6 +6,8 @@ const PWAInstall = dynamic(() => import('./PWAInstall'), {
   ssr: false,
 });
 
-export default function ClientPWAWrapper() {
+const ClientPWAWrapper = () => {
   return <PWAInstall />;
-}
+};
+
+export default ClientPWAWrapper;

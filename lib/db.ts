@@ -154,15 +154,15 @@ try {
 
   // Proxy for logging (keep as is)
   const dbProxy = new Proxy(db, {
-    get(target, prop) {
+    get: (target, prop) => {
       if (prop === 'prepare') {
-        return function (sql: string) {
+        return (sql: string) => {
           const stmt: Database.Statement = target.prepare(sql);
 
           return new Proxy(stmt, {
-            get(stmtTarget, stmtProp) {
+            get: (stmtTarget, stmtProp) => {
               if (stmtProp === 'run' || stmtProp === 'get' || stmtProp === 'all') {
-                return function (...args: unknown[]) {
+                return (...args: unknown[]) => {
                   const formattedParams = args.map((param) => {
                     if (typeof param === 'string' && param.length > 50) {
                       return param.substring(0, 47) + '...';

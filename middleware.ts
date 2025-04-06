@@ -5,7 +5,7 @@ import { getToken } from 'next-auth/jwt';
 const locales = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he'];
 const defaultLocale = 'en';
 
-export default async function middleware(req: import('next/server').NextRequest) {
+const middleware = async (req: import('next/server').NextRequest) => {
   const token = await getToken({ req });
   const isAdmin = token?.isAdmin === true;
   const pathname = req.nextUrl.pathname;
@@ -47,7 +47,9 @@ export default async function middleware(req: import('next/server').NextRequest)
     // It's generally better to return a response than re-throwing in middleware
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-}
+};
+
+export default middleware;
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.json).*)'], // Adjusted matcher slightly

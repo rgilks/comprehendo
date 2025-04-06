@@ -12,14 +12,14 @@ interface ModalProps {
   showCloseButton?: boolean;
 }
 
-export default function Modal({
+const Modal = ({
   isOpen,
   onClose,
   title,
   children,
   maxWidth = 'max-w-lg',
   showCloseButton = true,
-}: ModalProps) {
+}: ModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Close on escape key press
@@ -100,4 +100,6 @@ export default function Modal({
       </AnimateTransition>
     </div>
   );
-}
+};
+
+export default Modal;

@@ -1,10 +1,10 @@
 import { describe, test, expect } from '@jest/globals';
 
 describe('CEFR Level Extraction', () => {
-  function extractCEFRLevel(prompt: string): string {
+  const extractCEFRLevel = (prompt: string): string => {
     const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
     return cefrLevelMatch?.[1] ?? 'unknown';
-  }
+  };
 
   test('should extract valid CEFR level from prompt', () => {
     const prompt = 'Generate a reading exercise in Spanish at CEFR level B2 about cooking.';
@@ -20,7 +20,7 @@ describe('CEFR Level Extraction', () => {
 });
 
 describe('AI Response Processing', () => {
-  function processAIResponse(content: string): string {
+  const processAIResponse = (content: string): string => {
     try {
       JSON.parse(content);
       return content;
@@ -35,7 +35,7 @@ describe('AI Response Processing', () => {
         topic: 'Error Handling',
       });
     }
-  }
+  };
 
   test('should return valid JSON as is', () => {
     const validJson = JSON.stringify({
@@ -66,7 +66,7 @@ describe('AI Response Processing', () => {
 });
 
 describe('Rate Limiting', () => {
-  function checkIsWithinRateLimit(timestamps: number[]): boolean {
+  const checkIsWithinRateLimit = (timestamps: number[]): boolean => {
     const MAX_REQUESTS_PER_HOUR = 100;
     const now = Date.now();
     const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
@@ -74,7 +74,7 @@ describe('Rate Limiting', () => {
     const recentRequests = timestamps.filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW);
 
     return recentRequests.length < MAX_REQUESTS_PER_HOUR;
-  }
+  };
 
   test('should allow requests within rate limit', () => {
     const isWithinLimit = checkIsWithinRateLimit([Date.now() - 10000]); // One recent request

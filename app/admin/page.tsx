@@ -25,7 +25,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchTableNames() {
+    const fetchTableNames = async () => {
       setIsLoadingTables(true);
       setError(null);
       const result = await getTableNames();
@@ -35,7 +35,7 @@ export default function AdminPage() {
         setTableNames(result.data);
       }
       setIsLoadingTables(false);
-    }
+    };
     void fetchTableNames();
   }, []);
 

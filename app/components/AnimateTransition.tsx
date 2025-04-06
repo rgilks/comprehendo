@@ -21,7 +21,7 @@ interface AnimateTransitionProps {
   unmountOnExit?: boolean;
 }
 
-export default function AnimateTransition({
+const AnimateTransition = ({
   children,
   show,
   type = 'fade-in',
@@ -29,7 +29,7 @@ export default function AnimateTransition({
   delay = 0,
   className = '',
   unmountOnExit = false,
-}: AnimateTransitionProps) {
+}: AnimateTransitionProps) => {
   const [shouldRender, setShouldRender] = useState(show);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -107,4 +107,6 @@ export default function AnimateTransition({
       {children}
     </div>
   );
-}
+};
+
+export default AnimateTransition;

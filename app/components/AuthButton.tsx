@@ -22,7 +22,7 @@ interface AuthButtonProps {
   variant?: 'full' | 'icon-only';
 }
 
-export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
+const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
   const { data: session, status } = useSession() as {
     data: CustomSession | null;
     status: 'loading' | 'authenticated' | 'unauthenticated';
@@ -38,11 +38,11 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
 
   // Close menu when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
       }
-    }
+    };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -176,4 +176,6 @@ export default function AuthButton({ variant = 'full' }: AuthButtonProps) {
       </button>
     </AnimateTransition>
   );
-}
+};
+
+export default AuthButton;

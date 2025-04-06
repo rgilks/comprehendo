@@ -6,7 +6,7 @@ import LanguageSelector from '@/components/LanguageSelector';
 import AuthButton from '@/components/AuthButton';
 import TextGenerator from '@/components/TextGenerator';
 
-export default function HomeContent() {
+const HomeContent = () => {
   const { t } = useTranslation('common');
 
   return (
@@ -52,4 +52,6 @@ export default function HomeContent() {
       </div>
     </main>
   );
-}
+};
+
+export default HomeContent;

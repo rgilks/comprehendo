@@ -26,13 +26,13 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({
+export const LanguageProvider = ({
   children,
   initialLanguage,
 }: {
   children: ReactNode;
   initialLanguage: Language;
-}) {
+}) => {
   const router = useRouter();
   const pathname = usePathname();
   // const { i18n } = useTranslation(); // Remove the useTranslation hook call
@@ -78,21 +78,14 @@ export function LanguageProvider({
       {children}
     </LanguageContext.Provider>
   );
-}
+};
 
-export function useLanguage() {
+export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
-}
+};
 
-// Keep getTextDirection export here if components directly import it from context
-// Or remove if they import directly from '../config/languages'
 export { getTextDirection, LANGUAGES, SPEECH_LANGUAGES, type Language };
-
-// Remove local getTextDirection implementation if it uses local RTL_LANGUAGES
-// export function getTextDirection(language: Language) {
-//   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
-// }

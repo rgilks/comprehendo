@@ -17,10 +17,10 @@ const i18nConfig = {
   // Removed react: { useSuspense: false } from base config, set explicitly in init
 };
 
-export async function initServerI18n(
+export const initServerI18n = async (
   language: Language,
   namespaces: string | string[] = i18nConfig.ns
-): Promise<i18n> {
+): Promise<i18n> => {
   const i18nInstance = createInstance();
   await i18nInstance
     .use(initReactI18next)
@@ -39,7 +39,7 @@ export async function initServerI18n(
       },
     });
   return i18nInstance;
-}
+};
 
 // Optional: Export the config if needed elsewhere
 export { i18nConfig };
