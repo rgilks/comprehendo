@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useSession } from 'next-auth/react';
 import type { CEFRLevel } from '@/config/language-guidance';
+import AnimateTransition from '@/components/AnimateTransition';
 
 const ProgressTracker = () => {
   const { t } = useTranslation('common');
@@ -15,92 +16,106 @@ const ProgressTracker = () => {
     return null;
   }
 
+  // Create a lookup for level indices
+  const levelIndices = { A1: 0, A2: 1, B1: 2, B2: 3, C1: 4, C2: 5 };
+
   return (
-    <div className="mb-6 p-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl border border-gray-700 shadow-lg">
-      <h3 className="text-lg font-semibold text-white mb-3">{t('practice.yourProgress')}</h3>
+    <div className="mt-10 mb-4 p-3 bg-gradient-to-r from-gray-900/80 via-gray-800/90 to-gray-900/80 rounded-xl border border-indigo-500/30 shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 backdrop-blur-sm">
+      <h3 className="text-base font-semibold text-white mb-2 flex items-center">
+        <span className="mr-2 text-indigo-400">⚡</span>
+        {t('practice.yourProgress')}
+      </h3>
 
-      <div className="grid grid-cols-1 gap-4">
-        <div>
-          <span className="text-sm text-gray-400">{t('practice.currentStreak')}</span>
-
-          {/* Progress bar for streak */}
-          <div className="mt-2 w-full bg-gray-700 rounded-full h-2.5">
-            <div
-              className="bg-gradient-to-r from-yellow-500 to-orange-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-              style={{ width: `${Math.min(100, (userStreak / 5) * 100)}%` }}
-            ></div>
-          </div>
-
-          {/* Simple streak indicator without numbers */}
-          <div className="mt-3 flex justify-between items-center">
-            {[1, 2, 3, 4, 5].map((position) => (
-              <div key={position} className="flex flex-col items-center">
-                <div
-                  className={`w-3 h-3 rounded-full
-                    ${position <= userStreak ? 'bg-yellow-500' : 'bg-gray-600'}
-                    transition-all duration-300`}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Level progress section */}
-        <div className="mt-6 pt-4 border-t border-gray-700">
-          <span className="text-sm text-gray-400 block mb-2">{t('practice.level')}</span>
-          <div className="flex items-center mb-4">
-            <span className="text-xl font-bold text-white mr-2">{cefrLevel}</span>
-            <span className="text-sm text-gray-300">
-              - {t(`practice.cefr.levels.${cefrLevel}.name`)}
+      <AnimateTransition show={true} type="fade-in" duration={300} delay={100}>
+        <div className="p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-300 font-medium">
+              {t(`practice.cefr.levels.${cefrLevel}.name`)}
             </span>
           </div>
-          <div className="text-xs text-gray-300 mb-4">
-            {t(`practice.cefr.levels.${cefrLevel}.description`)}
+
+          {/* Single unified progress track */}
+          <div className="relative py-6">
+            {/* Background track */}
+            <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-700/50 rounded-full transform -translate-y-1/2"></div>
+
+            {/* Track with dots between level markers */}
+            <div className="relative flex justify-between items-center">
+              {(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as CEFRLevel[]).map((level, idx, levels) => (
+                <React.Fragment key={level}>
+                  {/* Level marker */}
+                  <div className="relative z-20">
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300
+                        ${
+                          level === cefrLevel
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white scale-110 shadow-lg shadow-blue-500/30'
+                            : levelIndices[cefrLevel] > levelIndices[level]
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-800 text-gray-500'
+                        }
+                      `}
+                    >
+                      {level}
+                    </div>
+                  </div>
+
+                  {/* Dots between this level and next level */}
+                  {idx < levels.length - 1 && (
+                    <div className="flex-1 flex justify-evenly items-center z-10 mx-1">
+                      {Array.from({ length: 4 }, (_, dotIdx) => {
+                        // For completed levels
+                        if (levelIndices[cefrLevel] > levelIndices[level]) {
+                          return (
+                            <div
+                              key={dotIdx}
+                              className="w-2.5 h-2.5 rounded-full bg-blue-500/80 shadow-sm shadow-blue-500/30"
+                            />
+                          );
+                        }
+
+                        // For current level - show streak
+                        if (level === cefrLevel) {
+                          return (
+                            <div
+                              key={dotIdx}
+                              className={`w-2.5 h-2.5 rounded-full transition-all duration-300
+                                ${
+                                  dotIdx < userStreak
+                                    ? 'bg-gradient-to-r from-yellow-400 to-orange-500 shadow-sm shadow-yellow-500/20'
+                                    : dotIdx === userStreak
+                                      ? 'bg-gradient-to-r from-orange-500 to-red-600 scale-110 shadow-sm shadow-red-500/30'
+                                      : 'bg-gray-700'
+                                }
+                              `}
+                            />
+                          );
+                        }
+
+                        // For future levels
+                        return (
+                          <div key={dotIdx} className="w-2.5 h-2.5 rounded-full bg-gray-700" />
+                        );
+                      })}
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
 
-          {/* Level labels above the progress indicators */}
-          <div className="flex justify-between items-center text-xs text-gray-400 mb-1">
-            <span>A1</span>
-            <span>A2</span>
-            <span>B1</span>
-            <span>B2</span>
-            <span>C1</span>
-            <span>C2</span>
-          </div>
-
-          <div className="flex justify-between items-center mb-1">
-            {(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as CEFRLevel[]).map((level, index) => {
-              const achieved = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].indexOf(cefrLevel) >= index;
-              const isCurrent = level === cefrLevel;
-              return (
-                <div key={level} className="flex flex-col items-center">
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      achieved ? 'bg-blue-500' : 'bg-gray-600'
-                    } ${isCurrent ? 'ring-1 ring-white ring-opacity-60' : ''}`}
-                    title={`${level}: ${t(`practice.cefr.levels.${level}.name`)}`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="w-full bg-gray-700 rounded-full h-2.5 mt-1">
-            {/* Calculate progress based on CEFR level */}
-            {(() => {
-              const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-              const levelIndex = levels.indexOf(cefrLevel);
-              const progress = ((levelIndex + 1) / 6) * 100;
-              return (
-                <div
-                  className="bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                  style={{ width: `${progress}%` }}
-                ></div>
-              );
-            })()}
+          {/* Motivational message */}
+          <div className="mt-2 text-center">
+            <span className="text-xs text-gray-300">
+              {userStreak === 0
+                ? t('practice.startStreak')
+                : userStreak === 4
+                  ? t('practice.almostLevelUp')
+                  : ''}
+            </span>
           </div>
         </div>
-      </div>
+      </AnimateTransition>
     </div>
   );
 };
