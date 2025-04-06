@@ -7,7 +7,6 @@ const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
 let db: Database.Database;
 
-// Define ColumnInfo interface centrally
 interface ColumnInfo {
   cid: number;
   name: string;

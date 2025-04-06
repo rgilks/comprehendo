@@ -633,7 +633,6 @@ export const useTextGeneratorStore = create(
       newExplanation: string
     ) => {
       set((state) => {
-        // This kind of deep nested update would require multiple spreads without Immer
         if (state.quizData) {
           state.quizData.options[optionKey] = newText;
           state.quizData.explanations[optionKey] = newExplanation;
@@ -644,10 +643,8 @@ export const useTextGeneratorStore = create(
     // Complex operation: Reset quiz with new data while maintaining history
     resetQuizWithNewData: (newQuizData: QuizData) => {
       set((state) => {
-        // Store previous quiz topic for history (if there was one)
         const previousTopic = state.quizData?.topic;
 
-        // Reset all quiz-related state
         state.quizData = newQuizData;
         state.selectedAnswer = null;
         state.isAnswered = false;
@@ -655,15 +652,11 @@ export const useTextGeneratorStore = create(
         state.relevantTextRange = null;
         state.currentWordIndex = null;
 
-        // Update UI states
         state.loading = false;
         state.showContent = true;
         state.showQuestionSection = false;
 
-        // Example of conditionally modifying nested data
-        // based on previous state
         if (previousTopic && previousTopic === newQuizData.topic) {
-          // If it's the same topic, maybe add an indicator in the new data
           state.quizData.topic = `${newQuizData.topic} (revisited)`;
         }
       });

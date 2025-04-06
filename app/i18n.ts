@@ -41,5 +41,4 @@ export const initServerI18n = async (
   return i18nInstance;
 };
 
-// Optional: Export the config if needed elsewhere
 export { i18nConfig };

@@ -32,8 +32,6 @@ const AnimateTransition = ({
 }: AnimateTransitionProps) => {
   const [shouldRender, setShouldRender] = useState(show);
   const [isAnimating, setIsAnimating] = useState(false);
-
-  // Track if we're in exit animation
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
@@ -42,15 +40,12 @@ const AnimateTransition = ({
     if (show) {
       setIsExiting(false);
       setShouldRender(true);
-      // Short delay to ensure DOM update before animation starts
       setTimeout(() => setIsAnimating(true), 10);
     } else {
-      // Start exit animation
       setIsExiting(true);
       setIsAnimating(false);
 
       if (unmountOnExit) {
-        // Wait for exit animation to complete before unmounting
         timer = setTimeout(() => {
           setIsExiting(false);
           setShouldRender(false);
@@ -63,15 +58,12 @@ const AnimateTransition = ({
     };
   }, [show, duration, unmountOnExit]);
 
-  // Don't render anything if we shouldn't render
   if (!shouldRender && unmountOnExit) {
     return null;
   }
 
-  // Base transition for all animation types
   const baseTransition = `transition-all duration-${duration} ease-out`;
 
-  // Get the appropriate classes based on animation state and type
   const getAnimationClasses = () => {
     const exitMap: Record<AnimationType, string> = {
       'fade-in': 'opacity-0',
@@ -92,7 +84,6 @@ const AnimateTransition = ({
     }
   };
 
-  // Apply delay if needed
   const delayStyle = delay && !isExiting ? { animationDelay: `${delay}ms` } : {};
 
   return (
