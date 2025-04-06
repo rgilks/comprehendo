@@ -6,7 +6,17 @@ import { authOptions } from '@/lib/authOptions';
 
 async function isAdmin(): Promise<boolean> {
   const session = await getServerSession(authOptions);
-  return (session?.user as { isAdmin?: boolean })?.isAdmin === true;
+
+  if (!session?.user?.email) {
+    return false;
+  }
+
+  const adminEmails = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim())
+    .filter((email) => email);
+
+  return adminEmails.includes(session.user.email);
 }
 
 interface TableNameResult {
