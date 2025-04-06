@@ -16,13 +16,11 @@
     "incremental": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-
     "plugins": [
       {
         "name": "next"
       }
     ],
-
     "paths": {
       "@/*": ["./*"],
       "@/components/*": ["./app/components/*"],
@@ -32,15 +30,19 @@
       "@/types/*": ["./app/types/*"],
       "@/utils/*": ["./app/utils/*"]
     },
-
     "sourceMap": true,
     "inlineSources": true,
-
     // Set `sourceRoot` to  "/" to strip the build path prefix
     // from generated source code references.
     // This improves issue grouping in Sentry.
     "sourceRoot": "/"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "next-env.d.ts",
+    ".next-validation/types/**/*.ts"
+  ],
   "exclude": ["node_modules"]
 }
