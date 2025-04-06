@@ -25,59 +25,114 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchTableNames = async () => {
+      if (!isMounted) return;
+
       setIsLoadingTables(true);
       setError(null);
-      const result = await getTableNames();
-      if (result.error) {
-        setError(result.error);
-      } else if (result.data) {
-        setTableNames(result.data);
+
+      try {
+        const result = await getTableNames();
+
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        if (result.error) {
+          setError(result.error);
+        } else if (result.data) {
+          setTableNames(result.data);
+        }
+      } catch (err) {
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        console.error('Error fetching table names:', err);
+        setError('Failed to load tables');
+      } finally {
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        setIsLoadingTables(false);
       }
-      setIsLoadingTables(false);
     };
+
+    // Start the fetch operation and handle the floating promise properly
     void fetchTableNames();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const fetchDataForTable = useCallback(async (tableName: string, page: number, limit: number) => {
     setIsLoadingData(true);
     setError(null);
-    const result = await getTableData(tableName, page, limit);
-    if (result.error) {
-      setError(result.error);
+
+    try {
+      const result = await getTableData(tableName, page, limit);
+
+      if (result.error) {
+        setError(result.error);
+        setTableData([]);
+      } else if (result.data) {
+        // Batch state updates
+        setTableData(result.data.data);
+        setTotalRows(result.data.totalRows);
+        setCurrentPage(result.data.page);
+        setRowsPerPage(result.data.limit);
+      }
+    } catch (err) {
+      console.error('Error fetching table data:', err);
+      setError('Failed to load table data');
       setTableData([]);
-    } else if (result.data) {
-      setTableData(result.data.data);
-      setTotalRows(result.data.totalRows);
-      setCurrentPage(result.data.page);
-      setRowsPerPage(result.data.limit);
+    } finally {
+      setIsLoadingData(false);
     }
-    setIsLoadingData(false);
   }, []);
 
-  const handleTableSelect = (tableName: string) => {
+  const handleTableSelect = async (tableName: string) => {
     setSelectedTable(tableName);
     setSelectedRowData(null);
     setCurrentPage(1);
-    void fetchDataForTable(tableName, 1, rowsPerPage);
+
+    try {
+      await fetchDataForTable(tableName, 1, rowsPerPage);
+    } catch (error) {
+      console.error('Error selecting table:', error);
+    }
   };
 
-  const handlePreviousPage = () => {
+  const handlePreviousPage = async () => {
     if (selectedTable && currentPage > 1) {
-      void fetchDataForTable(selectedTable, currentPage - 1, rowsPerPage);
+      try {
+        await fetchDataForTable(selectedTable, currentPage - 1, rowsPerPage);
+      } catch (error) {
+        console.error('Error navigating to previous page:', error);
+      }
     }
   };
 
-  const handleNextPage = () => {
+  const handleNextPage = async () => {
     if (selectedTable && currentPage < Math.ceil(totalRows / rowsPerPage)) {
-      void fetchDataForTable(selectedTable, currentPage + 1, rowsPerPage);
+      try {
+        await fetchDataForTable(selectedTable, currentPage + 1, rowsPerPage);
+      } catch (error) {
+        console.error('Error navigating to next page:', error);
+      }
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (selectedTable) {
       setCurrentPage(1);
-      void fetchDataForTable(selectedTable, 1, rowsPerPage);
+      try {
+        await fetchDataForTable(selectedTable, 1, rowsPerPage);
+      } catch (error) {
+        console.error('Error refreshing data:', error);
+      }
     }
   };
 
@@ -186,6 +241,23 @@ export default function AdminPage() {
     );
   };
 
+  // Convert event handlers for onClick to use void to handle the promises correctly
+  const handleTableSelectClick = (tableName: string) => {
+    void handleTableSelect(tableName);
+  };
+
+  const handlePreviousPageClick = () => {
+    void handlePreviousPage();
+  };
+
+  const handleNextPageClick = () => {
+    void handleNextPage();
+  };
+
+  const handleRefreshClick = () => {
+    void handleRefresh();
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -225,7 +297,7 @@ export default function AdminPage() {
                       {tableNames.map((name) => (
                         <button
                           key={name}
-                          onClick={() => handleTableSelect(name)}
+                          onClick={() => handleTableSelectClick(name)}
                           className={`${buttonBaseClass} ${selectedTable === name ? primaryButtonClass : secondaryButtonClass}`}
                         >
                           {name}
@@ -246,7 +318,7 @@ export default function AdminPage() {
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 mb-4 text-sm min-h-[38px]">
                       {currentPage === 1 ? (
                         <button
-                          onClick={handleRefresh}
+                          onClick={handleRefreshClick}
                           disabled={isLoadingData || !!error}
                           className={`${refreshButtonClass} ${totalRows === 0 || !!error ? 'invisible' : ''} px-3 py-1 sm:px-4 sm:py-2`}
                         >
@@ -255,7 +327,7 @@ export default function AdminPage() {
                         </button>
                       ) : (
                         <button
-                          onClick={handlePreviousPage}
+                          onClick={handlePreviousPageClick}
                           disabled={currentPage <= 1 || isLoadingData}
                           className={secondaryButtonClass}
                         >
@@ -269,7 +341,7 @@ export default function AdminPage() {
                         Page {currentPage} of {totalPages} (Total: {totalRows} rows)
                       </span>
                       <button
-                        onClick={handleNextPage}
+                        onClick={handleNextPageClick}
                         disabled={currentPage >= totalPages || isLoadingData}
                         className={secondaryButtonClass}
                       >

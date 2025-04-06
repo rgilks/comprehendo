@@ -16,44 +16,60 @@ jest.mock('./actions', () => ({
 }));
 
 describe('AdminPage component', () => {
+  // Create controlled promise objects for tests
+  let tableNamesPromiseResolve: (value: any) => void;
+  let tableNamesPromise: Promise<any>;
+
   beforeEach(() => {
     jest.clearAllMocks();
 
-    (getTableNames as jest.Mock).mockResolvedValue({ data: ['users', 'logs'] });
-    (getTableData as jest.Mock).mockResolvedValue({
-      data: {
-        data: [{ id: 1, name: 'Test User' }],
-        totalRows: 10,
-        page: 1,
-        limit: 10,
-      },
+    // Setup controlled promises for mocked functions
+    tableNamesPromise = new Promise((resolve) => {
+      tableNamesPromiseResolve = resolve;
     });
+
+    // Mock implementations with controlled promises
+    (getTableNames as jest.Mock).mockImplementation(() => tableNamesPromise);
+    (getTableData as jest.Mock).mockImplementation(() =>
+      Promise.resolve({
+        data: {
+          data: [{ id: 1, name: 'Test User' }],
+          totalRows: 10,
+          page: 1,
+          limit: 10,
+        },
+      })
+    );
   });
 
-  it('should show loading state while checking authentication', () => {
+  it('should show loading state while checking authentication', async () => {
     (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'loading',
     });
 
-    render(<AdminPage />);
+    await act(async () => {
+      render(<AdminPage />);
+    });
 
     expect(screen.getByText('Loading authentication status...')).toBeInTheDocument();
   });
 
-  it('should show unauthorized message when user is not logged in', () => {
+  it('should show unauthorized message when user is not logged in', async () => {
     (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'unauthenticated',
     });
 
-    render(<AdminPage />);
+    await act(async () => {
+      render(<AdminPage />);
+    });
 
     expect(screen.getByText('Unauthorized')).toBeInTheDocument();
     expect(screen.getByText('You must be logged in to access the admin area.')).toBeInTheDocument();
   });
 
-  it('should show unauthorized message when user is not an admin', () => {
+  it('should show unauthorized message when user is not an admin', async () => {
     (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
@@ -65,7 +81,9 @@ describe('AdminPage component', () => {
       status: 'authenticated',
     });
 
-    render(<AdminPage />);
+    await act(async () => {
+      render(<AdminPage />);
+    });
 
     expect(screen.getByText('Unauthorized')).toBeInTheDocument();
     expect(screen.getByText('You do not have admin permissions.')).toBeInTheDocument();
@@ -83,19 +101,15 @@ describe('AdminPage component', () => {
       status: 'authenticated',
     });
 
-    let resolvePromise: (value: any) => void;
-    const promise = new Promise((resolve) => {
-      resolvePromise = resolve;
+    await act(async () => {
+      render(<AdminPage />);
     });
-
-    (getTableNames as jest.Mock).mockImplementation(() => promise);
-
-    render(<AdminPage />);
 
     expect(screen.getByText(/Loading table names.../i)).toBeInTheDocument();
 
     await act(async () => {
-      resolvePromise!({ data: ['users', 'logs'] });
+      tableNamesPromiseResolve({ data: ['users', 'logs'] });
+      await tableNamesPromise; // Wait for the promise to resolve completely
     });
 
     await waitFor(() => {
@@ -118,12 +132,15 @@ describe('AdminPage component', () => {
       status: 'authenticated',
     });
 
-    (getTableNames as jest.Mock).mockResolvedValue({
-      error: 'Unauthorized',
-    });
-
     await act(async () => {
       render(<AdminPage />);
+      // Resolve the promise with an error right away
+      tableNamesPromiseResolve({ error: 'Unauthorized' });
+    });
+
+    // Wait a tick for the promise to be handled
+    await act(async () => {
+      await tableNamesPromise;
     });
 
     await waitFor(() => {
