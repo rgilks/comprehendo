@@ -46,6 +46,9 @@ const TextGeneratorContainer = () => {
   // and when the contextLanguage changes to prevent infinite updates
   useEffect(() => {
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
+
+    const { setPassageLanguage } = useTextGeneratorStore.getState();
+    setPassageLanguage(contextLanguage);
   }, [contextLanguage]);
 
   return (
