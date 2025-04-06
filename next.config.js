@@ -9,6 +9,7 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  distDir: process.env.NEXT_PREVIEW_BUILD === 'true' ? '.next-validation' : '.next',
   images: {
     remotePatterns: [
       {

@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build && npm run sentry:sourcemaps",
+    "preview-build": "NEXT_PREVIEW_BUILD=true next build",
     "start": "next start",
     "verify": "prettier --check . && next lint --no-cache",
-    "check": "prettier --write . && next lint --fix && tsc --noEmit && jest",
+    "check": "prettier --write . && next lint --fix && npm run preview-build && jest",
     "deps": "npx npm-check-updates",
     "deps:update": "npx npm-check-updates -u && npm install",
     "test": "jest",

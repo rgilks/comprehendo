@@ -5,9 +5,11 @@ import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { getActiveModel, getGoogleAIClient, getOpenAIClient, ModelConfig } from '@/lib/modelConfig';
 
+// Constants
 const MAX_REQUESTS_PER_HOUR = 100;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 
+// Types
 interface RateLimitRow {
   requests: string;
   updated_at: string;
@@ -22,6 +24,11 @@ interface GeneratedContentRow {
   created_at: string;
 }
 
+interface UserRecord {
+  id: number;
+}
+
+// Zod Schema
 const exerciseRequestBodySchema = z.object({
   prompt: z.string().min(1, { message: 'Prompt is required' }),
   seed: z.number().optional(),
@@ -33,7 +40,7 @@ const exerciseRequestBodySchema = z.object({
 
 export type ExerciseRequestParams = z.infer<typeof exerciseRequestBodySchema>;
 
-// Define the Quiz data schema to validate responses
+// Quiz data schema to validate responses
 const quizDataSchema = z.object({
   paragraph: z.string(),
   question: z.string(),
@@ -54,54 +61,26 @@ const quizDataSchema = z.object({
   topic: z.string(),
 });
 
-export async function generateExerciseResponse(params: ExerciseRequestParams) {
+/**
+ * Check if the user has exceeded rate limits
+ */
+export async function checkRateLimit(ip: string): Promise<boolean> {
   try {
-    const session = await getServerSession();
-    let userId = null;
-
     // Initialize DB table if not exists
-    db.exec(`
+    await Promise.resolve(
+      db.exec(`
       CREATE TABLE IF NOT EXISTS rate_limits (
         ip_address TEXT PRIMARY KEY,
         requests TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-    `);
-
-    if (session?.user) {
-      const userEmail = session.user.email as string | undefined;
-
-      interface UserRecord {
-        id: number;
-      }
-
-      const userRecord = db
-        .prepare(
-          `
-        SELECT id FROM users 
-        WHERE (email = ? AND email IS NOT NULL)
-        ORDER BY last_login DESC
-        LIMIT 1
-      `
-        )
-        .get(userEmail || '') as UserRecord | undefined;
-
-      if (userRecord) {
-        userId = userRecord.id;
-        console.log(`[API] Request from authenticated user ID: ${userId}`);
-      }
-    }
-
-    // IP address - use '127.0.0.1' for server actions since we can't get client IP
-    const ip = '127.0.0.1';
-
-    const logSafeIp = ip.length > 20 ? ip.substring(0, 20) + '...' : ip;
-    console.log(`[API] Request from IP: ${logSafeIp}`);
+    `)
+    );
 
     const now = Date.now();
     let userRequests: number[] = [];
 
-    console.log(`[API] Checking rate limit for IP: ${logSafeIp}`);
+    console.log(`[API] Checking rate limit for IP: ${ip}`);
     const rateLimitRow = db
       .prepare('SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?')
       .get(ip) as RateLimitRow | undefined;
@@ -115,14 +94,14 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
         ) {
           userRequests = parsedRequests;
         } else {
-          console.warn(`[API] Invalid rate limit data found for IP ${logSafeIp}. Resetting.`);
+          console.warn(`[API] Invalid rate limit data found for IP ${ip}. Resetting.`);
           userRequests = [];
         }
       } catch (parseError) {
-        console.error(`[API] Failed to parse rate limit data for IP ${logSafeIp}:`, parseError);
+        console.error(`[API] Failed to parse rate limit data for IP ${ip}:`, parseError);
         userRequests = [];
       }
-      console.log(`[API] Found ${userRequests.length} previous requests for IP: ${logSafeIp}`);
+      console.log(`[API] Found ${userRequests.length} previous requests for IP: ${ip}`);
 
       db.prepare('UPDATE rate_limits SET updated_at = CURRENT_TIMESTAMP WHERE ip_address = ?').run(
         ip
@@ -132,17 +111,15 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
     const recentRequests = userRequests.filter(
       (timestamp: number) => now - timestamp < RATE_LIMIT_WINDOW
     );
-    console.log(`[API] ${recentRequests.length} recent requests for IP: ${logSafeIp}`);
+    console.log(`[API] ${recentRequests.length} recent requests for IP: ${ip}`);
 
     if (recentRequests.length >= MAX_REQUESTS_PER_HOUR) {
-      console.log(`[API] Rate limit exceeded for IP: ${logSafeIp}`);
-      throw new Error('Rate limit exceeded. Please try again later.');
+      console.log(`[API] Rate limit exceeded for IP: ${ip}`);
+      return false;
     }
 
     const updatedRequests = [...recentRequests, now];
-    console.log(
-      `[API] Updating rate limit for IP: ${logSafeIp} with ${updatedRequests.length} requests`
-    );
+    console.log(`[API] Updating rate limit for IP: ${ip} with ${updatedRequests.length} requests`);
 
     db.prepare(
       `
@@ -153,39 +130,30 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
     `
     ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
 
-    const parsedBody = exerciseRequestBodySchema.safeParse(params);
+    return true;
+  } catch (error) {
+    console.error('[API] Error checking rate limit:', error);
+    return false;
+  }
+}
 
-    if (!parsedBody.success) {
-      console.log('[API] Invalid request body:', parsedBody.error.flatten());
-      throw new Error('Invalid request body');
-    }
-
-    const { prompt, seed, passageLanguage, questionLanguage, forceCache } = parsedBody.data;
-
-    console.log(`[API] Received request with prompt: ${prompt.substring(0, 50)}...`);
-    console.log(
-      `[API] Passage Language: ${passageLanguage}, Question Language: ${questionLanguage}`
-    );
-    if (forceCache) {
-      console.log(
-        '[API] Force cache option enabled - will use cached content if available regardless of age'
-      );
-    }
-
-    const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
-    const cefrLevel = cefrLevelMatch?.[1] ?? 'unknown';
-    console.log(`[API] Extracted level: ${cefrLevel}`);
-
-    const seedValue = typeof seed === 'number' ? seed : 0;
-    const cacheKey = `${passageLanguage}-${questionLanguage}-${cefrLevel}-${seedValue}`;
-    console.log(`[API] Checking cache for key: ${cacheKey}`);
-
-    // Function to get cached content with optional level override
-    const getCachedContent = (level: string) => {
+/**
+ * Get cached exercise content if available
+ */
+export async function getCachedExercise(
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  seedValue: number,
+  forceCache: boolean = false
+): Promise<GeneratedContentRow | undefined> {
+  try {
+    // Function to get cached content with specific level
+    const getCachedContent = (specificLevel: string) => {
       const result = db
         .prepare(
           `
-        SELECT content, created_at FROM generated_content \
+        SELECT id, language, level, content, questions, created_at FROM generated_content \
         WHERE language = ? \
           AND question_language = ? \
           AND level = ? \
@@ -193,7 +161,7 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
         ORDER BY created_at DESC LIMIT 1
       `
         )
-        .get(passageLanguage, questionLanguage, level, seedValue % 100);
+        .get(passageLanguage, questionLanguage, specificLevel, seedValue % 100);
 
       // Validate result has the expected structure
       if (
@@ -211,15 +179,13 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
     };
 
     // First try with exact CEFR level
-    let cachedContent = getCachedContent(cefrLevel);
+    let cachedContent = getCachedContent(level);
 
     // If forceCache is true and no content found, try with surrounding CEFR levels
     if (forceCache && !cachedContent) {
-      console.log(
-        `[API] Force cache enabled but no content for ${cefrLevel}, trying nearby levels`
-      );
+      console.log(`[API] Force cache enabled but no content for ${level}, trying nearby levels`);
       const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-      const currentIndex = cefrLevels.indexOf(cefrLevel);
+      const currentIndex = cefrLevels.indexOf(level);
 
       // Try one level easier if available
       if (currentIndex > 0) {
@@ -247,7 +213,7 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
         const anyLevelContent = db
           .prepare(
             `
-          SELECT content, created_at FROM generated_content \
+          SELECT id, language, level, content, questions, created_at FROM generated_content \
           WHERE language = ? \
             AND question_language = ? \
           ORDER BY created_at DESC LIMIT 1
@@ -267,74 +233,25 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
       }
     }
 
-    if (cachedContent) {
-      console.log('[API] Content found in cache:', cachedContent.content.substring(0, 20) + '...');
+    return cachedContent;
+  } catch (error) {
+    console.error('[API] Error getting cached exercise:', error);
+    return undefined;
+  }
+}
 
-      // Log the reuse in usage_stats
-      if (userId) {
-        try {
-          db.prepare(
-            `
-            INSERT INTO usage_stats (
-              user_id,
-              ip_address, 
-              language,
-              level,
-              timestamp
-            ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-          `
-          ).run(userId, ip, passageLanguage, cefrLevel);
-
-          console.log(`[API] Logged cache usage in stats for user ${userId}`);
-        } catch (error) {
-          console.error('[API] Error logging usage stats:', error);
-          // Continue even if logging fails
-        }
-      }
-
-      return { result: cachedContent.content };
-    }
-
-    // Not found in cache, call the LLM
-    console.log(`[API] Content not in cache, generating new content...`);
-
-    // Use the active model from config
-    const model = getActiveModel();
-    let result: string;
-
-    // Insert usage stats
-    if (userId) {
-      try {
-        db.prepare(
-          `
-          INSERT INTO usage_stats (
-            user_id,
-            ip_address, 
-            language,
-            level,
-            timestamp
-          ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `
-        ).run(userId, ip, passageLanguage, cefrLevel);
-
-        console.log(`[API] Logged content generation in stats for user ${userId}`);
-      } catch (error) {
-        console.error('[API] Error logging usage stats:', error);
-        // Continue even if logging fails
-      }
-    }
-
-    if (model.provider === 'openai') {
-      console.log(`[API] Using OpenAI model: ${model.name}`);
-      result = await generateWithOpenAI(prompt, model);
-    } else if (model.provider === 'google') {
-      console.log(`[API] Using Google AI model: ${model.name}`);
-      result = await generateWithGoogleAI(prompt, model);
-    } else {
-      throw new Error(`Unsupported model provider: ${String(model.provider)}`);
-    }
-
-    // Save the generated content to the database
+/**
+ * Save the generated content to the database
+ */
+export async function saveGeneratedContent(
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  content: string
+): Promise<number | undefined> {
+  try {
+    // Extract questions from content to save separately
+    let questions = '';
     try {
       // Define a type for the expected content structure
       interface QuizContent {
@@ -347,41 +264,37 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
         topic?: string;
       }
 
-      // Extract questions from content to save separately
-      // This is needed because the database schema requires a non-NULL questions field
-      let questions = '';
-      try {
-        // Try to parse the content as JSON to extract questions
-        const contentStr = result.replace(/```json|```/g, '').trim();
-        const content = JSON.parse(contentStr) as QuizContent;
+      // Try to parse the content as JSON to extract questions
+      const contentStr = content.replace(/```json|```/g, '').trim();
+      const contentObj = JSON.parse(contentStr) as QuizContent;
 
-        if (content.options || content.question) {
-          // Extract questions part
-          questions = JSON.stringify({
-            question: content.question || '',
-            options: content.options || {},
-            explanations: content.explanations || {},
-            correctAnswer: content.correctAnswer || '',
-            relevantText: content.relevantText || '',
-            topic: content.topic || '',
-          });
-        }
-      } catch (parseError) {
-        console.warn('[API] Could not parse content as JSON for questions extraction:', parseError);
-        // Default empty questions object that satisfies the schema
+      if (contentObj.options || contentObj.question) {
+        // Extract questions part
         questions = JSON.stringify({
-          question: '',
-          options: {},
-          explanations: {},
-          correctAnswer: '',
-          relevantText: '',
-          topic: '',
+          question: contentObj.question || '',
+          options: contentObj.options || {},
+          explanations: contentObj.explanations || {},
+          correctAnswer: contentObj.correctAnswer || '',
+          relevantText: contentObj.relevantText || '',
+          topic: contentObj.topic || '',
         });
       }
+    } catch (parseError) {
+      console.warn('[API] Could not parse content as JSON for questions extraction:', parseError);
+      // Default empty questions object that satisfies the schema
+      questions = JSON.stringify({
+        question: '',
+        options: {},
+        explanations: {},
+        correctAnswer: '',
+        relevantText: '',
+        topic: '',
+      });
+    }
 
-      const savedId = db
-        .prepare(
-          `
+    const savedId = db
+      .prepare(
+        `
         INSERT INTO generated_content (
           language, 
           level, 
@@ -392,29 +305,58 @@ export async function generateExerciseResponse(params: ExerciseRequestParams) {
         ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
         RETURNING id
       `
-        )
-        .get(passageLanguage, cefrLevel, result, questions, questionLanguage) as
-        | { id: number }
-        | undefined;
+      )
+      .get(passageLanguage, level, content, questions, questionLanguage) as
+      | { id: number }
+      | undefined;
 
-      if (savedId) {
-        console.log(`[API] Saved generated content to database with ID: ${savedId.id}`);
-      } else {
-        console.warn('[API] Failed to save generated content to database');
-      }
-    } catch (dbError) {
-      console.error('[API] Error saving content to database:', dbError);
-      // Continue even if saving fails
+    if (savedId) {
+      console.log(`[API] Saved generated content to database with ID: ${savedId.id}`);
+      return savedId.id;
+    } else {
+      console.warn('[API] Failed to save generated content to database');
+      return undefined;
     }
-
-    return { result };
   } catch (error) {
-    console.error('[API] Error in generateExerciseResponse:', error);
-    throw error;
+    console.error('[API] Error saving content to database:', error);
+    return undefined;
   }
 }
 
-async function generateWithOpenAI(prompt: string, model: ModelConfig): Promise<string> {
+/**
+ * Log usage statistics
+ */
+export async function logUsageStats(
+  userId: number | null,
+  ip: string,
+  language: string,
+  level: string
+): Promise<void> {
+  if (userId) {
+    try {
+      db.prepare(
+        `
+        INSERT INTO usage_stats (
+          user_id,
+          ip_address, 
+          language,
+          level,
+          timestamp
+        ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `
+      ).run(userId, ip, language, level);
+
+      console.log(`[API] Logged usage in stats for user ${userId}`);
+    } catch (error) {
+      console.error('[API] Error logging usage stats:', error);
+    }
+  }
+}
+
+/**
+ * Generate content with OpenAI
+ */
+export async function generateWithOpenAI(prompt: string, model: ModelConfig): Promise<string> {
   try {
     const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
@@ -432,14 +374,17 @@ async function generateWithOpenAI(prompt: string, model: ModelConfig): Promise<s
     });
 
     // Process and validate the response
-    return processAIResponse(completion.choices[0].message.content || '');
+    return await processAIResponse(completion.choices[0].message.content || '');
   } catch (error) {
     console.error('[API] OpenAI generation error:', error);
     throw new Error('Error generating content with OpenAI');
   }
 }
 
-async function generateWithGoogleAI(prompt: string, model: ModelConfig): Promise<string> {
+/**
+ * Generate content with Google AI
+ */
+export async function generateWithGoogleAI(prompt: string, model: ModelConfig): Promise<string> {
   try {
     const genAI = getGoogleAIClient();
     const generativeModel = genAI.getGenerativeModel({
@@ -471,15 +416,17 @@ CRITICAL INSTRUCTION: The question, options, and explanations MUST be in the que
     });
 
     // Process and validate the response
-    return processAIResponse(result.response.text());
+    return await processAIResponse(result.response.text());
   } catch (error) {
     console.error('[API] Google AI generation error:', error);
     throw new Error('Error generating content with Google AI');
   }
 }
 
-// Helper function to process and validate AI responses
-function processAIResponse(content: string): string {
+/**
+ * Helper function to process and validate AI responses
+ */
+export async function processAIResponse(content: string): Promise<string> {
   // Remove markdown formatting
   content = content.replace(/```json|```/g, '').trim();
 
@@ -582,5 +529,128 @@ function processAIResponse(content: string): string {
     };
 
     return JSON.stringify(fallbackData);
+  }
+}
+
+/**
+ * Extract CEFR level from prompt
+ */
+export async function extractCEFRLevel(prompt: string): Promise<string> {
+  const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
+  return cefrLevelMatch?.[1] ?? 'unknown';
+}
+
+/**
+ * Get user ID if user is authenticated
+ */
+export async function getAuthenticatedUserId(): Promise<number | null> {
+  try {
+    const session = await getServerSession();
+
+    if (session?.user) {
+      const userEmail = session.user.email as string | undefined;
+
+      const userRecord = db
+        .prepare(
+          `
+        SELECT id FROM users 
+        WHERE (email = ? AND email IS NOT NULL)
+        ORDER BY last_login DESC
+        LIMIT 1
+      `
+        )
+        .get(userEmail || '') as UserRecord | undefined;
+
+      if (userRecord) {
+        console.log(`[API] Request from authenticated user ID: ${userRecord.id}`);
+        return userRecord.id;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[API] Error getting authenticated user:', error);
+    return null;
+  }
+}
+
+/**
+ * Main function to generate exercise response
+ */
+export async function generateExerciseResponse(params: ExerciseRequestParams) {
+  try {
+    // Validate request parameters
+    const parsedBody = exerciseRequestBodySchema.safeParse(params);
+    if (!parsedBody.success) {
+      console.log('[API] Invalid request body:', parsedBody.error.flatten());
+      throw new Error('Invalid request body');
+    }
+
+    const { prompt, seed, passageLanguage, questionLanguage, forceCache } = parsedBody.data;
+
+    // Get authenticated user ID
+    const userId = await getAuthenticatedUserId();
+
+    // Using '127.0.0.1' for server actions since we can't get client IP
+    const ip = '127.0.0.1';
+
+    // Check rate limit
+    const isWithinRateLimit = await checkRateLimit(ip);
+    if (!isWithinRateLimit) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    }
+
+    // Extract CEFR level from prompt
+    const cefrLevel = await extractCEFRLevel(prompt);
+    console.log(`[API] Extracted level: ${cefrLevel}`);
+
+    // Determine seed value
+    const seedValue = typeof seed === 'number' ? seed : 0;
+
+    // Check cache for existing content
+    const cachedContent = await getCachedExercise(
+      passageLanguage,
+      questionLanguage,
+      cefrLevel,
+      seedValue,
+      !!forceCache
+    );
+
+    if (cachedContent) {
+      console.log('[API] Content found in cache:', cachedContent.content.substring(0, 20) + '...');
+
+      // Log usage stats
+      await logUsageStats(userId, ip, passageLanguage, cefrLevel);
+
+      return { result: cachedContent.content };
+    }
+
+    // Not found in cache, generate new content
+    console.log(`[API] Content not in cache, generating new content...`);
+
+    // Log usage stats
+    await logUsageStats(userId, ip, passageLanguage, cefrLevel);
+
+    // Use the active model from config
+    const model = getActiveModel();
+    let result: string;
+
+    if (model.provider === 'openai') {
+      console.log(`[API] Using OpenAI model: ${model.name}`);
+      result = await generateWithOpenAI(prompt, model);
+    } else if (model.provider === 'google') {
+      console.log(`[API] Using Google AI model: ${model.name}`);
+      result = await generateWithGoogleAI(prompt, model);
+    } else {
+      throw new Error(`Unsupported model provider: ${String(model.provider)}`);
+    }
+
+    // Save the generated content to the database
+    await saveGeneratedContent(passageLanguage, questionLanguage, cefrLevel, result);
+
+    return { result };
+  } catch (error) {
+    console.error('[API] Error in generateExerciseResponse:', error);
+    throw error;
   }
 }
