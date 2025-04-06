@@ -5,7 +5,7 @@ import { type Language, LANGUAGES, SPEECH_LANGUAGES } from '@/contexts/LanguageC
 import { type CEFRLevel } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { getVocabularyGuidance, getGrammarGuidance } from '@/config/language-guidance';
-import { generateChatResponse } from '@/app/actions/chat';
+import { generateExerciseResponse } from '@/app/actions/exercise';
 import { getProgress, updateProgress } from '@/app/actions/userProgress';
 
 // Quiz data schema
@@ -448,7 +448,7 @@ export const useTextGeneratorStore = create(
 
                   // Use server action directly
                   console.log('[API] Using server action');
-                  const response = await generateChatResponse(requestBody);
+                  const response = await generateExerciseResponse(requestBody);
 
                   // Validate the response with Zod schema
                   const validatedResponse = apiResponseSchema.parse(response);

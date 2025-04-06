@@ -291,8 +291,8 @@ You can customize various aspects of the application:
 - **Add More Languages**: Extend the `LANGUAGES` object in `app/components/TextGenerator.tsx`
 - **Visual Design**: Modify the Tailwind classes and gradients in component files
 - **API Prompt**: Adjust the prompt in the `generateText` function to change the content style
-- **Rate Limits**: Configure the `MAX_REQUESTS_PER_HOUR` value in `app/api/chat/route.ts`
-- **Cache Duration**: Change the `CACHE_TTL` value in `app/api/chat/route.ts`
+- **Rate Limits**: Configure the `MAX_REQUESTS_PER_HOUR` value in `app/actions/exercise.ts`
+- **Cache Duration**: Change the `CACHE_TTL` value in `app/actions/exercise.ts`
 - **Authentication**: Add or remove OAuth providers in `app/api/auth/[...nextauth]/route.ts`
 
 ## Code Structure
