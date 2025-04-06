@@ -10,6 +10,6 @@ npm run test
 BUILD_DIR=".next-validation"
 mkdir -p $BUILD_DIR
 
-NEXT_TELEMETRY_DISABLED=1 NEXT_DIST_DIR=$BUILD_DIR npx next build --no-lint
+NEXT_TELEMETRY_DISABLED=1 npx next build --no-lint --outdir $BUILD_DIR
 
 rm -rf $BUILD_DIR
