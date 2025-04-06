@@ -22,7 +22,7 @@ interface GeneratedContentRow {
   created_at: string;
 }
 
-const chatRequestBodySchema = z.object({
+const exerciseRequestBodySchema = z.object({
   prompt: z.string().min(1, { message: 'Prompt is required' }),
   seed: z.number().optional(),
   passageLanguage: z.string(),
@@ -31,7 +31,7 @@ const chatRequestBodySchema = z.object({
   languageRequirement: z.string().optional(),
 });
 
-export type ChatRequestParams = z.infer<typeof chatRequestBodySchema>;
+export type ExerciseRequestParams = z.infer<typeof exerciseRequestBodySchema>;
 
 // Define the Quiz data schema to validate responses
 const quizDataSchema = z.object({
@@ -54,7 +54,7 @@ const quizDataSchema = z.object({
   topic: z.string(),
 });
 
-export async function generateChatResponse(params: ChatRequestParams) {
+export async function generateExerciseResponse(params: ExerciseRequestParams) {
   try {
     const session = await getServerSession();
     let userId = null;
@@ -153,7 +153,7 @@ export async function generateChatResponse(params: ChatRequestParams) {
     `
     ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
 
-    const parsedBody = chatRequestBodySchema.safeParse(params);
+    const parsedBody = exerciseRequestBodySchema.safeParse(params);
 
     if (!parsedBody.success) {
       console.log('[API] Invalid request body:', parsedBody.error.flatten());
@@ -409,7 +409,7 @@ export async function generateChatResponse(params: ChatRequestParams) {
 
     return { result };
   } catch (error) {
-    console.error('[API] Error in generateChatResponse:', error);
+    console.error('[API] Error in generateExerciseResponse:', error);
     throw error;
   }
 }
@@ -578,10 +578,9 @@ function processAIResponse(content: string): string {
       },
       correctAnswer: 'A',
       relevantText: "This is a fallback paragraph due to an error processing the AI's response.",
-      topic: 'Error handling',
+      topic: 'Error Handling',
     };
 
-    console.log('[API] Using fallback data due to parsing errors');
     return JSON.stringify(fallbackData);
   }
 }
