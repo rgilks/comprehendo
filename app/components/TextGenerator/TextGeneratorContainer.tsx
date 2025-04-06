@@ -17,12 +17,15 @@ import Generator from './Generator';
 const TextGeneratorContainer = () => {
   const { language: contextLanguage } = useLanguage();
   const { status } = useSession();
-  const { loading, quizData, showContent, fetchUserProgress } = useTextGeneratorStore();
+  const { loading, quizData, showContent, isAnswered, fetchUserProgress } = useTextGeneratorStore();
 
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
   // Determine if content is visible
   const isContentVisible = !!(quizData && !loading && showContent);
+
+  // Determine if progress tracker should be visible
+  const showProgressTracker = (isAnswered || !isContentVisible) && !loading;
 
   // Effect to setup speech synthesis and fetch user progress
   useEffect(() => {
@@ -52,8 +55,12 @@ const TextGeneratorContainer = () => {
         <LoginPrompt />
         <ErrorDisplay />
 
-        {loading && !quizData && <QuizSkeleton />}
+        {/* Quiz skeleton with animation */}
+        <AnimateTransition show={loading && !quizData} type="fade-in" duration={400} unmountOnExit>
+          <QuizSkeleton />
+        </AnimateTransition>
 
+        {/* Content container with animation */}
         <AnimateTransition show={isContentVisible} type="fade-in" duration={400} unmountOnExit>
           {quizData && !loading && (
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
@@ -63,10 +70,12 @@ const TextGeneratorContainer = () => {
           )}
         </AnimateTransition>
 
-        {/* Only show progress tracker when content is not visible */}
-        {!isContentVisible && <ProgressTracker />}
+        {/* Progress tracker with animation */}
+        <AnimateTransition show={showProgressTracker} type="fade-in" duration={400} unmountOnExit>
+          <ProgressTracker />
+        </AnimateTransition>
 
-        {/* Generator can appear in different conditions than ProgressTracker */}
+        {/* Generator appears with animation */}
         <Generator />
       </div>
     </div>
