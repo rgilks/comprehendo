@@ -20,11 +20,10 @@ const ReadingPassage = () => {
     isSpeakingPassage,
     relevantTextRange,
     generatedPassageLanguage,
-    generatedQuestionLanguage,
   } = useTextGeneratorStore();
 
-  // Use the store's question language if available, otherwise use the context
-  const actualQuestionLanguage = generatedQuestionLanguage || questionLanguage;
+  // Use the user's selected language (context language) for question/answer display
+  const actualQuestionLanguage = questionLanguage;
 
   const renderParagraphWithWordHover = useCallback(
     (paragraph: string, lang: Language) => {
