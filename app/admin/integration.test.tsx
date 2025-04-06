@@ -4,7 +4,6 @@ import '@testing-library/jest-dom';
 import { useSession } from 'next-auth/react';
 import { getServerSession } from 'next-auth';
 import AdminPage from './page';
-import db from '@/lib/db';
 
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
