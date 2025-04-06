@@ -45,7 +45,6 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
   he: 'he-IL',
 };
 
-// Optional: Define RTL languages if needed elsewhere
 export const RTL_LANGUAGES: Language[] = ['he']; // Added Hebrew as RTL language
 
 export const getTextDirection = (language: Language): 'ltr' | 'rtl' => {

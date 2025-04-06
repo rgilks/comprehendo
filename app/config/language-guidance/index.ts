@@ -1,14 +1,5 @@
-/**
- * Language guidance based on Cambridge English Profiles:
- * - Cambridge English Vocabulary Profile (EVP): https://www.englishprofile.org/wordlists/evp
- * - Cambridge English Grammar Profile (EGP): https://www.englishprofile.org/english-grammar-profile/egp-online
- */
-
 export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
-/**
- * Provides vocabulary guidance for different CEFR levels
- */
 export const vocabularyGuidance: Record<CEFRLevel, string> = {
   // A1 vocabulary guidance (beginner)
   A1: `
@@ -47,9 +38,6 @@ export const vocabularyGuidance: Record<CEFRLevel, string> = {
   C2: `Use precise, nuanced vocabulary including specialized terminology. No restrictions on vocabulary complexity.`,
 };
 
-/**
- * Provides grammar guidance for different CEFR levels based on the Cambridge English Grammar Profile
- */
 export const grammarGuidance: Record<CEFRLevel, string> = {
   // A1 grammar guidance (beginner)
   A1: `
@@ -94,16 +82,10 @@ export const grammarGuidance: Record<CEFRLevel, string> = {
   C2: `Use all complex grammatical structures with full accuracy and subtlety, including rare constructions and sophisticated rhetorical devices.`,
 };
 
-/**
- * Get vocabulary guidance for a specific CEFR level
- */
 export const getVocabularyGuidance = (level: CEFRLevel): string => {
   return vocabularyGuidance[level] || '';
 };
 
-/**
- * Get grammar guidance for a specific CEFR level
- */
 export const getGrammarGuidance = (level: CEFRLevel): string => {
   return grammarGuidance[level] || '';
 };

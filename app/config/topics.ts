@@ -1,7 +1,3 @@
-/**
- * Topics organized by CEFR levels for language learning content generation
- */
-
 type TopicCategory = {
   name: string;
   topics: string[];
@@ -11,12 +7,6 @@ type CEFRTopics = {
   [key: string]: TopicCategory[];
 };
 
-/**
- * Topics organized by CEFR level and category
- * A1-A2: Basic/Elementary topics
- * B1-B2: Intermediate topics
- * C1-C2: Advanced topics
- */
 export const topicsByLevel: CEFRTopics = {
   // Basic/Elementary topics (A1-A2)
   A1: [
@@ -215,11 +205,6 @@ export const topicsByLevel: CEFRTopics = {
   ],
 };
 
-/**
- * Get appropriate topics for a specific CEFR level
- * @param level CEFR level (A1, A2, B1, B2, C1, C2)
- * @returns Array of topics suitable for the level
- */
 export const getTopicsForLevel = (level: string): string[] => {
   // Get topics for the specific level
   const levelTopics = topicsByLevel[level];
@@ -232,11 +217,6 @@ export const getTopicsForLevel = (level: string): string[] => {
   return levelTopics.flatMap((category) => category.topics);
 };
 
-/**
- * Get a random topic for a specific CEFR level
- * @param level CEFR level (A1, A2, B1, B2, C1, C2)
- * @returns A random topic suitable for the level
- */
 export const getRandomTopicForLevel = (level: string): string => {
   const topics = getTopicsForLevel(level);
 
@@ -246,14 +226,4 @@ export const getRandomTopicForLevel = (level: string): string => {
 
   const randomIndex = Math.floor(Math.random() * topics.length);
   return topics[randomIndex];
-};
-
-/**
- * Get all topics from all levels
- * @returns Array of all topics
- */
-export const getAllTopics = (): string[] => {
-  return Object.values(topicsByLevel).flatMap((categories) =>
-    categories.flatMap((category) => category.topics)
-  );
 };
