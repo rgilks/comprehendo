@@ -141,11 +141,11 @@ export const authOptions: NextAuthOptions = {
 
           if (userRecord) {
             (session.user as { dbId?: number }).dbId = userRecord.id;
-            console.log(
-              `[AUTH Session Callback] Assigned internal dbId=${userRecord.id} to session user.`
-            );
+            // Optional: Keep this log if useful for regular monitoring
+            // console.log(
+            //   `[AUTH Session Callback] Assigned internal dbId=${userRecord.id} to session user.`
+            // );
           } else {
-            // Use type assertion for provider
             console.warn(
               `[AUTH Session Callback] Could not find user with provider_id=${token.sub} and provider=${token.provider as string} to assign dbId.`
             );
@@ -156,11 +156,13 @@ export const authOptions: NextAuthOptions = {
 
         const isAdminValue = token.isAdmin as boolean | undefined;
         (session.user as { isAdmin?: boolean }).isAdmin = isAdminValue;
-        console.log(`[AUTH Session Callback] Assigning isAdmin=${isAdminValue} to session user.`);
+        // Optional: Keep this log if useful
+        // console.log(`[AUTH Session Callback] Assigning isAdmin=${isAdminValue} to session user.`);
       } else {
-        console.log(
-          '[AUTH Session Callback] Session user object, token.sub, or token.provider not found.'
-        );
+        // Optional: Keep this log for debugging session issues
+        // console.log(
+        //   '[AUTH Session Callback] Session user object, token.sub, or token.provider not found.'
+        // );
       }
       // console.log('[AUTH Session Callback] Returning session:', session);
       return session;
