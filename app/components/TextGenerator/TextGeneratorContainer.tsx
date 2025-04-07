@@ -45,14 +45,10 @@ const TextGeneratorContainer = () => {
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
   }, [status, fetchUserProgress, contextLanguage]);
 
-  // Update passage language when context language changes, but only initially
+  // Set the question language based on the UI language context
   useEffect(() => {
     // Set the user's interface language as the question language
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
-
-    // Also set the passage language (learning language) to the context language initially, only on first load
-    const { setPassageLanguage } = useTextGeneratorStore.getState();
-    setPassageLanguage(contextLanguage);
   }, [contextLanguage]);
 
   return (
