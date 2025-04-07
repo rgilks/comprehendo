@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "サインインして進捗状況を追跡し、学習履歴を確認しましょう！",
       "dismiss": "閉じる"
-    }
+    },
+    "leveledUp": "レベルアップしました",
+    "streakIncreased": "連続正解数が増加しました",
+    "streakCompleted": "連続正解完了！レベルアップ！",
+    "correctStreak": "連続正解数",
+    "progressUpdateError": "進捗の更新に失敗しました",
+    "yourProgress": "あなたの進捗",
+    "currentStreak": "現在の連続正解",
+    "startStreak": "連続正解を開始するには正しく回答してください",
+    "keepGoing": "続けてください！より多くの質問に正しく答えてください",
+    "almostLevelUp": "レベルアップまであと1問正解！"
   },
   "admin": {
     "title": "管理",
     "users": "ユーザー",
     "settings": "設定",
-    "logout": "ログアウト",
-    "light": "ライト",
-    "system": "システム",
-    "translating": "翻訳中...",
-    "errorPrefix": "エラー: ",
-    "generating": "生成中...",
-    "pause": "一時停止",
-    "play": "再生",
-    "stop": "停止",
-    "volume": "音量"
+    "logout": "ログアウト"
   },
   "common": {
     "language": "言語",

@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "登录以跟踪您的进度并查看您的学习历史！",
       "dismiss": "忽略"
-    }
+    },
+    "leveledUp": "已升级至",
+    "streakIncreased": "连胜增加至",
+    "streakCompleted": "连胜完成！升级！",
+    "correctStreak": "正确答案连胜",
+    "progressUpdateError": "更新进度失败",
+    "yourProgress": "您的进度",
+    "currentStreak": "当前连胜",
+    "startStreak": "正确回答以开始连胜",
+    "keepGoing": "继续加油！正确回答更多问题",
+    "almostLevelUp": "再答对一题即可升级！"
   },
   "admin": {
     "title": "管理",
     "users": "用户",
     "settings": "设置",
-    "logout": "退出",
-    "light": "亮色",
-    "system": "系统",
-    "translating": "翻译中...",
-    "errorPrefix": "错误：",
-    "generating": "生成中...",
-    "pause": "暂停",
-    "play": "播放",
-    "stop": "停止",
-    "volume": "音量"
+    "logout": "退出"
   },
   "common": {
     "language": "语言",

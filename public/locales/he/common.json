@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "היכנס כדי לעקוב אחר ההתקדמות שלך ולראות את היסטוריית הלמידה שלך!",
       "dismiss": "התעלם"
-    }
+    },
+    "leveledUp": "עלית רמה ל-",
+    "streakIncreased": "רצף הוגדל ל-",
+    "streakCompleted": "רצף הושלם! עלית רמה!",
+    "correctStreak": "רצף תשובות נכונות",
+    "progressUpdateError": "עדכון ההתקדמות נכשל",
+    "yourProgress": "ההתקדמות שלך",
+    "currentStreak": "רצף נוכחי",
+    "startStreak": "ענה נכון כדי להתחיל רצף",
+    "keepGoing": "המשך כך! ענה נכון על עוד שאלות",
+    "almostLevelUp": "עוד תשובה נכונה אחת לעליית רמה!"
   },
   "admin": {
     "title": "ניהול",
     "users": "משתמשים",
     "settings": "הגדרות",
-    "logout": "התנתקות",
-    "light": "בהיר",
-    "system": "מערכת",
-    "translating": "מתרגם...",
-    "errorPrefix": "שגיאה: ",
-    "generating": "יוצר...",
-    "pause": "השהה",
-    "play": "נגן",
-    "stop": "עצור",
-    "volume": "עוצמת קול"
+    "logout": "התנתקות"
   },
   "common": {
     "language": "שפה",
