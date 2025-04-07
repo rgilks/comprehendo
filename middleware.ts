@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import Sentry from './lib/sentry';
+// import Sentry from './lib/sentry';
 import { getToken } from 'next-auth/jwt';
 
 const locales = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he'];
@@ -43,7 +43,6 @@ const middleware = async (req: import('next/server').NextRequest) => {
     console.log(`[Middleware] Allowing access to ${pathname}`);
     return NextResponse.next(); // Allow access if admin or not an admin route
   } catch (error) {
-    Sentry.captureException(error);
     // It's generally better to return a response than re-throwing in middleware
     return new NextResponse('Internal Server Error', { status: 500 });
   }
