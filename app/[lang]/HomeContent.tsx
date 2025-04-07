@@ -25,7 +25,7 @@ const HomeContent = () => {
         </div>
 
         <div className="text-center py-10 md:py-16 fade-in">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-6 text-gray-800 dark:text-gray-200">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-6 bg-gradient-to-br from-blue-500 via-indigo-500 to-green-500 bg-clip-text text-transparent">
             Comprehendo
           </h1>
           <p className="text-xl mb-3 text-gray-300 max-w-2xl mx-auto">{t('subtitle')}</p>
