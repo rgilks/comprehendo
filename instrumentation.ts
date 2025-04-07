@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 
-export function register() {
+export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { nodeProfilingIntegration } = require('@sentry/profiling-node');
 
@@ -13,9 +13,9 @@ export function register() {
         Sentry.onUncaughtExceptionIntegration(),
         Sentry.onUnhandledRejectionIntegration(),
       ],
-      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-      profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-      debug: process.env.NODE_ENV === 'development',
+      tracesSampleRate: 1,
+      profilesSampleRate: 1,
+      debug: false,
       environment: process.env.NODE_ENV || 'development',
       release: process.env.npm_package_version,
       attachStacktrace: true,
