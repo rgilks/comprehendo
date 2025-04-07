@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "Connectez-vous pour suivre vos progrès et consulter votre historique d'apprentissage !",
       "dismiss": "Ignorer"
-    }
+    },
+    "leveledUp": "Niveau supérieur atteint",
+    "streakIncreased": "Série augmentée à",
+    "streakCompleted": "Série terminée ! Niveau supérieur !",
+    "correctStreak": "Série de réponses correctes",
+    "progressUpdateError": "Échec de la mise à jour de la progression",
+    "yourProgress": "Votre Progression",
+    "currentStreak": "Série Actuelle",
+    "startStreak": "Répondez correctement pour démarrer une série",
+    "keepGoing": "Continuez ! Répondez correctement à plus de questions",
+    "almostLevelUp": "Encore une bonne réponse pour passer au niveau supérieur !"
   },
   "admin": {
     "title": "Administration",
     "users": "Utilisateurs",
     "settings": "Paramètres",
-    "logout": "Déconnexion",
-    "light": "Clair",
-    "system": "Système",
-    "translating": "Traduction en cours...",
-    "errorPrefix": "Erreur : ",
-    "generating": "Génération en cours...",
-    "pause": "Pause",
-    "play": "Jouer",
-    "stop": "Arrêter",
-    "volume": "Volume"
+    "logout": "Déconnexion"
   },
   "common": {
     "language": "Langue",

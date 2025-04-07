@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "Accedi per monitorare i tuoi progressi e vedere la tua cronologia di apprendimento!",
       "dismiss": "Ignora"
-    }
+    },
+    "leveledUp": "Passato al livello",
+    "streakIncreased": "Serie aumentata a",
+    "streakCompleted": "Serie completata! Passaggio di livello!",
+    "correctStreak": "Serie di risposte corrette",
+    "progressUpdateError": "Errore aggiornamento progressi",
+    "yourProgress": "I tuoi Progressi",
+    "currentStreak": "Serie Attuale",
+    "startStreak": "Rispondi correttamente per iniziare una serie",
+    "keepGoing": "Continua così! Rispondi correttamente ad altre domande",
+    "almostLevelUp": "Ancora una risposta corretta per passare di livello!"
   },
   "admin": {
     "title": "Amministrazione",
     "users": "Utenti",
     "settings": "Impostazioni",
-    "logout": "Esci",
-    "light": "Chiaro",
-    "system": "Sistema",
-    "translating": "Traduzione in corso...",
-    "errorPrefix": "Errore: ",
-    "generating": "Generazione in corso...",
-    "pause": "Pausa",
-    "play": "Riproduci",
-    "stop": "Stop",
-    "volume": "Volume"
+    "logout": "Esci"
   },
   "common": {
     "language": "Lingua",

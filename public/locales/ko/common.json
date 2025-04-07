@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "로그인하여 진행 상황을 추적하고 학습 기록을 확인하세요!",
       "dismiss": "닫기"
-    }
+    },
+    "leveledUp": "레벨 업",
+    "streakIncreased": "연속 정답 기록 증가",
+    "streakCompleted": "연속 정답 완료! 레벨 업!",
+    "correctStreak": "연속 정답 기록",
+    "progressUpdateError": "진행 상황 업데이트 실패",
+    "yourProgress": "나의 진행 상황",
+    "currentStreak": "현재 연속 정답",
+    "startStreak": "연속 정답 기록 시작하기",
+    "keepGoing": "계속 진행하세요! 더 많은 문제를 맞춰보세요",
+    "almostLevelUp": "레벨 업까지 정답 하나 남았습니다!"
   },
   "admin": {
     "title": "관리",
     "users": "사용자",
     "settings": "설정",
-    "logout": "로그아웃",
-    "light": "라이트",
-    "system": "시스템",
-    "translating": "번역 중...",
-    "errorPrefix": "오류: ",
-    "generating": "생성 중...",
-    "pause": "일시 중지",
-    "play": "재생",
-    "stop": "중지",
-    "volume": "볼륨"
+    "logout": "로그아웃"
   },
   "common": {
     "language": "언어",

@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "अपनी प्रगति ट्रैक करने और अपना सीखने का इतिहास देखने के लिए साइन इन करें!",
       "dismiss": "खारिज करें"
-    }
+    },
+    "leveledUp": "स्तर बढ़ गया",
+    "streakIncreased": "सही उत्तरों का क्रम बढ़ा",
+    "streakCompleted": "क्रम पूरा! स्तर बढ़ा!",
+    "correctStreak": "सही उत्तरों का क्रम",
+    "progressUpdateError": "प्रगति अद्यतन विफल",
+    "yourProgress": "आपकी प्रगति",
+    "currentStreak": "वर्तमान क्रम",
+    "startStreak": "क्रम शुरू करने के लिए सही उत्तर दें",
+    "keepGoing": "जारी रखें! अधिक प्रश्नों का सही उत्तर दें",
+    "almostLevelUp": "स्तर बढ़ाने के लिए एक और सही उत्तर!"
   },
   "admin": {
     "title": "एडमिन",
     "users": "उपयोगकर्ता",
     "settings": "सेटिंग्स",
-    "logout": "लॉग आउट",
-    "light": "हल्का",
-    "system": "सिस्टम",
-    "translating": "अनुवाद हो रहा है...",
-    "errorPrefix": "त्रुटि:",
-    "generating": "उत्पन्न हो रहा है...",
-    "pause": "रोकें",
-    "play": "चलाएं",
-    "stop": "बंद करें",
-    "volume": "आवाज़"
+    "logout": "लॉग आउट"
   },
   "common": {
     "language": "भाषा",

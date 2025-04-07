@@ -71,22 +71,23 @@
     "signInPrompt": {
       "message": "Faça login para acompanhar seu progresso e ver seu histórico de aprendizado!",
       "dismiss": "Dispensar"
-    }
+    },
+    "leveledUp": "Subiu para o nível",
+    "streakIncreased": "Sequência aumentada para",
+    "streakCompleted": "Sequência completa! Subiu de nível!",
+    "correctStreak": "Sequência de respostas corretas",
+    "progressUpdateError": "Falha ao atualizar o progresso",
+    "yourProgress": "Seu Progresso",
+    "currentStreak": "Sequência Atual",
+    "startStreak": "Responda corretamente para iniciar uma sequência",
+    "keepGoing": "Continue assim! Responda mais perguntas corretamente",
+    "almostLevelUp": "Mais uma resposta correta para subir de nível!"
   },
   "admin": {
     "title": "Administração",
     "users": "Usuários",
     "settings": "Configurações",
-    "logout": "Sair",
-    "light": "Claro",
-    "system": "Sistema",
-    "translating": "Traduzindo...",
-    "errorPrefix": "Erro:",
-    "generating": "Gerando...",
-    "pause": "Pausar",
-    "play": "Reproduzir",
-    "stop": "Parar",
-    "volume": "Volume"
+    "logout": "Sair"
   },
   "common": {
     "language": "Idioma",
