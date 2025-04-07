@@ -5,6 +5,8 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
 });
 
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -31,4 +33,16 @@ const nextConfig = {
   },
 };
 
-module.exports = withPWA(nextConfig);
+const sentryWebpackPluginOptions = {
+  // For all available options, see https://github.com/getsentry/sentry-webpack-plugin#options
+  org: 'comprehendo',
+  project: 'comprehendo',
+  // authToken: process.env.SENTRY_AUTH_TOKEN, // Required for source map uploads
+  silent: true, // Suppresses build logs
+};
+
+// module.exports = withPWA(nextConfig);
+
+// Make sure adding Sentry options is the last code to run before exporting, to
+// ensure that your source maps include changes from all other Webpack plugins
+module.exports = withSentryConfig(withPWA(nextConfig), sentryWebpackPluginOptions);
