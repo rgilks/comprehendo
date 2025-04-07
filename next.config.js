@@ -15,6 +15,14 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   distDir: process.env.NEXT_PREVIEW_BUILD === 'true' ? '.next-validation' : '.next',
+  async rewrites() {
+    return [
+      {
+        source: '/:lang/icons/:path*',
+        destination: '/icons/:path*',
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
