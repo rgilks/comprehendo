@@ -16,7 +16,6 @@ const ProgressTracker = () => {
     return null;
   }
 
-  // Create a lookup for level indices
   const levelIndices = { A1: 0, A2: 1, B1: 2, B2: 3, C1: 4, C2: 5 };
 
   return (
@@ -34,16 +33,12 @@ const ProgressTracker = () => {
             </span>
           </div>
 
-          {/* Single unified progress track */}
           <div className="relative py-6">
-            {/* Background track */}
             <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-700/50 rounded-full transform -translate-y-1/2"></div>
 
-            {/* Track with dots between level markers - removed scrolling wrapper and min-width */}
             <div className="relative flex justify-between items-center">
               {(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as CEFRLevel[]).map((level, idx, levels) => (
                 <React.Fragment key={level}>
-                  {/* Level marker */}
                   <div className="relative z-20">
                     <div
                       className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300
@@ -60,11 +55,9 @@ const ProgressTracker = () => {
                     </div>
                   </div>
 
-                  {/* Dots between this level and next level */}
                   {idx < levels.length - 1 && (
                     <div className="flex-1 flex justify-evenly items-center z-10 mx-0 md:mx-1">
                       {Array.from({ length: 4 }, (_, dotIdx) => {
-                        // For completed levels
                         if (levelIndices[cefrLevel] > levelIndices[level]) {
                           return (
                             <div
@@ -74,7 +67,6 @@ const ProgressTracker = () => {
                           );
                         }
 
-                        // For current level - show streak
                         if (level === cefrLevel) {
                           return (
                             <div
@@ -84,7 +76,7 @@ const ProgressTracker = () => {
                                   dotIdx < userStreak
                                     ? 'bg-gradient-to-r from-yellow-400 to-orange-500 shadow-sm shadow-yellow-500/20'
                                     : dotIdx === userStreak
-                                      ? 'bg-gradient-to-r from-orange-500 to-red-600 scale-110 shadow-sm shadow-red-500/30'
+                                      ? 'border-2 border-orange-500 bg-gray-800 scale-110 shadow-sm shadow-orange-500/30'
                                       : 'bg-gray-700'
                                 }
                               `}
@@ -92,7 +84,6 @@ const ProgressTracker = () => {
                           );
                         }
 
-                        // For future levels
                         return (
                           <div
                             key={dotIdx}
@@ -107,7 +98,6 @@ const ProgressTracker = () => {
             </div>
           </div>
 
-          {/* Motivational message */}
           <div className="mt-2 text-center">
             <span className="text-xs text-gray-300">
               {userStreak === 0
