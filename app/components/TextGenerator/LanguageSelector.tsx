@@ -49,7 +49,8 @@ const LanguageSelector = () => {
           className="relative w-full px-3 py-2 text-sm text-white bg-gray-800 border border-gray-700 rounded col-span-1 flex items-center justify-between cursor-default"
         >
           <span>
-            {cefrLevel} - {t(`practice.cefr.levels.${cefrLevel}.name`)}
+            <span className="hidden sm:inline">{cefrLevel} - </span>
+            {t(`practice.cefr.levels.${cefrLevel}.name`)}
             {isProgressLoading && (
               <span className="ml-2 text-xs text-gray-400 animate-pulse">
                 {t('common.loading')}
