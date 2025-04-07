@@ -43,10 +43,10 @@ const ProgressTracker = () => {
                     <div
                       className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300
                         ${
-                          level === cefrLevel
+                          levelIndices[level] === levelIndices[cefrLevel]
                             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white scale-110 shadow-lg shadow-blue-500/30'
-                            : levelIndices[cefrLevel] > levelIndices[level]
-                              ? 'bg-indigo-600 text-white'
+                            : levelIndices[level] < levelIndices[cefrLevel]
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
                               : 'bg-gray-800 text-gray-500'
                         }
                       `}
@@ -102,9 +102,11 @@ const ProgressTracker = () => {
             <span className="text-xs text-gray-300">
               {userStreak === 0
                 ? t('practice.startStreak')
-                : userStreak === 4
-                  ? t('practice.almostLevelUp')
-                  : ''}
+                : userStreak > 0 && userStreak < 4
+                  ? t('practice.keepGoing')
+                  : userStreak === 4
+                    ? t('practice.almostLevelUp')
+                    : ''}
             </span>
           </div>
         </div>
