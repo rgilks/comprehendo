@@ -136,19 +136,40 @@ export const useTextGeneratorStore = create(
     questionDelayTimeoutRef: null,
 
     // Simple setters
-    setShowLoginPrompt: (show) =>
-      set((state) => {
-        state.showLoginPrompt = show;
-      }),
+    setShowLoginPrompt: (show) => set({ showLoginPrompt: show }),
+
     setPassageLanguage: (lang) => {
+      const { stopPassageSpeech, questionDelayTimeoutRef, fetchUserProgress } = get();
+
+      // Stop audio and clear any pending question reveal
+      stopPassageSpeech();
+      if (questionDelayTimeoutRef) {
+        clearTimeout(questionDelayTimeoutRef);
+      }
+
       set((state) => {
+        // Reset UI and quiz state
         state.passageLanguage = lang;
+        state.quizData = null;
+        state.selectedAnswer = null;
+        state.isAnswered = false;
+        state.showExplanation = false;
+        state.showQuestionSection = false;
+        state.currentWordIndex = null;
+        state.relevantTextRange = null;
+        state.error = null;
+        state.loading = false;
+        state.showContent = false;
+        state.generatedPassageLanguage = null;
+        state.generatedQuestionLanguage = null;
+        state.questionDelayTimeoutRef = null;
       });
+
+      // Fetch progress for the new language
+      void fetchUserProgress();
     },
-    setCefrLevel: (level) =>
-      set((state) => {
-        state.cefrLevel = level;
-      }),
+
+    setCefrLevel: (level) => set({ cefrLevel: level }),
 
     setVolumeLevel: (volume) => {
       set((state) => {
