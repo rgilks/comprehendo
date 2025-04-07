@@ -35,7 +35,7 @@ const Generator = () => {
       delay={200}
       unmountOnExit
     >
-      <div className="mt-8">
+      <div className="mt-6 md:mt-8">
         <button
           onClick={generateTextHandler}
           disabled={loading}

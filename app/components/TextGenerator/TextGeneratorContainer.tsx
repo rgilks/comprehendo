@@ -52,7 +52,10 @@ const TextGeneratorContainer = () => {
   }, [contextLanguage]);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 relative" ref={contentContainerRef}>
+    <div
+      className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 relative"
+      ref={contentContainerRef}
+    >
       <div className="w-full max-w-3xl mx-auto my-8">
         <LanguageSelector />
         <LoginPrompt />
@@ -66,7 +69,7 @@ const TextGeneratorContainer = () => {
         {/* Content container with animation */}
         <AnimateTransition show={isContentVisible} type="fade-in" duration={400} unmountOnExit>
           {quizData && !loading && (
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
+            <div className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg">
               <ReadingPassage />
               <QuizSection />
             </div>
