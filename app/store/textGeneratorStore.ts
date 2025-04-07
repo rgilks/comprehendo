@@ -144,9 +144,6 @@ export const useTextGeneratorStore = create(
       set((state) => {
         state.passageLanguage = lang;
       });
-
-      const { fetchUserProgress } = get();
-      void fetchUserProgress();
     },
     setCefrLevel: (level) =>
       set((state) => {
