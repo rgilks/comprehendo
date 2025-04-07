@@ -16,6 +16,7 @@
     "test:coverage": "jest --coverage",
     "test:quick": "jest --bail --findRelatedTests --passWithNoTests",
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org rob-gilks --project comprehendo ./.next && sentry-cli sourcemaps upload --org rob-gilks --project comprehendo ./.next",
+    "nuke": "rm -rf node_modules package-lock.json .next .next-validation",
     "prepare": "husky && husky install"
   },
   "dependencies": {
