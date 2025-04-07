@@ -7,6 +7,7 @@ import { getRandomTopicForLevel } from '@/config/topics';
 import { getVocabularyGuidance, getGrammarGuidance } from '@/config/language-guidance';
 import { generateExerciseResponse } from '@/app/actions/exercise';
 import { getProgress, updateProgress } from '@/app/actions/userProgress';
+import { getSession } from 'next-auth/react';
 
 // Quiz data schema
 const quizDataSchema = z.object({
@@ -326,6 +327,20 @@ export const useTextGeneratorStore = create(
 
     // Fetch user progress
     fetchUserProgress: async () => {
+      // Get session status first
+      const session = await getSession(); // Use NextAuth getSession client-side
+
+      // Only proceed if authenticated (session is not null)
+      if (!session) {
+        console.log('[Progress] User not authenticated, skipping fetchUserProgress.');
+        // Optionally reset local progress state if needed
+        set((state) => {
+          state.cefrLevel = 'A1';
+          state.userStreak = 0;
+        });
+        return;
+      }
+
       const { passageLanguage } = get();
       set((state) => {
         state.isProgressLoading = true;
