@@ -61,6 +61,14 @@ const quizDataSchema = z.object({
   topic: z.string(),
 });
 
+// Define a custom error for AI response processing issues
+class AIResponseProcessingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AIResponseProcessingError';
+  }
+}
+
 /**
  * Check if the user has exceeded rate limits
  */
@@ -373,7 +381,6 @@ export const generateWithOpenAI = async (prompt: string, model: ModelConfig): Pr
       max_tokens: 2000,
     });
 
-    // Process and validate the response
     return await processAIResponse(completion.choices[0].message.content || '');
   } catch (error) {
     console.error('[API] OpenAI generation error:', error);
@@ -415,7 +422,6 @@ CRITICAL INSTRUCTION: The question, options, and explanations MUST be in the que
       ],
     });
 
-    // Process and validate the response
     return await processAIResponse(result.response.text());
   } catch (error) {
     console.error('[API] Google AI generation error:', error);
@@ -427,10 +433,8 @@ CRITICAL INSTRUCTION: The question, options, and explanations MUST be in the que
  * Helper function to process and validate AI responses
  */
 export const processAIResponse = async (content: string): Promise<string> => {
-  // Remove markdown formatting
   content = content.replace(/```json|```/g, '').trim();
 
-  // Try to parse and validate the content
   try {
     // First attempt - direct parsing with proper typing
     const jsonData = JSON.parse(content) as unknown;
@@ -506,29 +510,12 @@ export const processAIResponse = async (content: string): Promise<string> => {
     throw new Error(`Failed to repair data: ${repairResult.error.message}`);
   } catch (error) {
     console.error('[API] JSON parsing/validation error:', error);
-
-    // Last resort - create a valid fallback response
-    const fallbackData = {
-      paragraph: "This is a fallback paragraph due to an error processing the AI's response.",
-      question: 'What happened to the original content?',
-      options: {
-        A: 'There was an error in the AI response format.',
-        B: 'The content was too complex to parse.',
-        C: 'The server encountered a technical issue.',
-        D: 'The question was not appropriate for the system.',
-      },
-      explanations: {
-        A: "This is correct. The AI generated content that couldn't be properly formatted.",
-        B: 'This might be part of the issue, but the main problem was a formatting error.',
-        C: 'This is partially correct, but specifically related to response formatting.',
-        D: 'This is incorrect. The question was appropriate but the response had formatting issues.',
-      },
-      correctAnswer: 'A',
-      relevantText: "This is a fallback paragraph due to an error processing the AI's response.",
-      topic: 'Error Handling',
-    };
-
-    return JSON.stringify(fallbackData);
+    // Throw specific error instead of returning fallback data
+    throw new AIResponseProcessingError(
+      `Failed to parse or validate AI response: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
 };
 
@@ -578,79 +565,91 @@ export const getAuthenticatedUserId = async (): Promise<number | null> => {
  * Main function to generate exercise response
  */
 export const generateExerciseResponse = async (params: ExerciseRequestParams) => {
-  try {
-    // Validate request parameters
-    const parsedBody = exerciseRequestBodySchema.safeParse(params);
-    if (!parsedBody.success) {
-      console.log('[API] Invalid request body:', parsedBody.error.flatten());
-      throw new Error('Invalid request body');
-    }
+  const parsedBody = exerciseRequestBodySchema.safeParse(params);
+  if (!parsedBody.success) {
+    console.log('[API] Invalid request body:', parsedBody.error.flatten());
+    throw new Error('Invalid request body');
+  }
 
-    const { prompt, seed, passageLanguage, questionLanguage, forceCache } = parsedBody.data;
+  const { prompt, seed, passageLanguage, questionLanguage, forceCache } = parsedBody.data;
 
-    // Get authenticated user ID
-    const userId = await getAuthenticatedUserId();
+  const userId = await getAuthenticatedUserId();
 
-    // Using '127.0.0.1' for server actions since we can't get client IP
-    const ip = '127.0.0.1';
+  const ip = '127.0.0.1';
 
-    // Check rate limit
-    const isWithinRateLimit = await checkRateLimit(ip);
-    if (!isWithinRateLimit) {
-      throw new Error('Rate limit exceeded. Please try again later.');
-    }
+  const isWithinRateLimit = await checkRateLimit(ip);
+  if (!isWithinRateLimit) {
+    throw new Error('Rate limit exceeded. Please try again later.');
+  }
 
-    // Extract CEFR level from prompt
-    const cefrLevel = await extractCEFRLevel(prompt);
-    console.log(`[API] Extracted level: ${cefrLevel}`);
+  const cefrLevel = await extractCEFRLevel(prompt);
+  console.log(`[API] Extracted level: ${cefrLevel}`);
 
-    // Determine seed value
-    const seedValue = typeof seed === 'number' ? seed : 0;
+  const seedValue = typeof seed === 'number' ? seed : 0;
 
-    // Check cache for existing content
-    const cachedContent = await getCachedExercise(
-      passageLanguage,
-      questionLanguage,
-      cefrLevel,
-      seedValue,
-      !!forceCache
+  const initiallyCachedContent = await getCachedExercise(
+    passageLanguage,
+    questionLanguage,
+    cefrLevel,
+    seedValue,
+    !!forceCache
+  );
+
+  if (initiallyCachedContent) {
+    console.log(
+      '[API] Content found in cache (initial check):',
+      initiallyCachedContent.content.substring(0, 20) + '...'
     );
-
-    if (cachedContent) {
-      console.log('[API] Content found in cache:', cachedContent.content.substring(0, 20) + '...');
-
-      // Log usage stats
-      await logUsageStats(userId, ip, passageLanguage, cefrLevel);
-
-      return { result: cachedContent.content };
-    }
-
-    // Not found in cache, generate new content
-    console.log(`[API] Content not in cache, generating new content...`);
-
-    // Log usage stats
     await logUsageStats(userId, ip, passageLanguage, cefrLevel);
+    return { result: initiallyCachedContent.content };
+  }
 
-    // Use the active model from config
+  console.log(`[API] Content not in cache or forced regeneration, generating new content...`);
+
+  if (!initiallyCachedContent) {
+    await logUsageStats(userId, ip, passageLanguage, cefrLevel);
+  }
+
+  try {
     const model = getActiveModel();
     let result: string;
 
+    console.log(`[API] Attempting generation with ${model.provider} model: ${model.name}`);
     if (model.provider === 'openai') {
-      console.log(`[API] Using OpenAI model: ${model.name}`);
       result = await generateWithOpenAI(prompt, model);
     } else if (model.provider === 'google') {
-      console.log(`[API] Using Google AI model: ${model.name}`);
       result = await generateWithGoogleAI(prompt, model);
     } else {
       throw new Error(`Unsupported model provider: ${String(model.provider)}`);
     }
 
-    // Save the generated content to the database
+    console.log(`[API] Successfully generated and processed content.`);
     await saveGeneratedContent(passageLanguage, questionLanguage, cefrLevel, result);
 
     return { result };
   } catch (error) {
-    console.error('[API] Error in generateExerciseResponse:', error);
-    throw error;
+    console.error('[API] Error during AI generation or processing:', error);
+
+    if (error instanceof AIResponseProcessingError) {
+      console.warn('[API] AI response processing failed. Attempting to fetch any cached exercise.');
+      const fallbackCachedContent = await getCachedExercise(
+        passageLanguage,
+        questionLanguage,
+        cefrLevel,
+        0,
+        true
+      );
+
+      if (fallbackCachedContent) {
+        console.log('[API] Found fallback cached content.');
+        return { result: fallbackCachedContent.content };
+      }
+
+      console.error('[API] No fallback cached content found. Re-throwing processing error.');
+      throw error;
+    } else {
+      console.error('[API] Non-AI processing error occurred.');
+      throw error;
+    }
   }
 };
