@@ -21,5 +21,6 @@ hard_limit = 1000
 soft_limit = 500
 
 [mounts]
-source = "sqlite_data"
-destination = "/data"
+source = "litefs"
+destination = "/var/lib/litefs"
+
