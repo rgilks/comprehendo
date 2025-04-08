@@ -1,5 +1,8 @@
 FROM node:18-alpine AS base
 
+# Install system dependencies
+RUN apk add --no-cache ca-certificates fuse3 sqlite
+
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
@@ -40,6 +43,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy LiteFS binary
+COPY --from=flyio/litefs:0.5 /usr/local/bin/litefs /usr/local/bin/litefs
+
 # Create public directory in runner if it doesn't exist
 RUN mkdir -p public
 COPY --from=builder /app/public ./public
@@ -53,6 +59,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Create directory for SQLite database
+RUN mkdir -p /litefs && chown nextjs:nodejs /litefs
 RUN mkdir -p /data && chown nextjs:nodejs /data
 
 USER nextjs
@@ -62,4 +69,14 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-CMD ["node", "server.js"] 
+# Create a script to run both LiteFS and the application
+COPY --chown=nextjs:nodejs <<EOF /app/start.sh
+#!/bin/sh
+litefs mount &
+sleep 2
+exec node server.js
+EOF
+
+RUN chmod +x /app/start.sh
+
+ENTRYPOINT ["/app/start.sh"]
