@@ -1,0 +1,21 @@
+FROM grafana/k6:latest
+
+WORKDIR /app
+
+# Install Node.js and npm
+RUN apk add --no-cache nodejs npm
+
+# Copy test scripts
+COPY load-test.js .
+COPY db-integrity.js .
+
+# Install dependencies for db-integrity.js
+RUN npm init -y && \
+    npm install sqlite3
+
+# Set up environment
+ENV K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write
+ENV K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true
+
+# Default command to run the load test
+CMD ["k6", "run", "load-test.js"] 
