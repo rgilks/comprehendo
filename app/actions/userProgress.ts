@@ -37,9 +37,11 @@ const dbQuizDataSchema = z.object({
 
 // Updated schema for the submitAnswer action
 const submitAnswerSchema = z.object({
-  selectedAnswer: z.string().length(1),
-  language: z.string().min(2).max(5),
-  quizId: z.number().int().positive(),
+  ans: z.string().length(1),
+  learn: z.string().min(2).max(5),
+  lang: z.string().min(2).max(5),
+  id: z.number().int().positive(),
+  cefrLevel: z.string().optional(),
 });
 
 export type UpdateProgressParams = z.infer<typeof updateProgressSchema>;
@@ -207,25 +209,28 @@ export const submitAnswer = async (
     };
   }
 
-  const { selectedAnswer, language, quizId } = parsedBody.data;
+  // Use renamed variables: ans, id, learn, lang, cefrLevel (cefrLevel might not be used directly here)
+  const { ans, id, learn, lang /*, cefrLevel */ } = parsedBody.data;
+
+  console.log(`[SubmitAnswer] Received params: ans=${ans}, id=${id}, learn=${learn}, lang=${lang}`);
 
   // Fetch Full Quiz Data (Handle Static IDs first)
   let fullQuizData: z.infer<typeof dbQuizDataSchema>;
   try {
     // Check for Static A1 Exercises
     const staticExercise: GeneratedContentRow | undefined = staticA1Exercises.find(
-      (ex) => ex.id === quizId
+      (ex) => ex.id === id // Use new id variable
     );
     if (staticExercise) {
-      console.log(`[SubmitAnswer] Found static exercise for ID ${quizId}`);
+      console.log(`[SubmitAnswer] Found static exercise for ID ${id}`);
       const parsedContent: unknown = JSON.parse(staticExercise.content);
       fullQuizData = dbQuizDataSchema.parse(parsedContent); // Validate static data
     } else {
       // --- If not static, fetch from DB ---
-      console.log(`[SubmitAnswer] ID ${quizId} not static, fetching from DB.`);
-      const cachedRow = db
-        .prepare('SELECT content FROM generated_content WHERE id = ?')
-        .get(quizId) as { content: string } | undefined;
+      console.log(`[SubmitAnswer] ID ${id} not static, fetching from DB.`);
+      const cachedRow = db.prepare('SELECT content FROM generated_content WHERE id = ?').get(id) as
+        | { content: string }
+        | undefined;
 
       if (!cachedRow?.content) {
         return {
@@ -250,7 +255,7 @@ export const submitAnswer = async (
     } else {
       message = 'Unknown error fetching/parsing quiz data';
     }
-    console.error(`[SubmitAnswer] Data fetch/parse error for quiz ID ${quizId}:`, message);
+    console.error(`[SubmitAnswer] Data fetch/parse error for quiz ID ${id}:`, message);
     return {
       currentLevel: 'A1',
       currentStreak: 0,
@@ -259,7 +264,7 @@ export const submitAnswer = async (
   }
 
   // Determine Correctness
-  const isCorrect = selectedAnswer === fullQuizData.correctAnswer;
+  const isCorrect = ans === fullQuizData.correctAnswer; // Use new ans variable
 
   // Update Progress ONLY IF USER IS LOGGED IN
   let progressResult: {
@@ -269,7 +274,8 @@ export const submitAnswer = async (
     dbError?: string;
   };
   if (userId) {
-    progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
+    // Pass the language being learned ('learn') to the progress calculation function
+    progressResult = calculateAndUpdateProgress(userId, learn, isCorrect);
   } else {
     progressResult = { currentLevel: 'A1', currentStreak: 0, leveledUp: false };
   }
