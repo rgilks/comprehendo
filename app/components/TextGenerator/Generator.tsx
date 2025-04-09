@@ -39,6 +39,7 @@ const Generator = () => {
         <button
           onClick={generateTextHandler}
           disabled={loading}
+          data-testid="generate-button"
           className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white ${
             loading
               ? 'bg-gray-600 cursor-not-allowed opacity-70'
