@@ -174,11 +174,11 @@ export const getCachedExercise = async (
         WHERE language = ? \
           AND question_language = ? \
           AND level = ? \
-          AND id % 100 = ?\
+          AND seed_value = ?
         ORDER BY created_at DESC LIMIT 1
       `
         )
-        .get(passageLanguage, questionLanguage, specificLevel, seedValue % 100);
+        .get(passageLanguage, questionLanguage, specificLevel, seedValue);
 
       // Validate result has the expected structure
       if (
@@ -403,8 +403,17 @@ export const generateExerciseResponse = async (
   // Generate topic and seed internally
   const levelToUse = cefrLevel as CEFRLevel; // Ensure correct type
   const topic = getRandomTopicForLevel(levelToUse);
-  const seed = Math.floor(Math.random() * 100);
-  console.log(`[API] Internally generated topic: ${topic}, seed: ${seed}`);
+
+  // Determine seed: Time-based for anonymous A1, random otherwise
+  let seed: number;
+  if (!isLoggedIn && levelToUse === 'A1') {
+    const currentMinute = new Date().getMinutes();
+    seed = currentMinute % 3; // Seed based on minute (0, 1, or 2)
+    console.log(`[API] Anonymous A1 user: Using time-based seed (minute % 3): ${seed}`);
+  } else {
+    seed = Math.floor(Math.random() * 100); // Random seed for logged-in users or non-A1 levels
+    console.log(`[API] Logged-in user or non-A1 level: Using random seed: ${seed}`);
+  }
 
   // Rate Limiting - Use determined ipAddress for anonymous users
   if (isLoggedIn && userId) {
