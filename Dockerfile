@@ -58,6 +58,9 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy the LiteFS config file
+COPY --from=builder --chown=nextjs:nodejs /app/litefs.yml ./litefs.yml
+
 # Create directory for SQLite database
 RUN mkdir -p /litefs && chown nextjs:nodejs /litefs
 RUN mkdir -p /data && chown nextjs:nodejs /data
