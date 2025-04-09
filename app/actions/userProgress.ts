@@ -38,10 +38,10 @@ const dbQuizDataSchema = z.object({
 
 // Updated schema for the submitAnswer action
 const submitAnswerSchema = z.object({
-  ans: z.string().length(1),
+  ans: z.string().length(1).optional(),
   learn: z.string().min(2).max(5),
   lang: z.string().min(2).max(5),
-  id: z.number().int().positive(),
+  id: z.number().int().positive().optional(),
   cefrLevel: z.string().optional(),
 });
 
@@ -203,13 +203,12 @@ export const submitAnswer = async (
   const sessionUser = session?.user as SessionUser | undefined;
   const userId = sessionUser?.dbId;
 
-  console.log(`[SubmitAnswer] Request received. UserID: ${userId ?? 'Anonymous'}`);
+  console.log(`[SubmitAnswer] Request received. UserID: ${userId ?? 'Anonymous'}, Params:`, params);
 
   // Input Validation
   const parsedBody = submitAnswerSchema.safeParse(params);
   if (!parsedBody.success) {
     const errorDetails = JSON.stringify(parsedBody.error.flatten().fieldErrors);
-    // Return only error, no feedback or next quiz possible
     return {
       currentLevel: 'A1', // Default level
       currentStreak: 0, // Default streak
@@ -219,128 +218,215 @@ export const submitAnswer = async (
 
   const { ans, id, learn, lang, cefrLevel: requestCefrLevel } = parsedBody.data;
 
-  console.log(
-    `[SubmitAnswer] Received params: ans=${ans}, id=${id}, learn=${learn}, lang=${lang}, level=${requestCefrLevel ?? 'N/A'}`
-  );
-
   // Initialize response object structure
   const responsePayload: ProgressResponse = {
-    currentLevel: 'A1',
+    currentLevel: 'A1', // Will be updated based on user progress or fetch
     currentStreak: 0,
     leveledUp: false,
   };
 
-  // 1. Fetch Full Quiz Data for the submitted answer
-  let fullQuizData: z.infer<typeof dbQuizDataSchema>;
-  try {
-    const staticExercise: GeneratedContentRow | undefined = staticA1Exercises.find(
-      (ex) => ex.id === id
-    );
-    if (staticExercise) {
-      console.log(`[SubmitAnswer] Found static exercise for ID ${id}`);
-      const parsedContent: unknown = JSON.parse(staticExercise.content);
-      fullQuizData = dbQuizDataSchema.parse(parsedContent);
-    } else {
-      console.log(`[SubmitAnswer] ID ${id} not static, fetching from DB.`);
-      const cachedRow = db.prepare('SELECT content FROM generated_content WHERE id = ?').get(id) as
-        | { content: string }
-        | undefined;
-      if (!cachedRow?.content) {
-        responsePayload.error = 'Quiz data not found for the provided ID.';
-        return responsePayload; // Cannot proceed without quiz data
-      }
-      const parsedContent: unknown = JSON.parse(cachedRow.content);
-      fullQuizData = dbQuizDataSchema.parse(parsedContent);
-    }
-  } catch (dataError: unknown) {
-    let message: string;
-    if (dataError instanceof z.ZodError) {
-      message = `Invalid quiz data structure: ${JSON.stringify(dataError.flatten().fieldErrors)}`;
-    } else if (dataError instanceof SyntaxError) {
-      message = 'Invalid JSON format for quiz data';
-    } else if (dataError instanceof Error) {
-      message = dataError.message;
-    } else {
-      message = 'Unknown error fetching/parsing quiz data';
-    }
-    console.error(`[SubmitAnswer] Data fetch/parse error for quiz ID ${id}:`, message);
-    responsePayload.error = `Error retrieving quiz details: ${message}`;
-    return responsePayload; // Cannot proceed without quiz data
-  }
-
-  // 2. Determine Correctness
-  const isCorrect = ans === fullQuizData.correctAnswer;
-
-  // 3. Update Progress (if logged in)
-  let cefrLevelForNextGen: string = requestCefrLevel || 'A1'; // Default level for next gen
-
+  // Determine user's current CEFR level (needed for both paths)
+  let cefrLevelForGeneration: string = requestCefrLevel || 'A1'; // Start with request or A1
   if (userId) {
-    const progressResult = calculateAndUpdateProgress(userId, learn, isCorrect);
-    responsePayload.currentLevel = progressResult.currentLevel;
-    responsePayload.currentStreak = progressResult.currentStreak;
-    responsePayload.leveledUp = progressResult.leveledUp;
-    responsePayload.error = progressResult.dbError; // Store potential DB error
-    cefrLevelForNextGen = progressResult.currentLevel; // Use updated level for next generation
+    try {
+      const userProgress = db
+        .prepare(
+          'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
+        )
+        .get(userId, learn.toLowerCase().slice(0, 2)) as
+        | { cefr_level: string; correct_streak: number }
+        | undefined;
+
+      if (userProgress) {
+        responsePayload.currentLevel = userProgress.cefr_level;
+        responsePayload.currentStreak = userProgress.correct_streak;
+        // If processing an answer, use this level for NEXT generation
+        // If getting first quiz, use this level for CURRENT generation
+        cefrLevelForGeneration = userProgress.cefr_level;
+      } else {
+        // No progress record, default to A1 for level and generation
+        responsePayload.currentLevel = 'A1';
+        responsePayload.currentStreak = 0;
+        cefrLevelForGeneration = 'A1';
+      }
+    } catch (dbError) {
+      console.error('[SubmitAnswer] Error fetching user progress:', dbError);
+      // Proceed with A1 defaults, maybe add non-critical error to response?
+      responsePayload.error = 'Failed to fetch user progress, using defaults.'; // Non-blocking error
+      cefrLevelForGeneration = 'A1';
+      responsePayload.currentLevel = 'A1';
+      responsePayload.currentStreak = 0;
+    }
   } else {
-    // For anonymous users, keep default A1/0 progress, use request level for next gen
-    responsePayload.currentLevel = requestCefrLevel || 'A1';
+    // Anonymous user: Use requested level or A1 for generation, reflect that in response
+    cefrLevelForGeneration = requestCefrLevel || 'A1';
+    responsePayload.currentLevel = cefrLevelForGeneration;
     responsePayload.currentStreak = 0;
   }
 
-  // 4. Construct Feedback for the current question
-  responsePayload.feedback = {
-    isCorrect: isCorrect,
-    correctAnswer: fullQuizData.correctAnswer,
-    explanations: fullQuizData.explanations,
-    relevantText: fullQuizData.relevantText,
-  };
-
-  // 5. Generate the next exercise asynchronously
-  // We do this after processing the current answer so we have the potentially updated level
-  try {
+  // --- PATH 1: Submitting an Answer (ans and id are provided) ---
+  if (ans && id) {
     console.log(
-      `[SubmitAnswer] Generating next exercise: learn=${learn}, lang=${lang}, level=${cefrLevelForNextGen}`
+      `[SubmitAnswer] Processing answer '${ans}' for quiz ID ${id}, learn=${learn}, lang=${lang}, level=${cefrLevelForGeneration}`
     );
-    const nextExerciseResult = await generateExerciseResponse({
-      passageLanguage: learn,
-      questionLanguage: lang,
-      cefrLevel: cefrLevelForNextGen,
-    });
 
-    if (nextExerciseResult.error || !nextExerciseResult.quizId) {
-      console.error('[SubmitAnswer] Failed to generate next exercise:', nextExerciseResult.error);
-      responsePayload.nextQuiz = { error: nextExerciseResult.error || 'Generation failed' };
+    // 1. Fetch Full Quiz Data for the submitted answer
+    let fullQuizData: z.infer<typeof dbQuizDataSchema>;
+    try {
+      const staticExercise: GeneratedContentRow | undefined = staticA1Exercises.find(
+        (ex) => ex.id === id
+      );
+      if (staticExercise) {
+        console.log(`[SubmitAnswer] Found static exercise for ID ${id}`);
+        const parsedContent: unknown = JSON.parse(staticExercise.content);
+        fullQuizData = dbQuizDataSchema.parse(parsedContent);
+      } else {
+        console.log(`[SubmitAnswer] ID ${id} not static, fetching from DB.`);
+        const cachedRow = db
+          .prepare('SELECT content FROM generated_content WHERE id = ?')
+          .get(id) as { content: string } | undefined;
+        if (!cachedRow?.content) {
+          responsePayload.error = 'Quiz data not found for the provided ID.';
+          return responsePayload; // Cannot proceed
+        }
+        const parsedContent: unknown = JSON.parse(cachedRow.content);
+        fullQuizData = dbQuizDataSchema.parse(parsedContent);
+      }
+    } catch (dataError: unknown) {
+      let message = 'Unknown error fetching/parsing quiz data';
+      if (dataError instanceof z.ZodError) {
+        message = `Invalid quiz data structure: ${JSON.stringify(dataError.flatten().fieldErrors)}`;
+      } else if (dataError instanceof SyntaxError) {
+        message = 'Invalid JSON format for quiz data';
+      } else if (dataError instanceof Error) {
+        message = dataError.message;
+      }
+      console.error(`[SubmitAnswer] Data fetch/parse error for quiz ID ${id}:`, message);
+      responsePayload.error = `Error retrieving quiz details: ${message}`;
+      return responsePayload; // Cannot proceed
+    }
+
+    // 2. Determine Correctness
+    const isCorrect = ans === fullQuizData.correctAnswer;
+
+    // 3. Update Progress (if logged in)
+    if (userId) {
+      const progressResult = calculateAndUpdateProgress(userId, learn, isCorrect);
+      responsePayload.currentLevel = progressResult.currentLevel;
+      responsePayload.currentStreak = progressResult.currentStreak;
+      responsePayload.leveledUp = progressResult.leveledUp;
+      // Overwrite initial fetch error if DB update succeeds/fails
+      responsePayload.error = progressResult.dbError;
+      // Use the *updated* level for generating the *next* quiz
+      cefrLevelForGeneration = progressResult.currentLevel;
     } else {
-      try {
+      // For anonymous users, progress doesn't change, use initial level for next gen
+      responsePayload.currentLevel = requestCefrLevel || 'A1';
+      responsePayload.currentStreak = 0; // Streak doesn't apply
+      cefrLevelForGeneration = responsePayload.currentLevel;
+    }
+
+    // 4. Construct Feedback for the *current* question
+    responsePayload.feedback = {
+      isCorrect: isCorrect,
+      correctAnswer: fullQuizData.correctAnswer,
+      explanations: fullQuizData.explanations,
+      relevantText: fullQuizData.relevantText,
+    };
+
+    // 5. Generate the *next* exercise (using potentially updated level)
+    try {
+      console.log(
+        `[SubmitAnswer] Generating *next* exercise: learn=${learn}, lang=${lang}, level=${cefrLevelForGeneration}`
+      );
+      const nextExerciseResult = await generateExerciseResponse({
+        passageLanguage: learn,
+        questionLanguage: lang,
+        cefrLevel: cefrLevelForGeneration,
+      });
+
+      if (nextExerciseResult.error || !nextExerciseResult.quizId) {
+        console.error('[SubmitAnswer] Failed to generate next exercise:', nextExerciseResult.error);
+        responsePayload.nextQuiz = { error: nextExerciseResult.error || 'Generation failed' };
+      } else {
         const nextQuizData = JSON.parse(nextExerciseResult.result) as PartialQuizData;
-        console.log(
-          `[SubmitAnswer] Successfully generated next exercise ID: ${nextExerciseResult.quizId}`
-        );
         responsePayload.nextQuiz = {
           quizData: nextQuizData,
           quizId: nextExerciseResult.quizId,
         };
-      } catch (parseError) {
-        console.error('[SubmitAnswer] Failed to parse next exercise JSON:', parseError);
-        console.error('[SubmitAnswer] Problematic JSON:', nextExerciseResult.result);
-        responsePayload.nextQuiz = {
-          error: 'Failed to parse generated exercise data',
-        };
       }
+    } catch (generationError) {
+      console.error('[SubmitAnswer] Error calling generateExerciseResponse:', generationError);
+      const message =
+        generationError instanceof Error ? generationError.message : 'Unknown generation error';
+      responsePayload.nextQuiz = { error: `Failed to generate next exercise: ${message}` };
     }
-  } catch (generationError) {
-    console.error('[SubmitAnswer] Error calling generateExerciseResponse:', generationError);
-    const message =
-      generationError instanceof Error ? generationError.message : 'Unknown generation error';
-    responsePayload.nextQuiz = { error: `Failed to generate next exercise: ${message}` };
+
+    // --- PATH 2: Getting a New/First Quiz (ans and id are NOT provided) ---
+  } else {
+    console.log(
+      `[SubmitAnswer] Generating *new/first* exercise: learn=${learn}, lang=${lang}, level=${cefrLevelForGeneration}`
+    );
+    // Feedback is null because no answer was submitted
+    responsePayload.feedback = undefined;
+
+    // Generate the exercise based on the determined level
+    try {
+      const exerciseResult = await generateExerciseResponse({
+        passageLanguage: learn,
+        questionLanguage: lang,
+        cefrLevel: cefrLevelForGeneration,
+      });
+
+      if (exerciseResult.error || !exerciseResult.quizId) {
+        console.error('[SubmitAnswer] Failed to generate new exercise:', exerciseResult.error);
+        // Put the error in the main error field, as this was the primary goal
+        responsePayload.error = exerciseResult.error || 'Generation failed';
+        responsePayload.nextQuiz = undefined; // No quiz generated
+      } else {
+        try {
+          const quizData = JSON.parse(exerciseResult.result) as PartialQuizData;
+          console.log(
+            `[SubmitAnswer] Successfully generated new exercise ID: ${exerciseResult.quizId}`
+          );
+          // Put the generated quiz into the `nextQuiz` field for consistency
+          responsePayload.nextQuiz = {
+            quizData: quizData,
+            quizId: exerciseResult.quizId,
+          };
+          // Clear any non-blocking progress fetch error if generation succeeded
+          if (responsePayload.error === 'Failed to fetch user progress, using defaults.') {
+            responsePayload.error = undefined;
+          }
+        } catch (parseError) {
+          console.error('[SubmitAnswer] Failed to parse new exercise JSON:', parseError);
+          console.error('[SubmitAnswer] Problematic JSON:', exerciseResult.result);
+          responsePayload.error = 'Failed to parse generated exercise data';
+          responsePayload.nextQuiz = undefined;
+        }
+      }
+    } catch (generationError) {
+      console.error('[SubmitAnswer] Error calling generateExerciseResponse:', generationError);
+      const message =
+        generationError instanceof Error ? generationError.message : 'Unknown generation error';
+      responsePayload.error = `Failed to generate exercise: ${message}`;
+      responsePayload.nextQuiz = undefined;
+    }
   }
 
-  // 6. Return combined progress, feedback, and next quiz data
+  // 6. Return final payload
   console.log('[SubmitAnswer] Returning final payload:', {
-    ...responsePayload,
-    feedback: '...', // Avoid logging potentially large feedback object
+    currentLevel: responsePayload.currentLevel,
+    currentStreak: responsePayload.currentStreak,
+    leveledUp: responsePayload.leveledUp,
+    error: responsePayload.error,
+    feedback: responsePayload.feedback ? '...' : undefined,
     nextQuiz: responsePayload.nextQuiz
-      ? { ...responsePayload.nextQuiz, quizData: '...' }
+      ? {
+          quizId: responsePayload.nextQuiz.quizId,
+          error: responsePayload.nextQuiz.error,
+          quizData: '...',
+        }
       : undefined,
   });
   return responsePayload;
