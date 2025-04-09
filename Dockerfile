@@ -73,4 +73,4 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 # ENTRYPOINT should run litefs, which will then execute the command from litefs.yml
-ENTRYPOINT ["litefs", "mount"]
+ENTRYPOINT ["litefs", "mount", "-config", "/app/litefs.yml"]
