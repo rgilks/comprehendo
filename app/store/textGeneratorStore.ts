@@ -530,8 +530,8 @@ export const useTextGeneratorStore = create(
                         set((state) => {
                           state.showQuestionSection = true;
                         });
-                      }, 100);
-                    }, questionDelayMs);
+                      }, 0); // Set nested delay to 0ms
+                    }, 0); // Set main delay to 0ms
 
                     set((state) => {
                       state.questionDelayTimeoutRef = timeoutId;

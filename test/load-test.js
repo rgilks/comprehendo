@@ -6,6 +6,13 @@ const path = require('path');
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const SCREENSHOT_DIR = path.join(process.cwd(), 'screenshots');
 
+// Expected questions for the static A1 exercises
+const EXPECTED_QUESTIONS = [
+  'What color is the cat?',
+  'Where do I play with the ball?',
+  'What do I see?',
+];
+
 // Handle process termination
 process.on('SIGINT', async () => {
   console.log('\nGracefully shutting down...');
@@ -50,9 +57,21 @@ async function runTest(page, testIndex) {
     // --- Wait for Question and Options ---
     log('Waiting for question and options...');
     await page.waitForSelector('[data-testid="quiz-section"]', { timeout: 30000 });
-    await page.waitForSelector('[data-testid="quiz-question"]', { timeout: 30000 });
+    const questionElement = await page.waitForSelector('[data-testid="quiz-question"]', {
+      timeout: 30000,
+    });
     await page.waitForSelector('[data-testid="quiz-option-A"]', { timeout: 30000 });
     log('Question and options loaded.');
+
+    // --- Verify Question Text (Simple Check) ---
+    const actualQuestionText = await questionElement.textContent();
+    const expectedQuestionIndex = testIndex % EXPECTED_QUESTIONS.length; // Cycle through expected questions
+    const expectedQuestionText = EXPECTED_QUESTIONS[expectedQuestionIndex];
+    log(`Verifying question: Expecting [${expectedQuestionIndex}] "${expectedQuestionText}"`);
+    console.assert(
+      actualQuestionText === expectedQuestionText,
+      `FAIL: Question mismatch! Expected: "${expectedQuestionText}", Got: "${actualQuestionText}"`
+    );
 
     // --- Answer Question (Select Option A) ---
     log('Clicking option A...');
@@ -140,9 +159,22 @@ async function main() {
     console.log('\n=== All test cycles completed ===');
     const successfulCycles = results.length;
     if (successfulCycles > 0) {
-      const avgDuration = results.reduce((sum, d) => sum + d, 0) / successfulCycles;
-      console.log(`📈 Average duration for successful cycles: ${avgDuration.toFixed(0)}ms`);
+      // Report average for all successful cycles
+      const avgDurationAll = results.reduce((sum, d) => sum + d, 0) / successfulCycles;
+      console.log(`📈 Average duration for ALL successful cycles: ${avgDurationAll.toFixed(0)}ms`);
+
+      // Report average excluding the first cycle if there are enough data points
+      if (successfulCycles > 1) {
+        const avgDurationExcludingFirst =
+          results.slice(1).reduce((sum, d) => sum + d, 0) / (successfulCycles - 1);
+        console.log(
+          `⏱️ Average duration excluding first cycle: ${avgDurationExcludingFirst.toFixed(0)}ms`
+        );
+      }
+    } else {
+      console.log('No successful cycles to calculate average duration.');
     }
+
     const failedCycles = totalTests - successfulCycles;
     console.log(
       `Total cycles run: ${totalTests}, Successful: ${successfulCycles}, Failed: ${failedCycles}`
