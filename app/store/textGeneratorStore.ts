@@ -563,15 +563,19 @@ export const useTextGeneratorStore = create(
           // Call submitAnswer with the new payload structure
           const result = await submitAnswer(payload);
 
-          if (result.error) {
-            console.error(`[Feedback/Progress] Error: ${result.error}`);
+          if (result.error && !result.feedback) {
+            // If there's an error AND no feedback (meaning the error likely happened early, e.g., DB error)
+            console.error(`[Feedback/Progress] Server Action Error: ${result.error}`);
             set((state) => {
-              state.error = `Feedback Error: ${result.error}`;
+              // Keep the answer selected, but show the error
+              state.error = `Server Error: ${result.error}`;
+              state.isAnswered = true; // Stay in answered state
+              state.showExplanation = false; // Don't show explanation on server error
             });
           } else {
-            // --- Update state with feedback and progress from server --- START
+            // Process feedback and potentially the next quiz
             set((state) => {
-              // Update progress state
+              // Update progress state first (currentLevel might change based on feedback)
               state.userStreak = result.currentStreak;
               if (result.leveledUp) {
                 state.cefrLevel = result.currentLevel as CEFRLevel;
@@ -598,22 +602,17 @@ export const useTextGeneratorStore = create(
                   }
                 } else {
                   state.relevantTextRange = null;
-                  // Clear feedback state if none received (shouldn't happen on success)
-                  state.feedbackIsCorrect = null;
-                  state.feedbackCorrectAnswer = null;
-                  state.feedbackExplanations = null;
-                  state.feedbackRelevantText = null;
                 }
               } else {
+                // Clear feedback state if none received
                 state.relevantTextRange = null;
-                // Clear feedback state if none received (shouldn't happen on success)
                 state.feedbackIsCorrect = null;
                 state.feedbackCorrectAnswer = null;
                 state.feedbackExplanations = null;
                 state.feedbackRelevantText = null;
               }
 
-              // Schedule the explanation display
+              // Schedule the explanation display after a short delay
               setTimeout(
                 () =>
                   set((state) => {
@@ -621,8 +620,27 @@ export const useTextGeneratorStore = create(
                   }),
                 50
               );
+
+              // Handle the next quiz data (if provided and no generation error)
+              if (result.nextQuiz && result.nextQuiz.quizData && result.nextQuiz.quizId) {
+                // Store the next quiz data temporarily or handle it immediately?
+                // For now, let's assume we need a way to trigger loading the next quiz.
+                // We could add a state variable like `nextQuizAvailable: { quizData: ..., quizId: ... }`
+                // Or, we could directly replace the current quiz after a delay?
+                // Let's log it for now and decide on UI flow later.
+                console.log('[Store] Next quiz generated:', result.nextQuiz);
+                // Potential future state update:
+                // state.nextQuizAvailable = {
+                //   quizData: result.nextQuiz.quizData,
+                //   quizId: result.nextQuiz.quizId,
+                // };
+              } else if (result.nextQuiz && result.nextQuiz.error) {
+                // Log error if next quiz generation failed
+                console.error('[Store] Failed to generate next quiz:', result.nextQuiz.error);
+                // Optionally show a message to the user?
+                // state.error = `Note: Failed to pre-load next exercise: ${result.nextQuiz.error}`;
+              }
             });
-            // --- Update state with feedback and progress from server --- END
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Unknown feedback/progress error';

@@ -54,7 +54,8 @@ const fullQuizDataSchema = z.object({
 });
 
 // Partial data sent to the client initially
-type PartialQuizData = Pick<
+// Export this type so it can be used in userProgress.ts
+export type PartialQuizData = Pick<
   z.infer<typeof fullQuizDataSchema>,
   'paragraph' | 'question' | 'options' | 'topic'
 >;
