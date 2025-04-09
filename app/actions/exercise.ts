@@ -3,7 +3,12 @@
 import { z } from 'zod';
 import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
+import { headers } from 'next/headers';
 import { getActiveModel, getGoogleAIClient, getOpenAIClient, ModelConfig } from '@/lib/modelConfig';
+import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
+import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
+import { getRandomTopicForLevel } from '@/config/topics';
+import { staticA1Exercises, type GeneratedContentRow } from '../config/static-exercises';
 
 // Constants
 const MAX_REQUESTS_PER_HOUR = 100;
@@ -15,51 +20,44 @@ interface RateLimitRow {
   updated_at: string;
 }
 
-interface GeneratedContentRow {
-  id: number;
-  language: string;
-  level: string;
-  content: string;
-  questions: string;
-  created_at: string;
-}
-
 interface UserRecord {
   id: number;
 }
 
 // Zod Schema
 const exerciseRequestBodySchema = z.object({
-  prompt: z.string().min(1, { message: 'Prompt is required' }),
-  seed: z.number().optional(),
   passageLanguage: z.string(),
   questionLanguage: z.string(),
-  forceCache: z.boolean().optional(),
-  languageRequirement: z.string().optional(),
+  cefrLevel: z.string(),
 });
 
 export type ExerciseRequestParams = z.infer<typeof exerciseRequestBodySchema>;
 
-// Quiz data schema to validate responses
-const quizDataSchema = z.object({
+// Full quiz data schema (used for validation and DB storage)
+const fullQuizDataSchema = z.object({
   paragraph: z.string(),
   question: z.string(),
-  options: z.object({
-    A: z.string(),
-    B: z.string(),
-    C: z.string(),
-    D: z.string(),
-  }),
-  explanations: z.object({
-    A: z.string(),
-    B: z.string(),
-    C: z.string(),
-    D: z.string(),
-  }),
+  options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
+  explanations: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
   correctAnswer: z.string(),
   relevantText: z.string(),
   topic: z.string(),
 });
+
+// Partial data sent to the client initially
+type PartialQuizData = Pick<
+  z.infer<typeof fullQuizDataSchema>,
+  'paragraph' | 'question' | 'options' | 'topic'
+>;
+
+// Response type for generateExerciseResponse
+interface GenerateExerciseResponsePayload {
+  result: string; // JSON string of PartialQuizData
+  quizId: number;
+  error?: string;
+  cached?: boolean;
+  usage?: { promptTokens: number; completionTokens: number };
+}
 
 // Define a custom error for AI response processing issues
 class AIResponseProcessingError extends Error {
@@ -68,81 +66,6 @@ class AIResponseProcessingError extends Error {
     this.name = 'AIResponseProcessingError';
   }
 }
-
-// Define 3 static A1 exercises for unlogged-in users
-const staticA1Exercises: GeneratedContentRow[] = [
-  {
-    id: 1001, // Use distinct IDs > 1000 to avoid potential conflicts with real IDs % 100
-    language: 'en',
-    level: 'A1',
-    content: JSON.stringify({
-      paragraph: 'This is a cat. The cat is black. It likes to sleep.',
-      question: 'What color is the cat?',
-      options: { A: 'White', B: 'Black', C: 'Orange', D: 'Gray' },
-      explanations: {
-        A: 'The text says the cat is black.',
-        B: 'Correct! The text states "The cat is black."',
-        C: 'The text does not mention orange.',
-        D: 'The text does not mention gray.',
-      },
-      correctAnswer: 'B',
-      relevantText: 'The cat is black.',
-      topic: 'Simple Animal',
-    }),
-    questions:
-      '{ "question": "What color is the cat?", "options": {"A":"White","B":"Black","C":"Orange","D":"Gray"}, "explanations": {"A":"The text says the cat is black.","B":"Correct! The text states \"The cat is black.\"","C":"The text does not mention orange.","D":"The text does not mention gray."}, "correctAnswer": "B", "relevantText": "The cat is black.", "topic": "Simple Animal" }', // Pre-stringify for simplicity
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 1002,
-    language: 'en',
-    level: 'A1',
-    content: JSON.stringify({
-      paragraph: 'I have a red ball. I play with my ball in the park.',
-      question: 'Where do I play with the ball?',
-      options: { A: 'At home', B: 'At school', C: 'In the park', D: 'In the car' },
-      explanations: {
-        A: 'The text says playing happens in the park.',
-        B: 'School is not mentioned.',
-        C: 'Correct! The text says "I play with my ball in the park."',
-        D: 'Playing in the car is not mentioned.',
-      },
-      correctAnswer: 'C',
-      relevantText: 'I play with my ball in the park.',
-      topic: 'Simple Toys',
-    }),
-    questions:
-      '{ "question": "Where do I play with the ball?", "options": {"A":"At home","B":"At school","C":"In the park","D":"In the car"}, "explanations": {"A":"The text says playing happens in the park.","B":"School is not mentioned.","C":"Correct! The text says \"I play with my ball in the park.\"","D":"Playing in the car is not mentioned."}, "correctAnswer": "C", "relevantText": "I play with my ball in the park.", "topic": "Simple Toys" }',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 1003,
-    language: 'en',
-    level: 'A1',
-    content: JSON.stringify({
-      paragraph: 'My name is Tom. I see a big blue bird.',
-      question: 'What do I see?',
-      options: {
-        A: 'A small red fish',
-        B: 'A big blue bird',
-        C: 'A green frog',
-        D: 'A yellow dog',
-      },
-      explanations: {
-        A: 'The text mentions a bird, not a fish.',
-        B: 'Correct! The text says "I see a big blue bird."',
-        C: 'A frog is not mentioned.',
-        D: 'A dog is not mentioned.',
-      },
-      correctAnswer: 'B',
-      relevantText: 'I see a big blue bird.',
-      topic: 'Simple Observation',
-    }),
-    questions:
-      '{ "question": "What do I see?", "options": {"A":"A small red fish","B":"A big blue bird","C":"A green frog","D":"A yellow dog"}, "explanations": {"A":"The text mentions a bird, not a fish.","B":"Correct! The text says \"I see a big blue bird.\"","C":"A frog is not mentioned.","D":"A dog is not mentioned."}, "correctAnswer": "B", "relevantText": "I see a big blue bird.", "topic": "Simple Observation" }',
-    created_at: new Date().toISOString(),
-  },
-];
 
 /**
  * Check if the user has exceeded rate limits
@@ -228,13 +151,11 @@ export const getCachedExercise = async (
   questionLanguage: string,
   level: string,
   seedValue: number,
-  forceCache: boolean = false,
   isLoggedIn: boolean
 ): Promise<GeneratedContentRow | undefined> => {
-  // Special case: A1 level for unlogged-in users
+  // Use imported staticA1Exercises
   if (level === 'A1' && !isLoggedIn) {
     console.log('[API] Unlogged-in A1 request: Returning static exercise.');
-    // Cycle through the 3 static exercises based on time or seed
     const index = (seedValue || Date.now()) % staticA1Exercises.length;
     return staticA1Exercises[index];
   }
@@ -273,59 +194,7 @@ export const getCachedExercise = async (
     };
 
     // First try with exact CEFR level
-    let cachedContent = getCachedContent(level);
-
-    // If forceCache is true and no content found, try with surrounding CEFR levels
-    if (forceCache && !cachedContent) {
-      console.log(`[API] Force cache enabled but no content for ${level}, trying nearby levels`);
-      const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-      const currentIndex = cefrLevels.indexOf(level);
-
-      // Try one level easier if available
-      if (currentIndex > 0) {
-        const easierLevel = cefrLevels[currentIndex - 1];
-        console.log(`[API] Trying easier level: ${easierLevel}`);
-        cachedContent = getCachedContent(easierLevel);
-        if (cachedContent) {
-          console.log(`[API] Found content at easier level: ${easierLevel}`);
-        }
-      }
-
-      // If still not found, try one level harder if available
-      if (!cachedContent && currentIndex < cefrLevels.length - 1) {
-        const harderLevel = cefrLevels[currentIndex + 1];
-        console.log(`[API] Trying harder level: ${harderLevel}`);
-        cachedContent = getCachedContent(harderLevel);
-        if (cachedContent) {
-          console.log(`[API] Found content at harder level: ${harderLevel}`);
-        }
-      }
-
-      // If still not found, try any level as last resort
-      if (!cachedContent) {
-        console.log(`[API] Force cache: last resort - trying any content for this language pair`);
-        const anyLevelContent = db
-          .prepare(
-            `
-          SELECT id, language, level, content, questions, created_at FROM generated_content \
-          WHERE language = ? \
-            AND question_language = ? \
-          ORDER BY created_at DESC LIMIT 1
-        `
-          )
-          .get(passageLanguage, questionLanguage);
-
-        if (
-          typeof anyLevelContent === 'object' &&
-          anyLevelContent !== null &&
-          'content' in anyLevelContent &&
-          typeof anyLevelContent.content === 'string'
-        ) {
-          cachedContent = anyLevelContent as GeneratedContentRow;
-          console.log(`[API] Found ANY level content for this language pair`);
-        }
-      }
-    }
+    const cachedContent = getCachedContent(level);
 
     return cachedContent;
   } catch (error) {
@@ -335,414 +204,368 @@ export const getCachedExercise = async (
 };
 
 /**
- * Save the generated content to the database
+ * Save generated exercise content to cache
  */
-export const saveGeneratedContent = async (
+export const saveExerciseToCache = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
-  content: string
+  seedValue: number,
+  jsonContent: string,
+  userId: number | null
 ): Promise<number | undefined> => {
+  console.log(
+    `[API] Attempting to save exercise to cache. Params: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, seed=${seedValue}, userId=${userId}`
+  );
   try {
-    // Extract questions from content to save separately
-    let questions = '';
-    try {
-      // Define a type for the expected content structure
-      interface QuizContent {
-        paragraph?: string;
-        question?: string;
-        options?: Record<string, string>;
-        explanations?: Record<string, string>;
-        correctAnswer?: string;
-        relevantText?: string;
-        topic?: string;
-      }
-
-      // Try to parse the content as JSON to extract questions
-      const contentStr = content.replace(/```json|```/g, '').trim();
-      const contentObj = JSON.parse(contentStr) as QuizContent;
-
-      if (contentObj.options || contentObj.question) {
-        // Extract questions part
-        questions = JSON.stringify({
-          question: contentObj.question || '',
-          options: contentObj.options || {},
-          explanations: contentObj.explanations || {},
-          correctAnswer: contentObj.correctAnswer || '',
-          relevantText: contentObj.relevantText || '',
-          topic: contentObj.topic || '',
-        });
-      }
-    } catch (parseError) {
-      console.warn('[API] Could not parse content as JSON for questions extraction:', parseError);
-      // Default empty questions object that satisfies the schema
-      questions = JSON.stringify({
-        question: '',
-        options: {},
-        explanations: {},
-        correctAnswer: '',
-        relevantText: '',
-        topic: '',
-      });
-    }
-
-    const savedId = db
+    // Use RETURNING id to get the inserted row's ID
+    const result = db
       .prepare(
         `
-        INSERT INTO generated_content (
-          language, 
-          level, 
-          content, 
-          questions,
-          created_at,
-          question_language
-        ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+        INSERT INTO generated_content (language, question_language, level, content, questions, created_at, seed_value, user_id) 
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
         RETURNING id
       `
       )
-      .get(passageLanguage, level, content, questions, questionLanguage) as
-      | { id: number }
-      | undefined;
+      .get(
+        passageLanguage,
+        questionLanguage,
+        level,
+        jsonContent,
+        jsonContent,
+        seedValue,
+        userId
+      ) as { id: number } | undefined;
 
-    if (savedId) {
-      console.log(`[API] Saved generated content to database with ID: ${savedId.id}`);
-      return savedId.id;
+    if (result?.id) {
+      console.log(`[API] Saved exercise to cache with ID: ${result.id}`);
+      return result.id;
     } else {
-      console.warn('[API] Failed to save generated content to database');
+      console.error(
+        '[API] Failed to get ID after saving to cache. The insert might have failed silently or RETURNING id did not work as expected.'
+      );
       return undefined;
     }
   } catch (error) {
-    console.error('[API] Error saving content to database:', error);
+    console.error('[API] Error saving to cache during DB operation:', error);
     return undefined;
   }
 };
 
 /**
- * Log usage statistics
+ * Call the OpenAI API to generate exercise content
  */
-export const logUsageStats = async (
-  userId: number | null,
-  ip: string,
-  language: string,
-  level: string
-): Promise<void> => {
-  if (userId) {
-    try {
-      db.prepare(
-        `
-        INSERT INTO usage_stats (
-          user_id,
-          ip_address, 
-          language,
-          level,
-          timestamp
-        ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `
-      ).run(userId, ip, language, level);
+async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
+  console.log('[API] Calling OpenAI API...');
+  const openai = getOpenAIClient();
 
-      console.log(`[API] Logged usage in stats for user ${userId}`);
-    } catch (error) {
-      console.error('[API] Error logging usage stats:', error);
-    }
-  }
-};
-
-/**
- * Generate content with OpenAI
- */
-export const generateWithOpenAI = async (prompt: string, model: ModelConfig): Promise<string> => {
   try {
-    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
-      model: model.name,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a language learning assistant that creates reading comprehension exercises. Always format your response as valid JSON without markdown code blocks. The JSON must include: paragraph, question, options (A,B,C,D), explanations (A,B,C,D), correctAnswer, relevantText, and topic fields. IMPORTANT: Make sure the question, options, and explanations are in the question language specified in the prompt, NOT in the passage language.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
+      model: modelConfig.name,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      max_tokens: modelConfig.maxTokens,
     });
 
-    return await processAIResponse(completion.choices[0].message.content || '');
-  } catch (error) {
-    console.error('[API] OpenAI generation error:', error);
-    throw new Error('Error generating content with OpenAI');
-  }
-};
+    const result = completion.choices[0]?.message?.content;
+    if (!result) {
+      throw new AIResponseProcessingError('No content received from OpenAI');
+    }
+    console.log('[API] Received response from OpenAI.');
+    return result;
+  } catch (error: unknown) {
+    console.error('[API] OpenAI API error:', error);
+    let responseData: unknown;
+    let rawResponse: unknown;
 
-/**
- * Generate content with Google AI
- */
-export const generateWithGoogleAI = async (prompt: string, model: ModelConfig): Promise<string> => {
-  try {
-    const genAI = getGoogleAIClient();
-    const generativeModel = genAI.getGenerativeModel({
-      model: model.name,
-    });
-
-    const result = await generativeModel.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `${prompt} 
-IMPORTANT: Respond with valid JSON only, no markdown formatting or code blocks.
-The JSON must include these exact fields:
-- paragraph: the text passage (in the passage language)
-- question: the comprehension question (in the question language)
-- options: an object with keys A, B, C, D containing answer choices (in the question language)
-- explanations: an object with keys A, B, C, D explaining each answer (in the question language)
-- correctAnswer: one of "A", "B", "C", or "D"
-- relevantText: the part of paragraph that answers the question (in the passage language)
-- topic: a brief description of the topic
-
-CRITICAL INSTRUCTION: The question, options, and explanations MUST be in the question language mentioned in the prompt, NOT in the passage language. This is essential for user experience.`,
-            },
-          ],
-        },
-      ],
-    });
-
-    return await processAIResponse(result.response.text());
-  } catch (error) {
-    console.error('[API] Google AI generation error:', error);
-    throw new Error('Error generating content with Google AI');
-  }
-};
-
-/**
- * Helper function to process and validate AI responses
- */
-export const processAIResponse = async (content: string): Promise<string> => {
-  content = content.replace(/```json|```/g, '').trim();
-
-  try {
-    // First attempt - direct parsing with proper typing
-    const jsonData = JSON.parse(content) as unknown;
-
-    // Check if it validates against our schema
-    const validationResult = quizDataSchema.safeParse(jsonData);
-
-    if (validationResult.success) {
-      console.log('[API] Response validated successfully against schema');
-      return JSON.stringify(validationResult.data);
+    if (error instanceof Error && 'response' in error) {
+      const errorWithResponse = error as { response?: unknown }; // Type assertion after check
+      rawResponse = errorWithResponse.response;
+      if (rawResponse && typeof rawResponse === 'object' && 'data' in rawResponse) {
+        responseData = (rawResponse as { data?: unknown }).data;
+      }
     }
 
-    console.warn(
-      '[API] Schema validation failed, attempting to fix structure:',
-      validationResult.error.issues.map((i) => i.path.join('.') + ': ' + i.message).join(', ')
-    );
-
-    // Define a typed interface for the parsed data to avoid 'any' types
-    type PartialQuizData = {
-      paragraph?: string;
-      question?: string;
-      options?: {
-        A?: string;
-        B?: string;
-        C?: string;
-        D?: string;
-      };
-      explanations?: {
-        A?: string;
-        B?: string;
-        C?: string;
-        D?: string;
-      };
-      correctAnswer?: string;
-      relevantText?: string;
-      topic?: string;
-    };
-
-    // Type assertion with a more specific type
-    const typedJsonData = jsonData as PartialQuizData;
-
-    // Try to repair the structure
-    const repairedData = {
-      paragraph: typedJsonData.paragraph ?? '',
-      question: typedJsonData.question ?? '',
-      options: {
-        A: typedJsonData.options?.A ?? '',
-        B: typedJsonData.options?.B ?? '',
-        C: typedJsonData.options?.C ?? '',
-        D: typedJsonData.options?.D ?? '',
-      },
-      explanations: {
-        A: typedJsonData.explanations?.A ?? '',
-        B: typedJsonData.explanations?.B ?? '',
-        C: typedJsonData.explanations?.C ?? '',
-        D: typedJsonData.explanations?.D ?? '',
-      },
-      correctAnswer: typedJsonData.correctAnswer ?? 'A',
-      relevantText:
-        typedJsonData.relevantText ??
-        (typedJsonData.paragraph ? typedJsonData.paragraph.substring(0, 50) : ''),
-      topic: typedJsonData.topic ?? 'General topic',
-    };
-
-    // Validate the repaired data
-    const repairResult = quizDataSchema.safeParse(repairedData);
-
-    if (repairResult.success) {
-      console.log('[API] Successfully repaired data structure');
-      return JSON.stringify(repairResult.data);
+    if (responseData !== undefined) {
+      console.error('[API] OpenAI Error Response Data:', responseData);
+    } else if (rawResponse !== undefined) {
+      console.error('[API] OpenAI Error Response (raw):', rawResponse);
     }
 
-    throw new Error(`Failed to repair data: ${repairResult.error.message}`);
-  } catch (error) {
-    console.error('[API] JSON parsing/validation error:', error);
-    // Throw specific error instead of returning fallback data
-    throw new AIResponseProcessingError(
-      `Failed to parse or validate AI response: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
+    const errorMessage = error instanceof Error ? error.message : 'Unknown OpenAI error';
+    throw new Error(`Failed to generate content using OpenAI: ${errorMessage}`);
   }
-};
+}
 
 /**
- * Extract CEFR level from prompt
+ * Call the Google AI API to generate exercise content
  */
-export const extractCEFRLevel = async (prompt: string): Promise<string> => {
-  const cefrLevelMatch = prompt.match(/CEFR level (A1|A2|B1|B2|C1|C2)/);
-  return cefrLevelMatch?.[1] ?? 'unknown';
-};
+async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
+  console.log('[API] Calling Google AI API...');
+  const genAI = getGoogleAIClient();
+  if (!genAI) throw new Error('Google AI client not initialized');
 
-/**
- * Get user ID if user is authenticated
- */
-export const getAuthenticatedUserId = async (): Promise<number | null> => {
   try {
-    const session = await getServerSession();
+    const model = genAI.getGenerativeModel({
+      model: modelConfig.name,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: modelConfig.maxTokens,
+      },
+    });
 
-    if (session?.user) {
-      const userEmail = session.user.email as string | undefined;
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
 
+    if (!text) {
+      throw new AIResponseProcessingError('No content received from Google AI');
+    }
+    console.log('[API] Received response from Google AI.');
+    return text;
+  } catch (error: unknown) {
+    console.error('[API] Google AI API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown Google AI error';
+    throw new Error(`Failed to generate content using Google AI: ${errorMessage}`);
+  }
+}
+
+/**
+ * Main server action to generate exercise response
+ */
+export const generateExerciseResponse = async (
+  params: ExerciseRequestParams
+): Promise<GenerateExerciseResponsePayload> => {
+  const session = await getServerSession();
+  let userId: number | null = null;
+  let isLoggedIn = false;
+
+  // --- Get User ID from session --- START
+  if (session?.user?.email) {
+    try {
       const userRecord = db
-        .prepare(
-          `
-        SELECT id FROM users 
-        WHERE (email = ? AND email IS NOT NULL)
-        ORDER BY last_login DESC
-        LIMIT 1
-      `
-        )
-        .get(userEmail || '') as UserRecord | undefined;
-
+        .prepare('SELECT id FROM users WHERE email = ?')
+        .get(session.user.email) as UserRecord | undefined;
       if (userRecord) {
-        console.log(`[API] Request from authenticated user ID: ${userRecord.id}`);
-        return userRecord.id;
+        userId = userRecord.id;
+        isLoggedIn = true;
+      } else {
+        console.warn(`[API] User with email ${session.user.email} not found in users table.`);
+        // Handle case where session exists but user record is missing
+        // Potentially return an error or proceed as anonymous
       }
+    } catch (dbError) {
+      console.error('[API] Database error fetching user by email:', dbError);
+      return { result: '', quizId: 0, error: 'Database error checking user.' };
     }
-
-    return null;
-  } catch (error) {
-    console.error('[API] Error getting authenticated user:', error);
-    return null;
   }
-};
+  // --- Get User ID from session --- END
 
-/**
- * Main function to generate exercise response
- */
-export const generateExerciseResponse = async (params: ExerciseRequestParams) => {
-  const parsedBody = exerciseRequestBodySchema.safeParse(params);
-  if (!parsedBody.success) {
-    console.log('[API] Invalid request body:', parsedBody.error.flatten());
-    throw new Error('Invalid request body');
-  }
-
-  const { prompt, seed, passageLanguage, questionLanguage, forceCache } = parsedBody.data;
-
-  const userId = await getAuthenticatedUserId();
-
-  const ip = '127.0.0.1';
-
-  const cefrLevel = await extractCEFRLevel(prompt);
-  console.log(`[API] Extracted level: ${cefrLevel}`);
-
-  const seedValue = typeof seed === 'number' ? seed : 0;
-  const isLoggedIn = userId !== null;
-
-  const initiallyCachedContent = await getCachedExercise(
-    passageLanguage,
-    questionLanguage,
-    cefrLevel,
-    seedValue,
-    !!forceCache,
-    isLoggedIn
-  );
-
-  if (initiallyCachedContent) {
-    console.log(
-      '[API] Content found in cache (initial check):',
-      initiallyCachedContent.content.substring(0, 20) + '...'
-    );
-    await logUsageStats(userId, ip, passageLanguage, cefrLevel);
-    return { result: initiallyCachedContent.content };
-  }
-
-  console.log(`[API] Content not in cache or forced regeneration, generating new content...`);
-
-  // --- Check Rate Limit Only If Generating ---
-  const isWithinRateLimit = await checkRateLimit(ip);
-  if (!isWithinRateLimit) {
-    console.warn('[API] Rate limit exceeded when attempting generation. Returning error.');
-    throw new Error('Rate limit exceeded. Please try again later.');
-  }
-  console.log('[API] Rate limit check passed for generation.');
-  // --- End Rate Limit Check ---
-
-  if (!initiallyCachedContent) {
-    await logUsageStats(userId, ip, passageLanguage, cefrLevel);
-  }
-
+  // --- Get IP Address from headers --- START
+  let ipAddress: string | null = null;
   try {
-    const model = getActiveModel();
-    let result: string;
+    const headerList = await headers();
+    // Common headers for IP address behind proxies
+    const forwardedFor = headerList.get('x-forwarded-for');
+    const realIp = headerList.get('x-real-ip');
 
-    console.log(`[API] Attempting generation with ${model.provider} model: ${model.name}`);
-    if (model.provider === 'openai') {
-      result = await generateWithOpenAI(prompt, model);
-    } else if (model.provider === 'google') {
-      result = await generateWithGoogleAI(prompt, model);
-    } else {
-      throw new Error(`Unsupported model provider: ${String(model.provider)}`);
+    if (forwardedFor) {
+      ipAddress = forwardedFor.split(',')[0]?.trim() || null;
+    } else if (realIp) {
+      ipAddress = realIp.trim();
     }
 
-    console.log(`[API] Successfully generated and processed content.`);
-    await saveGeneratedContent(passageLanguage, questionLanguage, cefrLevel, result);
+    console.log(`[API] Determined IP Address from headers: ${ipAddress}`);
+  } catch (error: unknown) {
+    console.warn('[API] Could not read headers to determine IP:', error);
+  }
+  // --- Get IP Address from headers --- END
 
-    return { result };
-  } catch (error) {
-    console.error('[API] Error during AI generation or processing:', error);
+  console.log(`[API] generateExerciseResponse called with params:`, params);
+  console.log(`[API] User ID: ${userId}, Logged In: ${isLoggedIn}, IP: ${ipAddress}`);
 
-    if (error instanceof AIResponseProcessingError) {
-      console.warn('[API] AI response processing failed. Attempting to fetch any cached exercise.');
-      const fallbackCachedContent = await getCachedExercise(
-        passageLanguage,
-        questionLanguage,
-        cefrLevel,
-        0,
-        true,
-        isLoggedIn
+  // Validate input using Zod
+  const validation = exerciseRequestBodySchema.safeParse(params);
+  if (!validation.success) {
+    console.error('[API] Invalid request params:', validation.error.errors);
+    return {
+      result: '',
+      quizId: 0,
+      error: validation.error.errors.map((e) => e.message).join(', '),
+    };
+  }
+
+  // Destructure validated data
+  const { passageLanguage, questionLanguage, cefrLevel } = validation.data;
+
+  // Generate topic and seed internally
+  const levelToUse = cefrLevel as CEFRLevel; // Ensure correct type
+  const topic = getRandomTopicForLevel(levelToUse);
+  const seed = Math.floor(Math.random() * 100);
+  console.log(`[API] Internally generated topic: ${topic}, seed: ${seed}`);
+
+  // Rate Limiting - Use determined ipAddress for anonymous users
+  if (isLoggedIn && userId) {
+    const rateLimitPassed = await checkRateLimit(String(userId));
+    if (!rateLimitPassed) {
+      return { result: '', quizId: 0, error: 'Rate limit exceeded' };
+    }
+  } else if (!isLoggedIn && ipAddress) {
+    // Use determined ipAddress
+    const rateLimitPassed = await checkRateLimit(ipAddress);
+    if (!rateLimitPassed) {
+      return { result: '', quizId: 0, error: 'Rate limit exceeded' };
+    }
+  } else if (!isLoggedIn && !ipAddress) {
+    console.warn('[API] Cannot apply rate limit: User not logged in and IP address not available.');
+  }
+
+  // Check cache first
+  try {
+    const cachedRow = await getCachedExercise(
+      passageLanguage,
+      questionLanguage,
+      cefrLevel,
+      seed,
+      isLoggedIn
+    );
+
+    if (cachedRow) {
+      console.log(
+        `[API] Cache hit (ID: ${cachedRow.id}) for lang=${passageLanguage} level=${cefrLevel} seed=${seed % 100}`
       );
+      try {
+        // Parse the full content from cache
+        const fullData: unknown = JSON.parse(cachedRow.content);
+        // Validate against the full schema BEFORE accessing properties
+        const validatedFullData = fullQuizDataSchema.parse(fullData);
 
-      if (fallbackCachedContent) {
-        console.log('[API] Found fallback cached content.');
-        return { result: fallbackCachedContent.content };
+        // Create partial data using validated data
+        const partialData: PartialQuizData = {
+          paragraph: validatedFullData.paragraph,
+          question: validatedFullData.question,
+          options: validatedFullData.options,
+          topic: validatedFullData.topic,
+        };
+        return {
+          result: JSON.stringify(partialData),
+          quizId: cachedRow.id,
+          cached: true,
+        };
+      } catch (jsonError: unknown) {
+        console.error('[API] Invalid JSON found in cache, proceeding to generate:', jsonError);
+        // Optionally delete the invalid cache entry here?
       }
-
-      console.error('[API] No fallback cached content found. Re-throwing processing error.');
-      throw error;
-    } else {
-      console.error('[API] Non-AI processing error occurred.');
-      throw error;
     }
+  } catch (cacheError: unknown) {
+    console.error('[API] Error checking cache:', cacheError);
+  }
+
+  console.log('[API] Cache miss or invalid. Generating new content...');
+
+  // Construct the prompt internally
+  const passageLanguageName = LANGUAGES[passageLanguage as Language] || passageLanguage;
+  const questionLanguageName = LANGUAGES[questionLanguage as Language] || questionLanguage;
+
+  let languageInstructions = '';
+  if (['A1', 'A2'].includes(levelToUse)) {
+    const vocabGuidance = getVocabularyGuidance(levelToUse);
+    const grammarGuidance = getGrammarGuidance(levelToUse);
+    languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
+  }
+
+  const constructedPrompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${topic}". The passage should be interesting and typical for language learners at this stage. 
+
+After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. 
+
+FORMAT THE QUESTION, OPTIONS, AND EXPLANATIONS IN ${questionLanguageName}. This is extremely important - the question and all answer options must be in ${questionLanguageName}, not in ${passageLanguageName}. 
+
+**CRITICAL INSTRUCTION: Respond ONLY with a single, valid JSON object.** Do not include any text, markdown formatting, or explanations outside of the JSON structure. The JSON object MUST contain these exact keys, with string values:
+- "paragraph": The reading passage text.
+- "question": The comprehension question text.
+- "options": An object with keys "A", "B", "C", "D" mapping to the answer choice strings.
+- "explanations": An object with keys "A", "B", "C", "D" mapping to the explanation strings for each option.
+- "correctAnswer": A single string containing the correct answer letter ("A", "B", "C", or "D").
+- "relevantText": The specific text snippet from the paragraph that supports the correct answer.
+- "topic": A brief English topic description (3-5 words).
+
+Ensure all string values within the JSON are properly escaped.${languageInstructions}`;
+
+  console.log('[API] Constructed prompt:', constructedPrompt.substring(0, 250) + '...');
+
+  // Get active AI model configuration
+  const modelConfig = getActiveModel();
+  console.log(`[API] Using AI model: ${modelConfig.provider} - ${modelConfig.name}`);
+
+  // Call the appropriate AI API
+  let generatedJson: string;
+  try {
+    if (modelConfig.provider === 'openai') {
+      generatedJson = await callOpenAI(constructedPrompt, modelConfig);
+    } else if (modelConfig.provider === 'google') {
+      generatedJson = await callGoogleAI(constructedPrompt, modelConfig);
+    } else {
+      throw new Error('Invalid AI provider specified in configuration');
+    }
+
+    // Validate the AI's JSON response against the schema
+    let fullDataValidated: z.infer<typeof fullQuizDataSchema>;
+    try {
+      const parsedJson: unknown = JSON.parse(generatedJson);
+      fullDataValidated = fullQuizDataSchema.parse(parsedJson); // Validate full structure
+      console.log('[API] AI response FULL JSON structure validated successfully.');
+    } catch (validationError: unknown) {
+      console.error('[API] AI response validation failed:', validationError);
+      console.error('[API] Problematic JSON:', generatedJson);
+
+      if (validationError instanceof z.ZodError) {
+        throw new AIResponseProcessingError(
+          `AI response failed validation: ${validationError.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', ')}`
+        );
+      } else {
+        const message =
+          validationError instanceof Error ? validationError.message : 'Unknown validation error';
+        if (validationError instanceof SyntaxError) {
+          throw new AIResponseProcessingError(`AI response is not valid JSON: ${message}`);
+        } else {
+          throw new AIResponseProcessingError(`AI response validation failed: ${message}`);
+        }
+      }
+    }
+
+    // Save the valid response to cache - use internally generated seed
+    const savedQuizId = await saveExerciseToCache(
+      passageLanguage,
+      questionLanguage,
+      cefrLevel,
+      seed,
+      generatedJson, // Save the original full JSON string
+      userId
+    );
+
+    if (!savedQuizId) {
+      // Handle failure to save/get ID
+      return { result: '', quizId: 0, error: 'Failed to save exercise to cache.' };
+    }
+
+    // Prepare partial data for the client
+    const partialData: PartialQuizData = {
+      paragraph: fullDataValidated.paragraph,
+      question: fullDataValidated.question,
+      options: fullDataValidated.options,
+      topic: fullDataValidated.topic,
+    };
+
+    // TODO: Implement actual token counting if needed
+    const usage = { promptTokens: 0, completionTokens: 0 };
+
+    // Return partial data and the new ID
+    return { result: JSON.stringify(partialData), quizId: savedQuizId, usage };
+  } catch (error: unknown) {
+    console.error('[API] Error during AI call or processing:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate exercise';
+    return { result: '', quizId: 0, error: errorMessage }; // Ensure return type matches
   }
 };
