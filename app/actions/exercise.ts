@@ -8,7 +8,6 @@ import { getActiveModel, getGoogleAIClient, getOpenAIClient, ModelConfig } from 
 import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
-import { staticA1Exercises, type GeneratedContentRow } from '../config/static-exercises';
 
 // Constants
 const MAX_REQUESTS_PER_HOUR = 100;
@@ -22,6 +21,16 @@ interface RateLimitRow {
 
 interface UserRecord {
   id: number;
+}
+
+// Define the structure for a row from the generated_content table
+interface GeneratedContentRow {
+  id: number;
+  language: string;
+  level: string;
+  content: string;
+  questions: string; // Assuming questions holds similar data based on context, adjust if needed
+  created_at: string;
 }
 
 // Zod Schema
@@ -150,16 +159,8 @@ export const getCachedExercise = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
-  seedValue: number,
-  isLoggedIn: boolean
+  seedValue: number
 ): Promise<GeneratedContentRow | undefined> => {
-  // Use imported staticA1Exercises
-  if (level === 'A1' && !isLoggedIn) {
-    console.log('[API] Unlogged-in A1 request: Returning static exercise.');
-    const index = (seedValue || Date.now()) % staticA1Exercises.length;
-    return staticA1Exercises[index];
-  }
-
   // Proceed with database cache logic for logged-in users or other levels
   console.log('[API] Logged-in user or non-A1 level: Checking database cache.');
   try {
@@ -422,13 +423,7 @@ export const generateExerciseResponse = async (
 
   // Check cache first
   try {
-    const cachedRow = await getCachedExercise(
-      passageLanguage,
-      questionLanguage,
-      cefrLevel,
-      seed,
-      isLoggedIn
-    );
+    const cachedRow = await getCachedExercise(passageLanguage, questionLanguage, cefrLevel, seed);
 
     if (cachedRow) {
       console.log(
