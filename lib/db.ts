@@ -58,7 +58,9 @@ function initializeDatabase(): Database.Database {
         content TEXT NOT NULL,
         questions TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        question_language TEXT
+        question_language TEXT,
+        seed_value INTEGER,
+        user_id INTEGER -- Removed FK here for ALTER TABLE compatibility
       );
       
       CREATE TABLE IF NOT EXISTS usage_stats (
@@ -119,6 +121,21 @@ function initializeDatabase(): Database.Database {
       console.log('[DB] Adding question_language column to generated_content table');
       dbInstance.exec(`ALTER TABLE generated_content ADD COLUMN question_language TEXT`);
       console.log('[DB] Column question_language added successfully to generated_content');
+    }
+
+    // Add seed_value to generated_content if it doesn't exist
+    if (!generatedContentColumns.some((column) => column.name === 'seed_value')) {
+      console.log('[DB] Adding seed_value column to generated_content table');
+      dbInstance.exec(`ALTER TABLE generated_content ADD COLUMN seed_value INTEGER`);
+      console.log('[DB] Column seed_value added successfully to generated_content');
+    }
+
+    // Add user_id to generated_content if it doesn't exist
+    if (!generatedContentColumns.some((column) => column.name === 'user_id')) {
+      console.log('[DB] Adding user_id column to generated_content table');
+      // Add the column; FK constraint is not added here due to potential SQLite limitations with ALTER TABLE.
+      dbInstance.exec(`ALTER TABLE generated_content ADD COLUMN user_id INTEGER`);
+      console.log('[DB] Column user_id added successfully to generated_content');
     }
 
     // Check and remove old columns from 'users' table if they exist (requires SQLite 3.35.0+)

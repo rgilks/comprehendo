@@ -1,36 +1,22 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { z } from 'zod';
-import { type Language, LANGUAGES, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
+import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
 import { type CEFRLevel } from '@/config/language-guidance';
-import { getRandomTopicForLevel } from '@/config/topics';
-import { getVocabularyGuidance, getGrammarGuidance } from '@/config/language-guidance';
 import { generateExerciseResponse } from '@/app/actions/exercise';
-import { getProgress, updateProgress } from '@/app/actions/userProgress';
+import { getProgress, submitAnswer } from '@/app/actions/userProgress';
 import { getSession } from 'next-auth/react';
 
-// Quiz data schema
-const quizDataSchema = z.object({
-  paragraph: z.string(),
-  question: z.string(),
-  options: z.object({
-    A: z.string(),
-    B: z.string(),
-    C: z.string(),
-    D: z.string(),
-  }),
-  explanations: z.object({
-    A: z.string(),
-    B: z.string(),
-    C: z.string(),
-    D: z.string(),
-  }),
-  correctAnswer: z.string(),
-  relevantText: z.string(),
-  topic: z.string(),
-});
-
-export type QuizData = z.infer<typeof quizDataSchema>;
+// --- Quiz data schema (PARTIAL - for client state) --- START
+// Define the shape directly if Zod isn't used here
+interface PartialQuizDataClient {
+  paragraph: string;
+  question: string;
+  options: { A: string; B: string; C: string; D: string };
+  topic: string;
+}
+// Use the interface for the state type
+export type QuizData = PartialQuizDataClient;
+// --- Quiz data schema (PARTIAL - for client state) --- END
 
 interface TranslationResponse {
   responseStatus: number;
@@ -39,10 +25,8 @@ interface TranslationResponse {
   };
 }
 
-// Define the API response schema
-const apiResponseSchema = z.object({
-  result: z.string(),
-});
+// Define the API response schema for generation if needed for typing, otherwise remove
+// Remove if `apiResponseSchema` was only for Zod parsing previously
 
 interface TextGeneratorState {
   // UI state
@@ -62,9 +46,16 @@ interface TextGeneratorState {
 
   // Quiz state
   quizData: QuizData | null;
+  currentQuizId: number | null;
   selectedAnswer: string | null;
   isAnswered: boolean;
   relevantTextRange: { start: number; end: number } | null;
+
+  // Feedback state
+  feedbackIsCorrect: boolean | null;
+  feedbackCorrectAnswer: string | null;
+  feedbackExplanations: { A: string; B: string; C: string; D: string } | null;
+  feedbackRelevantText: string | null;
 
   // Audio state
   isSpeechSupported: boolean;
@@ -88,17 +79,12 @@ interface TextGeneratorState {
   setVolumeLevel: (volume: number) => void;
   fetchUserProgress: () => Promise<void>;
   generateText: () => void;
-  handleAnswerSelect: (answer: string) => Promise<void>;
+  handleAnswerSelect: (answer: string) => void;
   stopPassageSpeech: () => void;
   handlePlayPause: () => void;
   handleStop: () => void;
   getTranslation: (word: string, sourceLang: string, targetLang: string) => Promise<string>;
   speakText: (text: string | null, lang: Language) => void;
-  updateQuizOptionAndExplanation: (
-    optionKey: 'A' | 'B' | 'C' | 'D',
-    newText: string,
-    newExplanation: string
-  ) => void;
   resetQuizWithNewData: (newQuizData: QuizData) => void;
 }
 
@@ -119,9 +105,14 @@ export const useTextGeneratorStore = create(
     cefrLevel: 'A1',
 
     quizData: null,
+    currentQuizId: null,
     selectedAnswer: null,
     isAnswered: false,
     relevantTextRange: null,
+    feedbackIsCorrect: null,
+    feedbackCorrectAnswer: null,
+    feedbackExplanations: null,
+    feedbackRelevantText: null,
 
     isSpeechSupported: false,
     isSpeakingPassage: false,
@@ -391,289 +382,238 @@ export const useTextGeneratorStore = create(
 
     // Generate text
     generateText: () => {
-      const { stopPassageSpeech, passageLanguage, cefrLevel, questionDelayTimeoutRef } = get();
+      const { stopPassageSpeech, generatedQuestionLanguage, questionDelayTimeoutRef } = get();
 
-      // First hide content with animation
+      // Stop any ongoing speech and clear delays
+      stopPassageSpeech();
+      if (questionDelayTimeoutRef) {
+        clearTimeout(questionDelayTimeoutRef);
+      }
+
       set((state) => {
-        state.showContent = false;
+        state.loading = true;
+        state.error = null;
+        state.showContent = true;
+        state.quizData = null;
+        state.currentQuizId = null;
+        state.selectedAnswer = null;
+        state.isAnswered = false;
+        state.showExplanation = false;
+        state.showQuestionSection = false;
+        state.relevantTextRange = null;
+        state.currentWordIndex = null;
+        state.feedbackIsCorrect = null;
+        state.feedbackCorrectAnswer = null;
+        state.feedbackExplanations = null;
+        state.feedbackRelevantText = null;
+        state.generatedPassageLanguage = null;
+        state.generatedQuestionLanguage = generatedQuestionLanguage;
+        state.questionDelayTimeoutRef = null;
       });
 
-      // Wait for exit animation to complete before starting new content generation
-      // Using a regular timeout instead of async/await to avoid React state issues
+      // Timeout to allow loading state to render
       setTimeout(() => {
-        stopPassageSpeech();
-        set((state) => {
-          state.loading = true;
-          state.error = null;
-          state.quizData = null;
-          state.selectedAnswer = null;
-          state.isAnswered = false;
-          state.showExplanation = false;
-          state.showQuestionSection = false;
-          state.currentWordIndex = null;
-          state.relevantTextRange = null;
-        });
+        stopPassageSpeech(); // Ensure speech is stopped again
 
-        if (questionDelayTimeoutRef) {
-          clearTimeout(questionDelayTimeoutRef);
-          set((state) => {
-            state.questionDelayTimeoutRef = null;
-          });
-        }
+        void (async () => {
+          // Get necessary state values
+          const currentPassageLanguage = get().passageLanguage;
+          const currentCefrLevel = get().cefrLevel;
+          const currentQuestionLanguage = get().generatedQuestionLanguage || 'en';
 
-        const levelToUse = cefrLevel;
+          try {
+            console.log('[Store] Calling generateExerciseResponse action with:');
+            console.log(
+              '[Store] Passage Lang:',
+              currentPassageLanguage,
+              'Question Lang:',
+              currentQuestionLanguage,
+              'Level:',
+              currentCefrLevel
+            );
 
-        try {
-          // Get a random topic appropriate for the current CEFR level
-          const randomTopic = getRandomTopicForLevel(levelToUse);
+            const MAX_RETRIES = 2;
+            let currentRetry = 0;
+            let success = false;
+            let response: Awaited<ReturnType<typeof generateExerciseResponse>> | null = null;
 
-          // This function is intentionally not async/await since it manages its own
-          // async flow with promises and uses the store's state through closures
-          void (async () => {
-            try {
-              // Get vocabulary and grammar guidance for the current level
-              const vocabGuidance = getVocabularyGuidance(levelToUse);
-              const grammarGuidance = getGrammarGuidance(levelToUse);
+            while (currentRetry < MAX_RETRIES && !success) {
+              try {
+                response = await generateExerciseResponse({
+                  passageLanguage: currentPassageLanguage,
+                  questionLanguage: currentQuestionLanguage,
+                  cefrLevel: currentCefrLevel,
+                });
 
-              const passageLanguageName = LANGUAGES[passageLanguage] || passageLanguage;
-              // Get the user's selected language (interface language) for questions
-              const questionLanguage = get().generatedQuestionLanguage || 'en';
-              const questionLanguageName = LANGUAGES[questionLanguage] || questionLanguage;
+                if (response.error || !response.quizId) {
+                  throw new Error(response.error || 'Failed to retrieve Quiz ID');
+                }
 
-              // Add language guidance to the prompt for A1 and A2 levels
-              let languageInstructions = '';
-              if (['A1', 'A2'].includes(levelToUse)) {
-                languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
-              }
+                // --- Parse PARTIAL data (Remove Zod validation) --- START
+                // Server action already ensures this structure
+                const parsedPartialData = JSON.parse(response.result) as QuizData;
+                // --- Parse PARTIAL data --- END
 
-              const prompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${randomTopic}". The passage should be interesting and typical for language learners at this stage. After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. FORMAT THE QUESTION, OPTIONS, AND EXPLANATIONS IN ${questionLanguageName}. This is extremely important - the question and all answer options must be in ${questionLanguageName}, not in ${passageLanguageName}. Respond ONLY with the JSON object.${languageInstructions}`;
+                set((state) => {
+                  state.quizData = parsedPartialData; // Use the parsed data directly
+                  state.currentQuizId = response?.quizId ?? null;
+                  state.generatedPassageLanguage = currentPassageLanguage;
+                  state.generatedQuestionLanguage = currentQuestionLanguage;
+                  state.loading = false;
+                  state.error = null;
+                  // Reset feedback state
+                  state.feedbackIsCorrect = null;
+                  state.feedbackCorrectAnswer = null;
+                  state.feedbackExplanations = null;
+                  state.feedbackRelevantText = null;
+                });
 
-              const seed = Math.floor(Math.random() * 100);
+                // Determine reading time and schedule question display
+                const delay = response.cached ? 500 : 2000; // Use fixed delay for now
 
-              console.log('[API] Sending request with prompt:', prompt.substring(0, 100) + '...');
-              console.log(
-                '[API] Passage Lang:',
-                passageLanguage,
-                'Question Lang:',
-                questionLanguage,
-                'Level:',
-                levelToUse,
-                'Topic:',
-                randomTopic
-              );
+                console.log(`[Store] Delaying question reveal by ${delay}ms`);
 
-              const MAX_RETRIES = 2;
-              let currentRetry = 0;
-              let forceCache = false;
-              let success = false;
+                const timeoutId = setTimeout(() => {
+                  set((state) => {
+                    state.showQuestionSection = true;
+                    state.questionDelayTimeoutRef = null;
+                  });
+                }, delay);
+                set((state) => {
+                  state.questionDelayTimeoutRef = timeoutId;
+                });
 
-              // Keep trying until we succeed or exhaust all options
-              while (!success && (currentRetry <= MAX_RETRIES || !forceCache)) {
-                try {
-                  const requestBody = {
-                    prompt,
-                    seed,
-                    passageLanguage,
-                    questionLanguage,
-                    forceCache,
-                    languageRequirement: `Generate passage in ${passageLanguageName}, but questions/options/explanations in ${questionLanguageName}`,
-                  };
-
-                  // Use server action directly
-                  console.log('[API] Using server action');
-                  const response = await generateExerciseResponse(requestBody);
-
-                  // Validate the response with Zod schema
-                  const validatedResponse = apiResponseSchema.parse(response);
-                  const result = validatedResponse.result;
-
-                  if (!result) {
-                    throw new Error('No result received');
-                  }
-
-                  try {
-                    // The server has already validated this against the quiz schema
-                    const jsonData = JSON.parse(result) as z.infer<typeof quizDataSchema>;
-                    console.log('[Debug] JSON parse successful');
-
-                    // The server has already validated against the schema, but we do a final check
-                    // This provides type safety but shouldn't fail under normal circumstances
-                    const validatedData = quizDataSchema.parse(jsonData);
-
-                    set((state) => {
-                      state.quizData = validatedData;
-                      state.generatedPassageLanguage = passageLanguage;
-                    });
-
-                    // --- Calculate Dynamic Question Delay ---
-                    const WPM = 250; // Lower WPM for a quicker appearance
-                    const wordCount = validatedData.paragraph.split(/\s+/).filter(Boolean).length;
-                    const readingTimeMs = (wordCount / WPM) * 60 * 1000;
-                    const bufferMs = 1500; // Further reduce buffer for a more responsive feel
-                    const minDelayMs = 1500; // Shorter minimum delay
-                    const questionDelayMs = Math.max(minDelayMs, readingTimeMs + bufferMs);
-                    console.log(
-                      `[DelayCalc] Words: ${wordCount}, Est. Read Time: ${readingTimeMs.toFixed(0)}ms, Delay Set: ${questionDelayMs.toFixed(0)}ms`
-                    );
-                    // --- End Calculate Delay ---
-
-                    // Start timer to show question section using calculated delay, but with a cross-fade effect
-                    const timeoutId = setTimeout(() => {
-                      // When it's time to show the question, first make sure content is visible
-                      if (!get().showContent)
-                        set((state) => {
-                          state.showContent = true;
-                        });
-
-                      // Short delay to ensure content is visible before showing question
-                      setTimeout(() => {
-                        set((state) => {
-                          state.showQuestionSection = true;
-                        });
-                      }, 0); // Set nested delay to 0ms
-                    }, 0); // Set main delay to 0ms
-
-                    set((state) => {
-                      state.questionDelayTimeoutRef = timeoutId;
-                    });
-                    success = true;
-                  } catch (error) {
-                    console.error('Error parsing generated quiz JSON:', error);
-                    throw new Error('Failed to parse the structure of the generated quiz.');
-                  }
-                } catch (err) {
-                  console.error(`Error during attempt ${currentRetry + 1}:`, err);
-                  if (currentRetry < MAX_RETRIES) {
-                    // If we have retries left, increment the counter and try again
-                    currentRetry++;
-                    console.log(`Retrying... Attempt ${currentRetry + 1} of ${MAX_RETRIES + 1}`);
-                    const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
-                    await new Promise((resolve) => setTimeout(resolve, delay));
-                  } else if (!forceCache) {
-                    // We've exhausted our retries, try the cache as last resort
-                    console.log('Retries exhausted, trying to force cache retrieval');
-                    forceCache = true;
-                    currentRetry = 0; // Reset retry counter for the cache attempt
-                  } else {
-                    // We've tried retries and cache, now show error
-                    if (err instanceof Error) {
-                      set((state) => {
-                        state.error = err.message;
-                      });
-                    } else {
-                      set((state) => {
-                        state.error = 'An error occurred during text generation';
-                      });
-                    }
-                    throw err; // Re-throw to exit the retry loop
-                  }
+                success = true;
+              } catch (err: unknown) {
+                currentRetry++;
+                // Check if err is an Error before accessing message
+                const message =
+                  err instanceof Error ? err.message : 'Unknown error during generation attempt';
+                console.error(`[Store] Attempt ${currentRetry}/${MAX_RETRIES} failed:`, message);
+                if (currentRetry >= MAX_RETRIES) {
+                  throw err;
+                } else {
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
               }
-            } catch (error) {
-              console.error('All attempts failed:', error);
-            } finally {
-              set((state) => {
-                state.loading = false;
-                state.showContent = true;
-              });
             }
-          })();
-        } catch (error) {
-          console.error('Failed to start text generation:', error);
-          set((state) => {
-            state.loading = false;
-            state.showContent = true;
-            state.error = 'Failed to start generation process';
-          });
-        }
-      }, 500);
+          } catch (err: unknown) {
+            console.error('[Store] Error generating text:', err);
+            // Check if err is an Error before accessing message
+            const message = err instanceof Error ? err.message : 'Failed to generate text';
+            set((state) => {
+              state.error = message;
+              state.loading = false;
+            });
+          }
+        })();
+      }, 100);
     },
 
     // Handle answer selection
-    handleAnswerSelect: async (answer) => {
-      const { quizData, isAnswered, stopPassageSpeech, generatedPassageLanguage } = get();
+    handleAnswerSelect: (answer) => {
+      const { currentQuizId, quizData, stopPassageSpeech, generatedQuestionLanguage, isAnswered } =
+        get();
 
-      if (isAnswered || !quizData) return;
+      // Ensure we have a quiz ID and haven't answered yet
+      if (!currentQuizId || !quizData || isAnswered || !generatedQuestionLanguage) return;
 
       stopPassageSpeech();
+
+      // Immediately mark as answered and store the selection
       set((state) => {
         state.selectedAnswer = answer;
         state.isAnswered = true;
         state.showExplanation = false;
-        state.relevantTextRange = null; // Reset range initially
+        state.relevantTextRange = null;
+        state.feedbackIsCorrect = null;
+        state.feedbackCorrectAnswer = null;
+        state.feedbackExplanations = null;
+        state.feedbackRelevantText = null;
+        state.error = null;
       });
 
-      // Find and set the relevant text range
-      if (quizData.relevantText && quizData.paragraph) {
-        const startIndex = quizData.paragraph.indexOf(quizData.relevantText);
-        if (startIndex !== -1) {
-          set((state) => {
-            state.relevantTextRange = {
-              start: startIndex,
-              end: startIndex + quizData.relevantText.length,
-            };
-          });
-          console.log(
-            `[Highlight] Relevant text range found: ${startIndex} - ${startIndex + quizData.relevantText.length}`
-          );
-        } else {
-          console.warn(
-            '[Highlight] Relevant text not found exactly in paragraph:',
-            quizData.relevantText
-          );
-        }
-      }
-
-      // Update user progress if authenticated
-      // Fire-and-forget: Trigger update but don't wait for it here to avoid blocking UI updates
+      // Call the server action to submit answer and get feedback
       void (async () => {
         try {
-          const result = await updateProgress({
-            isCorrect: answer === quizData.correctAnswer,
-            language: generatedPassageLanguage || '',
+          // Call submitAnswer (Server action handles auth internally now)
+          const result = await submitAnswer({
+            selectedAnswer: answer,
+            language: generatedQuestionLanguage,
+            quizId: currentQuizId,
           });
 
-          // Still update state when the promise resolves
           if (result.error) {
-            console.error(`[Progress] Error: ${result.error}`);
-          } else {
+            console.error(`[Feedback/Progress] Error: ${result.error}`);
             set((state) => {
-              state.userStreak = result.currentStreak;
+              state.error = `Feedback Error: ${result.error}`;
             });
-            if (result.leveledUp) {
-              set((state) => {
+          } else {
+            // --- Update state with feedback and progress from server --- START
+            set((state) => {
+              // Update progress state
+              state.userStreak = result.currentStreak;
+              if (result.leveledUp) {
                 state.cefrLevel = result.currentLevel as CEFRLevel;
-              });
-              console.log(`[Progress] Leveled up to ${result.currentLevel}!`);
-            }
+                console.log(`[Progress] Leveled up to ${result.currentLevel}!`);
+              }
+
+              // Store the received feedback data
+              if (result.feedback) {
+                state.feedbackIsCorrect = result.feedback.isCorrect;
+                state.feedbackCorrectAnswer = result.feedback.correctAnswer;
+                state.feedbackExplanations = result.feedback.explanations;
+                state.feedbackRelevantText = result.feedback.relevantText;
+
+                // Find and set relevant text range based on feedbackRelevantText
+                if (state.feedbackRelevantText && state.quizData?.paragraph) {
+                  const startIndex = state.quizData.paragraph.indexOf(state.feedbackRelevantText);
+                  if (startIndex !== -1) {
+                    state.relevantTextRange = {
+                      start: startIndex,
+                      end: startIndex + state.feedbackRelevantText.length,
+                    };
+                  } else {
+                    state.relevantTextRange = null;
+                  }
+                } else {
+                  state.relevantTextRange = null;
+                  // Clear feedback state if none received (shouldn't happen on success)
+                  state.feedbackIsCorrect = null;
+                  state.feedbackCorrectAnswer = null;
+                  state.feedbackExplanations = null;
+                  state.feedbackRelevantText = null;
+                }
+              } else {
+                state.relevantTextRange = null;
+                // Clear feedback state if none received (shouldn't happen on success)
+                state.feedbackIsCorrect = null;
+                state.feedbackCorrectAnswer = null;
+                state.feedbackExplanations = null;
+                state.feedbackRelevantText = null;
+              }
+
+              // Schedule the explanation display
+              setTimeout(
+                () =>
+                  set((state) => {
+                    state.showExplanation = true;
+                  }),
+                50
+              );
+            });
+            // --- Update state with feedback and progress from server --- END
           }
-        } catch (err) {
-          console.error('[Progress] Error updating progress async:', err);
-        }
-      })(); // Immediately invoke the async function
-
-      // Schedule the explanation display without waiting for updateProgress
-      setTimeout(
-        () =>
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Unknown feedback/progress error';
+          console.error('[Feedback/Progress] Error submitting answer:', message);
           set((state) => {
-            state.showExplanation = true;
-          }),
-        100
-      );
-    },
-
-    // Example of a complex update that would be hard without Immer
-    updateQuizOptionAndExplanation: (
-      optionKey: 'A' | 'B' | 'C' | 'D',
-      newText: string,
-      newExplanation: string
-    ) => {
-      set((state) => {
-        if (state.quizData) {
-          state.quizData.options[optionKey] = newText;
-          state.quizData.explanations[optionKey] = newExplanation;
+            state.error = `Error submitting answer: ${message}`;
+          });
+          // Show explanation even on error? Maybe or show error message instead.
+          // setTimeout(() => set((state) => { state.showExplanation = true; }), 100);
         }
-      });
+      })();
     },
 
     // Complex operation: Reset quiz with new data while maintaining history
@@ -681,18 +621,26 @@ export const useTextGeneratorStore = create(
       set((state) => {
         const previousTopic = state.quizData?.topic;
 
-        state.quizData = newQuizData;
+        // Reset state, including feedback
+        state.quizData = newQuizData; // Assign new partial data
         state.selectedAnswer = null;
         state.isAnswered = false;
         state.showExplanation = false;
         state.relevantTextRange = null;
         state.currentWordIndex = null;
+        state.currentQuizId = null; // Also reset quiz ID
+        state.feedbackIsCorrect = null;
+        state.feedbackCorrectAnswer = null;
+        state.feedbackExplanations = null;
+        state.feedbackRelevantText = null;
+        state.error = null;
 
         state.loading = false;
         state.showContent = true;
         state.showQuestionSection = false;
 
-        if (previousTopic && previousTopic === newQuizData.topic) {
+        // Topic handling remains the same
+        if (previousTopic && previousTopic === newQuizData.topic && state.quizData) {
           state.quizData.topic = `${newQuizData.topic} (revisited)`;
         }
       });
