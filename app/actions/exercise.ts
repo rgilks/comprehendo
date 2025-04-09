@@ -83,23 +83,23 @@ class AIResponseProcessingError extends Error {
 export const checkRateLimit = async (ip: string): Promise<boolean> => {
   try {
     // Initialize DB table if not exists
-    await Promise.resolve(
-      db.exec(`
+    db.exec(`
       CREATE TABLE IF NOT EXISTS rate_limits (
         ip_address TEXT PRIMARY KEY,
         requests TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
-    `)
-    );
+    `);
 
     const now = Date.now();
     let userRequests: number[] = [];
 
     console.log(`[API] Checking rate limit for IP: ${ip}`);
+    console.log(`[API Perf] Rate Limit - SELECT Start: ${Date.now()}`);
     const rateLimitRow = db
       .prepare('SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?')
       .get(ip) as RateLimitRow | undefined;
+    console.log(`[API Perf] Rate Limit - SELECT End: ${Date.now()}`);
 
     if (rateLimitRow) {
       try {
@@ -118,10 +118,6 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
         userRequests = [];
       }
       console.log(`[API] Found ${userRequests.length} previous requests for IP: ${ip}`);
-
-      db.prepare('UPDATE rate_limits SET updated_at = CURRENT_TIMESTAMP WHERE ip_address = ?').run(
-        ip
-      );
     }
 
     const recentRequests = userRequests.filter(
@@ -137,6 +133,7 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
     const updatedRequests = [...recentRequests, now];
     console.log(`[API] Updating rate limit for IP: ${ip} with ${updatedRequests.length} requests`);
 
+    console.log(`[API Perf] Rate Limit - INSERT/UPDATE Start: ${Date.now()}`);
     db.prepare(
       `
       INSERT INTO rate_limits (ip_address, requests, updated_at)
@@ -145,6 +142,7 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
       requests = ?, updated_at = CURRENT_TIMESTAMP
     `
     ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
+    console.log(`[API Perf] Rate Limit - INSERT/UPDATE End: ${Date.now()}`);
 
     return true;
   } catch (error) {
@@ -433,33 +431,41 @@ export const generateExerciseResponse = async (
 
   // Check cache first
   try {
+    console.log(`[API Perf] Cache Check Start: ${Date.now()}`);
     const cachedRow = await getCachedExercise(passageLanguage, questionLanguage, cefrLevel, seed);
+    console.log(`[API Perf] Cache Check End (DB query): ${Date.now()}`);
 
     if (cachedRow) {
       console.log(
-        `[API] Cache hit (ID: ${cachedRow.id}) for lang=${passageLanguage} level=${cefrLevel} seed=${seed % 100}`
+        `[API] Cache hit (ID: ${cachedRow.id}) for lang=${passageLanguage} level=${cefrLevel} seed=${seed}` // Corrected seed logging
       );
       try {
-        // Parse the full content from cache
+        console.log(`[API Perf] JSON Parse Start: ${Date.now()}`);
         const fullData: unknown = JSON.parse(cachedRow.content);
-        // Validate against the full schema BEFORE accessing properties
-        const validatedFullData = fullQuizDataSchema.parse(fullData);
+        console.log(`[API Perf] JSON Parse End: ${Date.now()}`);
 
-        // Create partial data using validated data
+        console.log(`[API Perf] Zod Validation Start: ${Date.now()}`);
+        const validatedFullData = fullQuizDataSchema.parse(fullData);
+        console.log(`[API Perf] Zod Validation End: ${Date.now()}`);
+
+        console.log(`[API Perf] Partial Data Creation Start: ${Date.now()}`);
         const partialData: PartialQuizData = {
           paragraph: validatedFullData.paragraph,
           question: validatedFullData.question,
           options: validatedFullData.options,
           topic: validatedFullData.topic,
         };
+        const partialJsonString = JSON.stringify(partialData);
+        console.log(`[API Perf] Partial Data Creation End (stringify): ${Date.now()}`);
+
+        console.log(`[API Perf] Returning Cached Data: ${Date.now()}`);
         return {
-          result: JSON.stringify(partialData),
+          result: partialJsonString,
           quizId: cachedRow.id,
           cached: true,
         };
       } catch (jsonError: unknown) {
         console.error('[API] Invalid JSON found in cache, proceeding to generate:', jsonError);
-        // Optionally delete the invalid cache entry here?
       }
     }
   } catch (cacheError: unknown) {

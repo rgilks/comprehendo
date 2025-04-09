@@ -273,18 +273,24 @@ export const submitAnswer = async (
     // 1. Fetch Full Quiz Data for the submitted answer
     let fullQuizData: z.infer<typeof dbQuizDataSchema>;
     try {
+      console.log(`[API Perf] SubmitAnswer - Check Static Start: ${Date.now()}`);
       const staticExercise: GeneratedContentRow | undefined = staticA1Exercises.find(
         (ex) => ex.id === id
       );
+      console.log(`[API Perf] SubmitAnswer - Check Static End: ${Date.now()}`);
+
       if (staticExercise) {
         console.log(`[SubmitAnswer] Found static exercise for ID ${id}`);
         const parsedContent: unknown = JSON.parse(staticExercise.content);
         fullQuizData = dbQuizDataSchema.parse(parsedContent);
       } else {
         console.log(`[SubmitAnswer] ID ${id} not static, fetching from DB.`);
+        console.log(`[API Perf] SubmitAnswer - SELECT Start: ${Date.now()}`);
         const cachedRow = db
           .prepare('SELECT content FROM generated_content WHERE id = ?')
           .get(id) as { content: string } | undefined;
+        console.log(`[API Perf] SubmitAnswer - SELECT End: ${Date.now()}`);
+
         if (!cachedRow?.content) {
           responsePayload.error = 'Quiz data not found for the provided ID.';
           return responsePayload; // Cannot proceed
