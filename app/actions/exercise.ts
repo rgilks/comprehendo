@@ -69,6 +69,81 @@ class AIResponseProcessingError extends Error {
   }
 }
 
+// Define 3 static A1 exercises for unlogged-in users
+const staticA1Exercises: GeneratedContentRow[] = [
+  {
+    id: 1001, // Use distinct IDs > 1000 to avoid potential conflicts with real IDs % 100
+    language: 'en',
+    level: 'A1',
+    content: JSON.stringify({
+      paragraph: 'This is a cat. The cat is black. It likes to sleep.',
+      question: 'What color is the cat?',
+      options: { A: 'White', B: 'Black', C: 'Orange', D: 'Gray' },
+      explanations: {
+        A: 'The text says the cat is black.',
+        B: 'Correct! The text states "The cat is black."',
+        C: 'The text does not mention orange.',
+        D: 'The text does not mention gray.',
+      },
+      correctAnswer: 'B',
+      relevantText: 'The cat is black.',
+      topic: 'Simple Animal',
+    }),
+    questions:
+      '{ "question": "What color is the cat?", "options": {"A":"White","B":"Black","C":"Orange","D":"Gray"}, "explanations": {"A":"The text says the cat is black.","B":"Correct! The text states \"The cat is black.\"","C":"The text does not mention orange.","D":"The text does not mention gray."}, "correctAnswer": "B", "relevantText": "The cat is black.", "topic": "Simple Animal" }', // Pre-stringify for simplicity
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 1002,
+    language: 'en',
+    level: 'A1',
+    content: JSON.stringify({
+      paragraph: 'I have a red ball. I play with my ball in the park.',
+      question: 'Where do I play with the ball?',
+      options: { A: 'At home', B: 'At school', C: 'In the park', D: 'In the car' },
+      explanations: {
+        A: 'The text says playing happens in the park.',
+        B: 'School is not mentioned.',
+        C: 'Correct! The text says "I play with my ball in the park."',
+        D: 'Playing in the car is not mentioned.',
+      },
+      correctAnswer: 'C',
+      relevantText: 'I play with my ball in the park.',
+      topic: 'Simple Toys',
+    }),
+    questions:
+      '{ "question": "Where do I play with the ball?", "options": {"A":"At home","B":"At school","C":"In the park","D":"In the car"}, "explanations": {"A":"The text says playing happens in the park.","B":"School is not mentioned.","C":"Correct! The text says \"I play with my ball in the park.\"","D":"Playing in the car is not mentioned."}, "correctAnswer": "C", "relevantText": "I play with my ball in the park.", "topic": "Simple Toys" }',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 1003,
+    language: 'en',
+    level: 'A1',
+    content: JSON.stringify({
+      paragraph: 'My name is Tom. I see a big blue bird.',
+      question: 'What do I see?',
+      options: {
+        A: 'A small red fish',
+        B: 'A big blue bird',
+        C: 'A green frog',
+        D: 'A yellow dog',
+      },
+      explanations: {
+        A: 'The text mentions a bird, not a fish.',
+        B: 'Correct! The text says "I see a big blue bird."',
+        C: 'A frog is not mentioned.',
+        D: 'A dog is not mentioned.',
+      },
+      correctAnswer: 'B',
+      relevantText: 'I see a big blue bird.',
+      topic: 'Simple Observation',
+    }),
+    questions:
+      '{ "question": "What do I see?", "options": {"A":"A small red fish","B":"A big blue bird","C":"A green frog","D":"A yellow dog"}, "explanations": {"A":"The text mentions a bird, not a fish.","B":"Correct! The text says \"I see a big blue bird.\"","C":"A frog is not mentioned.","D":"A dog is not mentioned."}, "correctAnswer": "B", "relevantText": "I see a big blue bird.", "topic": "Simple Observation" }',
+    created_at: new Date().toISOString(),
+  },
+];
+
 /**
  * Check if the user has exceeded rate limits
  */
@@ -153,8 +228,19 @@ export const getCachedExercise = async (
   questionLanguage: string,
   level: string,
   seedValue: number,
-  forceCache: boolean = false
+  forceCache: boolean = false,
+  isLoggedIn: boolean
 ): Promise<GeneratedContentRow | undefined> => {
+  // Special case: A1 level for unlogged-in users
+  if (level === 'A1' && !isLoggedIn) {
+    console.log('[API] Unlogged-in A1 request: Returning static exercise.');
+    // Cycle through the 3 static exercises based on time or seed
+    const index = (seedValue || Date.now()) % staticA1Exercises.length;
+    return staticA1Exercises[index];
+  }
+
+  // Proceed with database cache logic for logged-in users or other levels
+  console.log('[API] Logged-in user or non-A1 level: Checking database cache.');
   try {
     // Function to get cached content with specific level
     const getCachedContent = (specificLevel: string) => {
@@ -586,13 +672,15 @@ export const generateExerciseResponse = async (params: ExerciseRequestParams) =>
   console.log(`[API] Extracted level: ${cefrLevel}`);
 
   const seedValue = typeof seed === 'number' ? seed : 0;
+  const isLoggedIn = userId !== null;
 
   const initiallyCachedContent = await getCachedExercise(
     passageLanguage,
     questionLanguage,
     cefrLevel,
     seedValue,
-    !!forceCache
+    !!forceCache,
+    isLoggedIn
   );
 
   if (initiallyCachedContent) {
@@ -637,7 +725,8 @@ export const generateExerciseResponse = async (params: ExerciseRequestParams) =>
         questionLanguage,
         cefrLevel,
         0,
-        true
+        true,
+        isLoggedIn
       );
 
       if (fallbackCachedContent) {
