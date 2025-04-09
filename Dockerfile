@@ -72,5 +72,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# ENTRYPOINT should run litefs, which will then execute the command from litefs.yml
-ENTRYPOINT ["litefs", "mount", "-config", "/app/litefs.yml"]
+# ENTRYPOINT runs the Next.js app directly
+ENTRYPOINT ["node", "/app/server.js"]
