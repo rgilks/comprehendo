@@ -58,7 +58,7 @@ function initializeDatabase(): Database.Database {
         content TEXT NOT NULL,
         questions TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        question_language TEXT -- Added
+        question_language TEXT
       );
       
       CREATE TABLE IF NOT EXISTS usage_stats (
@@ -67,7 +67,7 @@ function initializeDatabase(): Database.Database {
         language TEXT NOT NULL,
         level TEXT NOT NULL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE -- Added & Cascade
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
       );
 
       CREATE TABLE IF NOT EXISTS users (
