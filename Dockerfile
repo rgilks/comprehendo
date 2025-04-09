@@ -69,14 +69,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Create a script to run both LiteFS and the application
-COPY --chown=nextjs:nodejs <<EOF /app/start.sh
-#!/bin/sh
-litefs mount &
-sleep 2
-exec node server.js
-EOF
-
-RUN chmod +x /app/start.sh
-
-ENTRYPOINT ["/app/start.sh"]
+# ENTRYPOINT should run litefs, which will then execute the command from litefs.yml
+ENTRYPOINT ["litefs", "mount"]
