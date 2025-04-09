@@ -17,6 +17,8 @@ const QuizSection = () => {
     showExplanation,
     showQuestionSection,
     handleAnswerSelect,
+    feedbackCorrectAnswer,
+    feedbackExplanations,
   } = useTextGeneratorStore();
 
   // Use the context language (user's selected language) instead of the generated question language
@@ -52,8 +54,8 @@ const QuizSection = () => {
               onClick={handleAsyncClick(key)}
               disabled={isAnswered}
               className={`w-full text-left p-3 rounded-md border transition-colors ${
-                isAnswered
-                  ? key === quizData.correctAnswer
+                isAnswered && feedbackCorrectAnswer
+                  ? key === feedbackCorrectAnswer
                     ? 'bg-green-900/50 border-green-700 text-green-100'
                     : selectedAnswer === key
                       ? 'bg-red-900/50 border-red-700 text-red-100'
@@ -74,37 +76,45 @@ const QuizSection = () => {
             data-testid="quiz-explanation"
           >
             <p className="text-gray-300" dir={getTextDirection(questionLanguage)}>
-              {quizData.explanations[quizData.correctAnswer as keyof typeof quizData.explanations]}
+              {feedbackCorrectAnswer &&
+                feedbackExplanations &&
+                feedbackExplanations[feedbackCorrectAnswer as keyof typeof feedbackExplanations]}
             </p>
           </div>
         )}
       </div>
 
-      <AnimateTransition show={showExplanation} type="scale-up" duration={400} unmountOnExit>
+      <AnimateTransition
+        show={showExplanation && !!feedbackExplanations}
+        type="scale-up"
+        duration={400}
+        unmountOnExit
+      >
         <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
           <h4 className="text-lg font-semibold mb-3 text-blue-300">{t('practice.explanation')}</h4>
           <div className="space-y-3 text-sm">
-            {Object.entries(quizData.explanations).map(([key, explanation], index) => (
-              <AnimateTransition
-                key={key}
-                show={showExplanation}
-                type="slide-left"
-                duration={400}
-                delay={100 * index} // Stagger the animations
-                className="w-full"
-              >
-                <div
-                  className={`p-2 rounded ${key === quizData.correctAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== quizData.correctAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
+            {feedbackExplanations &&
+              Object.entries(feedbackExplanations).map(([key, explanation], index) => (
+                <AnimateTransition
+                  key={key}
+                  show={showExplanation}
+                  type="slide-left"
+                  duration={400}
+                  delay={100 * index} // Stagger the animations
+                  className="w-full"
                 >
-                  <strong
-                    className={`font-semibold ${key === quizData.correctAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
+                  <div
+                    className={`p-2 rounded ${key === feedbackCorrectAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== feedbackCorrectAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
                   >
-                    {key}:
-                  </strong>{' '}
-                  <span className="text-gray-300">{explanation}</span>
-                </div>
-              </AnimateTransition>
-            ))}
+                    <strong
+                      className={`font-semibold ${key === feedbackCorrectAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
+                    >
+                      {key}:
+                    </strong>{' '}
+                    <span className="text-gray-300">{explanation}</span>
+                  </div>
+                </AnimateTransition>
+              ))}
           </div>
         </div>
       </AnimateTransition>
