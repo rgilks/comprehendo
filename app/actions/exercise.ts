@@ -663,11 +663,6 @@ export const generateExerciseResponse = async (params: ExerciseRequestParams) =>
 
   const ip = '127.0.0.1';
 
-  const isWithinRateLimit = await checkRateLimit(ip);
-  if (!isWithinRateLimit) {
-    throw new Error('Rate limit exceeded. Please try again later.');
-  }
-
   const cefrLevel = await extractCEFRLevel(prompt);
   console.log(`[API] Extracted level: ${cefrLevel}`);
 
@@ -693,6 +688,15 @@ export const generateExerciseResponse = async (params: ExerciseRequestParams) =>
   }
 
   console.log(`[API] Content not in cache or forced regeneration, generating new content...`);
+
+  // --- Check Rate Limit Only If Generating ---
+  const isWithinRateLimit = await checkRateLimit(ip);
+  if (!isWithinRateLimit) {
+    console.warn('[API] Rate limit exceeded when attempting generation. Returning error.');
+    throw new Error('Rate limit exceeded. Please try again later.');
+  }
+  console.log('[API] Rate limit check passed for generation.');
+  // --- End Rate Limit Check ---
 
   if (!initiallyCachedContent) {
     await logUsageStats(userId, ip, passageLanguage, cefrLevel);

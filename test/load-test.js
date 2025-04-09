@@ -19,31 +19,17 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-async function runTest(page, testIndex) {
+async function runTest(page, cycleIndex, userId) {
   const startTime = performance.now();
   const log = (message) =>
-    console.log(`[${new Date().toISOString()}] [Test ${testIndex + 1}] ${message}`);
+    console.log(
+      `[${new Date().toISOString()}] [User ${userId + 1} Cycle ${cycleIndex + 1}] ${message}`
+    );
 
   try {
-    // Initial navigation is now handled outside the loop in main
-
-    // For the first test, we need to wait for initial hydration
-    if (testIndex === 0) {
-      log('Waiting for initial hydration (generate button)...');
-      await page.waitForFunction(
-        () => {
-          return document.querySelector('[data-testid="generate-button"]') !== null;
-        },
-        { timeout: 30000 }
-      );
-      log('Initial page ready.');
-      log('Taking initial load screenshot...');
-      await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'initial-load.png') });
-      log('Initial load screenshot saved.');
-    } else {
-      // For subsequent tests, the generate button should already be ready from the previous cycle
-      log('Ready for next cycle.');
-    }
+    // Initial navigation handled by runUserSession
+    // Generate button should be ready after initial nav or previous cycle
+    log('Ready for interaction.');
 
     // --- Generation Step ---
     log('Clicking generate button...');
@@ -65,12 +51,12 @@ async function runTest(page, testIndex) {
 
     // --- Verify Question Text (Simple Check) ---
     const actualQuestionText = await questionElement.textContent();
-    const expectedQuestionIndex = testIndex % EXPECTED_QUESTIONS.length; // Cycle through expected questions
-    const expectedQuestionText = EXPECTED_QUESTIONS[expectedQuestionIndex];
-    log(`Verifying question: Expecting [${expectedQuestionIndex}] "${expectedQuestionText}"`);
+    // Verify the question is one of the expected static questions
+    log(`Verifying question: Got "${actualQuestionText}"`);
+    const isExpected = EXPECTED_QUESTIONS.includes(actualQuestionText);
     console.assert(
-      actualQuestionText === expectedQuestionText,
-      `FAIL: Question mismatch! Expected: "${expectedQuestionText}", Got: "${actualQuestionText}"`
+      isExpected,
+      `FAIL [User ${userId + 1} Cycle ${cycleIndex + 1}]: Question mismatch! Got: "${actualQuestionText}", Expected one of: ${JSON.stringify(EXPECTED_QUESTIONS)}`
     );
 
     // --- Answer Question (Select Option A) ---
@@ -85,43 +71,53 @@ async function runTest(page, testIndex) {
     });
     log('Answer processed and ready for next generation click.');
 
-    // NOTE: Clicking the generate button for the *next* cycle happens at the START of the next runTest iteration.
-
     const endTime = performance.now();
     const duration = endTime - startTime;
-    // Add a specific log for the cycle duration excluding potential setup/wait time
     log(`Interaction cycle duration: ${duration.toFixed(0)}ms`);
     return duration;
   } catch (error) {
+    // Adjust error logging
     console.error(
-      `[${new Date().toISOString()}] [Test ${testIndex + 1}] Test failed:`,
+      `[${new Date().toISOString()}] [User ${userId + 1} Cycle ${cycleIndex + 1}] Test failed:`,
       error.message
     );
     if (page) {
+      // Include user/cycle in failure screenshot name
       const failurePath = path.join(
         SCREENSHOT_DIR,
-        `test-failure-${testIndex + 1}-${Date.now()}.png`
+        `test-failure-user-${userId + 1}-cycle-${cycleIndex + 1}-${Date.now()}.png`
       );
       log(`Saving failure screenshot to: ${failurePath}`);
       await page.screenshot({ path: failurePath });
     }
-    return -1;
+    return -1; // Indicate failure
   } finally {
-    // Do not close browser/context here, it's handled in main
+    // Context/Page is closed in runUserSession
   }
 }
 
 async function main() {
-  const totalTests = 10; // Set number of tests to 10
-  const results = [];
+  // --- Configuration ---
+  const numConcurrentUsers = 3; // Reduced from 5
+  const totalCycles = 20; // Reverted from 200
+  // --- End Configuration ---
+
+  // Revert back to calculating cycles per user
+  if (totalCycles < numConcurrentUsers) {
+    console.error('Error: totalCycles must be >= numConcurrentUsers');
+    process.exit(1);
+  }
+  const cyclesPerUser = Math.ceil(totalCycles / numConcurrentUsers);
+  console.log(
+    `Simulating ${numConcurrentUsers} concurrent users, approx ${cyclesPerUser} cycles each (total ${totalCycles}).`
+  );
+
+  const allResults = [];
   let globalBrowser = null;
-  let context = null;
-  let page = null;
 
   try {
     console.log('Starting load tests...');
 
-    // Ensure screenshots directory exists
     if (!fs.existsSync(SCREENSHOT_DIR)) {
       console.log(
         `[${new Date().toISOString()}] [Main] Creating screenshot directory: ${SCREENSHOT_DIR}`
@@ -131,63 +127,151 @@ async function main() {
 
     console.log(`[${new Date().toISOString()}] [Main] Launching global browser...`);
     globalBrowser = await chromium.launch({ headless: true });
-    context = await globalBrowser.newContext();
-    page = await context.newPage();
     console.log(`[${new Date().toISOString()}] [Main] Global browser launched.`);
 
-    // Perform initial navigation once before the loop
-    console.log(
-      `[${new Date().toISOString()}] [Main] Performing initial navigation to ${BASE_URL}/en...`
-    );
-    await page.goto(`${BASE_URL}/en`, { waitUntil: 'networkidle' });
-    console.log(`[${new Date().toISOString()}] [Main] Initial navigation complete.`);
+    const userTasks = []; // Array to hold promises for each user session
 
-    for (let i = 0; i < totalTests; i++) {
-      console.log(`\n=== Running test cycle ${i + 1}/${totalTests} ===`);
-      const duration = await runTest(page, i);
-      // Store only valid durations
-      if (duration !== -1) {
-        results.push(duration);
-        console.log(`✅ Test cycle ${i + 1} completed in ${duration.toFixed(0)}ms`);
-      } else {
-        console.log('❌ Test cycle failed');
-        // Optional: break the loop on failure?
-        // break;
+    // --- Function to run a single user's session ---
+    const runUserSession = async (userId) => {
+      let context = null;
+      let page = null;
+      const userResults = [];
+      const sessionLog = (message) =>
+        console.log(`[${new Date().toISOString()}] [User ${userId + 1} Session] ${message}`);
+
+      try {
+        sessionLog('Creating browser context...');
+        context = await globalBrowser.newContext();
+        page = await context.newPage();
+        sessionLog('Context and page created.');
+
+        sessionLog(`Performing initial navigation to ${BASE_URL}/en...`);
+        await page.goto(`${BASE_URL}/en`, { waitUntil: 'networkidle' });
+        // Simple wait for generate button after initial nav
+        await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
+          timeout: 30000,
+        });
+        sessionLog('Initial navigation and hydration complete.');
+
+        // Take initial load screenshot only once (e.g., for the first user)
+        if (userId === 0) {
+          sessionLog('Taking initial load screenshot...');
+          await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'initial-load.png') });
+          sessionLog('Initial load screenshot saved.');
+        }
+
+        sessionLog(`Starting ${cyclesPerUser} test cycles...`);
+        // Revert to for loop based on cyclesPerUser
+        for (let i = 0; i < cyclesPerUser; i++) {
+          const duration = await runTest(page, i, userId); // Pass loop index i as cycleIndex
+          userResults.push(duration);
+          if (duration === -1) {
+            sessionLog(`Cycle ${i + 1} failed. Continuing if possible...`);
+            // break; // Optional: stop this user on failure
+          }
+          // Add a larger delay between cycles for this user to reduce resource strain
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        sessionLog(`Finished ${cyclesPerUser} test cycles.`);
+      } catch (sessionError) {
+        sessionLog(`FATAL ERROR: ${sessionError.message}`);
+        // Push -1 for remaining cycles if session fails catastrophically
+        const remainingCycles = cyclesPerUser - userResults.length;
+        for (let k = 0; k < remainingCycles; k++) userResults.push(-1);
+      } finally {
+        if (context) {
+          sessionLog('Closing browser context...');
+          await context.close();
+          sessionLog('Browser context closed.');
+        }
       }
+      return userResults; // Return results for this user
+    };
+    // --- End runUserSession function ---
+
+    // Create tasks for all users
+    console.log(
+      `[${new Date().toISOString()}] [Main] Creating ${numConcurrentUsers} user session tasks...`
+    );
+    for (let i = 0; i < numConcurrentUsers; i++) {
+      userTasks.push(runUserSession(i));
     }
 
-    console.log('\n=== All test cycles completed ===');
-    const successfulCycles = results.length;
-    if (successfulCycles > 0) {
-      // Report average for all successful cycles
-      const avgDurationAll = results.reduce((sum, d) => sum + d, 0) / successfulCycles;
-      console.log(`📈 Average duration for ALL successful cycles: ${avgDurationAll.toFixed(0)}ms`);
+    // Run all user sessions concurrently
+    console.log(
+      `[${new Date().toISOString()}] [Main] Starting ${numConcurrentUsers} concurrent user sessions...`
+    );
+    // Use allSettled to ensure all promises complete, even if some reject
+    const settledResults = await Promise.allSettled(userTasks);
+    console.log(`[${new Date().toISOString()}] [Main] All user sessions finished.`);
 
-      // Report average excluding the first cycle if there are enough data points
-      if (successfulCycles > 1) {
-        const avgDurationExcludingFirst =
-          results.slice(1).reduce((sum, d) => sum + d, 0) / (successfulCycles - 1);
+    // Process results and errors from allSettled
+    let sessionFailures = 0;
+    settledResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        // Add results from successful sessions
+        allResults.push(...result.value);
+      } else {
+        // Log rejected session promises and count failures
+        console.error(`[Main] User ${index + 1} session failed catastrophically:`, result.reason);
+        sessionFailures++;
+        // Estimate failed cycles for this user if needed, though allResults won't include them
+        // For simplicity, we rely on runTest pushing -1 for cycle failures within fulfilled sessions.
+      }
+    });
+
+    console.log('\n=== Aggregated Results ===');
+    const successfulCycles = allResults.filter((d) => d !== -1);
+    const totalCyclesAttempted = allResults.length; // Cycles from fulfilled sessions
+    const failedCycles = totalCyclesAttempted - successfulCycles.length; // Failures within fulfilled sessions
+
+    console.log(`Concurrent Users: ${numConcurrentUsers}`);
+    console.log(`Total cycles attempted (in completed sessions): ${totalCyclesAttempted}`);
+    console.log(`  Successful cycles: ${successfulCycles.length}`);
+    console.log(`  Failed cycles (errors during runTest): ${failedCycles}`);
+    console.log(`  Failed user sessions (catastrophic errors): ${sessionFailures}`);
+
+    if (successfulCycles.length > 0) {
+      // Calculate average excluding the first cycle *of each fulfilled user session*
+      let sumExcludingFirst = 0;
+      let countExcludingFirst = 0;
+
+      settledResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const userRuns = result.value.filter((d) => d !== -1); // Successful runs for this user
+          if (userRuns.length > 1) {
+            sumExcludingFirst += userRuns.slice(1).reduce((sum, d) => sum + d, 0);
+            countExcludingFirst += userRuns.length - 1;
+          }
+        }
+      });
+
+      if (countExcludingFirst > 0) {
+        const avgDurationExcludingFirst = sumExcludingFirst / countExcludingFirst;
         console.log(
-          `⏱️ Average duration excluding first cycle: ${avgDurationExcludingFirst.toFixed(0)}ms`
+          `⏱️ Average duration excluding first cycle of each user: ${avgDurationExcludingFirst.toFixed(0)}ms`
         );
+      } else if (successfulCycles.length > 0) {
+        // Handle case where users only ran 1 cycle or less successfully
+        const overallAvg =
+          successfulCycles.reduce((sum, d) => sum + d, 0) / successfulCycles.length;
+        console.log(`📈 Overall average duration (incl. first cycles): ${overallAvg.toFixed(0)}ms`);
       }
     } else {
       console.log('No successful cycles to calculate average duration.');
     }
 
-    const failedCycles = totalTests - successfulCycles;
-    console.log(
-      `Total cycles run: ${totalTests}, Successful: ${successfulCycles}, Failed: ${failedCycles}`
-    );
+    // Exit based on whether any cycle or session failed
+    const anyFailures = failedCycles > 0 || sessionFailures > 0;
+    process.exit(anyFailures ? 1 : 0);
   } catch (error) {
-    console.error('Fatal error during test execution:', error);
+    console.error('[Main] Fatal error during test execution:', error);
   } finally {
     if (globalBrowser) {
       console.log(`[${new Date().toISOString()}] [Main] Closing global browser...`);
       await globalBrowser.close();
       console.log(`[${new Date().toISOString()}] [Main] Global browser closed.`);
     }
-    process.exit(0);
   }
 }
 

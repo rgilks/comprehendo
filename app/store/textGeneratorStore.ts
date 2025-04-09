@@ -625,31 +625,34 @@ export const useTextGeneratorStore = create(
       }
 
       // Update user progress if authenticated
-      try {
-        const result = await updateProgress({
-          isCorrect: answer === quizData.correctAnswer,
-          language: generatedPassageLanguage || '',
-        });
-
-        if (result.error) {
-          console.error(`[Progress] Error: ${result.error}`);
-        } else {
-          set((state) => {
-            state.userStreak = result.currentStreak;
+      // Fire-and-forget: Trigger update but don't wait for it here to avoid blocking UI updates
+      void (async () => {
+        try {
+          const result = await updateProgress({
+            isCorrect: answer === quizData.correctAnswer,
+            language: generatedPassageLanguage || '',
           });
 
-          // First check for level up
-          if (result.leveledUp) {
+          // Still update state when the promise resolves
+          if (result.error) {
+            console.error(`[Progress] Error: ${result.error}`);
+          } else {
             set((state) => {
-              state.cefrLevel = result.currentLevel as CEFRLevel;
+              state.userStreak = result.currentStreak;
             });
-            console.log(`[Progress] Leveled up to ${result.currentLevel}!`);
+            if (result.leveledUp) {
+              set((state) => {
+                state.cefrLevel = result.currentLevel as CEFRLevel;
+              });
+              console.log(`[Progress] Leveled up to ${result.currentLevel}!`);
+            }
           }
+        } catch (err) {
+          console.error('[Progress] Error updating progress async:', err);
         }
-      } catch (err) {
-        console.error('[Progress] Error updating progress:', err);
-      }
+      })(); // Immediately invoke the async function
 
+      // Schedule the explanation display without waiting for updateProgress
       setTimeout(
         () =>
           set((state) => {
