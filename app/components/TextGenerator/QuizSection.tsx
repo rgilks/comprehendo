@@ -37,44 +37,47 @@ const QuizSection = () => {
 
   return (
     <AnimateTransition show={showQuestionSection} type="slide-up" duration={500} unmountOnExit>
-      <div className="mt-6">
+      <div className="mt-6 space-y-4" data-testid="quiz-section">
         <h3
+          className="text-lg font-semibold text-white"
+          data-testid="quiz-question"
           dir={getTextDirection(questionLanguage)}
-          className="text-lg font-semibold text-white mb-4"
         >
           {quizData.question}
         </h3>
-        <div className="space-y-3">
-          {Object.entries(quizData.options).map(([key, value], index) => (
-            <AnimateTransition
+        <div className="space-y-2" data-testid="quiz-options">
+          {Object.entries(quizData.options).map(([key, value]) => (
+            <button
               key={key}
-              show={showQuestionSection}
-              type="slide-right"
-              duration={400}
-              delay={100 * index} // Stagger the animations
-              className="w-full"
-            >
-              <button
-                onClick={handleAsyncClick(key)}
-                disabled={isAnswered}
-                dir={getTextDirection(questionLanguage)}
-                className={`w-full text-left p-3 rounded transition-colors duration-200 ${
-                  isAnswered
-                    ? key === quizData.correctAnswer
-                      ? 'bg-gradient-to-r from-green-700 to-green-800 border border-green-600 text-white'
-                      : key === selectedAnswer
-                        ? 'bg-gradient-to-r from-red-700 to-red-800 border border-red-600 text-white'
-                        : 'bg-gray-700 border border-gray-600 text-gray-400'
+              onClick={handleAsyncClick(key)}
+              disabled={isAnswered}
+              className={`w-full text-left p-3 rounded-md border transition-colors ${
+                isAnswered
+                  ? key === quizData.correctAnswer
+                    ? 'bg-green-900/50 border-green-700 text-green-100'
                     : selectedAnswer === key
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 text-white'
-                      : 'bg-gray-700 border border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500'
-                }`}
-              >
-                <span className="font-semibold">{key}:</span> {value}
-              </button>
-            </AnimateTransition>
+                      ? 'bg-red-900/50 border-red-700 text-red-100'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-400'
+                  : selectedAnswer === key
+                    ? 'bg-blue-900/50 border-blue-700 text-blue-100'
+                    : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
+              }`}
+              data-testid={`quiz-option-${key}`}
+            >
+              {value}
+            </button>
           ))}
         </div>
+        {isAnswered && showExplanation && (
+          <div
+            className="mt-4 p-4 bg-gray-800/50 border border-gray-700 rounded-md"
+            data-testid="quiz-explanation"
+          >
+            <p className="text-gray-300" dir={getTextDirection(questionLanguage)}>
+              {quizData.explanations[quizData.correctAnswer as keyof typeof quizData.explanations]}
+            </p>
+          </div>
+        )}
       </div>
 
       <AnimateTransition show={showExplanation} type="scale-up" duration={400} unmountOnExit>

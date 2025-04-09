@@ -69,10 +69,15 @@ const ReadingPassage = () => {
 
   return (
     <>
-      <div className="flex flex-col items-start space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mb-4">
+      <div
+        className="flex flex-col items-start space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mb-4"
+        data-testid="reading-passage"
+      >
         <div className="flex items-center text-blue-400">
           <BookOpenIcon className="w-5 h-5 mr-2" />
-          <span className="text-lg font-medium">{t('practice.passageTitle')}</span>
+          <span className="text-lg font-medium" data-testid="passage-title">
+            {t('practice.passageTitle')}
+          </span>
         </div>
         <AudioControls />
       </div>
@@ -82,6 +87,7 @@ const ReadingPassage = () => {
         type="fade-in"
         duration={600}
         className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
+        data-testid="passage-content"
       >
         <div dir={getTextDirection(generatedPassageLanguage)}>
           {renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)}
