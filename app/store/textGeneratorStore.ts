@@ -536,12 +536,32 @@ export const useTextGeneratorStore = create(
       // Call the server action to submit answer and get feedback
       void (async () => {
         try {
-          // Call submitAnswer (Server action handles auth internally now)
-          const result = await submitAnswer({
-            selectedAnswer: answer,
-            language: generatedQuestionLanguage,
-            quizId: currentQuizId,
-          });
+          const { generatedPassageLanguage, cefrLevel } = get(); // Get current passage language and level
+
+          if (!generatedPassageLanguage || !generatedQuestionLanguage) {
+            throw new Error('Generated languages not available for submission.');
+          }
+
+          const payload: {
+            ans: string;
+            learn: string;
+            lang: string;
+            id: number;
+            cefrLevel?: string; // Optional
+          } = {
+            ans: answer, // Use 'ans'
+            learn: generatedPassageLanguage, // Language being learned
+            lang: generatedQuestionLanguage, // Language of the questions
+            id: currentQuizId, // Use 'id'
+          };
+
+          // Only include cefrLevel if it's not A1 (default)
+          if (cefrLevel && cefrLevel !== 'A1') {
+            payload.cefrLevel = cefrLevel;
+          }
+
+          // Call submitAnswer with the new payload structure
+          const result = await submitAnswer(payload);
 
           if (result.error) {
             console.error(`[Feedback/Progress] Error: ${result.error}`);
