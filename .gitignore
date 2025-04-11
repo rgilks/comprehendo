@@ -160,3 +160,13 @@ public/workbox-*.js.map
 # Test reports
 /playwright-report/
 /test-results/
+
+# testing
+coverage/
+
+# Playwright test reports
+playwright-report/
+test-results/
+
+# E2E Auth State (contains sensitive JWTs)
+test/e2e/auth/*.storageState.json

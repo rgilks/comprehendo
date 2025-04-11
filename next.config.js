@@ -14,6 +14,7 @@ const { withSentryConfig } = require('@sentry/nextjs');
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  productionBrowserSourceMaps: false,
   distDir: process.env.NEXT_PREVIEW_BUILD === 'true' ? '.next-validation' : '.next',
   async rewrites() {
     return [

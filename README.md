@@ -348,3 +348,51 @@ Comprehendo includes a basic admin panel accessible at the `/admin` route.
   - Browse table data using pagination controls.
   - Refresh the data view.
 - **Setup**: To enable admin access, set the `ADMIN_EMAILS` environment variable (comma-separated list) both locally (`.env.local`) and in your deployment environment (e.g., Fly.io secrets).
+
+### Testing
+
+The project uses Jest for unit/integration tests and Playwright for end-to-end tests.
+
+- Run all tests: `npm run check` (includes linting, build)
+- Run Jest tests: `npm test` or `npm run test:watch`
+- Run Playwright E2E tests: `npm run test:e2e`
+
+**E2E Test Authentication Setup:**
+
+Some E2E tests verify authenticated user behavior (e.g., admin access).
+These tests rely on pre-generated authentication state files stored in `test/e2e/auth/`, which are **not** committed to version control due to containing sensitive JWTs.
+
+To run these tests locally, you must generate these files yourself:
+
+1.  **Create Files:** Ensure the following files exist (they might be empty initially):
+    - `test/e2e/auth/admin.storageState.json`
+    - `test/e2e/auth/nonAdmin.storageState.json`
+2.  **Log in as Admin:** Run the app (`npm run dev`) and log in via the UI as a user who **is** an admin (e.g., email listed in `ADMIN_EMAILS`).
+3.  **Extract Admin Token:** Open browser dev tools (F12), go to Application/Storage -> Cookies -> `localhost`. Find the `next-auth.session-token` cookie and copy its value.
+4.  **Update Admin File:** Paste the admin token value into `test/e2e/auth/admin.storageState.json`. The structure should look like this (replace the placeholder):
+    ```json
+    {
+      "cookies": [
+        {
+          "name": "next-auth.session-token",
+          "value": "PASTE_ADMIN_TOKEN_HERE",
+          "domain": "localhost",
+          "path": "/",
+          "expires": -1,
+          "httpOnly": true,
+          "secure": false,
+          "sameSite": "Lax"
+        }
+      ],
+      "origins": []
+    }
+    ```
+5.  **Log Out & Log in as Non-Admin:** Log out, then log in via the UI as a user who **is NOT** an admin.
+6.  **Extract Non-Admin Token:** Repeat step 3 to get the _new_ `next-auth.session-token` value.
+7.  **Update Non-Admin File:** Paste the non-admin token value into `test/e2e/auth/nonAdmin.storageState.json` using the same JSON structure as above.
+
+Once these files are correctly populated, the E2E tests requiring authentication should pass when run with `npm run test:e2e`.
+
+## Deployment
+
+The application is configured for deployment via Docker and includes a LiteFS setup for SQLite replication.
