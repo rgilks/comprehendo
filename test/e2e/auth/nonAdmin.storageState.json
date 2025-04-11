@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "next-auth.session-token",
-      "value": "mock-non-admin-session-token-value-needs-replacement",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..NVRvsTedK4NB-dDJ.LxOjRIhy1FhSn7widXs5QnT02dpo96rkjaXNxqMuHbgsQJghIGPgaChGsqIjTC-xbVo0nNOq_gOskrjhW7yQdax6Fv5OH3bYDr5FeHDZvKZSwetE-AiyoSNYkEETH6MqUkVs_AC-xZJY0WHr9Tqmvj4YOMtJsyMkdcmmvEaunZcJNy4vUhKjarWOhONBAmNZzVyriJLNuk9IUzrYrYKsUSuw-dpQkNBSMlf3GwVuiYiVie5759lmmReAJTkxJNOPMUlZg7aeQAa8LE0VV32u5LFkZ0yLIwgOTohRTnqRp0mnNF--71zC7-v4EqLcLfHZX9yLa7nmxqK6z3aEeTFuWSg_qPk7-NDjZw-37fzLSNYTMsIoF1uwYh_xxoX5heY9k7Auv_kG6ciqMxY-zcm1zHKl.FUl4QUQ6rmHqpGkRLnaSLg",
       "domain": "localhost",
       "path": "/",
       "expires": -1,

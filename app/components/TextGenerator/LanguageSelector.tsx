@@ -34,6 +34,7 @@ const LanguageSelector = () => {
         </label>
         <select
           id="passage-language-select"
+          data-testid="language-select"
           value={passageLanguage}
           onChange={(e) => setPassageLanguage(e.target.value as Language)}
           className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors col-span-1"
@@ -46,6 +47,7 @@ const LanguageSelector = () => {
         </select>
         <div
           id="cefr-level-display"
+          data-testid="level-display"
           className="relative w-full px-3 py-2 text-sm text-white bg-gray-800 border border-gray-700 rounded col-span-1 flex items-center justify-between cursor-default"
         >
           <span>
