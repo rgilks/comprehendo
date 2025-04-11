@@ -105,6 +105,7 @@ const QuizSection = () => {
                 >
                   <div
                     className={`p-2 rounded ${key === feedbackCorrectAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== feedbackCorrectAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
+                    data-testid={`feedback-description-${key}`}
                   >
                     <strong
                       className={`font-semibold ${key === feedbackCorrectAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
