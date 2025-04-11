@@ -69,7 +69,8 @@
     "prettier": "^3.5.3",
     "supertest": "^7.1.0",
     "ts-jest": "^29.3.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "wait-on": "^7.2.0"
   },
   "overrides": {
     "@types/react": "19.0.12",
