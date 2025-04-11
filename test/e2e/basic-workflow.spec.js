@@ -187,7 +187,6 @@ test.describe('Basic Workflow Test', () => {
   });
 
   test('should allow admin user to access admin page', async ({ browser }) => {
-    // Create a new browser context with the admin storage state
     const context = await browser.newContext({
       storageState: 'test/e2e/auth/admin.storageState.json',
     });
@@ -198,13 +197,11 @@ test.describe('Basic Workflow Test', () => {
     await page.goto(adminUrl, { waitUntil: 'networkidle' });
     console.log('Navigation to admin page complete. Verifying content...');
 
-    // Verify the main admin heading is visible
     const adminHeading = page.locator('h1:has-text("Comprehendo admin")');
     await expect(adminHeading, 'Admin page heading should be visible').toBeVisible({
       timeout: 3000,
     });
 
-    // Verify the unauthorized message is NOT visible
     const unauthorizedMessage = page.locator(
       'text=/Unauthorized|You do not have admin permissions./i'
     );
@@ -215,12 +212,10 @@ test.describe('Basic Workflow Test', () => {
 
     console.log('Admin page content verified successfully.');
 
-    // Clean up context
     await context.close();
   });
 
   test('should prevent non-admin user from accessing admin page', async ({ browser }) => {
-    // Create a new browser context with the non-admin storage state
     const context = await browser.newContext({
       storageState: 'test/e2e/auth/nonAdmin.storageState.json',
     });
@@ -229,27 +224,14 @@ test.describe('Basic Workflow Test', () => {
     const adminUrl = `${BASE_URL}/admin`;
     console.log(`Navigating to admin page: ${adminUrl} using non-admin storage state...`);
     await page.goto(adminUrl, { waitUntil: 'networkidle' });
-    console.log('Navigation to admin page complete. Verifying content...');
+    console.log('Navigation attempt to admin page complete. Verifying redirect...');
 
-    // Verify the main admin heading is NOT visible
-    const adminHeading = page.locator('h1:has-text("Comprehendo admin")');
-    await expect(
-      adminHeading,
-      'Admin page heading should not be visible for non-admin'
-    ).not.toBeVisible();
+    await expect(page, 'User should be redirected from /admin').toHaveURL(TARGET_URL, {
+      timeout: 5000,
+    });
 
-    // Verify the unauthorized message IS visible
-    const unauthorizedMessage = page.locator(
-      'text=/Unauthorized|You do not have admin permissions./i'
-    );
-    await expect(
-      unauthorizedMessage.first(),
-      'Unauthorized message should be visible for non-admin'
-    ).toBeVisible({ timeout: 3000 });
+    console.log('Non-admin was correctly redirected from /admin page.');
 
-    console.log('Non-admin access correctly prevented.');
-
-    // Clean up context
     await context.close();
   });
 });
