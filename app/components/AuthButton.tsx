@@ -115,6 +115,7 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
                   void signOut();
                   setShowUserMenu(false);
                 }}
+                data-testid="sign-out-button"
                 className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
               >
                 {t('auth.signOut')}

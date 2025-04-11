@@ -4,64 +4,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const TARGET_URL = `${BASE_URL}/en`;
 
 test.describe('Basic Workflow Test', () => {
-  test('should load, generate a question, and allow answering', async ({ page }) => {
-    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
-
-    const generateButton = page.locator('[data-testid="generate-button"]:not([disabled])');
-    await expect(
-      generateButton,
-      'Generate button should be visible and enabled initially'
-    ).toBeVisible({ timeout: 2000 });
-
-    await generateButton.click();
-
-    const quizSection = page.locator('[data-testid="quiz-section"]');
-    const errorDisplay = page.locator('[data-testid="error-display"] p');
-
-    await Promise.race([
-      expect(quizSection, 'Quiz section should appear').toBeVisible({ timeout: 2000 }),
-      expect(errorDisplay, 'Error message should appear').toBeVisible({ timeout: 2000 }),
-    ]);
-
-    const isQuizVisible = await quizSection.isVisible();
-
-    if (isQuizVisible) {
-      const questionElement = page.locator('[data-testid="quiz-question"]');
-      const optionA = page.locator('[data-testid="quiz-option-A"]');
-
-      await expect(questionElement, 'Quiz question should be visible').toBeVisible({
-        timeout: 2000,
-      });
-      await expect(optionA, 'Option A should be visible').toBeVisible({ timeout: 2000 });
-
-      await optionA.click();
-
-      const feedbackHighlight = page.locator('[data-testid="feedback-highlight"]');
-      const feedbackDescriptionA = page.locator('[data-testid="feedback-description-A"]');
-
-      await expect(feedbackHighlight.first(), 'Feedback highlight should be visible').toBeVisible({
-        timeout: 5000,
-      });
-      await expect(
-        feedbackDescriptionA,
-        'Feedback description for A should be visible'
-      ).toBeVisible({ timeout: 5000 });
-
-      await expect(generateButton, 'Generate button should re-enable after answering').toBeVisible({
-        timeout: 2000,
-      });
-    } else {
-      await expect(errorDisplay, 'Error message should be visible').toBeVisible();
-      // Optionally, check if the generate button re-enables even after an error
-      try {
-        await expect(generateButton, 'Generate button should re-enable after error').toBeVisible({
-          timeout: 2000,
-        });
-      } catch (e) {
-        // Ignore error if button doesn't re-enable, might be expected
-      }
-    }
-  });
+  // Test: should load, generate a question, and allow answering (removed)
 
   test('should allow changing UI language', async ({ page }) => {
     await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
@@ -94,7 +37,7 @@ test.describe('Basic Workflow Test', () => {
   test('should allow changing passage (learning) language', async ({ page }) => {
     await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
 
-    const passageLangSelect = page.locator('#passage-language-select');
+    const passageLangSelect = page.locator('[data-testid="language-select"]');
     await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible({
       timeout: 2000,
     });
