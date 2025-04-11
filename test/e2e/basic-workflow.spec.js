@@ -185,4 +185,71 @@ test.describe('Basic Workflow Test', () => {
     ).toHaveAttribute('src', new RegExp(expectedEncodedUrlPart));
     console.log('Avatar image src verified. Mock login test successful.');
   });
+
+  test('should allow admin user to access admin page', async ({ browser }) => {
+    // Create a new browser context with the admin storage state
+    const context = await browser.newContext({
+      storageState: 'test/e2e/auth/admin.storageState.json',
+    });
+    const page = await context.newPage();
+
+    const adminUrl = `${BASE_URL}/admin`;
+    console.log(`Navigating to admin page: ${adminUrl} using admin storage state...`);
+    await page.goto(adminUrl, { waitUntil: 'networkidle' });
+    console.log('Navigation to admin page complete. Verifying content...');
+
+    // Verify the main admin heading is visible
+    const adminHeading = page.locator('h1:has-text("Comprehendo admin")');
+    await expect(adminHeading, 'Admin page heading should be visible').toBeVisible({
+      timeout: 3000,
+    });
+
+    // Verify the unauthorized message is NOT visible
+    const unauthorizedMessage = page.locator(
+      'text=/Unauthorized|You do not have admin permissions./i'
+    );
+    await expect(
+      unauthorizedMessage,
+      'Unauthorized message should not be visible for admin'
+    ).not.toBeVisible();
+
+    console.log('Admin page content verified successfully.');
+
+    // Clean up context
+    await context.close();
+  });
+
+  test('should prevent non-admin user from accessing admin page', async ({ browser }) => {
+    // Create a new browser context with the non-admin storage state
+    const context = await browser.newContext({
+      storageState: 'test/e2e/auth/nonAdmin.storageState.json',
+    });
+    const page = await context.newPage();
+
+    const adminUrl = `${BASE_URL}/admin`;
+    console.log(`Navigating to admin page: ${adminUrl} using non-admin storage state...`);
+    await page.goto(adminUrl, { waitUntil: 'networkidle' });
+    console.log('Navigation to admin page complete. Verifying content...');
+
+    // Verify the main admin heading is NOT visible
+    const adminHeading = page.locator('h1:has-text("Comprehendo admin")');
+    await expect(
+      adminHeading,
+      'Admin page heading should not be visible for non-admin'
+    ).not.toBeVisible();
+
+    // Verify the unauthorized message IS visible
+    const unauthorizedMessage = page.locator(
+      'text=/Unauthorized|You do not have admin permissions./i'
+    );
+    await expect(
+      unauthorizedMessage.first(),
+      'Unauthorized message should be visible for non-admin'
+    ).toBeVisible({ timeout: 3000 });
+
+    console.log('Non-admin access correctly prevented.');
+
+    // Clean up context
+    await context.close();
+  });
 });
