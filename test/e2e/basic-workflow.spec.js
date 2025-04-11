@@ -29,9 +29,8 @@ test.describe('Basic Workflow Test', () => {
     console.log('Generate button clicked. Waiting for quiz or error...');
 
     const quizSection = page.locator('[data-testid="quiz-section"]');
-    const errorDisplay = page.locator('[data-testid="error-display"] p'); // Assuming error text is in a <p>
+    const errorDisplay = page.locator('[data-testid="error-display"] p');
 
-    // Wait for either the quiz section to become visible OR the error message to become visible
     await Promise.race([
       expect(quizSection, 'Quiz section should appear').toBeVisible({ timeout: 2000 }),
       expect(errorDisplay, 'Error message should appear').toBeVisible({ timeout: 2000 }),
@@ -39,7 +38,6 @@ test.describe('Basic Workflow Test', () => {
 
     console.log('Quiz section or error message appeared.');
 
-    // Check which one appeared
     const isQuizVisible = await quizSection.isVisible();
 
     if (isQuizVisible) {
@@ -56,13 +54,9 @@ test.describe('Basic Workflow Test', () => {
       await optionA.click();
       console.log('Option A clicked. Waiting for feedback and generate button re-enable...');
 
-      // Check for feedback elements
       const feedbackHighlight = page.locator('[data-testid="feedback-highlight"]');
       const feedbackDescriptionA = page.locator('[data-testid="feedback-description-A"]');
-      // Add locators for other feedback descriptions if needed (B, C, D, etc.)
-      // const feedbackDescriptionB = page.locator('[data-testid="feedback-description-B"]');
 
-      // Check that at least one highlight span is visible
       await expect(feedbackHighlight.first(), 'Feedback highlight should be visible').toBeVisible({
         timeout: 5000,
       });
@@ -70,19 +64,15 @@ test.describe('Basic Workflow Test', () => {
         feedbackDescriptionA,
         'Feedback description for A should be visible'
       ).toBeVisible({ timeout: 5000 });
-      // Add expectations for other feedback descriptions if needed
-      // await expect(feedbackDescriptionB, 'Feedback description for B should be visible').toBeVisible({ timeout: 10000 });
 
       console.log('Feedback elements verified.');
 
-      // Generate button should become enabled again after answering and showing feedback
       await expect(generateButton, 'Generate button should re-enable after answering').toBeVisible({
         timeout: 2000,
       });
       console.log('Generate button re-enabled. Test successful.');
     } else {
       console.log('Error message is visible. Verifying error...');
-      // If the quiz didn't appear, the error must have. Check its content if needed.
       await expect(errorDisplay, 'Error message should be visible').toBeVisible();
       const errorText = await errorDisplay.textContent();
       console.log(`Error message displayed: "${errorText}". This might be expected.`);
@@ -94,8 +84,105 @@ test.describe('Basic Workflow Test', () => {
         console.log('Generate button re-enabled after error.');
       } catch (e) {
         console.log('Generate button did not re-enable after error (within 2s).');
-        // Decide if this is a failure or acceptable depending on app logic
       }
     }
+  });
+
+  test('should allow changing UI language', async ({ page }) => {
+    console.log(`Navigating to ${TARGET_URL}...`); // Start at English URL
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+    console.log('Navigation complete. Waiting for language selector...');
+
+    const languageDropdownButton = page.locator('#language-select-button');
+    await expect(languageDropdownButton, 'Language dropdown button should be visible').toBeVisible({
+      timeout: 2000,
+    });
+    console.log('Language dropdown button found. Clicking...');
+
+    await languageDropdownButton.click();
+    console.log('Language dropdown button clicked. Waiting for options...');
+
+    const spanishLangOption = page.locator('div[role="menu"] button:has-text("Español")');
+    await expect(
+      spanishLangOption,
+      'Spanish language option should be visible in dropdown'
+    ).toBeVisible({ timeout: 2000 });
+    console.log('Spanish option found. Clicking...');
+
+    await spanishLangOption.click();
+    console.log('Spanish option clicked. Waiting for URL change...');
+
+    const expectedSpanishUrl = `${BASE_URL}/es`;
+    await page.waitForURL(expectedSpanishUrl, { waitUntil: 'networkidle' });
+    console.log(`URL changed to ${expectedSpanishUrl}. Verifying content...`);
+
+    const generateButton = page.locator('[data-testid="generate-button"]');
+    await expect(generateButton, 'Generate button should have Spanish text').toHaveText(
+      'Genera un nuevo texto',
+      { timeout: 2000 }
+    );
+    console.log('Generate button text verified in Spanish. Language change successful.');
+  });
+
+  test('should allow changing passage (learning) language', async ({ page }) => {
+    console.log(`Navigating to ${TARGET_URL}...`);
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+    console.log('Navigation complete. Waiting for passage language selector...');
+
+    const passageLangSelect = page.locator('#passage-language-select');
+    await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible({
+      timeout: 2000,
+    });
+    console.log('Passage language selector found.');
+
+    await passageLangSelect.selectOption({ value: 'es' });
+    console.log('Selected Spanish in passage language selector.');
+
+    await expect(
+      passageLangSelect,
+      'Passage language selector value should be Spanish'
+    ).toHaveValue('es', { timeout: 1000 });
+    console.log('Passage language selector value verified.');
+  });
+
+  test('should show avatar after mock GitHub sign-in', async ({ page }) => {
+    console.log('Setting up mock for /api/auth/session...');
+    // Intercept the session request to simulate a logged-in state
+    await page.route('**/api/auth/session', async (route) => {
+      console.log(`Intercepted ${route.request().url()}, fulfilling with mock data.`);
+      const mockSession = {
+        user: {
+          name: 'Mock User',
+          email: 'mock@example.com',
+          image: 'https://avatars.githubusercontent.com/u/999999?v=4', // Example avatar URL
+        },
+        expires: new Date(Date.now() + 86400 * 1000).toISOString(), // Expires in 1 day
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockSession),
+      });
+    });
+
+    console.log(`Navigating to ${TARGET_URL} with mock active...`);
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+    console.log('Navigation complete. Verifying AuthButton state...');
+
+    // Locate the avatar image using its alt text, which comes from the mock session data.
+    const avatarImage = page.locator('img[alt="Mock User"]');
+
+    await expect(avatarImage, 'Avatar image should be visible after mock login').toBeVisible({
+      timeout: 5000,
+    });
+    console.log('Avatar image found and visible.');
+
+    // Check the src attribute - it will be modified by next/image, so check for the encoded base URL part
+    const expectedEncodedUrlPart = 'https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F999999';
+    await expect(
+      avatarImage,
+      'Avatar image src should contain the encoded mock URL'
+    ).toHaveAttribute('src', new RegExp(expectedEncodedUrlPart));
+    console.log('Avatar image src verified. Mock login test successful.');
   });
 });
