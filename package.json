@@ -8,7 +8,7 @@
     "preview-build": "NEXT_PREVIEW_BUILD=true next build",
     "start": "next start",
     "verify": "prettier --check . && next lint --no-cache",
-    "check": "prettier --write . && next lint --fix && npm run preview-build && jest",
+    "check": "prettier --write . && next lint --fix && jest && npx playwright test && npm run preview-build",
     "deps": "npx npm-check-updates",
     "deps:update": "npx npm-check-updates -u && npm install",
     "test": "jest",
@@ -41,6 +41,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@sentry/cli": "^2.30.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
