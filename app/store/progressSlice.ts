@@ -31,8 +31,8 @@ export const createProgressSlice: StateCreator<
   fetchUserProgress: async () => {
     set({ isProgressLoading: true });
     const session = await getSession();
-    // Use type assertion as temporary workaround, assuming dbId exists due to augmentation
-    if (!(session?.user as any)?.dbId) {
+    // Use type assertion that reflects the augmented session user type
+    if (!(session?.user as { dbId?: number })?.dbId) {
       set({ userStreak: null, isProgressLoading: false });
       return;
     }
