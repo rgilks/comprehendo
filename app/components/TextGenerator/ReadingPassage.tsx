@@ -22,6 +22,8 @@ const ReadingPassage = () => {
     generatedPassageLanguage,
   } = useTextGeneratorStore();
 
+  // console.log('[ReadingPassage] Rendering. relevantTextRange:', relevantTextRange);
+
   // Use the user's selected language (context language) for question/answer display
   const actualQuestionLanguage = questionLanguage;
 

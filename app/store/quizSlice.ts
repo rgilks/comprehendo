@@ -34,23 +34,25 @@ const GenerateExerciseResultSchema = z.object({
 });
 
 const SubmitAnswerResultSchema = z.object({
-  isCorrect: z.boolean().optional().nullable(),
-  correctAnswer: z.string().optional().nullable(),
-  explanations: z
+  currentLevel: z.string().optional().nullable(),
+  currentStreak: z.number().optional().nullable(),
+  leveledUp: z.boolean().optional().nullable(),
+  error: z.string().optional().nullable(),
+  feedback: z
     .object({
-      A: z.string(),
-      B: z.string(),
-      C: z.string(),
-      D: z.string(),
+      isCorrect: z.boolean(),
+      correctAnswer: z.string(),
+      explanations: z.object({
+        A: z.string(),
+        B: z.string(),
+        C: z.string(),
+        D: z.string(),
+      }),
+      relevantText: z.string(),
     })
     .optional()
     .nullable(),
-  relevantText: z.string().optional().nullable(),
-  streak: z.number().optional().nullable(),
-  error: z.string().optional().nullable(),
-  // Add other potential fields like leveledUp, currentLevel etc. if returned
-  currentLevel: z.string().optional().nullable(),
-  leveledUp: z.boolean().optional().nullable(),
+  // Add other potential top-level fields like nextQuiz if needed
 });
 // --- Zod Schemas --- END
 
@@ -137,15 +139,7 @@ export const createQuizSlice: StateCreator<
   },
 
   resetQuizWithNewData: (newQuizData: QuizData, quizId: number) => {
-    console.log('[QuizSlice] resetQuizWithNewData called with:', newQuizData, ' ID:', quizId);
-    const oldState = get();
-    console.log('[QuizSlice] State *before* reset:', {
-      quizData: oldState.quizData,
-      currentQuizId: oldState.currentQuizId,
-      loading: oldState.loading,
-      showContent: oldState.showContent,
-    });
-
+    // console.log('[QuizSlice] resetQuizWithNewData called with:', newQuizData, ' ID:', quizId);
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
@@ -164,14 +158,6 @@ export const createQuizSlice: StateCreator<
       const currentPassageLanguage = get().passageLanguage;
       state.generatedPassageLanguage = currentPassageLanguage;
       state.nextQuizAvailable = null;
-    });
-
-    const newState = get();
-    console.log('[QuizSlice] State *after* reset:', {
-      quizData: newState.quizData,
-      currentQuizId: newState.currentQuizId,
-      loading: newState.loading,
-      showContent: newState.showContent,
     });
 
     get().clearQuestionDelayTimeout();
@@ -340,29 +326,50 @@ export const createQuizSlice: StateCreator<
       }
 
       const result = validatedResult.data; // Use validated data
-      console.log('[QuizSlice handleAnswerSelect] API Result:', result); // Log the API result
+      // console.log('[QuizSlice handleAnswerSelect] API Result:', result); // Log the API result
 
       if (result.error) {
         throw new Error(result.error);
       }
 
       set((state) => {
-        console.log('[QuizSlice handleAnswerSelect] Setting feedback state:', {
-          // Log state being set
-          isCorrect: result.isCorrect ?? null,
-          correctAnswer: result.correctAnswer ?? null,
-          explanations: result.explanations ?? null,
-          relevantText: result.relevantText ?? null,
-          streak: result.streak,
-          leveledUp: result.leveledUp,
-          currentLevel: result.currentLevel,
-        });
-        state.feedbackIsCorrect = result.isCorrect ?? null;
-        state.feedbackCorrectAnswer = result.correctAnswer ?? null;
-        state.feedbackExplanations = result.explanations ?? null;
-        state.feedbackRelevantText = result.relevantText ?? null;
-        if (result.streak !== undefined && result.streak !== null) {
-          state.userStreak = result.streak;
+        // console.log('[QuizSlice handleAnswerSelect] Setting feedback state:', {
+        //   // Log state being set (accessing via result.feedback)
+        //   isCorrect: result.feedback?.isCorrect ?? null,
+        //   correctAnswer: result.feedback?.correctAnswer ?? null,
+        //   explanations: result.feedback?.explanations ?? null,
+        //   relevantText: result.feedback?.relevantText ?? null,
+        //   streak: result.currentStreak,
+        //   leveledUp: result.leveledUp,
+        //   currentLevel: result.currentLevel,
+        // });
+        state.feedbackIsCorrect = result.feedback?.isCorrect ?? null;
+        state.feedbackCorrectAnswer = result.feedback?.correctAnswer ?? null;
+        state.feedbackExplanations = result.feedback?.explanations ?? null;
+        state.feedbackRelevantText = result.feedback?.relevantText ?? null;
+
+        // Calculate and set relevantTextRange (accessing via result.feedback)
+        if (state.quizData?.paragraph && result.feedback?.relevantText) {
+          const paragraph = state.quizData.paragraph;
+          const relevantText = result.feedback.relevantText;
+          const startIndex = paragraph.indexOf(relevantText);
+          if (startIndex !== -1) {
+            const endIndex = startIndex + relevantText.length;
+            state.relevantTextRange = { start: startIndex, end: endIndex };
+            // console.log(
+            //   '[QuizSlice handleAnswerSelect] Calculated relevantTextRange:',
+            //   state.relevantTextRange
+            // );
+          } else {
+            state.relevantTextRange = null;
+            // console.warn('[QuizSlice handleAnswerSelect] Relevant text not found in paragraph.');
+          }
+        } else {
+          state.relevantTextRange = null; // Reset if data is missing
+        }
+
+        if (result.currentStreak !== undefined && result.currentStreak !== null) {
+          state.userStreak = result.currentStreak;
         }
         if (result.leveledUp && result.currentLevel) {
           state.cefrLevel = result.currentLevel as CEFRLevel;
