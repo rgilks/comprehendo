@@ -6,7 +6,7 @@ import { generateExerciseResponse } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { getSession } from 'next-auth/react';
 import type { CEFRLevel } from '@/config/language-guidance'; // Keep CEFRLevel if used elsewhere in file
-import { Language, LANGUAGES } from '@/contexts/LanguageContext'; // Import Language type and LANGUAGES map
+import {} from '@/contexts/LanguageContext'; // Removed unused Language type and LANGUAGES map
 
 // Define QuizData type used within the store
 // type QuizData = PartialQuizData; // Now imported
@@ -85,7 +85,7 @@ export interface QuizSlice {
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
   resetQuizState: () => void;
-  resetQuizWithNewData: (newQuizData: QuizData) => void;
+  resetQuizWithNewData: (newQuizData: QuizData, quizId: number) => void;
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
 }
@@ -136,18 +136,19 @@ export const createQuizSlice: StateCreator<
     });
   },
 
-  resetQuizWithNewData: (newQuizData: QuizData) => {
-    console.log('[QuizSlice] resetQuizWithNewData called with:', newQuizData);
+  resetQuizWithNewData: (newQuizData: QuizData, quizId: number) => {
+    console.log('[QuizSlice] resetQuizWithNewData called with:', newQuizData, ' ID:', quizId);
     const oldState = get();
     console.log('[QuizSlice] State *before* reset:', {
       quizData: oldState.quizData,
+      currentQuizId: oldState.currentQuizId,
       loading: oldState.loading,
       showContent: oldState.showContent,
     });
 
     set((state) => {
       state.quizData = newQuizData;
-      state.currentQuizId = newQuizData.id ?? null;
+      state.currentQuizId = quizId;
       state.selectedAnswer = null;
       state.isAnswered = false;
       state.relevantTextRange = null;
@@ -168,6 +169,7 @@ export const createQuizSlice: StateCreator<
     const newState = get();
     console.log('[QuizSlice] State *after* reset:', {
       quizData: newState.quizData,
+      currentQuizId: newState.currentQuizId,
       loading: newState.loading,
       showContent: newState.showContent,
     });
@@ -181,7 +183,7 @@ export const createQuizSlice: StateCreator<
   loadNextQuiz: () => {
     const nextQuiz = get().nextQuizAvailable;
     if (nextQuiz) {
-      get().resetQuizWithNewData(nextQuiz.quizData);
+      get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
     } else {
       console.warn('Next quiz not available, generating new one.');
       void get().generateText();
@@ -260,7 +262,7 @@ export const createQuizSlice: StateCreator<
         });
         console.log('Next quiz pre-fetched.');
       } else {
-        get().resetQuizWithNewData(quizData);
+        get().resetQuizWithNewData(quizData, response.quizId);
       }
     } catch (error: unknown) {
       console.error('Error generating text:', String(error));
@@ -283,8 +285,7 @@ export const createQuizSlice: StateCreator<
 
     set({ selectedAnswer: answer, isAnswered: true, showExplanation: true });
     const session = await getSession();
-    const { quizData } = get();
-    const currentQuizId = quizData?.id;
+    const { currentQuizId } = get();
 
     if (typeof currentQuizId !== 'number') {
       console.error('Invalid or missing current quiz ID:', currentQuizId);
@@ -339,12 +340,23 @@ export const createQuizSlice: StateCreator<
       }
 
       const result = validatedResult.data; // Use validated data
+      console.log('[QuizSlice handleAnswerSelect] API Result:', result); // Log the API result
 
       if (result.error) {
         throw new Error(result.error);
       }
 
       set((state) => {
+        console.log('[QuizSlice handleAnswerSelect] Setting feedback state:', {
+          // Log state being set
+          isCorrect: result.isCorrect ?? null,
+          correctAnswer: result.correctAnswer ?? null,
+          explanations: result.explanations ?? null,
+          relevantText: result.relevantText ?? null,
+          streak: result.streak,
+          leveledUp: result.leveledUp,
+          currentLevel: result.currentLevel,
+        });
         state.feedbackIsCorrect = result.isCorrect ?? null;
         state.feedbackCorrectAnswer = result.correctAnswer ?? null;
         state.feedbackExplanations = result.explanations ?? null;

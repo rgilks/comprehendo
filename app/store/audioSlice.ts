@@ -140,7 +140,7 @@ export const createAudioSlice: StateCreator<
         });
       };
 
-      utterance.onerror = (event: any) => {
+      utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
         console.error('Speech synthesis error:', event);
         get().setError('Speech synthesis failed.');
         set({
@@ -167,7 +167,7 @@ export const createAudioSlice: StateCreator<
     utterance.lang = SPEECH_LANGUAGES[lang];
     utterance.volume = volume;
 
-    utterance.onerror = (event: any) => {
+    utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
       console.error('Speech synthesis error:', event);
       get().setError('Speech synthesis failed.');
     };
