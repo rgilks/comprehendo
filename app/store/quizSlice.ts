@@ -9,13 +9,14 @@ import { getSession } from 'next-auth/react';
 import type { CEFRLevel } from '@/config/language-guidance'; // Keep CEFRLevel if used elsewhere in file
 import {} from '@/contexts/LanguageContext'; // Removed unused Language type and LANGUAGES map
 import {
-  QuizData,
-  QuizDataSchema,
+  // QuizData, // Keep full QuizData if needed for feedback part, otherwise remove
+  // QuizDataSchema, // Remove this unused import
+  PartialQuizData, // Use PartialQuizData
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,
 } from '@/lib/domain/schemas'; // <-- Import centralized types/schemas
 
-// Define QuizData type used within the store
+// Define QuizData type used within the store - Now using PartialQuizData mainly
 // type QuizData = PartialQuizData; // Now imported
 
 // --- Zod Schemas --- START
@@ -27,23 +28,24 @@ import {
 
 // Define the shape of the pre-fetched quiz data
 interface NextQuizInfo {
-  quizData: QuizData;
+  quizData: PartialQuizData; // Use PartialQuizData
   quizId: number;
 }
 
 export interface QuizSlice {
-  quizData: QuizData | null;
+  quizData: PartialQuizData | null; // Use PartialQuizData
   currentQuizId: number | null;
   selectedAnswer: string | null;
   isAnswered: boolean;
   relevantTextRange: { start: number; end: number } | null;
+  // Feedback still likely uses full details, keep original structure if SubmitAnswerResult provides it
   feedbackIsCorrect: boolean | null;
   feedbackCorrectAnswer: string | null;
   feedbackExplanations: { A: string; B: string; C: string; D: string } | null;
   feedbackRelevantText: string | null;
-  nextQuizAvailable: NextQuizInfo | null;
+  nextQuizAvailable: NextQuizInfo | null; // Uses PartialQuizData via NextQuizInfo
 
-  setQuizData: (data: QuizData | null) => void;
+  setQuizData: (data: PartialQuizData | null) => void; // Use PartialQuizData
   setSelectedAnswer: (answer: string | null) => void;
   setIsAnswered: (answered: boolean) => void;
   setRelevantTextRange: (range: { start: number; end: number } | null) => void;
@@ -56,7 +58,7 @@ export interface QuizSlice {
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
   resetQuizState: () => void;
-  resetQuizWithNewData: (newQuizData: QuizData, quizId: number) => void;
+  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void; // Use PartialQuizData
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
 }
@@ -122,7 +124,7 @@ export const createQuizSlice: StateCreator<
     });
   },
 
-  resetQuizWithNewData: (newQuizData: QuizData, quizId: number) => {
+  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
@@ -195,43 +197,29 @@ export const createQuizSlice: StateCreator<
         throw new Error(response.error);
       }
 
-      // Parse the result string into quizData
-      let quizData: QuizData | null = null;
-      try {
-        const parsedResult = QuizDataSchema.safeParse(JSON.parse(response.result));
-        if (parsedResult.success) {
-          quizData = parsedResult.data;
-          if (!quizData.language) {
-            quizData.language = get().passageLanguage;
-          }
-        } else {
-          console.error(
-            'Zod validation error (parsing result string):',
-            parsedResult.error.message
-          );
-          throw new Error(`Invalid quiz data structure in response: ${parsedResult.error.message}`);
-        }
-      } catch (parseError: unknown) {
-        console.error('Error parsing quiz data from response result string:', parseError);
-        console.error('Problematic string:', response.result);
-        throw new Error('Failed to parse quiz data from server.');
+      // The response.quizData ALREADY contains the PartialQuizData object
+      // No need to parse response.result anymore.
+      const quizData: PartialQuizData | null = response.quizData;
+
+      // Add language if missing (assuming PartialQuizData might have it optional)
+      if (quizData && !quizData.language) {
+        quizData.language = get().passageLanguage;
       }
 
-      // Now check the parsed quizData
+      // Now check the received quizData (which is PartialQuizData)
       if (!quizData) {
-        // This case should ideally be caught by the parsing errors above
-        throw new Error('Failed to generate text. No quiz data in response after parsing.');
+        throw new Error('Failed to generate text. No quiz data received from API.');
       }
 
-      // Use parsed quizData and response.quizId
+      // Use received quizData (PartialQuizData) and response.quizId
       if (isPrefetch) {
         get()._setNextQuizAvailable({
-          quizData: quizData,
+          quizData: quizData, // Use PartialQuizData
           quizId: response.quizId,
         });
         console.log('Next quiz pre-fetched.');
       } else {
-        get().resetQuizWithNewData(quizData, response.quizId);
+        get().resetQuizWithNewData(quizData, response.quizId); // Use PartialQuizData
       }
     } catch (error: unknown) {
       console.error('Error generating text:', String(error));
@@ -336,6 +324,11 @@ export const createQuizSlice: StateCreator<
         state.feedbackRelevantText = result.feedback?.relevantText ?? null;
 
         // Calculate and set relevantTextRange (accessing via result.feedback)
+        // This part might need adjustment if quizData is now PartialQuizData and lacks paragraph
+        // We need to ensure the paragraph is available SOMEWHERE when feedback comes in.
+        // OPTION: Fetch full QuizData on answer submission? Or ensure feedback includes paragraph?
+        // TEMPORARY: Assume feedbackRelevantText can be found in the potentially partial quizData.paragraph
+        // If quizData.paragraph is undefined, this will safely do nothing.
         if (state.quizData?.paragraph && result.feedback?.relevantText) {
           const paragraph = state.quizData.paragraph;
           const relevantText = result.feedback.relevantText;

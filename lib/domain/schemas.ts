@@ -19,10 +19,22 @@ export const QuizDataSchema = z.object({
 
 export type QuizData = z.infer<typeof QuizDataSchema>;
 
+// --- Partial Schema for Initial Client Data ---
+
+// Define PartialQuizData based on the imported QuizDataSchema
+export const PartialQuizDataSchema = QuizDataSchema.pick({
+  paragraph: true,
+  question: true,
+  options: true,
+  topic: true,
+  language: true, // Keep language if it's needed by the client initially
+});
+export type PartialQuizData = z.infer<typeof PartialQuizDataSchema>;
+
 // --- API Response Schemas ---
 
 export const GenerateExerciseResultSchema = z.object({
-  result: z.string(), // Stringified JSON containing QuizData
+  quizData: PartialQuizDataSchema,
   quizId: z.number(),
   error: z.string().optional().nullable(),
   cached: z.boolean().optional().nullable(),
@@ -52,15 +64,3 @@ export const SubmitAnswerResultSchema = z.object({
 });
 
 export type SubmitAnswerResult = z.infer<typeof SubmitAnswerResultSchema>;
-
-// --- Partial Schema for Initial Client Data ---
-
-// Define PartialQuizData based on the imported QuizDataSchema
-export const PartialQuizDataSchema = QuizDataSchema.pick({
-  paragraph: true,
-  question: true,
-  options: true,
-  topic: true,
-  language: true, // Keep language if it's needed by the client initially
-});
-export type PartialQuizData = z.infer<typeof PartialQuizDataSchema>;

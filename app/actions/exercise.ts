@@ -317,7 +317,12 @@ export const generateExerciseResponse = async (
   const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
   if (!validCefrLevels.includes(levelStr as CEFRLevel)) {
     console.error(`[API] Invalid CEFR level received: ${levelStr}`);
-    return { result: '', quizId: -1, error: `Invalid CEFR level: ${levelStr}` };
+    // Return an empty PartialQuizData structure in the quizData field on error
+    return {
+      quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
+      quizId: -1,
+      error: `Invalid CEFR level: ${levelStr}`,
+    };
   }
   const cefrLevelTyped = levelStr as CEFRLevel;
 
@@ -345,7 +350,12 @@ export const generateExerciseResponse = async (
   console.log(`[API Perf] Rate Limit Check Start: ${Date.now()}`);
   if (!(await checkRateLimit(ip))) {
     console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
-    return { result: '', quizId: -1, error: 'Rate limit exceeded' };
+    // Return an empty PartialQuizData structure in the quizData field on error
+    return {
+      quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
+      quizId: -1,
+      error: 'Rate limit exceeded',
+    };
   }
   console.log(`[API Perf] Rate Limit Check End: ${Date.now()}`);
 
@@ -374,7 +384,12 @@ export const generateExerciseResponse = async (
         console.error('[API] Invalid data found in cache:', validatedCachedData.error.format());
         // Decide how to handle invalid cache data - perhaps proceed to generate new content?
         // For now, return error similar to generation failure.
-        return { result: '', quizId: -1, error: 'Invalid cached data encountered.' };
+        // Return an empty PartialQuizData structure in the quizData field on error
+        return {
+          quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
+          quizId: -1,
+          error: 'Invalid cached data encountered.',
+        };
       }
       console.log(`[API Perf] Cache Validation End: ${Date.now()}`);
 
@@ -387,7 +402,8 @@ export const generateExerciseResponse = async (
         topic: fullData.topic,
       };
       return {
-        result: JSON.stringify(partialData),
+        // Replace result: JSON.stringify(partialData) with quizData: partialData
+        quizData: partialData,
         quizId: cachedExercise.id, // Use the ID from the cache record
         cached: true,
       };
@@ -512,7 +528,12 @@ Ensure the entire output is a single, valid JSON object string without any surro
       console.error('[API] Failed to save generated exercise to cache.');
       // Decide if this is a critical error - maybe proceed without caching?
       // For now, let's return an error indication.
-      return { result: '', quizId: -1, error: 'Failed to save exercise to cache.' };
+      // Return an empty PartialQuizData structure in the quizData field on error
+      return {
+        quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
+        quizId: -1,
+        error: 'Failed to save exercise to cache.',
+      };
     }
 
     // Prepare partial data using the validated data
@@ -525,9 +546,10 @@ Ensure the entire output is a single, valid JSON object string without any surro
 
     // Construct the final payload matching GenerateExerciseResult
     const payload: GenerateExerciseResult = {
-      result: JSON.stringify(partialData),
+      // Replace result: JSON.stringify(partialData) with quizData: partialData
+      quizData: partialData,
       quizId: quizId,
-      cached: !!cachedExercise,
+      cached: !!cachedExercise, // Explicitly cast to boolean
     };
 
     console.log(`[API Perf] Total generateExerciseResponse time: ${Date.now() - start}ms`);
@@ -540,7 +562,8 @@ Ensure the entire output is a single, valid JSON object string without any surro
       error instanceof Error ? error.message : 'AI model response parsing failed';
 
     return {
-      result: '', // Return empty result string on error
+      // Replace result: '' with an empty PartialQuizData structure in the quizData field on error
+      quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
       quizId: -1, // Indicate error with a sentinel quizId
       error: errorMessage,
     };
