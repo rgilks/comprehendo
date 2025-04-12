@@ -294,7 +294,7 @@ export const submitAnswer = async (
     feedback: feedbackData, // Add the populated feedback data
   };
 
- if (userId) {
+  if (userId) {
     try {
       const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
 

@@ -148,7 +148,7 @@ export const getCachedExercise = async (
     // Use non-null assertion
     const getCachedContent = (specificLevel: string) => {
       // Use non-null assertion here as well
-      const stmt = db!.prepare<[string, string, string, number]>(
+      const stmt = db.prepare<[string, string, string, number]>(
         `SELECT id, language, level, content, questions, created_at
          FROM generated_content
          WHERE language = ? AND questions_language = ? AND level = ? AND seed_value = ?
