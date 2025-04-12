@@ -209,7 +209,7 @@ export const authOptions: NextAuthOptions = {
             session.user.dbId = userRecord.id;
           } else {
             console.warn(
-              `[AUTH Session Callback] Could not find user or userRecord format is incorrect for provider_id=${token.sub} and provider=${token.provider as string}.`
+              `[AUTH Session Callback] Could not find user or userRecord format is incorrect for provider_id=${token.sub} and provider=${token.provider}.`
             );
           }
         } catch (error) {

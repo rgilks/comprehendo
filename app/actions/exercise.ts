@@ -389,6 +389,7 @@ export const generateExerciseResponse = async (
     );
     try {
       console.log(`[API Perf] Cache Validation Start: ${Date.now()}`);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsedCachedContent = JSON.parse(cachedExercise.content);
       const validatedCachedData = fullQuizDataSchema.safeParse(parsedCachedContent);
 
