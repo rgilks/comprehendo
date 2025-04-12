@@ -4,7 +4,7 @@ import { z } from 'zod';
 import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { headers } from 'next/headers';
-import { getActiveModel, getGoogleAIClient, getOpenAIClient, ModelConfig } from '@/lib/modelConfig';
+import { getActiveModel, getGoogleAIClient, openai, ModelConfig } from '@/lib/modelConfig';
 import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
@@ -60,6 +60,8 @@ function ensureError(error: unknown, defaultMessage: string = 'An unknown error 
  * Check if the user has exceeded rate limits
  */
 export const checkRateLimit = async (ip: string): Promise<boolean> => {
+  if (!db) throw new Error('Database not initialized');
+
   try {
     // Initialize DB table if not exists
     db.exec(`
@@ -139,37 +141,22 @@ export const getCachedExercise = async (
   level: string,
   seedValue: number
 ): Promise<GeneratedContentRow | undefined> => {
+  if (!db) throw new Error('Database not initialized');
   // Proceed with database cache logic for logged-in users or other levels
   console.log('[API] Logged-in user or non-A1 level: Checking database cache.');
   try {
-    // Function to get cached content with specific level
+    // Use non-null assertion
     const getCachedContent = (specificLevel: string) => {
-      const result = db
-        .prepare(
-          `
-        SELECT id, language, level, content, questions, created_at FROM generated_content \
-        WHERE language = ? \
-          AND question_language = ? \
-          AND level = ? \
-          AND seed_value = ?
-        ORDER BY created_at DESC LIMIT 1
-      `
-        )
-        .get(passageLanguage, questionLanguage, specificLevel, seedValue);
-
-      // Validate result has the expected structure
-      if (
-        typeof result === 'object' &&
-        result !== null &&
-        'content' in result &&
-        typeof result.content === 'string' &&
-        'created_at' in result &&
-        typeof result.created_at === 'string'
-      ) {
-        return result as GeneratedContentRow;
-      }
-
-      return undefined;
+      // Use non-null assertion here as well
+      const stmt = db!.prepare<[string, string, string, number]>(
+        `SELECT id, language, level, content, questions, created_at
+         FROM generated_content
+         WHERE language = ? AND questions_language = ? AND level = ? AND seed_value = ?
+         ORDER BY created_at DESC LIMIT 1`
+      );
+      return stmt.get(passageLanguage, questionLanguage, specificLevel, seedValue) as
+        | GeneratedContentRow
+        | undefined;
     };
 
     // First try with exact CEFR level
@@ -193,6 +180,7 @@ export const saveExerciseToCache = async (
   jsonContent: string,
   userId: number | null
 ): Promise<number | undefined> => {
+  if (!db) throw new Error('Database not initialized');
   console.log(
     `[API] Attempting to save exercise to cache. Params: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, seed=${seedValue}, userId=${userId}`
   );
@@ -236,7 +224,9 @@ export const saveExerciseToCache = async (
  */
 async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling OpenAI API...');
-  const openai = getOpenAIClient();
+  if (!openai) {
+    throw new Error('OpenAI client is not initialized. Check OPENAI_API_KEY.');
+  }
 
   try {
     const completion = await openai.chat.completions.create({
@@ -246,15 +236,28 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
       max_tokens: modelConfig.maxTokens,
     });
 
-    const result = completion.choices[0]?.message?.content;
+    // Add checks before accessing properties
+    const choice = completion?.choices?.[0];
+    const result = choice?.message?.content;
+
     if (!result) {
-      throw new AIResponseProcessingError('No content received from OpenAI');
+      // Log the structure if it's unexpected
+      if (!completion) console.error('[API] OpenAI response completion object is missing.');
+      else if (!completion.choices || completion.choices.length === 0)
+        console.error('[API] OpenAI response choices array is missing or empty.');
+      else if (!choice.message) console.error('[API] OpenAI response message object is missing.');
+      else if (!choice.message.content)
+        console.error('[API] OpenAI response message content is missing.');
+
+      throw new AIResponseProcessingError('No content received or invalid structure from OpenAI');
     }
     console.log('[API] Received response from OpenAI.');
     return result;
   } catch (error: unknown) {
-    console.error('[API] OpenAI API raw error:', error); // Log raw error first
+    // Use String() for safe logging
+    console.error('[API] OpenAI API raw error:', String(error));
     // Throw a guaranteed Error object
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     throw ensureError(error, 'Failed to generate content using OpenAI');
   }
 }
@@ -277,16 +280,25 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     });
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    // Add checks before accessing properties
+    const response = result?.response;
+    const text = response?.text(); // text() might throw if response is missing/malformed, but safer access
 
     if (!text) {
-      throw new AIResponseProcessingError('No content received from Google AI');
+      // Log the structure if it's unexpected
+      if (!result) console.error('[API] Google AI result object is missing.');
+      else if (!response) console.error('[API] Google AI response object is missing.');
+      else console.error('[API] Google AI response text is missing or empty.'); // Assuming text() returned empty
+
+      throw new AIResponseProcessingError(
+        'No content received or invalid structure from Google AI'
+      );
     }
     console.log('[API] Received response from Google AI.');
     return text;
   } catch (error: unknown) {
-    console.error('[API] Google AI API raw error:', error); // Log raw error first
+    // Use String() for safe logging
+    console.error('[API] Google AI API raw error:', String(error));
     // Throw a guaranteed Error object
     throw ensureError(error, 'Failed to generate content using Google AI');
   }

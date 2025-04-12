@@ -12,15 +12,17 @@ jest.mock('@/lib/authOptions', () => ({
 }));
 
 // Mock the database implementation
-jest.mock('@/lib/db', () => {
-  const mockPrepare = jest.fn();
-  const mockDb = {
-    prepare: mockPrepare,
-    transaction: jest.fn((cb) => cb()),
-  };
-
-  return mockDb;
-});
+jest.mock('@/lib/db', () => ({
+  __esModule: true,
+  default: {
+    prepare: jest.fn(() => ({
+      all: jest.fn(),
+      get: jest.fn(),
+      run: jest.fn(),
+    })),
+    transaction: jest.fn((cb) => cb()), // Mock transaction to just run the callback
+  },
+}));
 
 // Mock environment variables
 const originalEnv = process.env;

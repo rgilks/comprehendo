@@ -26,7 +26,6 @@ export const PartialQuizDataSchema = QuizDataSchema.pick({
 });
 export type PartialQuizData = z.infer<typeof PartialQuizDataSchema>;
 
-
 export const GenerateExerciseResultSchema = z.object({
   quizData: PartialQuizDataSchema,
   quizId: z.number(),

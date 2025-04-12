@@ -294,15 +294,8 @@ export const submitAnswer = async (
     feedback: feedbackData, // Add the populated feedback data
   };
 
-  // Determine user's current CEFR level & Update Progress if logged in
-  // let cefrLevelForGeneration: string = requestCefrLevel || 'A1'; // Start with request or A1
-  if (userId) {
+ if (userId) {
     try {
-      // Fetch existing progress (only needed if we didn't already fetch before answer check - simplifying for now)
-      // const userProgress = db.prepare(...).get(...)
-      // if (userProgress) { responsePayload.currentLevel = ..., responsePayload.currentStreak = ... }
-
-      // --- Update User Progress in DB ---
       const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
 
       responsePayload.currentLevel = progressUpdate.currentLevel;
@@ -334,21 +327,6 @@ export const submitAnswer = async (
     responsePayload.currentStreak = 0; // No streak for anonymous users
     responsePayload.leveledUp = false;
   }
-
-  // --- Next Quiz Generation (Optional - Keep existing logic or refine) ---
-  // Consider if next quiz generation should happen here or be a separate call
-  // ... (existing next quiz logic can be placed here if desired) ...
-  // try {
-  //   console.log(`[SubmitAnswer] Generating next quiz. Level: ${cefrLevelForGeneration}, Learn: ${learn}, Lang: ${lang}`);
-  //   const nextQuizResult = await generateExerciseResponse({
-  //     passageLanguage: learn,
-  //     questionLanguage: lang,
-  //     cefrLevel: cefrLevelForGeneration,
-  //   });
-  //   // ... (parse/validate nextQuizResult and add to responsePayload.nextQuiz) ...
-  // } catch (genError) {
-  //   // ... handle next quiz generation error ...
-  // }
 
   console.log('[SubmitAnswer] Sending Response Payload:', responsePayload);
   return responsePayload;

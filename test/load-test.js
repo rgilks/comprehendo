@@ -2,6 +2,8 @@ const { chromium } = require('playwright');
 const { performance } = require('perf_hooks');
 const fs = require('fs');
 const path = require('path');
+import { check, group, sleep } from 'k6';
+import http from 'k6/http';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const SCREENSHOT_DIR = path.join(process.cwd(), 'screenshots');
@@ -298,3 +300,10 @@ main().catch((error) => {
   console.error('Unhandled error in main:', error);
   process.exit(1);
 });
+
+group('Load Landing Page', () => {
+  const res = http.get(__ENV.BASE_URL || 'http://localhost:3000/');
+  check(res, { 'status is 200': (r) => r.status === 200 });
+});
+
+sleep(1); // Simulate user reading time

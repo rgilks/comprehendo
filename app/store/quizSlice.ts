@@ -10,7 +10,6 @@ import type { CEFRLevel } from '@/config/language-guidance'; // Keep CEFRLevel i
 import {} from '@/contexts/LanguageContext'; // Removed unused Language type and LANGUAGES map
 import {
   // QuizData, // Keep full QuizData if needed for feedback part, otherwise remove
-  // QuizDataSchema, // Remove this unused import
   PartialQuizData, // Use PartialQuizData
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,

@@ -1,4 +1,4 @@
-import { NextAuthOptions, User, Account } from 'next-auth';
+import { User, Account } from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import { JWT } from 'next-auth/jwt';
@@ -6,9 +6,10 @@ import { Session } from 'next-auth';
 import db from './db';
 import { AdapterUser } from 'next-auth/adapters';
 import { z } from 'zod';
+import type { NextAuthOptions } from 'next-auth';
 
 // --- Zod Schema for Auth Environment Variables ---
-const authEnvSchema = z
+export const authEnvSchema = z
   .object({
     GITHUB_ID: z.string().optional(),
     GITHUB_SECRET: z.string().optional(),
@@ -194,6 +195,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session: ({ session, token }: { session: Session; token: JWT }) => {
+      // Assign dbId and isAdmin fetched earlier
       if (session.user && token.sub && token.provider) {
         try {
           const userRecord = db
@@ -206,7 +208,7 @@ export const authOptions: NextAuthOptions = {
             'id' in userRecord &&
             typeof userRecord.id === 'number'
           ) {
-            session.user.dbId = userRecord.id;
+            session.user.dbId = userRecord.id; // Assign internal DB id
           } else {
             console.warn(
               `[AUTH Session Callback] Could not find user or userRecord format is incorrect for provider_id=${token.sub} and provider=${token.provider}.`
@@ -216,11 +218,18 @@ export const authOptions: NextAuthOptions = {
           console.error('[AUTH Session Callback] Error fetching internal user ID:', error);
         }
 
+        // Assign standard user ID from token
+        session.user.id = token.sub;
+        // Assign isAdmin status from token
         const isAdminValue = token.isAdmin;
         session.user.isAdmin = isAdminValue;
       } else {
+        // Handle case where session.user or token.sub/provider is missing
+        console.warn(
+          '[AUTH Session Callback] session.user, token.sub, or token.provider missing. Cannot assign id/isAdmin.'
+        );
       }
-
+      // Return the standard session object without the custom error property
       return session;
     },
   },

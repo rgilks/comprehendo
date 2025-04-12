@@ -19,13 +19,13 @@ const isBuildPhase =
   process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
 // --- Singleton Instance Holder ---
-let dbInstance: Database.Database | null = null;
+let db: Database.Database | null = null;
 let dbProxyInstance: Database.Database | null = null;
 let isInitialized = false;
 
 // --- Initialization Function ---
 function initializeDatabase(): Database.Database {
-  if (dbInstance && dbProxyInstance && isInitialized) {
+  if (db && dbProxyInstance && isInitialized) {
     // Return the existing proxied instance if already initialized
     return dbProxyInstance;
   }
@@ -35,22 +35,22 @@ function initializeDatabase(): Database.Database {
   try {
     // Determine if we should use memory or file
     if (isBuildPhase || !fs.existsSync(process.cwd())) {
-      dbInstance = new Database(':memory:');
+      db = new Database(':memory:');
       console.log('[DB] Using in-memory database for build phase');
     } else {
       if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
         console.log(`[DB] Created database directory at ${DB_DIR}`);
       }
-      dbInstance = new Database(DB_PATH);
+      db = new Database(DB_PATH);
       console.log(`[DB] Connected to database at ${DB_PATH}`);
     }
 
-    dbInstance.pragma('foreign_keys = ON');
+    db.pragma('foreign_keys = ON');
     console.log('[DB] Enabled foreign key constraints');
 
     console.log('[DB] Initializing/verifying database schema...');
-    dbInstance.exec(`
+    db.exec(`
       CREATE TABLE IF NOT EXISTS generated_content (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         language TEXT NOT NULL,
@@ -102,31 +102,29 @@ function initializeDatabase(): Database.Database {
 
     // --- Column Migration/Cleanup (Only run once per instance) ---
     // Add user_id to usage_stats if it doesn't exist
-    const usageStatsColumns = dbInstance
-      .prepare('PRAGMA table_info(usage_stats)')
-      .all() as ColumnInfo[];
+    const usageStatsColumns = db.prepare('PRAGMA table_info(usage_stats)').all() as ColumnInfo[];
     if (!usageStatsColumns.some((column) => column.name === 'user_id')) {
       console.log('[DB] Adding user_id column to usage_stats table');
-      dbInstance.exec(
+      db.exec(
         `ALTER TABLE usage_stats ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`
       );
       console.log('[DB] Column user_id added successfully to usage_stats');
     }
 
     // Add question_language to generated_content if it doesn't exist
-    const generatedContentColumns = dbInstance
+    const generatedContentColumns = db
       .prepare('PRAGMA table_info(generated_content)')
       .all() as ColumnInfo[];
     if (!generatedContentColumns.some((column) => column.name === 'question_language')) {
       console.log('[DB] Adding question_language column to generated_content table');
-      dbInstance.exec(`ALTER TABLE generated_content ADD COLUMN question_language TEXT`);
+      db.exec(`ALTER TABLE generated_content ADD COLUMN question_language TEXT`);
       console.log('[DB] Column question_language added successfully to generated_content');
     }
 
     // Add seed_value to generated_content if it doesn't exist
     if (!generatedContentColumns.some((column) => column.name === 'seed_value')) {
       console.log('[DB] Adding seed_value column to generated_content table');
-      dbInstance.exec(`ALTER TABLE generated_content ADD COLUMN seed_value INTEGER`);
+      db.exec(`ALTER TABLE generated_content ADD COLUMN seed_value INTEGER`);
       console.log('[DB] Column seed_value added successfully to generated_content');
     }
 
@@ -134,18 +132,18 @@ function initializeDatabase(): Database.Database {
     if (!generatedContentColumns.some((column) => column.name === 'user_id')) {
       console.log('[DB] Adding user_id column to generated_content table');
       // Add the column; FK constraint is not added here due to potential SQLite limitations with ALTER TABLE.
-      dbInstance.exec(`ALTER TABLE generated_content ADD COLUMN user_id INTEGER`);
+      db.exec(`ALTER TABLE generated_content ADD COLUMN user_id INTEGER`);
       console.log('[DB] Column user_id added successfully to generated_content');
     }
 
     // Check and remove old columns from 'users' table if they exist (requires SQLite 3.35.0+)
-    const userColumns = dbInstance.prepare('PRAGMA table_info(users)').all() as ColumnInfo[];
+    const userColumns = db.prepare('PRAGMA table_info(users)').all() as ColumnInfo[];
     const hasOldLevelColumn = userColumns.some((col) => col.name === 'current_cefr_level');
     const hasOldStreakColumn = userColumns.some((col) => col.name === 'correct_streak');
     if (hasOldLevelColumn) {
       console.log('[DB] Attempting to drop old current_cefr_level column from users table');
       try {
-        dbInstance.exec('ALTER TABLE users DROP COLUMN current_cefr_level');
+        db.exec('ALTER TABLE users DROP COLUMN current_cefr_level');
       } catch (e) {
         console.warn('[DB] Could not drop current_cefr_level:', e);
       }
@@ -153,16 +151,26 @@ function initializeDatabase(): Database.Database {
     if (hasOldStreakColumn) {
       console.log('[DB] Attempting to drop old correct_streak column from users table');
       try {
-        dbInstance.exec('ALTER TABLE users DROP COLUMN correct_streak');
+        db.exec('ALTER TABLE users DROP COLUMN correct_streak');
       } catch (e) {
         console.warn('[DB] Could not drop correct_streak:', e);
       }
     }
 
+    // Apply migrations or schema changes if necessary
+    try {
+      db.exec(`ALTER TABLE user_progress DROP COLUMN last_quiz_id;`);
+      console.log('[DB] Removed old last_quiz_id column from user_progress');
+    } catch (e) {
+      // Ignore error if column doesn't exist or other issues
+      console.warn('[DB] Could not remove old last_quiz_id column:', e);
+    }
+    // ... add other migrations here ...
+
     console.log('[DB] Schema initialization/verification complete');
 
     // --- Create Proxy for Logging (Only once) ---
-    dbProxyInstance = new Proxy(dbInstance, {
+    dbProxyInstance = new Proxy(db, {
       get: (target, prop) => {
         if (prop === 'prepare') {
           return (sql: string) => {
@@ -206,9 +214,9 @@ function initializeDatabase(): Database.Database {
     // Fallback to in-memory DB if initialization fails in production (outside build)
     if (process.env.NODE_ENV === 'production' && !isBuildPhase) {
       console.warn('[DB] CRITICAL: Falling back to in-memory database due to error!');
-      dbInstance = new Database(':memory:');
+      db = new Database(':memory:');
       // Re-attempt minimal setup for in-memory fallback?
-      dbProxyInstance = dbInstance; // Use non-proxied instance for fallback
+      dbProxyInstance = db; // Use non-proxied instance for fallback
       isInitialized = true; // Mark as initialized to prevent loops
       return dbProxyInstance;
     }
@@ -219,5 +227,5 @@ function initializeDatabase(): Database.Database {
 
 // --- Export Singleton Instance ---
 // Initialize on first import and export the instance.
-const db = initializeDatabase();
-export default db;
+const initializedDbInstance = initializeDatabase();
+export default initializedDbInstance;
