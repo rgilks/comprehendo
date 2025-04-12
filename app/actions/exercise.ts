@@ -73,6 +73,14 @@ class AIResponseProcessingError extends Error {
   }
 }
 
+// Helper function to ensure caught value is an Error object
+function ensureError(error: unknown, defaultMessage: string = 'An unknown error occurred'): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error(`${defaultMessage}: ${String(error)}`);
+}
+
 /**
  * Check if the user has exceeded rate limits
  */
@@ -249,7 +257,7 @@ export const saveExerciseToCache = async (
 };
 
 /**
- * Call the OpenAI API to generate exercise content
+ * Call the OpenAI API
  */
 async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling OpenAI API...');
@@ -270,35 +278,14 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
     console.log('[API] Received response from OpenAI.');
     return result;
   } catch (error: unknown) {
-    console.error('[API] OpenAI API error:', error);
-    let responseData: unknown;
-    let rawResponse: unknown;
-
-    if (error instanceof Error && 'response' in error) {
-      const errorWithResponse = error as { response?: unknown }; // Type assertion after check
-      rawResponse = errorWithResponse.response;
-      if (rawResponse && typeof rawResponse === 'object' && 'data' in rawResponse) {
-        responseData = (rawResponse as { data?: unknown }).data;
-      }
-    }
-
-    if (responseData !== undefined) {
-      console.error('[API] OpenAI Error Response Data:', responseData);
-    } else if (rawResponse !== undefined) {
-      console.error('[API] OpenAI Error Response (raw):', rawResponse);
-    }
-
-    // Safely get error message
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    // Assign error safely
-    const processedError = new Error(`Failed to generate content using OpenAI: ${errorMessage}`);
-    console.error('[API] OpenAI API error:', processedError);
-    throw processedError;
+    console.error('[API] OpenAI API raw error:', error); // Log raw error first
+    // Throw a guaranteed Error object
+    throw ensureError(error, 'Failed to generate content using OpenAI');
   }
 }
 
 /**
- * Call the Google AI API to generate exercise content
+ * Call the Google AI API
  */
 async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling Google AI API...');
@@ -324,37 +311,57 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     console.log('[API] Received response from Google AI.');
     return text;
   } catch (error: unknown) {
-    // Safely get error message
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    // Assign error safely
-    const processedError = new Error(`Failed to generate content using Google AI: ${errorMessage}`);
-    console.error('[API] Google AI API error:', processedError);
-    throw processedError;
+    console.error('[API] Google AI API raw error:', error); // Log raw error first
+    // Throw a guaranteed Error object
+    throw ensureError(error, 'Failed to generate content using Google AI');
   }
 }
 
 /**
- * Main server action to generate exercise response
+ * Main server action
  */
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
 ): Promise<GenerateExerciseResponsePayload> => {
+  // Destructure params
   const { passageLanguage, questionLanguage, cefrLevel: level } = params;
-  const headerList = await headers(); // Await the headers
+
+  // Ensure param types are explicitly strings before use (belt and suspenders)
+  const passageLanguageStr = String(passageLanguage);
+  const questionLanguageStr = String(questionLanguage);
+  const levelStr = String(level);
+
+  const headerList = await headers();
   const ip = headerList.get('x-forwarded-for') || 'unknown';
   const session = await getServerSession();
   const userId = session?.user?.dbId || null;
 
-  // Ensure all prompt variables are strings
-  const topic: string = getRandomTopicForLevel(level as CEFRLevel);
-  const grammarGuidance: string = getGrammarGuidance(level as CEFRLevel);
-  const vocabularyGuidance: string = getVocabularyGuidance(level as CEFRLevel);
-  const passageLangName: string = LANGUAGES[passageLanguage as Language]?.name || passageLanguage;
+  // Validate CEFR level before using it as an enum key
+  const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  if (!validCefrLevels.includes(levelStr as CEFRLevel)) {
+    console.error(`[API] Invalid CEFR level received: ${levelStr}`);
+    return { result: '', quizId: -1, error: `Invalid CEFR level: ${levelStr}` };
+  }
+  const cefrLevelTyped = levelStr as CEFRLevel;
+
+  // Let TS infer topic type from if/else
+  const topicResult = getRandomTopicForLevel(cefrLevelTyped);
+  let topic; // Let TS infer the type
+  if (typeof topicResult === 'string') {
+    topic = topicResult;
+  } else {
+    topic = String(topicResult);
+  }
+  // topic is now inferred as string
+
+  const grammarGuidance: string = getGrammarGuidance(cefrLevelTyped);
+  const vocabularyGuidance: string = getVocabularyGuidance(cefrLevelTyped);
+  const passageLangName: string = LANGUAGES[passageLanguageStr as Language] ?? passageLanguageStr;
   const questionLangName: string =
-    LANGUAGES[questionLanguage as Language]?.name || questionLanguage;
+    LANGUAGES[questionLanguageStr as Language] ?? questionLanguageStr;
 
   console.log(
-    `[API] Received request: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, ip=${ip}, userId=${userId}`
+    `[API] Received request: lang=${passageLanguageStr}, qLang=${questionLanguageStr}, level=${levelStr}, ip=${ip}, userId=${userId}`
   );
 
   // Rate Limiting
@@ -381,7 +388,6 @@ export const generateExerciseResponse = async (
       `[API] Cache hit for lang=${passageLanguage}, level=${level}, seed=${seedValue}. Cache ID: ${cachedExercise.id}`
     );
     try {
-      // Validate cached content immediately
       console.log(`[API Perf] Cache Validation Start: ${Date.now()}`);
       const parsedCachedContent = JSON.parse(cachedExercise.content);
       const validatedCachedData = fullQuizDataSchema.safeParse(parsedCachedContent);
@@ -418,53 +424,52 @@ export const generateExerciseResponse = async (
   // --- Generation ---
   let aiResponseContent: string | undefined;
   let usageData: { promptTokens: number; completionTokens: number } | undefined;
-  let validatedAiData: z.infer<typeof fullQuizDataSchema> | undefined; // Variable to hold validated data
+  let validatedAiData: z.infer<typeof fullQuizDataSchema> | undefined;
 
   try {
     const activeModel = getActiveModel();
     console.log(`[API] Using AI model: ${activeModel.displayName}`);
 
-    // topic, grammarGuidance, vocabularyGuidance already ensured to be strings
+    // Use template literal for prompt, keeping explicit String() casts
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    const prompt = `Generate a reading comprehension exercise based on the following parameters:
+- Topic: ${topic}
+- Passage Language: ${passageLangName} (${passageLanguageStr})
+- Question Language: ${questionLangName} (${questionLanguageStr})
+- CEFR Level: ${levelStr}
+- Grammar Guidance: ${grammarGuidance}
+- Vocabulary Guidance: ${vocabularyGuidance}
 
-    const prompt = `
-      Generate a reading comprehension exercise based on the following parameters:
-      - Topic: ${topic}
-      - Passage Language: ${passageLangName} (${passageLanguage})
-      - Question Language: ${questionLangName} (${questionLanguage})
-      - CEFR Level: ${level}
-      - Grammar Guidance: ${grammarGuidance}
-      - Vocabulary Guidance: ${vocabularyGuidance}
+Instructions:
+1. Create a short paragraph (3-6 sentences) in ${passageLanguageStr} suitable for a ${levelStr} learner, focusing on the topic "${topic}".
+2. Write one multiple-choice question in ${questionLanguageStr} about the main idea or a specific detail of the paragraph.
+3. Provide four answer options (A, B, C, D) in ${questionLanguageStr}. Only one option should be correct. The options should be plausible but clearly distinguishable based on the paragraph.
+4. Identify the correct answer (A, B, C, or D).
+5. Provide a brief explanation (in ${questionLanguageStr}) for why each option is correct or incorrect.
+6. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguageStr}) that provides the evidence for the correct answer ("relevantText").
 
-      Instructions:
-      1. Create a short paragraph (3-6 sentences) in ${passageLanguage} suitable for a ${level} learner, focusing on the topic "${topic}".
-      2. Write one multiple-choice question in ${questionLanguage} about the main idea or a specific detail of the paragraph.
-      3. Provide four answer options (A, B, C, D) in ${questionLanguage}. Only one option should be correct. The options should be plausible but clearly distinguishable based on the paragraph.
-      4. Identify the correct answer (A, B, C, or D).
-      5. Provide a brief explanation (in ${questionLanguage}) for why each option is correct or incorrect.
-      6. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguage}) that provides the evidence for the correct answer ("relevantText").
+Output Format: Respond ONLY with a valid JSON object containing the following keys:
+- "paragraph": (string) The generated paragraph in ${passageLanguageStr}.
+- "topic": (string) The topic used: "${topic}".
+- "question": (string) The multiple-choice question in ${questionLanguageStr}.
+- "options": (object) An object with keys "A", "B", "C", "D", where each value is an answer option string in ${questionLanguageStr}.
+- "correctAnswer": (string) The key ("A", "B", "C", or "D") of the correct answer.
+- "explanations": (object) An object with keys "A", "B", "C", "D", where each value is the explanation string in ${questionLanguageStr} for that option.
+- "relevantText": (string) The sentence or phrase from the paragraph in ${passageLanguageStr} that supports the correct answer.
 
-      Output Format: Respond ONLY with a valid JSON object containing the following keys:
-      - "paragraph": (string) The generated paragraph in ${passageLanguage}.
-      - "topic": (string) The topic used: "${topic}".
-      - "question": (string) The multiple-choice question in ${questionLanguage}.
-      - "options": (object) An object with keys "A", "B", "C", "D", where each value is an answer option string in ${questionLanguage}.
-      - "correctAnswer": (string) The key ("A", "B", "C", or "D") of the correct answer.
-      - "explanations": (object) An object with keys "A", "B", "C", "D", where each value is the explanation string in ${questionLanguage} for that option.
-      - "relevantText": (string) The sentence or phrase from the paragraph in ${passageLanguage} that supports the correct answer.
+Example JSON structure:
+{
+  "paragraph": "...",
+  "topic": "...",
+  "question": "...",
+  "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
+  "correctAnswer": "B",
+  "explanations": { "A": "...", "B": "...", "C": "...", "D": "..." },
+  "relevantText": "..."
+}
 
-      Example JSON structure:
-      {
-        "paragraph": "...",
-        "topic": "...",
-        "question": "...",
-        "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-        "correctAnswer": "B",
-        "explanations": { "A": "...", "B": "...", "C": "...", "D": "..." },
-        "relevantText": "..."
-      }
-
-      Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
-      `;
+Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
+`;
 
     console.log(`[API Perf] AI Call Start: ${Date.now()}`);
     if (activeModel.provider === 'openai') {
@@ -474,6 +479,7 @@ export const generateExerciseResponse = async (
       aiResponseContent = await callGoogleAI(prompt, activeModel);
       // TODO: Extract usage data if Google AI provides it
     } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Unsupported model provider: ${activeModel.provider}`);
     }
     console.log(`[API Perf] AI Call End: ${Date.now()}`);
@@ -484,7 +490,7 @@ export const generateExerciseResponse = async (
 
     // --- Immediate Validation of AI Response ---
     console.log(`[API Perf] AI Response Validation Start: ${Date.now()}`);
-    let parsedAiContent: unknown; // Use unknown instead of any
+    let parsedAiContent: unknown;
     try {
       parsedAiContent = JSON.parse(aiResponseContent);
     } catch (parseError: unknown) {
@@ -509,20 +515,18 @@ export const generateExerciseResponse = async (
         `AI response failed validation. Errors: ${JSON.stringify(validationResult.error.format())}`
       );
     }
-    validatedAiData = validationResult.data; // Store validated data
+    validatedAiData = validationResult.data;
     console.log(`[API Perf] AI Response Validation End: ${Date.now()}`);
     // --- End Immediate Validation ---
 
     console.log(`[API Perf] Cache Save Start: ${Date.now()}`);
-    // Save the original, validated JSON string to cache
-    // Ensure userId is passed correctly (type number | null)
-    const currentUserId = userId; // Assign to a new const to help type inference if needed
+    const currentUserId = userId;
     const quizId = await saveExerciseToCache(
       passageLanguage,
       questionLanguage,
       level,
       seedValue,
-      aiResponseContent, // Save the original string
+      aiResponseContent,
       currentUserId
     );
     console.log(`[API Perf] Cache Save End: ${Date.now()}`);
@@ -548,24 +552,18 @@ export const generateExerciseResponse = async (
       usage: usageData,
     };
   } catch (error: unknown) {
-    // Safely assign and log error
-    let finalError: Error;
-    if (error instanceof AIResponseProcessingError) {
-      console.error('[API] AI Processing Error:', error.message);
-      finalError = error;
-    } else if (error instanceof Error) {
-      console.error('[API] Error generating exercise:', error);
-      finalError = error;
-    } else {
-      const unknownErrorMessage = 'An unknown error occurred during exercise generation.';
-      console.error(`[API] ${unknownErrorMessage}:`, error);
-      finalError = new Error(unknownErrorMessage);
-    }
+    // Explicitly type finalError and errorMessage
+    const finalError: Error = ensureError(error, 'Error generating exercise');
+    const errorMessage: string = finalError.message;
+
+    // Log the specific error message and the error object
+    console.error(`[API] Error generating exercise: ${errorMessage}`, finalError);
 
     return {
       result: '',
       quizId: -1,
-      error: finalError.message, // Use the message from the guaranteed Error object
+      // Return the guaranteed string message
+      error: errorMessage,
     };
   }
 };

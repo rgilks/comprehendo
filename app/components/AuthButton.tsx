@@ -8,22 +8,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import AnimateTransition from './AnimateTransition';
 
-interface CustomSession extends Session {
-  user?: {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    isAdmin?: boolean | null;
-  };
-}
-
 interface AuthButtonProps {
   variant?: 'full' | 'icon-only';
 }
 
 const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
   const { data: session, status } = useSession() as {
-    data: CustomSession | null;
+    data: Session | null;
     status: 'loading' | 'authenticated' | 'unauthenticated';
   };
   const [isMounted, setIsMounted] = useState(false);

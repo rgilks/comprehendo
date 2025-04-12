@@ -169,7 +169,6 @@ export const authOptions: NextAuthOptions = {
         const rawAdminEmails = validatedAuthEnv?.ADMIN_EMAILS;
         console.log(`[AUTH JWT Callback] Raw ADMIN_EMAILS env var: '${rawAdminEmails || ''}'`);
 
-        // Process ADMIN_EMAILS safely
         let adminEmails: string[] = [];
         if (typeof rawAdminEmails === 'string' && rawAdminEmails.length > 0) {
           adminEmails = rawAdminEmails
@@ -199,21 +198,26 @@ export const authOptions: NextAuthOptions = {
         try {
           const userRecord = db
             .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
-            .get(token.sub, token.provider) as { id: number } | undefined;
+            .get(token.sub, token.provider);
 
-          if (userRecord) {
-            (session.user as { dbId?: number }).dbId = userRecord.id;
+          if (
+            userRecord &&
+            typeof userRecord === 'object' &&
+            'id' in userRecord &&
+            typeof userRecord.id === 'number'
+          ) {
+            session.user.dbId = userRecord.id;
           } else {
             console.warn(
-              `[AUTH Session Callback] Could not find user with provider_id=${token.sub} and provider=${token.provider as string} to assign dbId.`
+              `[AUTH Session Callback] Could not find user or userRecord format is incorrect for provider_id=${token.sub} and provider=${token.provider as string}.`
             );
           }
         } catch (error) {
           console.error('[AUTH Session Callback] Error fetching internal user ID:', error);
         }
 
-        const isAdminValue = token.isAdmin as boolean | undefined;
-        (session.user as { isAdmin?: boolean }).isAdmin = isAdminValue;
+        const isAdminValue = token.isAdmin;
+        session.user.isAdmin = isAdminValue;
       } else {
       }
 
