@@ -5,8 +5,11 @@ import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
-import type { PartialQuizData } from '@/app/actions/exercise';
-import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
+import {
+  QuizDataSchema,
+  SubmitAnswerResultSchema,
+  type PartialQuizData,
+} from '@/lib/domain/schemas';
 
 // Define an interface for the session user that includes dbId
 interface SessionUser extends NonNullable<Session['user']> {

@@ -40,18 +40,6 @@ const _exerciseRequestBodySchema = z.object({
 
 export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
 
-// Partial data sent to the client initially
-// Define PartialQuizData based on the imported QuizDataSchema
-// REMOVED FROM HERE - MOVED TO lib/domain/schemas.ts
-// export const PartialQuizDataSchema = QuizDataSchema.pick({
-//   paragraph: true,
-//   question: true,
-//   options: true,
-//   topic: true,
-//   language: true, // Keep language if it's needed by the client initially
-// });
-// export type PartialQuizData = z.infer<typeof PartialQuizDataSchema>;
-
 // Define a custom error for AI response processing issues
 class AIResponseProcessingError extends Error {
   constructor(message: string) {
