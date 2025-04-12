@@ -151,12 +151,6 @@ public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 
-# Sentry Config File
-.sentryclirc
-
-# Sentry Config File
-.env.sentry-build-plugin
-
 # Test reports
 /playwright-report/
 /test-results/
@@ -170,3 +164,10 @@ test-results/
 
 # E2E Auth State (contains sensitive JWTs)
 test/e2e/auth/*.storageState.json
+
+.vscode/
+.DS_Store
+
+# local env files
+.pnp.*
+.yarn/

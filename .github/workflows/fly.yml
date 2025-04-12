@@ -19,7 +19,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Cache Next.js build
         uses: actions/cache@v3
@@ -39,26 +39,10 @@ jobs:
       - name: Build Next.js application
         run: npm run build
 
-      - name: Install Sentry CLI
-        run: curl -sL https://sentry.io/get-cli/ | bash
-
-      - name: Create Sentry release and upload source maps
-        run: |
-          export SENTRY_ORG=rob-gilks
-          export SENTRY_PROJECT=comprehendo
-          export VERSION=`sentry-cli releases propose-version`
-          sentry-cli releases new "$VERSION"
-          sentry-cli releases set-commits "$VERSION" --auto
-          sentry-cli releases files "$VERSION" upload-sourcemaps .next --url-prefix '~/_next'
-          sentry-cli releases finalize "$VERSION"
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
-        run: flyctl deploy --dockerfile Dockerfile --remote-only --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: flyctl deploy --dockerfile Dockerfile --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

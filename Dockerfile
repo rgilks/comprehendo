@@ -15,9 +15,13 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 
-# Add build argument for Sentry token
-ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+# Add build argument for NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# Add build argument for Node version
+ARG NODE_VERSION
+ENV NODE_VERSION=$NODE_VERSION
 
 COPY --from=deps /app/node_modules ./node_modules
 # Copy everything instead of individual directories

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && npm run sentry:sourcemaps",
+    "build": "next build",
     "preview-build": "NEXT_PREVIEW_BUILD=true next build",
     "start": "next start",
     "verify": "prettier --check . && next lint --no-cache",
@@ -15,7 +15,6 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:quick": "jest --bail --findRelatedTests --passWithNoTests",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org rob-gilks --project comprehendo ./.next",
     "nuke": "rm -rf node_modules package-lock.json .next .next-validation",
     "prepare": "husky && husky install",
     "test:e2e": "npx playwright test --reporter=list"
@@ -23,7 +22,6 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
     "@heroicons/react": "^2.2.0",
-    "@sentry/nextjs": "^9.11.0",
     "better-sqlite3": "^11.9.1",
     "i18next": "^24.2.3",
     "i18next-resources-to-backend": "^1.2.1",
@@ -43,7 +41,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",
-    "@sentry/cli": "^2.30.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/better-sqlite3": "^7.6.12",

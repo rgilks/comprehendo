@@ -32,6 +32,11 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **PWA Support**: Progressive Web App features for mobile installation
 - **Sentry Integration**: Real-time error tracking and monitoring
 - **Multi-language Interface**: Localized UI for different user languages
+- **AI Interaction**: Chat with OpenAI or Gemini models.
+- **Local Caching**: SQLite database for caching AI responses.
+- **Offline Support**: Progressive Web App (PWA) capabilities.
+- **Testing**: Unit and integration tests with Jest, end-to-end tests with Playwright.
+- **Linting & Formatting**: ESLint and Prettier for code quality.
 
 ## Technology Stack
 
@@ -46,6 +51,11 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **i18next**: Internationalization framework
 - **Sentry**: Error tracking and performance monitoring
 - **zustand**: Lightweight state management
+- **Playwright**: End-to-end testing framework
+- **Jest/React Testing Library**: Unit and integration testing
+- **ESLint/Prettier**: Code linting and formatting
+- **Husky/lint-staged**: Git hooks for code quality checks
+- **Next-PWA**: Progressive Web App features
 
 ## How It Works
 
