@@ -21,8 +21,6 @@ const TranslatableWord = memo(
 
     const { speakText, getTranslation } = useTextGeneratorStore();
 
-    // console.log(`[TranslatableWord] Rendering word: "${word}", isRelevant: ${isRelevant}`);
-
     const shouldTranslate = fromLang !== toLang;
 
     const handleMouseEnter = useCallback(() => {
@@ -63,9 +61,6 @@ const TranslatableWord = memo(
     const showTranslation = isHovered && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
-    // if (isRelevant) {
-    //   console.log(`[TranslatableWord] Adding data-testid for word: "${word}"`);
-    // }
 
     return (
       <span

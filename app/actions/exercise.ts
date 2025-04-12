@@ -9,31 +9,28 @@ import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 
-// Constants
 const MAX_REQUESTS_PER_HOUR = 100;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 
-// Types
 interface RateLimitRow {
   requests: string;
   updated_at: string;
+  id: number;
 }
 
 interface UserRecord {
   id: number;
 }
 
-// Define the structure for a row from the generated_content table
 interface GeneratedContentRow {
   id: number;
   language: string;
   level: string;
   content: string;
-  questions: string; // Assuming questions holds similar data based on context, adjust if needed
+  questions: string;
   created_at: string;
 }
 
-// Zod Schema
 const exerciseRequestBodySchema = z.object({
   passageLanguage: z.string(),
   questionLanguage: z.string(),
@@ -42,7 +39,6 @@ const exerciseRequestBodySchema = z.object({
 
 export type ExerciseRequestParams = z.infer<typeof exerciseRequestBodySchema>;
 
-// Full quiz data schema (used for validation and DB storage)
 const fullQuizDataSchema = z.object({
   paragraph: z.string(),
   question: z.string(),

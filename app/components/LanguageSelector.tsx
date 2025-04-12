@@ -15,7 +15,6 @@ const LanguageSelector = () => {
     setIsOpen(false);
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -46,7 +45,6 @@ const LanguageSelector = () => {
           aria-expanded={isOpen}
         >
           {languages[language]}
-          {/* Basic Chevron Down Icon */}
           <svg
             className={`-mr-1 ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
             xmlns="http://www.w3.org/2000/svg"

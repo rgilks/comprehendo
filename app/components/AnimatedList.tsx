@@ -38,7 +38,3 @@ const AnimatedList = ({
 };
 
 export default AnimatedList;
-
-// Example usage:
-// const items = ['Item 1', 'Item 2', 'Item 3'].map(item => <div className="p-4 bg-gray-800 mb-2 rounded">{item}</div>);
-// <AnimatedList items={items} visible={true} animationType="slide-left" className="space-y-2" />

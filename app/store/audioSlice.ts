@@ -1,9 +1,8 @@
 import type { StateCreator } from 'zustand';
-import { z } from 'zod'; // Import Zod
+import { z } from 'zod';
 import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
-import type { TextGeneratorState } from './textGeneratorStore'; // Import combined state type
+import type { TextGeneratorState } from './textGeneratorStore';
 
-// --- Zod Schema --- START
 const TranslationResponseDataSchema = z.object({
   translatedText: z.string(),
 });
@@ -12,7 +11,6 @@ const TranslationResponseSchema = z.object({
   responseStatus: z.number(),
   responseData: TranslationResponseDataSchema.optional().nullable(),
 });
-// --- Zod Schema --- END
 
 export interface AudioSlice {
   isSpeechSupported: boolean;
@@ -20,9 +18,8 @@ export interface AudioSlice {
   isPaused: boolean;
   volume: number;
   currentWordIndex: number | null;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   passageUtteranceRef: SpeechSynthesisUtterance | null;
-  wordsRef: string[]; // Store words derived from the passage
+  wordsRef: string[];
 
   setVolumeLevel: (volume: number) => void;
   stopPassageSpeech: () => void;
@@ -96,9 +93,9 @@ export const createAudioSlice: StateCreator<
       passageUtteranceRef,
     } = get();
 
-    // Explicitly "use" passageUtteranceRef to satisfy TypeScript compiler
+    // Add dummy usage to satisfy compiler build check
     if (passageUtteranceRef && false) {
-      console.log('This should never run, just using the ref');
+      console.log('Dummy usage of passageUtteranceRef to satisfy build');
     }
 
     if (!isSpeechSupported || !quizData?.paragraph || !generatedPassageLanguage) return;

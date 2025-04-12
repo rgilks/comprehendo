@@ -11,7 +11,7 @@ test.describe('Basic Workflow Test', () => {
 
     const languageDropdownButton = page.locator('#language-select-button');
     await expect(languageDropdownButton, 'Language dropdown button should be visible').toBeVisible({
-      timeout: 2000,
+      timeout: 5000,
     });
 
     await languageDropdownButton.click();

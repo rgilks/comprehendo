@@ -1,17 +1,15 @@
 import type { StateCreator } from 'zustand';
-import { z } from 'zod'; // Import Zod
+import { z } from 'zod';
 import { getProgress } from '@/app/actions/userProgress';
 import { getSession } from 'next-auth/react';
-import type { TextGeneratorState } from './textGeneratorStore'; // Import combined state type
+import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/config/language-guidance';
 
-// --- Zod Schema --- START
 const GetProgressResultSchema = z.object({
   streak: z.number().optional().nullable(),
   currentLevel: z.string().optional().nullable(), // Assuming CEFRLevel is string-based
   error: z.string().optional().nullable(),
 });
-// --- Zod Schema --- END
 
 export interface ProgressSlice {
   isProgressLoading: boolean;

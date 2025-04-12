@@ -27,7 +27,7 @@ const getAllTableNames = (): string[] => {
   try {
     const tables = db
       .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
-      .all() as TableNameResult[]; // Use specific type
+      .all() as TableNameResult[];
     return tables.map((table) => table.name);
   } catch (error) {
     console.error('[Admin Actions] Error fetching table names:', error);
@@ -57,7 +57,7 @@ export const getTableNames = async (): Promise<{ error?: string; data?: string[]
 export const getTableData = async (
   tableName: string,
   page: number = 1,
-  limit: number = 10 // Default to 10 rows per page
+  limit: number = 10
 ): Promise<{ error?: string; data?: PaginatedTableData }> => {
   if (!(await isAdmin())) {
     return { error: 'Unauthorized' };
@@ -86,7 +86,7 @@ export const getTableData = async (
     const result = db.transaction(() => {
       const countResult = db
         .prepare(`SELECT COUNT(*) as totalRows FROM "${tableName}"`)
-        .get() as CountResult; // Use specific type
+        .get() as CountResult;
       const totalRows = countResult.totalRows;
 
       const query = `SELECT * FROM "${tableName}" ${orderByClause} LIMIT ? OFFSET ?`;

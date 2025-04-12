@@ -10,9 +10,7 @@ const Generator = () => {
   const { loading, quizData, isAnswered, generateText } = useTextGeneratorStore();
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
-  // Handle text generation with scroll
   const generateTextHandler = useCallback(() => {
-    // First scroll to the content area
     if (contentContainerRef.current) {
       contentContainerRef.current.scrollIntoView({
         behavior: 'smooth',
@@ -20,11 +18,9 @@ const Generator = () => {
       });
     }
 
-    // Then generate the text
     void generateText();
   }, [generateText]);
 
-  // Determine if generator button should be visible
   const showGeneratorButton = (isAnswered || !quizData) && !loading;
 
   return (

@@ -62,12 +62,10 @@ const TextGeneratorContainer = () => {
         <LoginPrompt />
         <ErrorDisplay />
 
-        {/* Quiz skeleton with animation */}
         <AnimateTransition show={loading && !quizData} type="fade-in" duration={400} unmountOnExit>
           <QuizSkeleton />
         </AnimateTransition>
 
-        {/* Content container with animation */}
         <AnimateTransition show={isContentVisible} type="fade-in" duration={400} unmountOnExit>
           {quizData && !loading && (
             <div
@@ -80,12 +78,10 @@ const TextGeneratorContainer = () => {
           )}
         </AnimateTransition>
 
-        {/* Progress tracker with animation */}
         <AnimateTransition show={showProgressTracker} type="fade-in" duration={400} unmountOnExit>
           <ProgressTracker />
         </AnimateTransition>
 
-        {/* Generator appears with animation */}
         <Generator />
       </div>
     </div>

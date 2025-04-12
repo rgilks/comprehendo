@@ -17,7 +17,6 @@ interface CustomSession extends Session {
   };
 }
 
-// Define props interface
 interface AuthButtonProps {
   variant?: 'full' | 'icon-only';
 }

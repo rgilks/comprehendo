@@ -1,4 +1,3 @@
-// Type definition for supported language codes
 export type Language =
   | 'en'
   | 'es'
@@ -13,7 +12,6 @@ export type Language =
   | 'hi'
   | 'he';
 
-// Mapping from language code to display name
 export const LANGUAGES: Record<Language, string> = {
   en: 'English',
   es: 'Español',
@@ -29,7 +27,6 @@ export const LANGUAGES: Record<Language, string> = {
   he: 'עברית',
 };
 
-// Mapping from language code to speech synthesis code (BCP 47)
 export const SPEECH_LANGUAGES: Record<Language, string> = {
   en: 'en-US',
   es: 'es-ES',
@@ -45,7 +42,7 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
   he: 'he-IL',
 };
 
-export const RTL_LANGUAGES: Language[] = ['he']; // Added Hebrew as RTL language
+export const RTL_LANGUAGES: Language[] = ['he'];
 
 export const getTextDirection = (language: Language): 'ltr' | 'rtl' => {
   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';

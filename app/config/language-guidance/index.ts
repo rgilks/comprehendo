@@ -1,7 +1,6 @@
 export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export const vocabularyGuidance: Record<CEFRLevel, string> = {
-  // A1 vocabulary guidance (beginner)
   A1: `
     Use only the most basic everyday vocabulary including:
     - Simple nouns: house, school, family, food, water, day, time, person, year, way, thing
@@ -13,7 +12,6 @@ export const vocabularyGuidance: Record<CEFRLevel, string> = {
     Use sentences with simple structures. Avoid phrasal verbs, idioms, or sophisticated vocabulary.
   `,
 
-  // A2 vocabulary guidance (elementary)
   A2: `
     Build on A1 vocabulary, including:
     - Expanded everyday vocabulary: work, life, children, money, information, world, place, problem, hand, part, student
@@ -25,21 +23,16 @@ export const vocabularyGuidance: Record<CEFRLevel, string> = {
     Use mostly simple and compound sentences. Limit complex sentences. Some basic phrasal verbs are acceptable.
   `,
 
-  // B1 vocabulary guidance (intermediate)
   B1: `Use intermediate vocabulary with some topic-specific terms. Simple phrasal verbs and some idioms are acceptable.`,
 
-  // B2 vocabulary guidance (upper intermediate)
   B2: `Use varied vocabulary including abstract concepts and topic-specific terminology. Phrasal verbs and common idioms are fine.`,
 
-  // C1 vocabulary guidance (advanced)
   C1: `Use sophisticated vocabulary including nuanced expressions and academic terminology. Varied phrasal verbs and idioms are appropriate.`,
 
-  // C2 vocabulary guidance (proficiency)
   C2: `Use precise, nuanced vocabulary including specialized terminology. No restrictions on vocabulary complexity.`,
 };
 
 export const grammarGuidance: Record<CEFRLevel, string> = {
-  // A1 grammar guidance (beginner)
   A1: `
     Use only the most basic grammatical structures:
     - Simple present tense for facts, habits and routines ("I live in London")
@@ -54,7 +47,6 @@ export const grammarGuidance: Record<CEFRLevel, string> = {
     Keep sentences short (5-10 words) and direct with SVO word order.
   `,
 
-  // A2 grammar guidance (elementary)
   A2: `
     Build on A1 structures, adding:
     - Simple past tense for completed actions ("I visited Paris last year")
@@ -69,16 +61,12 @@ export const grammarGuidance: Record<CEFRLevel, string> = {
     Sentences can be longer (8-12 words) with occasional compound sentences using basic connectors.
   `,
 
-  // B1 grammar guidance (intermediate)
   B1: `Use a mix of simple and more complex sentences with varied tenses. Can use present perfect, past continuous, and second conditional structures.`,
 
-  // B2 grammar guidance (upper intermediate)
   B2: `Use complex sentence structures with subordinate clauses. Include varied tenses, passive voice, reported speech, and all conditional forms.`,
 
-  // C1 grammar guidance (advanced)
   C1: `Use sophisticated grammar including complex conditionals, subtle tense distinctions, cleft sentences, inversion, and varied emphasis structures.`,
 
-  // C2 grammar guidance (proficiency)
   C2: `Use all complex grammatical structures with full accuracy and subtlety, including rare constructions and sophisticated rhetorical devices.`,
 };
 

@@ -8,7 +8,6 @@ type CEFRTopics = {
 };
 
 export const topicsByLevel: CEFRTopics = {
-  // Basic/Elementary topics (A1-A2)
   A1: [
     {
       name: 'Daily Life',
@@ -73,7 +72,6 @@ export const topicsByLevel: CEFRTopics = {
       ],
     },
   ],
-  // Intermediate topics (B1-B2)
   B1: [
     {
       name: 'Life Experiences',
@@ -138,7 +136,6 @@ export const topicsByLevel: CEFRTopics = {
       ],
     },
   ],
-  // Advanced topics (C1-C2)
   C1: [
     {
       name: 'Complex Issues',
@@ -206,14 +203,12 @@ export const topicsByLevel: CEFRTopics = {
 };
 
 export const getTopicsForLevel = (level: string): string[] => {
-  // Get topics for the specific level
   const levelTopics = topicsByLevel[level];
 
   if (!levelTopics) {
     return [];
   }
 
-  // Flatten the topics from all categories at this level
   return levelTopics.flatMap((category) => category.topics);
 };
 
@@ -221,7 +216,7 @@ export const getRandomTopicForLevel = (level: string): string => {
   const topics = getTopicsForLevel(level);
 
   if (topics.length === 0) {
-    return 'General knowledge'; // Fallback topic
+    return 'General knowledge';
   }
 
   const randomIndex = Math.floor(Math.random() * topics.length);

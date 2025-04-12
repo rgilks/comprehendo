@@ -139,7 +139,6 @@ export const createQuizSlice: StateCreator<
   },
 
   resetQuizWithNewData: (newQuizData: QuizData, quizId: number) => {
-    // console.log('[QuizSlice] resetQuizWithNewData called with:', newQuizData, ' ID:', quizId);
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
@@ -244,7 +243,7 @@ export const createQuizSlice: StateCreator<
       if (isPrefetch) {
         get()._setNextQuizAvailable({
           quizData: quizData,
-          quizId: response.quizId, // Use quizId from the payload
+          quizId: response.quizId,
         });
         console.log('Next quiz pre-fetched.');
       } else {

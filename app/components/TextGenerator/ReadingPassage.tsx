@@ -22,19 +22,16 @@ const ReadingPassage = () => {
     generatedPassageLanguage,
   } = useTextGeneratorStore();
 
-  // console.log('[ReadingPassage] Rendering. relevantTextRange:', relevantTextRange);
-
-  // Use the user's selected language (context language) for question/answer display
   const actualQuestionLanguage = questionLanguage;
 
   const renderParagraphWithWordHover = useCallback(
     (paragraph: string, lang: Language) => {
-      const words = paragraph.split(/(\s+)/); // Split by spaces, keeping spaces
+      const words = paragraph.split(/(\s+)/);
       let currentPos = 0;
       return words.map((segment, index) => {
         const segmentStart = currentPos;
         const segmentEnd = currentPos + segment.length;
-        currentPos = segmentEnd; // Update position for next segment
+        currentPos = segmentEnd;
 
         if (/^\s+$/.test(segment)) {
           return <span key={index}>{segment}</span>;
