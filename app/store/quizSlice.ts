@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
-import { z } from 'zod'; // Import Zod
+// Removed unused Zod import
+// import { z } from 'zod';
 // import type { PartialQuizData } from '@/app/actions/exercise';
 import { submitAnswer } from '@/app/actions/userProgress';
 import { generateExerciseResponse } from '@/app/actions/exercise';
@@ -7,53 +8,21 @@ import type { TextGeneratorState } from './textGeneratorStore';
 import { getSession } from 'next-auth/react';
 import type { CEFRLevel } from '@/config/language-guidance'; // Keep CEFRLevel if used elsewhere in file
 import {} from '@/contexts/LanguageContext'; // Removed unused Language type and LANGUAGES map
+import {
+  QuizData,
+  QuizDataSchema,
+  GenerateExerciseResultSchema,
+  SubmitAnswerResultSchema,
+} from '@/lib/domain/schemas'; // <-- Import centralized types/schemas
 
 // Define QuizData type used within the store
 // type QuizData = PartialQuizData; // Now imported
 
 // --- Zod Schemas --- START
-const QuizDataSchema = z.object({
-  id: z.number().optional().nullable(),
-  language: z.string().optional().nullable(), // Make language optional
-  paragraph: z.string(),
-  topic: z.string().optional().nullable(),
-  // Add other expected fields from PartialQuizData if necessary
-  question: z.string(),
-  options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-});
-
-// Define and Export QuizData type based on local schema
-export type QuizData = z.infer<typeof QuizDataSchema>;
-
-const GenerateExerciseResultSchema = z.object({
-  result: z.string(), // Expect stringified JSON
-  quizId: z.number(),
-  error: z.string().optional().nullable(),
-  cached: z.boolean().optional().nullable(), // Add other fields from payload if needed
-  // usage: z.object({ promptTokens: z.number(), completionTokens: z.number() }).optional().nullable(),
-});
-
-const SubmitAnswerResultSchema = z.object({
-  currentLevel: z.string().optional().nullable(),
-  currentStreak: z.number().optional().nullable(),
-  leveledUp: z.boolean().optional().nullable(),
-  error: z.string().optional().nullable(),
-  feedback: z
-    .object({
-      isCorrect: z.boolean(),
-      correctAnswer: z.string(),
-      explanations: z.object({
-        A: z.string(),
-        B: z.string(),
-        C: z.string(),
-        D: z.string(),
-      }),
-      relevantText: z.string(),
-    })
-    .optional()
-    .nullable(),
-  // Add other potential top-level fields like nextQuiz if needed
-});
+// REMOVED QuizDataSchema definition
+// REMOVED export type QuizData = z.infer<typeof QuizDataSchema>;
+// REMOVED GenerateExerciseResultSchema definition
+// REMOVED SubmitAnswerResultSchema definition
 // --- Zod Schemas --- END
 
 // Define the shape of the pre-fetched quiz data

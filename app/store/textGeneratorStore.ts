@@ -3,9 +3,10 @@ import { immer } from 'zustand/middleware/immer';
 
 import { type UISlice, createUISlice } from './uiSlice';
 import { type SettingsSlice, createSettingsSlice } from './settingsSlice';
-import { type QuizSlice, createQuizSlice, type QuizData } from './quizSlice';
+import { type QuizSlice, createQuizSlice } from './quizSlice';
 import { type AudioSlice, createAudioSlice } from './audioSlice';
 import { type ProgressSlice, createProgressSlice } from './progressSlice';
+import { type QuizData } from '@/lib/domain/schemas';
 
 export { type Language } from '@/contexts/LanguageContext';
 export { type CEFRLevel } from '@/config/language-guidance';

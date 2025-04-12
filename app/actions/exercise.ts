@@ -8,6 +8,7 @@ import { getActiveModel, getGoogleAIClient, getOpenAIClient, ModelConfig } from 
 import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
+import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
 
 const MAX_REQUESTS_PER_HOUR = 100;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -39,31 +40,17 @@ const _exerciseRequestBodySchema = z.object({
 
 export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
 
-const fullQuizDataSchema = z.object({
-  paragraph: z.string(),
-  question: z.string(),
-  options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  explanations: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  correctAnswer: z.string(),
-  relevantText: z.string(),
-  topic: z.string(),
-});
-
 // Partial data sent to the client initially
-// Export this type so it can be used in userProgress.ts
-export type PartialQuizData = Pick<
-  z.infer<typeof fullQuizDataSchema>,
-  'paragraph' | 'question' | 'options' | 'topic'
->;
-
-// Response type for generateExerciseResponse
-interface GenerateExerciseResponsePayload {
-  result: string; // JSON string of PartialQuizData
-  quizId: number;
-  error?: string;
-  cached?: boolean;
-  usage?: { promptTokens: number; completionTokens: number };
-}
+// Define PartialQuizData based on the imported QuizDataSchema
+// REMOVED FROM HERE - MOVED TO lib/domain/schemas.ts
+// export const PartialQuizDataSchema = QuizDataSchema.pick({
+//   paragraph: true,
+//   question: true,
+//   options: true,
+//   topic: true,
+//   language: true, // Keep language if it's needed by the client initially
+// });
+// export type PartialQuizData = z.infer<typeof PartialQuizDataSchema>;
 
 // Define a custom error for AI response processing issues
 class AIResponseProcessingError extends Error {
@@ -322,7 +309,14 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
  */
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
-): Promise<GenerateExerciseResponsePayload> => {
+): Promise<GenerateExerciseResult> => {
+  console.log('[API] generateExerciseResponse called with params:', params);
+  const start = Date.now();
+  const headersList = await headers();
+  const ip = headersList.get('x-forwarded-for') || 'unknown';
+  const session = await getServerSession();
+  const userId = session?.user?.dbId || null;
+
   // Destructure params
   const { passageLanguage, questionLanguage, cefrLevel: level } = params;
 
@@ -330,11 +324,6 @@ export const generateExerciseResponse = async (
   const passageLanguageStr = String(passageLanguage);
   const questionLanguageStr = String(questionLanguage);
   const levelStr = String(level);
-
-  const headerList = await headers();
-  const ip = headerList.get('x-forwarded-for') || 'unknown';
-  const session = await getServerSession();
-  const userId = session?.user?.dbId || null;
 
   // Validate CEFR level before using it as an enum key
   const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -391,7 +380,7 @@ export const generateExerciseResponse = async (
       console.log(`[API Perf] Cache Validation Start: ${Date.now()}`);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsedCachedContent = JSON.parse(cachedExercise.content);
-      const validatedCachedData = fullQuizDataSchema.safeParse(parsedCachedContent);
+      const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
 
       if (!validatedCachedData.success) {
         console.error('[API] Invalid data found in cache:', validatedCachedData.error.format());
@@ -424,8 +413,7 @@ export const generateExerciseResponse = async (
 
   // --- Generation ---
   let aiResponseContent: string | undefined;
-  let usageData: { promptTokens: number; completionTokens: number } | undefined;
-  let validatedAiData: z.infer<typeof fullQuizDataSchema> | undefined;
+  let validatedAiData: z.infer<typeof QuizDataSchema> | undefined;
 
   try {
     const activeModel = getActiveModel();
@@ -504,7 +492,7 @@ Ensure the entire output is a single, valid JSON object string without any surro
     }
 
     // safeParse handles unknown input type
-    const validationResult = fullQuizDataSchema.safeParse(parsedAiContent);
+    const validationResult = QuizDataSchema.safeParse(parsedAiContent);
 
     if (!validationResult.success) {
       console.error(
@@ -547,23 +535,25 @@ Ensure the entire output is a single, valid JSON object string without any surro
       topic: validatedAiData.topic,
     };
 
-    return {
+    // Construct the final payload matching GenerateExerciseResult
+    const payload: GenerateExerciseResult = {
       result: JSON.stringify(partialData),
       quizId: quizId,
-      usage: usageData,
+      cached: !!cachedExercise,
     };
-  } catch (error: unknown) {
-    // Explicitly type finalError and errorMessage
-    const finalError: Error = ensureError(error, 'Error generating exercise');
-    const errorMessage: string = finalError.message;
 
-    // Log the specific error message and the error object
-    console.error(`[API] Error generating exercise: ${errorMessage}`, finalError);
+    console.log(`[API Perf] Total generateExerciseResponse time: ${Date.now() - start}ms`);
+    return payload;
+  } catch (error: unknown) {
+    console.error('[API] AI Response Processing Error:', error);
+
+    // Type guard for error message construction
+    const errorMessage =
+      error instanceof Error ? error.message : 'AI model response parsing failed';
 
     return {
-      result: '',
-      quizId: -1,
-      // Return the guaranteed string message
+      result: '', // Return empty result string on error
+      quizId: -1, // Indicate error with a sentinel quizId
       error: errorMessage,
     };
   }

@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
 import type { PartialQuizData } from '@/app/actions/exercise';
+import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
 
 // Define an interface for the session user that includes dbId
 interface SessionUser extends NonNullable<Session['user']> {
@@ -24,17 +25,6 @@ const getProgressSchema = z.object({
   language: z.string().min(2).max(5),
 });
 
-// Schema for quiz data stored in the DB
-const dbQuizDataSchema = z.object({
-  paragraph: z.string(),
-  question: z.string(),
-  options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  explanations: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  correctAnswer: z.string(),
-  relevantText: z.string(),
-  topic: z.string(),
-});
-
 // Updated schema for the submitAnswer action
 const submitAnswerSchema = z.object({
   ans: z.string().length(1).optional(),
@@ -47,23 +37,16 @@ const submitAnswerSchema = z.object({
 export type UpdateProgressParams = z.infer<typeof updateProgressSchema>;
 export type GetProgressParams = z.infer<typeof getProgressSchema>;
 
+// Infer the feedback type from the centralized schema
+type FeedbackType = z.infer<typeof SubmitAnswerResultSchema>['feedback'];
+
 // --- UPDATED ProgressResponse to include feedback AND next quiz--- START
 export interface ProgressResponse {
   currentLevel: string;
   currentStreak: number;
   leveledUp?: boolean;
   error?: string; // Error related to processing the current answer/progress
-  feedback?: {
-    isCorrect: boolean;
-    correctAnswer: string;
-    explanations: {
-      A: string;
-      B: string;
-      C: string;
-      D: string;
-    };
-    relevantText: string;
-  };
+  feedback?: FeedbackType;
   // Add field for the next quiz data or generation error
   nextQuiz?: {
     quizData?: PartialQuizData;
@@ -227,7 +210,7 @@ export const submitAnswer = async (
   }
 
   let isCorrect = false;
-  let feedbackData: ProgressResponse['feedback'] = undefined;
+  let feedbackData: FeedbackType = undefined;
 
   try {
     // --- Fetch Quiz Details ---
@@ -244,12 +227,11 @@ export const submitAnswer = async (
     }
 
     // --- Parse Content and Extract Data ---
-    const parsedContent = dbQuizDataSchema.safeParse(JSON.parse(quizRecord.content));
+    const parsedContent = QuizDataSchema.safeParse(JSON.parse(quizRecord.content));
 
     if (!parsedContent.success) {
       console.error(
-        `[SubmitAnswer] Failed to parse content for quiz ID ${id}:`,
-        parsedContent.error.message
+        `[SubmitAnswer] Failed to parse quiz content (ID: ${id}) using QuizDataSchema: ${JSON.stringify(parsedContent.error.flatten())}`
       );
       return {
         currentLevel: 'A1',
@@ -258,19 +240,40 @@ export const submitAnswer = async (
       };
     }
 
-    // Extract data from the parsed content object
-    const { correctAnswer, explanations, relevantText } = parsedContent.data;
+    const fullQuizData = parsedContent.data;
 
     // --- Check Answer ---
-    isCorrect = !!ans && ans === correctAnswer; // Check if ans exists and matches correctAnswer from JSON
+    if (typeof ans === 'string' && ans in fullQuizData.options) {
+      isCorrect = ans === fullQuizData.correctAnswer;
+      console.log(
+        `[SubmitAnswer] Answer check. User Ans: ${ans}, Correct Ans: ${fullQuizData.correctAnswer}, Result: ${isCorrect}`
+      );
 
-    // --- Populate Feedback Object ---
-    feedbackData = {
-      isCorrect: isCorrect,
-      correctAnswer: correctAnswer,
-      explanations: explanations,
-      relevantText: relevantText,
-    };
+      // Construct feedback object ONLY if all required fields exist
+      if (
+        typeof fullQuizData.correctAnswer === 'string' &&
+        fullQuizData.explanations && // Check if explanations object exists
+        typeof fullQuizData.relevantText === 'string'
+      ) {
+        feedbackData = {
+          isCorrect: isCorrect,
+          correctAnswer: fullQuizData.correctAnswer,
+          explanations: fullQuizData.explanations,
+          relevantText: fullQuizData.relevantText,
+        };
+      } else {
+        console.warn(
+          `[SubmitAnswer] Cannot construct full feedback for Quiz ID ${id} due to missing data (correctAnswer, explanations, or relevantText).`
+        );
+        // Optionally create partial feedback or set feedbackData to undefined/null
+        feedbackData = undefined; // Or handle as needed
+      }
+    } else {
+      // Handle cases where answer is missing or invalid
+      console.warn(`[SubmitAnswer] Invalid or missing answer provided: ${ans}`);
+      // Optionally set an error or default feedback
+      feedbackData = undefined;
+    }
   } catch (error: unknown) {
     console.error(`[SubmitAnswer] Error fetching/processing quiz ${id}:`, error);
     return {
