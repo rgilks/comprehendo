@@ -44,10 +44,15 @@ export const createAudioSlice: StateCreator<
   passageUtteranceRef: null,
   wordsRef: [],
 
-  _setIsSpeechSupported: (supported) => set({ isSpeechSupported: supported }),
+  _setIsSpeechSupported: (supported) =>
+    set((state) => {
+      state.isSpeechSupported = supported;
+    }),
 
   setVolumeLevel: (volume) => {
-    set({ volume });
+    set((state) => {
+      state.volume = volume;
+    });
     const { passageUtteranceRef } = get();
 
     if (passageUtteranceRef) {
@@ -58,7 +63,10 @@ export const createAudioSlice: StateCreator<
       window.speechSynthesis.cancel();
       if (passageUtteranceRef) {
         window.speechSynthesis.speak(passageUtteranceRef);
-        set({ isSpeakingPassage: true, isPaused: false });
+        set((state) => {
+          state.isSpeakingPassage = true;
+          state.isPaused = false;
+        });
       }
     }
   },
@@ -68,12 +76,12 @@ export const createAudioSlice: StateCreator<
     if (isSpeechSupported && typeof window !== 'undefined') {
       window.speechSynthesis.cancel();
     }
-    set({
-      isSpeakingPassage: false,
-      isPaused: false,
-      currentWordIndex: null,
-      passageUtteranceRef: null,
-      wordsRef: [],
+    set((state) => {
+      state.isSpeakingPassage = false;
+      state.isPaused = false;
+      state.currentWordIndex = null;
+      state.passageUtteranceRef = null;
+      state.wordsRef = [];
     });
   },
 
@@ -103,16 +111,22 @@ export const createAudioSlice: StateCreator<
     if (isSpeakingPassage) {
       if (isPaused) {
         window.speechSynthesis.resume();
-        set({ isPaused: false });
+        set((state) => {
+          state.isPaused = false;
+        });
       } else {
         window.speechSynthesis.pause();
-        set({ isPaused: true });
+        set((state) => {
+          state.isPaused = true;
+        });
       }
     } else {
       stopPassageSpeech();
 
       const words = quizData.paragraph.split(/\s+/);
-      set({ wordsRef: words });
+      set((state) => {
+        state.wordsRef = words;
+      });
 
       const utterance = new SpeechSynthesisUtterance(quizData.paragraph);
       utterance.lang = SPEECH_LANGUAGES[generatedPassageLanguage];
@@ -123,33 +137,39 @@ export const createAudioSlice: StateCreator<
           const charIndex = event.charIndex;
           const wordsUpToChar = quizData.paragraph.substring(0, charIndex).split(/\s+/);
           const currentWordIdx = wordsUpToChar.length - 1;
-          set({ currentWordIndex: currentWordIdx });
+          set((state) => {
+            state.currentWordIndex = currentWordIdx;
+          });
         }
       };
 
       utterance.onend = () => {
-        set({
-          isSpeakingPassage: false,
-          isPaused: false,
-          currentWordIndex: null,
-          passageUtteranceRef: null,
-          wordsRef: [],
+        set((state) => {
+          state.isSpeakingPassage = false;
+          state.isPaused = false;
+          state.currentWordIndex = null;
+          state.passageUtteranceRef = null;
+          state.wordsRef = [];
         });
       };
 
       utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
         console.error('Speech synthesis error:', event);
         get().setError('Speech synthesis failed.');
-        set({
-          isSpeakingPassage: false,
-          isPaused: false,
-          currentWordIndex: null,
-          passageUtteranceRef: null,
-          wordsRef: [],
+        set((state) => {
+          state.isSpeakingPassage = false;
+          state.isPaused = false;
+          state.currentWordIndex = null;
+          state.passageUtteranceRef = null;
+          state.wordsRef = [];
         });
       };
 
-      set({ passageUtteranceRef: utterance, isSpeakingPassage: true, isPaused: false });
+      set((state) => {
+        state.passageUtteranceRef = utterance;
+        state.isSpeakingPassage = true;
+        state.isPaused = false;
+      });
       window.speechSynthesis.speak(utterance);
     }
   },

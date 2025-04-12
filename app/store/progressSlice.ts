@@ -27,11 +27,16 @@ export const createProgressSlice: StateCreator<
   userStreak: null,
 
   fetchUserProgress: async () => {
-    set({ isProgressLoading: true });
+    set((state) => {
+      state.isProgressLoading = true;
+    });
     const session = await getSession();
     // Use type assertion that reflects the augmented session user type
     if (!(session?.user as { dbId?: number })?.dbId) {
-      set({ userStreak: null, isProgressLoading: false });
+      set((state) => {
+        state.userStreak = null;
+        state.isProgressLoading = false;
+      });
       return;
     }
 
@@ -64,12 +69,16 @@ export const createProgressSlice: StateCreator<
       }
     } catch (error: unknown) {
       console.error('Error fetching user progress:', String(error));
-      set({ userStreak: null });
+      set((state) => {
+        state.userStreak = null;
+      });
       const errorMessage: string =
         error instanceof Error ? error.message : 'Unknown error fetching progress';
       get().setError(errorMessage);
     } finally {
-      set({ isProgressLoading: false });
+      set((state) => {
+        state.isProgressLoading = false;
+      });
     }
   },
 });

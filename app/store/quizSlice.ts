@@ -109,32 +109,47 @@ export const createQuizSlice: StateCreator<
   feedbackRelevantText: null,
   nextQuizAvailable: null,
 
-  setQuizData: (data) => set({ quizData: data }),
-  setSelectedAnswer: (answer) => set({ selectedAnswer: answer }),
-  setIsAnswered: (answered) => set({ isAnswered: answered }),
-  setRelevantTextRange: (range) => set({ relevantTextRange: range }),
+  setQuizData: (data) =>
+    set((state) => {
+      state.quizData = data;
+    }),
+  setSelectedAnswer: (answer) =>
+    set((state) => {
+      state.selectedAnswer = answer;
+    }),
+  setIsAnswered: (answered) =>
+    set((state) => {
+      state.isAnswered = answered;
+    }),
+  setRelevantTextRange: (range) =>
+    set((state) => {
+      state.relevantTextRange = range;
+    }),
   setFeedback: (correct, correctAnswer, explanations, relevantText) =>
-    set({
-      feedbackIsCorrect: correct,
-      feedbackCorrectAnswer: correctAnswer,
-      feedbackExplanations: explanations,
-      feedbackRelevantText: relevantText,
+    set((state) => {
+      state.feedbackIsCorrect = correct;
+      state.feedbackCorrectAnswer = correctAnswer;
+      state.feedbackExplanations = explanations;
+      state.feedbackRelevantText = relevantText;
     }),
 
-  _setNextQuizAvailable: (info) => set({ nextQuizAvailable: info }),
+  _setNextQuizAvailable: (info) =>
+    set((state) => {
+      state.nextQuizAvailable = info;
+    }),
 
   resetQuizState: () => {
-    set({
-      quizData: null,
-      currentQuizId: null,
-      selectedAnswer: null,
-      isAnswered: false,
-      relevantTextRange: null,
-      feedbackIsCorrect: null,
-      feedbackCorrectAnswer: null,
-      feedbackExplanations: null,
-      feedbackRelevantText: null,
-      nextQuizAvailable: null,
+    set((state) => {
+      state.quizData = null;
+      state.currentQuizId = null;
+      state.selectedAnswer = null;
+      state.isAnswered = false;
+      state.relevantTextRange = null;
+      state.feedbackIsCorrect = null;
+      state.feedbackCorrectAnswer = null;
+      state.feedbackExplanations = null;
+      state.feedbackRelevantText = null;
+      state.nextQuizAvailable = null;
     });
   },
 
@@ -268,16 +283,20 @@ export const createQuizSlice: StateCreator<
   handleAnswerSelect: async (answer): Promise<void> => {
     if (get().isAnswered) return;
 
-    set({ selectedAnswer: answer, isAnswered: true, showExplanation: true });
+    set((state) => {
+      state.selectedAnswer = answer;
+      state.isAnswered = true;
+      state.showExplanation = true;
+    });
     const session = await getSession();
     const { currentQuizId } = get();
 
     if (typeof currentQuizId !== 'number') {
       console.error('Invalid or missing current quiz ID:', currentQuizId);
-      set({
-        error: 'Cannot submit answer: Invalid quiz ID.',
-        isAnswered: false,
-        selectedAnswer: null,
+      set((state) => {
+        state.error = 'Cannot submit answer: Invalid quiz ID.';
+        state.isAnswered = false;
+        state.selectedAnswer = null;
       });
       return;
     }

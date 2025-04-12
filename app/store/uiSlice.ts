@@ -33,18 +33,42 @@ export const createUISlice: StateCreator<
   showExplanation: false,
   questionDelayTimeoutRef: null,
 
-  setError: (error) => set({ error }),
-  setLoading: (loading) => set({ loading }),
-  setShowLoginPrompt: (show) => set({ showLoginPrompt: show }),
-  setShowContent: (show) => set({ showContent: show }),
-  setShowQuestionSection: (show) => set({ showQuestionSection: show }),
-  setShowExplanation: (show) => set({ showExplanation: show }),
-  setQuestionDelayTimeoutRef: (ref) => set({ questionDelayTimeoutRef: ref }),
+  setError: (error) =>
+    set((state) => {
+      state.error = error;
+    }),
+  setLoading: (loading) =>
+    set((state) => {
+      state.loading = loading;
+    }),
+  setShowLoginPrompt: (show) =>
+    set((state) => {
+      state.showLoginPrompt = show;
+    }),
+  setShowContent: (show) =>
+    set((state) => {
+      state.showContent = show;
+    }),
+  setShowQuestionSection: (show) =>
+    set((state) => {
+      state.showQuestionSection = show;
+    }),
+  setShowExplanation: (show) =>
+    set((state) => {
+      state.showExplanation = show;
+    }),
+  setQuestionDelayTimeoutRef: (ref) =>
+    set((state) => {
+      state.questionDelayTimeoutRef = ref;
+    }),
+
   clearQuestionDelayTimeout: () => {
     const timeoutRef = get().questionDelayTimeoutRef;
     if (timeoutRef) {
       clearTimeout(timeoutRef);
-      set({ questionDelayTimeoutRef: null });
+      set((state) => {
+        state.questionDelayTimeoutRef = null;
+      });
     }
   },
 });
