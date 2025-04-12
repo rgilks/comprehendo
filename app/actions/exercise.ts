@@ -18,9 +18,9 @@ interface RateLimitRow {
   id: number;
 }
 
-interface UserRecord {
-  id: number;
-}
+// interface UserRecord {
+//   id: number;
+// }
 
 interface GeneratedContentRow {
   id: number;
@@ -31,13 +31,13 @@ interface GeneratedContentRow {
   created_at: string;
 }
 
-const exerciseRequestBodySchema = z.object({
+const _exerciseRequestBodySchema = z.object({
   passageLanguage: z.string(),
   questionLanguage: z.string(),
   cefrLevel: z.string(),
 });
 
-export type ExerciseRequestParams = z.infer<typeof exerciseRequestBodySchema>;
+export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
 
 const fullQuizDataSchema = z.object({
   paragraph: z.string(),
@@ -288,8 +288,12 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
       console.error('[API] OpenAI Error Response (raw):', rawResponse);
     }
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown OpenAI error';
-    throw new Error(`Failed to generate content using OpenAI: ${errorMessage}`);
+    // Safely get error message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Assign error safely
+    const processedError = new Error(`Failed to generate content using OpenAI: ${errorMessage}`);
+    console.error('[API] OpenAI API error:', processedError);
+    throw processedError;
   }
 }
 
@@ -320,9 +324,12 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     console.log('[API] Received response from Google AI.');
     return text;
   } catch (error: unknown) {
-    console.error('[API] Google AI API error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown Google AI error';
-    throw new Error(`Failed to generate content using Google AI: ${errorMessage}`);
+    // Safely get error message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Assign error safely
+    const processedError = new Error(`Failed to generate content using Google AI: ${errorMessage}`);
+    console.error('[API] Google AI API error:', processedError);
+    throw processedError;
   }
 }
 
@@ -332,247 +339,233 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
 ): Promise<GenerateExerciseResponsePayload> => {
+  const { passageLanguage, questionLanguage, cefrLevel: level } = params;
+  const headerList = await headers(); // Await the headers
+  const ip = headerList.get('x-forwarded-for') || 'unknown';
   const session = await getServerSession();
-  let userId: number | null = null;
-  let isLoggedIn = false;
+  const userId = session?.user?.dbId || null;
 
-  // --- Get User ID from session --- START
-  if (session?.user?.email) {
+  // Ensure all prompt variables are strings
+  const topic: string = getRandomTopicForLevel(level as CEFRLevel);
+  const grammarGuidance: string = getGrammarGuidance(level as CEFRLevel);
+  const vocabularyGuidance: string = getVocabularyGuidance(level as CEFRLevel);
+  const passageLangName: string = LANGUAGES[passageLanguage as Language]?.name || passageLanguage;
+  const questionLangName: string =
+    LANGUAGES[questionLanguage as Language]?.name || questionLanguage;
+
+  console.log(
+    `[API] Received request: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, ip=${ip}, userId=${userId}`
+  );
+
+  // Rate Limiting
+  console.log(`[API Perf] Rate Limit Check Start: ${Date.now()}`);
+  if (!(await checkRateLimit(ip))) {
+    console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
+    return { result: '', quizId: -1, error: 'Rate limit exceeded' };
+  }
+  console.log(`[API Perf] Rate Limit Check End: ${Date.now()}`);
+
+  // --- Cache Check ---
+  const seedValue = Math.floor(Date.now() / (1000 * 60 * 60 * 24)); // Daily seed
+  console.log(`[API Perf] Cache Check Start: ${Date.now()}`);
+  const cachedExercise = await getCachedExercise(
+    passageLanguage,
+    questionLanguage,
+    level,
+    seedValue
+  );
+  console.log(`[API Perf] Cache Check End: ${Date.now()}`);
+
+  if (cachedExercise) {
+    console.log(
+      `[API] Cache hit for lang=${passageLanguage}, level=${level}, seed=${seedValue}. Cache ID: ${cachedExercise.id}`
+    );
     try {
-      const userRecord = db
-        .prepare('SELECT id FROM users WHERE email = ?')
-        .get(session.user.email) as UserRecord | undefined;
-      if (userRecord) {
-        userId = userRecord.id;
-        isLoggedIn = true;
-      } else {
-        console.warn(`[API] User with email ${session.user.email} not found in users table.`);
-        // Handle case where session exists but user record is missing
-        // Potentially return an error or proceed as anonymous
+      // Validate cached content immediately
+      console.log(`[API Perf] Cache Validation Start: ${Date.now()}`);
+      const parsedCachedContent = JSON.parse(cachedExercise.content);
+      const validatedCachedData = fullQuizDataSchema.safeParse(parsedCachedContent);
+
+      if (!validatedCachedData.success) {
+        console.error('[API] Invalid data found in cache:', validatedCachedData.error.format());
+        // Decide how to handle invalid cache data - perhaps proceed to generate new content?
+        // For now, return error similar to generation failure.
+        return { result: '', quizId: -1, error: 'Invalid cached data encountered.' };
       }
-    } catch (dbError) {
-      console.error('[API] Database error fetching user by email:', dbError);
-      return { result: '', quizId: 0, error: 'Database error checking user.' };
+      console.log(`[API Perf] Cache Validation End: ${Date.now()}`);
+
+      const fullData = validatedCachedData.data;
+
+      const partialData: PartialQuizData = {
+        paragraph: fullData.paragraph,
+        question: fullData.question,
+        options: fullData.options,
+        topic: fullData.topic,
+      };
+      return {
+        result: JSON.stringify(partialData),
+        quizId: cachedExercise.id, // Use the ID from the cache record
+        cached: true,
+      };
+    } catch (error) {
+      console.error('[API] Error processing cached exercise:', error);
+      // Fall through to generate new content if cache processing fails
     }
-  }
-  // --- Get User ID from session --- END
-
-  // --- Get IP Address from headers --- START
-  let ipAddress: string | null = null;
-  try {
-    const headerList = await headers();
-    // Common headers for IP address behind proxies
-    const forwardedFor = headerList.get('x-forwarded-for');
-    const realIp = headerList.get('x-real-ip');
-
-    if (forwardedFor) {
-      ipAddress = forwardedFor.split(',')[0]?.trim() || null;
-    } else if (realIp) {
-      ipAddress = realIp.trim();
-    }
-
-    console.log(`[API] Determined IP Address from headers: ${ipAddress}`);
-  } catch (error: unknown) {
-    console.warn('[API] Could not read headers to determine IP:', error);
-  }
-  // --- Get IP Address from headers --- END
-
-  console.log(`[API] generateExerciseResponse called with params:`, params);
-  console.log(`[API] User ID: ${userId}, Logged In: ${isLoggedIn}, IP: ${ipAddress}`);
-
-  // Validate input using Zod
-  const validation = exerciseRequestBodySchema.safeParse(params);
-  if (!validation.success) {
-    console.error('[API] Invalid request params:', validation.error.errors);
-    return {
-      result: '',
-      quizId: 0,
-      error: validation.error.errors.map((e) => e.message).join(', '),
-    };
-  }
-
-  // Destructure validated data
-  const { passageLanguage, questionLanguage, cefrLevel } = validation.data;
-
-  // Generate topic and seed internally
-  const levelToUse = cefrLevel as CEFRLevel; // Ensure correct type
-  const topic = getRandomTopicForLevel(levelToUse);
-
-  // Determine seed: Time-based for anonymous A1, random otherwise
-  let seed: number;
-  if (!isLoggedIn && levelToUse === 'A1') {
-    const currentMinute = new Date().getMinutes();
-    seed = currentMinute % 3; // Seed based on minute (0, 1, or 2)
-    console.log(`[API] Anonymous A1 user: Using time-based seed (minute % 3): ${seed}`);
   } else {
-    seed = Math.floor(Math.random() * 100); // Random seed for logged-in users or non-A1 levels
-    console.log(`[API] Logged-in user or non-A1 level: Using random seed: ${seed}`);
+    console.log(`[API] Cache miss for lang=${passageLanguage}, level=${level}, seed=${seedValue}`);
   }
 
-  // Rate Limiting - Use determined ipAddress for anonymous users
-  if (isLoggedIn && userId) {
-    const rateLimitPassed = await checkRateLimit(String(userId));
-    if (!rateLimitPassed) {
-      return { result: '', quizId: 0, error: 'Rate limit exceeded' };
-    }
-  } else if (!isLoggedIn && ipAddress) {
-    // Use determined ipAddress
-    const rateLimitPassed = await checkRateLimit(ipAddress);
-    if (!rateLimitPassed) {
-      return { result: '', quizId: 0, error: 'Rate limit exceeded' };
-    }
-  } else if (!isLoggedIn && !ipAddress) {
-    console.warn('[API] Cannot apply rate limit: User not logged in and IP address not available.');
-  }
+  // --- Generation ---
+  let aiResponseContent: string | undefined;
+  let usageData: { promptTokens: number; completionTokens: number } | undefined;
+  let validatedAiData: z.infer<typeof fullQuizDataSchema> | undefined; // Variable to hold validated data
 
-  // Check cache first
   try {
-    console.log(`[API Perf] Cache Check Start: ${Date.now()}`);
-    const cachedRow = await getCachedExercise(passageLanguage, questionLanguage, cefrLevel, seed);
-    console.log(`[API Perf] Cache Check End (DB query): ${Date.now()}`);
+    const activeModel = getActiveModel();
+    console.log(`[API] Using AI model: ${activeModel.displayName}`);
 
-    if (cachedRow) {
-      console.log(
-        `[API] Cache hit (ID: ${cachedRow.id}) for lang=${passageLanguage} level=${cefrLevel} seed=${seed}` // Corrected seed logging
-      );
-      try {
-        console.log(`[API Perf] JSON Parse Start: ${Date.now()}`);
-        const fullData: unknown = JSON.parse(cachedRow.content);
-        console.log(`[API Perf] JSON Parse End: ${Date.now()}`);
+    // topic, grammarGuidance, vocabularyGuidance already ensured to be strings
 
-        console.log(`[API Perf] Zod Validation Start: ${Date.now()}`);
-        const validatedFullData = fullQuizDataSchema.parse(fullData);
-        console.log(`[API Perf] Zod Validation End: ${Date.now()}`);
+    const prompt = `
+      Generate a reading comprehension exercise based on the following parameters:
+      - Topic: ${topic}
+      - Passage Language: ${passageLangName} (${passageLanguage})
+      - Question Language: ${questionLangName} (${questionLanguage})
+      - CEFR Level: ${level}
+      - Grammar Guidance: ${grammarGuidance}
+      - Vocabulary Guidance: ${vocabularyGuidance}
 
-        console.log(`[API Perf] Partial Data Creation Start: ${Date.now()}`);
-        const partialData: PartialQuizData = {
-          paragraph: validatedFullData.paragraph,
-          question: validatedFullData.question,
-          options: validatedFullData.options,
-          topic: validatedFullData.topic,
-        };
-        const partialJsonString = JSON.stringify(partialData);
-        console.log(`[API Perf] Partial Data Creation End (stringify): ${Date.now()}`);
+      Instructions:
+      1. Create a short paragraph (3-6 sentences) in ${passageLanguage} suitable for a ${level} learner, focusing on the topic "${topic}".
+      2. Write one multiple-choice question in ${questionLanguage} about the main idea or a specific detail of the paragraph.
+      3. Provide four answer options (A, B, C, D) in ${questionLanguage}. Only one option should be correct. The options should be plausible but clearly distinguishable based on the paragraph.
+      4. Identify the correct answer (A, B, C, or D).
+      5. Provide a brief explanation (in ${questionLanguage}) for why each option is correct or incorrect.
+      6. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguage}) that provides the evidence for the correct answer ("relevantText").
 
-        console.log(`[API Perf] Returning Cached Data: ${Date.now()}`);
-        return {
-          result: partialJsonString,
-          quizId: cachedRow.id,
-          cached: true,
-        };
-      } catch (jsonError: unknown) {
-        console.error('[API] Invalid JSON found in cache, proceeding to generate:', jsonError);
+      Output Format: Respond ONLY with a valid JSON object containing the following keys:
+      - "paragraph": (string) The generated paragraph in ${passageLanguage}.
+      - "topic": (string) The topic used: "${topic}".
+      - "question": (string) The multiple-choice question in ${questionLanguage}.
+      - "options": (object) An object with keys "A", "B", "C", "D", where each value is an answer option string in ${questionLanguage}.
+      - "correctAnswer": (string) The key ("A", "B", "C", or "D") of the correct answer.
+      - "explanations": (object) An object with keys "A", "B", "C", "D", where each value is the explanation string in ${questionLanguage} for that option.
+      - "relevantText": (string) The sentence or phrase from the paragraph in ${passageLanguage} that supports the correct answer.
+
+      Example JSON structure:
+      {
+        "paragraph": "...",
+        "topic": "...",
+        "question": "...",
+        "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
+        "correctAnswer": "B",
+        "explanations": { "A": "...", "B": "...", "C": "...", "D": "..." },
+        "relevantText": "..."
       }
-    }
-  } catch (cacheError: unknown) {
-    console.error('[API] Error checking cache:', cacheError);
-  }
 
-  console.log('[API] Cache miss or invalid. Generating new content...');
+      Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
+      `;
 
-  // Construct the prompt internally
-  const passageLanguageName = LANGUAGES[passageLanguage as Language] || passageLanguage;
-  const questionLanguageName = LANGUAGES[questionLanguage as Language] || questionLanguage;
-
-  let languageInstructions = '';
-  if (['A1', 'A2'].includes(levelToUse)) {
-    const vocabGuidance = getVocabularyGuidance(levelToUse);
-    const grammarGuidance = getGrammarGuidance(levelToUse);
-    languageInstructions = `\n\nVocabulary guidance: ${vocabGuidance}\n\nGrammar guidance: ${grammarGuidance}`;
-  }
-
-  const constructedPrompt = `Generate a reading passage in ${passageLanguageName} suitable for CEFR level ${levelToUse} about the topic "${topic}". The passage should be interesting and typical for language learners at this stage. 
-
-After the passage, provide a multiple-choice comprehension question about it, four answer options (A, B, C, D), indicate the correct answer letter, provide a brief topic description (3-5 words in English) for image generation, provide explanations for each option being correct or incorrect, and include the relevant text snippet from the passage supporting the correct answer. 
-
-FORMAT THE QUESTION, OPTIONS, AND EXPLANATIONS IN ${questionLanguageName}. This is extremely important - the question and all answer options must be in ${questionLanguageName}, not in ${passageLanguageName}. 
-
-**CRITICAL INSTRUCTION: Respond ONLY with a single, valid JSON object.** Do not include any text, markdown formatting, or explanations outside of the JSON structure. The JSON object MUST contain these exact keys, with string values:
-- "paragraph": The reading passage text.
-- "question": The comprehension question text.
-- "options": An object with keys "A", "B", "C", "D" mapping to the answer choice strings.
-- "explanations": An object with keys "A", "B", "C", "D" mapping to the explanation strings for each option.
-- "correctAnswer": A single string containing the correct answer letter ("A", "B", "C", or "D").
-- "relevantText": The specific text snippet from the paragraph that supports the correct answer.
-- "topic": A brief English topic description (3-5 words).
-
-Ensure all string values within the JSON are properly escaped.${languageInstructions}`;
-
-  console.log('[API] Constructed prompt:', constructedPrompt.substring(0, 250) + '...');
-
-  // Get active AI model configuration
-  const modelConfig = getActiveModel();
-  console.log(`[API] Using AI model: ${modelConfig.provider} - ${modelConfig.name}`);
-
-  // Call the appropriate AI API
-  let generatedJson: string;
-  try {
-    if (modelConfig.provider === 'openai') {
-      generatedJson = await callOpenAI(constructedPrompt, modelConfig);
-    } else if (modelConfig.provider === 'google') {
-      generatedJson = await callGoogleAI(constructedPrompt, modelConfig);
+    console.log(`[API Perf] AI Call Start: ${Date.now()}`);
+    if (activeModel.provider === 'openai') {
+      aiResponseContent = await callOpenAI(prompt, activeModel);
+      // TODO: Extract usage data if OpenAI provides it
+    } else if (activeModel.provider === 'google') {
+      aiResponseContent = await callGoogleAI(prompt, activeModel);
+      // TODO: Extract usage data if Google AI provides it
     } else {
-      throw new Error('Invalid AI provider specified in configuration');
+      throw new Error(`Unsupported model provider: ${activeModel.provider}`);
+    }
+    console.log(`[API Perf] AI Call End: ${Date.now()}`);
+
+    if (!aiResponseContent) {
+      throw new AIResponseProcessingError('Received empty response from AI model.');
     }
 
-    // Validate the AI's JSON response against the schema
-    let fullDataValidated: z.infer<typeof fullQuizDataSchema>;
+    // --- Immediate Validation of AI Response ---
+    console.log(`[API Perf] AI Response Validation Start: ${Date.now()}`);
+    let parsedAiContent: unknown; // Use unknown instead of any
     try {
-      const parsedJson: unknown = JSON.parse(generatedJson);
-      fullDataValidated = fullQuizDataSchema.parse(parsedJson); // Validate full structure
-      console.log('[API] AI response FULL JSON structure validated successfully.');
-    } catch (validationError: unknown) {
-      console.error('[API] AI response validation failed:', validationError);
-      console.error('[API] Problematic JSON:', generatedJson);
-
-      if (validationError instanceof z.ZodError) {
-        throw new AIResponseProcessingError(
-          `AI response failed validation: ${validationError.errors
-            .map((e) => `${e.path.join('.')}: ${e.message}`)
-            .join(', ')}`
-        );
-      } else {
-        const message =
-          validationError instanceof Error ? validationError.message : 'Unknown validation error';
-        if (validationError instanceof SyntaxError) {
-          throw new AIResponseProcessingError(`AI response is not valid JSON: ${message}`);
-        } else {
-          throw new AIResponseProcessingError(`AI response validation failed: ${message}`);
-        }
-      }
+      parsedAiContent = JSON.parse(aiResponseContent);
+    } catch (parseError: unknown) {
+      console.error('[API] Failed to parse AI response JSON:', aiResponseContent);
+      // Ensure parseError is treated as Error or string for message
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+      throw new AIResponseProcessingError(
+        `Failed to parse AI JSON response. Error: ${errorMessage}`
+      );
     }
 
-    // Save the valid response to cache - use internally generated seed
-    const savedQuizId = await saveExerciseToCache(
+    // safeParse handles unknown input type
+    const validationResult = fullQuizDataSchema.safeParse(parsedAiContent);
+
+    if (!validationResult.success) {
+      console.error(
+        '[API] AI response failed Zod validation:',
+        JSON.stringify(validationResult.error.format(), null, 2)
+      );
+      console.error('[API] Failing AI Response Content:', aiResponseContent); // Log the raw failing response
+      throw new AIResponseProcessingError(
+        `AI response failed validation. Errors: ${JSON.stringify(validationResult.error.format())}`
+      );
+    }
+    validatedAiData = validationResult.data; // Store validated data
+    console.log(`[API Perf] AI Response Validation End: ${Date.now()}`);
+    // --- End Immediate Validation ---
+
+    console.log(`[API Perf] Cache Save Start: ${Date.now()}`);
+    // Save the original, validated JSON string to cache
+    // Ensure userId is passed correctly (type number | null)
+    const currentUserId = userId; // Assign to a new const to help type inference if needed
+    const quizId = await saveExerciseToCache(
       passageLanguage,
       questionLanguage,
-      cefrLevel,
-      seed,
-      generatedJson, // Save the original full JSON string
-      userId
+      level,
+      seedValue,
+      aiResponseContent, // Save the original string
+      currentUserId
     );
+    console.log(`[API Perf] Cache Save End: ${Date.now()}`);
 
-    if (!savedQuizId) {
-      // Handle failure to save/get ID
-      return { result: '', quizId: 0, error: 'Failed to save exercise to cache.' };
+    if (quizId === undefined) {
+      console.error('[API] Failed to save generated exercise to cache.');
+      // Decide if this is a critical error - maybe proceed without caching?
+      // For now, let's return an error indication.
+      return { result: '', quizId: -1, error: 'Failed to save exercise to cache.' };
     }
 
-    // Prepare partial data for the client
+    // Prepare partial data using the validated data
     const partialData: PartialQuizData = {
-      paragraph: fullDataValidated.paragraph,
-      question: fullDataValidated.question,
-      options: fullDataValidated.options,
-      topic: fullDataValidated.topic,
+      paragraph: validatedAiData.paragraph,
+      question: validatedAiData.question,
+      options: validatedAiData.options,
+      topic: validatedAiData.topic,
     };
 
-    // TODO: Implement actual token counting if needed
-    const usage = { promptTokens: 0, completionTokens: 0 };
-
-    // Return partial data and the new ID
-    return { result: JSON.stringify(partialData), quizId: savedQuizId, usage };
+    return {
+      result: JSON.stringify(partialData),
+      quizId: quizId,
+      usage: usageData,
+    };
   } catch (error: unknown) {
-    console.error('[API] Error during AI call or processing:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate exercise';
-    return { result: '', quizId: 0, error: errorMessage }; // Ensure return type matches
+    // Safely assign and log error
+    let finalError: Error;
+    if (error instanceof AIResponseProcessingError) {
+      console.error('[API] AI Processing Error:', error.message);
+      finalError = error;
+    } else if (error instanceof Error) {
+      console.error('[API] Error generating exercise:', error);
+      finalError = error;
+    } else {
+      const unknownErrorMessage = 'An unknown error occurred during exercise generation.';
+      console.error(`[API] ${unknownErrorMessage}:`, error);
+      finalError = new Error(unknownErrorMessage);
+    }
+
+    return {
+      result: '',
+      quizId: -1,
+      error: finalError.message, // Use the message from the guaranteed Error object
+    };
   }
 };

@@ -5,6 +5,69 @@ import { JWT } from 'next-auth/jwt';
 import { Session } from 'next-auth';
 import db from './db';
 import { AdapterUser } from 'next-auth/adapters';
+import { z } from 'zod';
+
+// --- Zod Schema for Auth Environment Variables ---
+const authEnvSchema = z
+  .object({
+    GITHUB_ID: z.string().optional(),
+    GITHUB_SECRET: z.string().optional(),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    AUTH_SECRET: z.string({ required_error: '[NextAuth] ERROR: AUTH_SECRET is missing!' }),
+    NEXTAUTH_URL: z.string().url().optional(),
+    ADMIN_EMAILS: z.string().optional(),
+    NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.GITHUB_ID && !data.GITHUB_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'GITHUB_SECRET is required when GITHUB_ID is set',
+        path: ['GITHUB_SECRET'],
+      });
+    }
+    if (!data.GITHUB_ID && data.GITHUB_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'GITHUB_ID is required when GITHUB_SECRET is set',
+        path: ['GITHUB_ID'],
+      });
+    }
+    if (data.GOOGLE_CLIENT_ID && !data.GOOGLE_CLIENT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'GOOGLE_CLIENT_SECRET is required when GOOGLE_CLIENT_ID is set',
+        path: ['GOOGLE_CLIENT_SECRET'],
+      });
+    }
+    if (!data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'GOOGLE_CLIENT_ID is required when GOOGLE_CLIENT_SECRET is set',
+        path: ['GOOGLE_CLIENT_ID'],
+      });
+    }
+    if (!data.NEXTAUTH_URL && data.NODE_ENV === 'production') {
+      console.warn('[NextAuth] NEXTAUTH_URL is not set, this might cause issues in production');
+      // Not adding an issue as it's a warning in the original code
+    }
+  });
+
+// Parse and validate auth environment variables at startup
+const authEnvVars = authEnvSchema.safeParse(process.env);
+
+if (!authEnvVars.success) {
+  console.error(
+    '❌ Invalid Auth environment variables:',
+    JSON.stringify(authEnvVars.error.format(), null, 4)
+  );
+  // Critical issues like missing AUTH_SECRET are caught by required_error
+  // Other warnings are logged. Proceed cautiously.
+}
+
+const validatedAuthEnv = authEnvVars.success ? authEnvVars.data : undefined;
+// --- End Zod Schema ---
 
 interface UserWithEmail extends User {
   email?: string | null;
@@ -12,48 +75,46 @@ interface UserWithEmail extends User {
 
 const providers = [];
 
-// Add debug logs for GitHub provider
-if (process.env.GITHUB_ID && process.env.GITHUB_SECRET) {
+// Use validated env vars safely
+if (validatedAuthEnv?.GITHUB_ID && validatedAuthEnv?.GITHUB_SECRET) {
   console.log('[NextAuth] GitHub OAuth credentials found, adding provider');
   providers.push(
     GitHub({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
+      clientId: validatedAuthEnv.GITHUB_ID,
+      clientSecret: validatedAuthEnv.GITHUB_SECRET,
     })
   );
-} else {
-  console.warn('[NextAuth] GitHub OAuth credentials missing');
+} else if (!validatedAuthEnv?.GITHUB_ID && !validatedAuthEnv?.GITHUB_SECRET) {
+  // Only warn if neither is set, refinement handles case where only one is set
+  console.warn('[NextAuth] GitHub OAuth credentials missing (GITHUB_ID and GITHUB_SECRET)');
 }
 
-// Add debug logs for Google provider
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+// Use validated env vars safely
+if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv?.GOOGLE_CLIENT_SECRET) {
   console.log('[NextAuth] Google OAuth credentials found, adding provider');
   providers.push(
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: validatedAuthEnv.GOOGLE_CLIENT_ID,
+      clientSecret: validatedAuthEnv.GOOGLE_CLIENT_SECRET,
     })
   );
-} else {
-  console.warn('[NextAuth] Google OAuth credentials missing');
+} else if (!validatedAuthEnv?.GOOGLE_CLIENT_ID && !validatedAuthEnv?.GOOGLE_CLIENT_SECRET) {
+  // Only warn if neither is set, refinement handles case where only one is set
+  console.warn(
+    '[NextAuth] Google OAuth credentials missing (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)'
+  );
 }
 
 // Log active providers count
 console.log(`[NextAuth] Configured ${providers.length} authentication providers`);
 
-// Check for required environment variables
-if (!process.env.AUTH_SECRET) {
-  console.error('[NextAuth] ERROR: AUTH_SECRET is missing!');
-}
-
-if (!process.env.NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
-  console.warn('[NextAuth] NEXTAUTH_URL is not set, this might cause issues in production');
-}
+// Checks for AUTH_SECRET and NEXTAUTH_URL in production are handled by Zod validation above
 
 export const authOptions: NextAuthOptions = {
   providers,
-  secret: process.env.AUTH_SECRET,
-  debug: process.env.NODE_ENV !== 'production',
+  // Use validated secret, provide default empty string if validation failed or env is undefined
+  secret: validatedAuthEnv?.AUTH_SECRET || '',
+  debug: (validatedAuthEnv?.NODE_ENV || process.env.NODE_ENV) !== 'production',
   session: {
     strategy: 'jwt' as const,
   },
@@ -105,13 +166,17 @@ export const authOptions: NextAuthOptions = {
           `[AUTH JWT Callback] Processing token for user email: ${user.email} via provider: ${account.provider}`
         );
 
-        const rawAdminEmails = process.env.ADMIN_EMAILS;
-        console.log(`[AUTH JWT Callback] Raw ADMIN_EMAILS env var: '${rawAdminEmails}'`);
+        const rawAdminEmails = validatedAuthEnv?.ADMIN_EMAILS;
+        console.log(`[AUTH JWT Callback] Raw ADMIN_EMAILS env var: '${rawAdminEmails || ''}'`);
 
-        const adminEmails = (rawAdminEmails || '')
-          .split(',')
-          .map((email) => email.trim())
-          .filter((email) => email);
+        // Process ADMIN_EMAILS safely
+        let adminEmails: string[] = [];
+        if (typeof rawAdminEmails === 'string' && rawAdminEmails.length > 0) {
+          adminEmails = rawAdminEmails
+            .split(',')
+            .map((email) => email.trim())
+            .filter((email): email is string => !!email);
+        }
 
         console.log(`[AUTH JWT Callback] Processed adminEmails array: [${adminEmails.join(', ')}]`);
 
@@ -158,14 +223,14 @@ export const authOptions: NextAuthOptions = {
   cookies: {
     sessionToken: {
       name:
-        process.env.NODE_ENV === 'production'
+        (validatedAuthEnv?.NODE_ENV || process.env.NODE_ENV) === 'production'
           ? `__Secure-next-auth.session-token`
           : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: (validatedAuthEnv?.NODE_ENV || process.env.NODE_ENV) === 'production',
       },
     },
   },

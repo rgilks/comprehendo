@@ -1,5 +1,6 @@
 import { OpenAI } from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { z } from 'zod';
 
 export type ModelProvider = 'openai' | 'google';
 export type ModelName = 'gpt-3.5-turbo' | 'gemini-2.0-flash-lite';
@@ -26,28 +27,59 @@ export const MODELS: Record<ModelName, ModelConfig> = {
   },
 };
 
+// --- Zod Schema for Environment Variables ---
+const envSchema = z.object({
+  OPENAI_API_KEY: z.string().optional(),
+  GOOGLE_AI_API_KEY: z.string().optional(),
+  ACTIVE_MODEL: z.enum(Object.keys(MODELS) as [ModelName, ...ModelName[]]).optional(),
+});
+
+// Parse and validate environment variables at startup
+const envVars = envSchema.safeParse(process.env);
+
+if (!envVars.success) {
+  console.error(
+    '❌ Invalid environment variables:',
+    JSON.stringify(envVars.error.format(), null, 4)
+  );
+  // Decide how to handle this - throw error, exit, or use defaults
+  // For now, let's log and proceed cautiously, functions might fail if keys are missing
+}
+
+const validatedEnv = envVars.success ? envVars.data : {};
+// --- End Zod Schema ---
+
 export const getOpenAIClient = () => {
+  // Use validated env var
+  if (!validatedEnv.OPENAI_API_KEY) {
+    console.warn('Warning: OPENAI_API_KEY is not set or invalid');
+    // Potentially throw an error or return a mock client depending on desired behavior
+  }
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: validatedEnv.OPENAI_API_KEY || '',
   });
 };
 
 export const getGoogleAIClient = () => {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = validatedEnv.GOOGLE_AI_API_KEY;
 
   if (!apiKey) {
-    console.warn('Warning: GOOGLE_AI_API_KEY is not set');
+    console.warn('Warning: GOOGLE_AI_API_KEY is not set or invalid');
   }
 
   return new GoogleGenerativeAI(apiKey || '');
 };
 
 export const getActiveModel = (): ModelConfig => {
-  const envModel = process.env.ACTIVE_MODEL;
+  const envModel = validatedEnv.ACTIVE_MODEL;
 
-  if (envModel && Object.keys(MODELS).includes(envModel)) {
-    return MODELS[envModel as ModelName];
+  if (envModel) {
+    return MODELS[envModel];
   }
 
+  // Return default if ACTIVE_MODEL is not set or invalid
+  console.warn(
+    `Warning: ACTIVE_MODEL env var is not set or invalid. Falling back to default: ${MODELS['gemini-2.0-flash-lite'].displayName}`
+  );
   return MODELS['gemini-2.0-flash-lite'];
 };
