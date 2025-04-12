@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-// --- Quiz Domain ---
-
 export const QuizDataSchema = z.object({
   id: z.number().optional().nullable(),
   language: z.string().optional().nullable(),
@@ -19,19 +17,15 @@ export const QuizDataSchema = z.object({
 
 export type QuizData = z.infer<typeof QuizDataSchema>;
 
-// --- Partial Schema for Initial Client Data ---
-
-// Define PartialQuizData based on the imported QuizDataSchema
 export const PartialQuizDataSchema = QuizDataSchema.pick({
   paragraph: true,
   question: true,
   options: true,
   topic: true,
-  language: true, // Keep language if it's needed by the client initially
+  language: true,
 });
 export type PartialQuizData = z.infer<typeof PartialQuizDataSchema>;
 
-// --- API Response Schemas ---
 
 export const GenerateExerciseResultSchema = z.object({
   quizData: PartialQuizDataSchema,
