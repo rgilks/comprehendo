@@ -24,6 +24,10 @@ jobs:
       - name: Run Playwright tests
         # Start server in background, wait, run tests
         # Assumes default port 3000
+        env:
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          ADMIN_JWT_TOKEN: ${{ secrets.ADMIN_JWT_TOKEN }}
+          NON_ADMIN_JWT_TOKEN: ${{ secrets.NON_ADMIN_JWT_TOKEN }}
         run: |
           npm start &
           npx wait-on http://localhost:3000 -t 60000 # Wait for server up to 60s
