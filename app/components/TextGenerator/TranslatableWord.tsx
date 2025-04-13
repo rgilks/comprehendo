@@ -58,7 +58,6 @@ const TranslatableWord = memo(
       combinedClassName += ' hover:text-blue-400';
     }
 
-    // Only show translation popup when not loading and translation is available
     const showTranslation = isHovered && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};

@@ -29,7 +29,6 @@ export const MODELS: Record<ModelName, ModelConfig> = {
 
 export const LanguageLevels = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 
-// --- Zod Schema for Environment Variables ---
 const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
@@ -37,7 +36,6 @@ const envSchema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
 });
 
-// Parse and validate environment variables at startup
 const envVars = envSchema.safeParse(process.env);
 
 if (!envVars.success) {
@@ -45,20 +43,15 @@ if (!envVars.success) {
     '❌ Invalid environment variables:',
     JSON.stringify(envVars.error.format(), null, 4)
   );
-  // Decide how to handle this - throw error, exit, or use defaults
-  // For now, let's log and proceed cautiously, functions might fail if keys are missing
 }
 
 const validatedEnv = envVars.success ? envVars.data : {};
-// --- End Zod Schema ---
 
-// Determine if OpenAI should be used based on ACTIVE_MODEL or presence of OpenAI key
 const activeModelName = validatedEnv.ACTIVE_MODEL;
 const useOpenAI = activeModelName
   ? MODELS[activeModelName]?.provider === 'openai'
   : !!validatedEnv.OPENAI_API_KEY;
 
-// Initialize OpenAI client only if needed and key exists
 export const openai =
   useOpenAI && validatedEnv.OPENAI_API_KEY
     ? new OpenAI({ apiKey: validatedEnv.OPENAI_API_KEY })
@@ -75,14 +68,12 @@ export const getGoogleAIClient = () => {
 };
 
 export const getActiveModel = (): ModelConfig => {
-  // Use validated data safely
   const envModel = validatedEnv.ACTIVE_MODEL;
 
   if (envModel && MODELS[envModel]) {
     return MODELS[envModel];
   }
 
-  // Return default if ACTIVE_MODEL is not set or invalid
   console.warn(
     `Warning: ACTIVE_MODEL env var is not set or invalid. Falling back to default: ${MODELS['gemini-2.0-flash-lite'].displayName}`
   );

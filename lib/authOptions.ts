@@ -51,7 +51,6 @@ export const authEnvSchema = z
     }
     if (!data.NEXTAUTH_URL && data.NODE_ENV === 'production') {
       console.warn('[NextAuth] NEXTAUTH_URL is not set, this might cause issues in production');
-      // Not adding an issue as it's a warning in the original code
     }
   });
 

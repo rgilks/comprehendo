@@ -36,11 +36,9 @@ const ReadingPassage = () => {
           return <span key={index}>{segment}</span>;
         }
 
-        // Calculate word index based on non-whitespace segments
         const wordIndex = words.slice(0, index + 1).filter((s) => !/^\s+$/.test(s)).length - 1;
         const isCurrent = currentWordIndex === wordIndex && isSpeakingPassage;
 
-        // Determine relevance based on character range overlap
         const isRelevant =
           relevantTextRange !== null &&
           segmentStart >= relevantTextRange.start &&
@@ -80,7 +78,6 @@ const ReadingPassage = () => {
         <AudioControls />
       </div>
 
-      {/* Passage Content */}
       <div
         className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
         data-testid="passage-content"
@@ -90,7 +87,6 @@ const ReadingPassage = () => {
         </div>
       </div>
 
-      {/* Question Placeholder */}
       {!showQuestionSection && (
         <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
           {t('practice.questionWillAppear')}

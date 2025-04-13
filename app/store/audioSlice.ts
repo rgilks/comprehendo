@@ -101,7 +101,6 @@ export const createAudioSlice: StateCreator<
       passageUtteranceRef,
     } = get();
 
-    // Add dummy usage to satisfy compiler build check
     if (passageUtteranceRef && false) {
       console.log('Dummy usage of passageUtteranceRef to satisfy build');
     }

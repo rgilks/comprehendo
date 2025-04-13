@@ -21,33 +21,25 @@ const TextGeneratorContainer = () => {
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const generatedContentRef = useRef<HTMLDivElement>(null);
 
-  // Determine if content is visible
   const isContentVisible = !!(quizData && !loading && showContent);
 
-  // Determine if progress tracker should be visible
   const showProgressTracker = (isAnswered || !isContentVisible) && !loading;
 
-  // Effect to setup speech synthesis and fetch user progress
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Check speech synthesis support
       const isSpeechSupported =
         'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
       useTextGeneratorStore.setState({ isSpeechSupported });
     }
 
-    // Fetch user progress if authenticated
     if (status === 'authenticated') {
       void fetchUserProgress();
     }
 
-    // Always ensure the question language is set to the user's interface language
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
   }, [status, fetchUserProgress, contextLanguage]);
 
-  // Set the question language based on the UI language context
   useEffect(() => {
-    // Set the user's interface language as the question language
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
   }, [contextLanguage]);
 
@@ -68,10 +60,8 @@ const TextGeneratorContainer = () => {
         <LoginPrompt />
         <ErrorDisplay />
 
-        {/* Quiz Skeleton */}
         {loading && !quizData && <QuizSkeleton />}
 
-        {/* Generated Content */}
         {isContentVisible && (
           <div
             className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg"
@@ -83,7 +73,6 @@ const TextGeneratorContainer = () => {
           </div>
         )}
 
-        {/* Progress Tracker */}
         {showProgressTracker && <ProgressTracker />}
 
         <Generator />

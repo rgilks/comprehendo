@@ -50,9 +50,7 @@ const Modal = ({
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      {/* Backdrop */}
       {isOpen && <div className="fixed inset-0 bg-black/50"></div>}
-      {/* Modal Content */}
       {isOpen && (
         <div
           className={`${maxWidth} w-full bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden z-10`}
