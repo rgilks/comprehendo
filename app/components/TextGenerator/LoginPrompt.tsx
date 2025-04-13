@@ -17,16 +17,16 @@ const LoginPrompt = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-700/70 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-      <p className="text-sm text-blue-100 flex-grow text-center sm:text-left order-2 sm:order-1">
+    <div className="bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-700/70 rounded-lg p-4 mb-6 flex flex-col items-start gap-4 shadow-md relative">
+      <p className="text-sm text-blue-100 flex-grow text-left w-full">
         {t('practice.signInPrompt.message')}
       </p>
-      <div className="flex-shrink-0 order-1 sm:order-2">
-        <AuthButton />
+      <div className="flex items-center justify-center gap-3 w-full">
+        <AuthButton variant="short" />
       </div>
       <button
         onClick={() => setShowLoginPrompt(false)}
-        className="p-1 text-blue-300 hover:text-white hover:bg-blue-800/50 rounded-full transition-colors flex-shrink-0 order-3"
+        className="absolute top-2 right-2 p-1 text-blue-300 hover:text-white hover:bg-blue-800/50 rounded-full transition-colors"
         aria-label={t('practice.signInPrompt.dismiss')}
         title={t('practice.signInPrompt.dismiss')}
       >
