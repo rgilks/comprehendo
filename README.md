@@ -70,7 +70,13 @@ Comprehendo is an AI-powered language learning application designed to help user
 
 Comprehendo implements several strategies to manage AI API costs:
 
-- **Rate Limiting**: Users are limited to 100 requests per hour to prevent excessive API usage
+- **Rate Limiting**:
+  - The application uses a fixed-window counter rate limit based on IP address.
+  - By default, each IP address is allowed **100 requests per hour** to the exercise generation endpoint.
+  - This applies to both anonymous and logged-in users.
+  - The limit is implemented in `app/actions/exercise.ts` and uses the `rate_limits` table in the SQLite database.
+  - When the limit is exceeded, a warning is logged to Sentry (if configured).
+  - You can adjust the `MAX_REQUESTS_PER_HOUR` constant in `app/actions/exercise.ts` if needed.
 - **Response Caching**: Successful API responses are cached for 24 hours to reduce duplicate calls
 - **Intelligent Seed System**: Random seeds create variety in cached responses to avoid repetitive content
 - **Graceful Error Handling**: User-friendly messages when rate limits are reached
@@ -307,7 +313,7 @@ You can customize various aspects of the application:
 - **Add More Languages**: Extend the `LANGUAGES` object in `app/components/TextGenerator.tsx`
 - **Visual Design**: Modify the Tailwind classes and gradients in component files
 - **API Prompt**: Adjust the prompt in the `generateText` function to change the content style
-- **Rate Limits**: Configure the `MAX_REQUESTS_PER_HOUR` value in `app/actions/exercise.ts`
+- **Rate Limits**: Adjust the `MAX_REQUESTS_PER_HOUR` constant in `app/actions/exercise.ts` to change the number of allowed requests per IP per hour (default is 100).
 - **Cache Duration**: Change the `CACHE_TTL` value in `app/actions/exercise.ts`
 - **Authentication**: Add or remove OAuth providers in `app/api/auth/[...nextauth]/route.ts`
 
@@ -337,7 +343,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Troubleshooting
 
 - **API Key Issues**: Ensure your API keys are correctly set in the `.env.local` file or Fly.io secrets
-- **Rate Limit Errors**: If you see "rate limit exceeded" errors, wait for the cool-down period (1 hour)
+- **Rate Limit Errors**: The application limits requests to 100 per IP address per hour. If you encounter "rate limit exceeded" errors, wait for the current hour window to reset.
 - **Loading Indefinitely**: If content generation seems stuck, refresh the page and try with a different CEFR level
 - **Authentication Errors**: Check OAuth configuration and ensure redirect URIs are correctly set
 - **Database Errors**: Verify the SQLite volume is properly mounted in production

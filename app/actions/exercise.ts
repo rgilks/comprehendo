@@ -75,6 +75,16 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
           console.log(
             `[API] Rate limit exceeded for IP: ${ip}. Count: ${rateLimitRow.request_count}, Window Start: ${rateLimitRow.window_start_time}`
           );
+          Sentry.captureMessage(`Rate limit exceeded for IP: ${ip}`, {
+            level: 'warning',
+            extra: {
+              ip_address: ip,
+              request_count: rateLimitRow.request_count,
+              window_start_time: rateLimitRow.window_start_time,
+              max_requests: MAX_REQUESTS_PER_HOUR,
+              rate_limit_window_ms: RATE_LIMIT_WINDOW,
+            },
+          });
           return false;
         } else {
           console.log(`[API Perf] Rate Limit - UPDATE Start: ${Date.now()}`);
