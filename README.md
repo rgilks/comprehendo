@@ -1,222 +1,184 @@
 # Comprehendo
 
-A multi-language reading comprehension practice tool powered by Next.js, OpenAI, and Google Gemini
+A multi-language reading comprehension practice tool powered by Next.js, OpenAI, and Google Gemini.
+
+[![CI/CD](https://github.com/your-username/comprehendo/actions/workflows/fly.yml/badge.svg)](https://github.com/your-username/comprehendo/actions/workflows/fly.yml)
 
 ![Comprehendo Screenshot](public/screenshot.png)
 
 ## Overview
 
-Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding. Word translations are powered by the MyMemory Translation API.
+Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding. Word translations are powered by the MyMemory Translation API (if integrated, otherwise specify).
 
 ## Features
 
-- **Multi-language Support**: Practice reading comprehension in English, Italian, Spanish, French, or German
-- **CEFR Level Selection**: Choose from six proficiency levels (A1-C2) to match your current language skills
-- **AI-Generated Content**: Fresh, unique reading passages generated for each practice session
-- **Multiple AI Model Support**: Switch between OpenAI's GPT-3.5 Turbo and Google's Gemini 2.0 Flash-Lite via environment variables
-- **Interactive Quiz Format**: Answer multiple-choice questions and receive immediate feedback
-- **Detailed Explanations**: Learn why answers are correct or incorrect with thorough explanations
-- **Text Highlighting**: See the relevant portion of text highlighted after answering
-- **Word Translation**: Hover over any word to see its translation in English
-- **Text-to-Speech**: Listen to passages and individual words with adjustable volume
-- **User Authentication**: Secure login via GitHub and Google OAuth
-- **Data Persistence**: Store user preferences and usage statistics in SQLite
-- **Responsive Design**: Optimized for both desktop and mobile devices
-- **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback
-- **Cost-Control System**: Intelligent rate limiting and caching to manage API costs
-- **Robust Validation**: Uses Zod for request validation on API routes
-- **Smooth Loading Experience**: Enhanced loading indicators and transitions
-- **Continuous Deployment**: Automatic deployment to Fly.io when code is pushed to main branch
-- **Admin Panel**: A secure area for administrators to view application data (generated content, users)
-- **Internationalization**: Full i18n support for UI elements
-- **PWA Support**: Progressive Web App features for mobile installation
-- **Sentry Integration**: Real-time error tracking and monitoring
-- **Multi-language Interface**: Localized UI for different user languages
-- **AI Interaction**: Chat with OpenAI or Gemini models.
-- **Local Caching**: SQLite database for caching AI responses.
-- **Offline Support**: Progressive Web App (PWA) capabilities.
-- **Testing**: Unit and integration tests with Jest, end-to-end tests with Playwright.
-- **Linting & Formatting**: ESLint and Prettier for code quality.
+- **Multi-language Support**: Practice reading comprehension in English, Italian, Spanish, French, or German (confirm languages).
+- **CEFR Level Selection**: Choose from six proficiency levels (A1-C2) to match your current language skills.
+- **AI-Generated Content**: Fresh, unique reading passages generated for each practice session.
+- **Multiple AI Model Support**: Switch between OpenAI's GPT-3.5 Turbo and Google's Gemini 2.0 Flash-Lite via environment variables.
+- **Interactive Quiz Format**: Answer multiple-choice questions and receive immediate feedback.
+- **Detailed Explanations**: Learn why answers are correct or incorrect with thorough explanations.
+- **Text Highlighting**: See the relevant portion of text highlighted after answering.
+- **Word Translation**: Hover over any word to see its translation in English (verify implementation).
+- **Text-to-Speech**: Listen to passages and individual words with adjustable volume (verify implementation).
+- **User Authentication**: Secure login via GitHub, Google, and Discord OAuth.
+- **Data Persistence**: Store user preferences and usage statistics in an SQLite database.
+- **Responsive Design**: Optimized for both desktop and mobile devices.
+- **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback using Tailwind CSS.
+- **Cost-Control System**: IP-based rate limiting and database caching to manage API costs.
+- **Robust Validation**: Uses Zod for request validation on API routes and environment variables.
+- **Smooth Loading Experience**: Enhanced loading indicators and transitions.
+- **Continuous Deployment**: Automatic deployment to Fly.io via GitHub Actions when code is pushed to the `main` branch.
+- **Admin Panel**: A secure area for administrators to view application data (users, quizzes, feedback).
+- **Internationalization (i18n)**: Full i18n support for UI elements using `i18next`.
+- **PWA Support**: Progressive Web App features for mobile installation using `@ducanh2912/next-pwa`.
+- **Sentry Integration**: Real-time error tracking and performance monitoring.
+- **State Management**: Uses `zustand` for lightweight global state management.
+- **Database Caching**: SQLite database for caching generated exercises.
+- **Testing**:
+  - Unit and integration tests with Jest & React Testing Library.
+  - End-to-end tests with Playwright.
+- **Code Quality**:
+  - ESLint and Prettier for linting and formatting.
+  * Husky and lint-staged for Git hooks (pre-commit/pre-push checks).
+
+* **State Diagram**: Visual representation of the text generation process. [View State Diagram](docs/text_generator_state_diagram.md)
 
 ## Technology Stack
 
-- **Next.js 15.3.0**: Latest version with App Router support
-- **React 19.0.0**: Latest major version with improved rendering performance
-- **Tailwind CSS 3.4.1**: Utility-first CSS framework
-- **next-auth 4.24.11**: Authentication solution for Next.js
-- **OpenAI SDK**: For GPT-3.5 Turbo integration
-- **Google Generative AI SDK**: For Gemini 2.0 integration
-- **SQLite with better-sqlite3**: Lightweight database solution
-- **Zod**: TypeScript-first schema validation
-- **i18next**: Internationalization framework
-- **Sentry**: Error tracking and performance monitoring
-- **zustand**: Lightweight state management
-- **Playwright**: End-to-end testing framework
-- **Jest/React Testing Library**: Unit and integration testing
-- **ESLint/Prettier**: Code linting and formatting
-- **Husky/lint-staged**: Git hooks for code quality checks
-- **Next-PWA**: Progressive Web App features
+- **Next.js**: Latest version using App Router (`package.json` likely has exact version)
+- **React**: Latest major version (`package.json` likely has exact version)
+- **Tailwind CSS**: Utility-first CSS framework
+- **TypeScript**: Strong typing for code quality
+- **next-auth**: Authentication (GitHub, Google, Discord)
+- **OpenAI SDK**: GPT-3.5 Turbo integration
+- **Google Generative AI SDK**: Gemini 2.0 Flash-Lite integration
+- **SQLite**: `better-sqlite3` for database storage
+- **Zod**: Schema validation
+- **i18next / react-i18next**: Internationalization
+- **@ducanh2912/next-pwa**: PWA features
+- **@sentry/nextjs**: Error tracking
+- **zustand**: State management
+- **Playwright**: End-to-end testing
+- **Jest / React Testing Library**: Unit/Integration testing
+- **ESLint / Prettier**: Linting & Formatting
+- **Husky / lint-staged**: Git hooks
+- **Turbopack**: (Optional, used with `npm run dev`)
 
 ## How It Works
 
-1. **Sign in**: Use GitHub or Google authentication to access the application
-2. **Select your settings**: Choose your CEFR level (A1-C2) and preferred reading language
-3. **Generate a passage**: The application creates a reading passage tailored to your proficiency level
-4. **Test your comprehension**: Answer the multiple-choice question and receive instant feedback with explanations
-5. **Review explanations**: After answering, see why each option was correct or incorrect
-6. **Try again or generate new**: Practice with the same content or generate a new passage
+1.  **Sign in**: Use GitHub, Google, or Discord authentication.
+2.  **Select Settings**: Choose CEFR level (A1-C2) and target language.
+3.  **Generate Exercise**: Request an AI-generated reading passage and question.
+4.  **Comprehension Test**: Answer the multiple-choice question.
+5.  **Feedback & Review**: Receive instant feedback, explanations, and highlighting.
+6.  **Repeat or New**: Practice more or generate a new exercise.
 
 ## API Cost Management
 
-Comprehendo implements several strategies to manage AI API costs:
+Comprehendo implements strategies to manage AI API costs:
 
 - **Rate Limiting**:
-  - The application uses a fixed-window counter rate limit based on IP address.
-  - By default, each IP address is allowed **100 requests per hour** to the exercise generation endpoint.
-  - This applies to both anonymous and logged-in users.
-  - The limit is implemented in `app/actions/exercise.ts` and uses the `rate_limits` table in the SQLite database.
-  - When the limit is exceeded, a warning is logged to Sentry (if configured).
-  - You can adjust the `MAX_REQUESTS_PER_HOUR` constant in `app/actions/exercise.ts` if needed.
-- **Response Caching**: Successful API responses are cached for 24 hours to reduce duplicate calls
-- **Intelligent Seed System**: Random seeds create variety in cached responses to avoid repetitive content
-- **Graceful Error Handling**: User-friendly messages when rate limits are reached
-- **Multi-model Support**: Switch between different AI providers based on cost considerations
+  - Uses a fixed-window counter based on IP address, stored in the `rate_limits` SQLite table.
+  - Default limit: **100 requests per hour** per IP to the exercise generation endpoint (`POST /api/exercise`).
+  - Applies to all users (anonymous and logged-in).
+  - Implemented in `app/actions/exercise.ts`.
+  - Exceeding the limit logs a warning to Sentry (if configured).
+  - Adjust `MAX_REQUESTS_PER_HOUR` in `app/actions/exercise.ts`.
+- **Database Caching**:
+  - Successful AI-generated exercises (passage, question, choices, explanation) are stored in the `quiz` SQLite table.
+  - Before calling the AI, the system checks for a suitable cached exercise based on language, level, and user interaction history (via `question_feedback` table).
+  - This significantly reduces redundant API calls.
+- **User Feedback Loop**: User feedback on questions (via `question_feedback` table) can potentially inform cache selection or future generation (verify implementation detail).
+- **Multi-model Support**: Easily switch between OpenAI and Google AI models via the `ACTIVE_MODEL` environment variable to leverage different cost structures.
 
 ## CEFR Levels Explained
 
-- **A1 (Beginner)**: Basic phrases, simple questions
-- **A2 (Elementary)**: Familiar topics, simple sentences
-- **B1 (Intermediate)**: Routine matters, basic opinions
-- **B2 (Upper Intermediate)**: Technical discussions, clear viewpoints
-- **C1 (Advanced)**: Complex topics, spontaneous expression
-- **C2 (Proficiency)**: Virtually everything, nuanced expression
+- **A1 (Beginner)**: Basic phrases, simple questions.
+- **A2 (Elementary)**: Familiar topics, simple sentences.
+- **B1 (Intermediate)**: Routine matters, basic opinions.
+- **B2 (Upper Intermediate)**: Technical discussions, clear viewpoints.
+- **C1 (Advanced)**: Complex topics, spontaneous expression.
+- **C2 (Proficiency)**: Virtually everything, nuanced expression.
 
 ## Setup and Running
 
-Follow these steps to get Comprehendo running on your local machine and optionally deploy it to Fly.io.
-
 ### Prerequisites
 
-Before you begin, make sure you have the following installed and set up:
-
-1.  **Node.js:** Version 18 or higher. (Download from [nodejs.org](https://nodejs.org/)).
-2.  **npm or yarn:** Package manager for Node.js (npm comes with Node.js).
-3.  **Git:** For cloning the repository. (Download from [git-scm.com](https://git-scm.com/)).
-4.  **API Keys & Credentials:** You'll need accounts and credentials from these services:
-    - **OpenAI:** For the GPT model. Get an API key at [platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys).
-    - **Google AI:** For the Gemini model. Get an API key at [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey).
-    - **GitHub:** For user login. Create an OAuth App at [github.com/settings/developers](https://github.com/settings/developers).
-    - **Google Cloud:** For user login. Create OAuth credentials at [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials).
-    - _(Optional) For Deployment:_ A [Fly.io](https://fly.io/) account and the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) installed (`curl -L https://fly.io/install.sh | sh`).
+1.  **Node.js:** Version 18 or higher (Check `.nvmrc` or project docs if specific version needed).
+2.  **npm or yarn:** Package manager.
+3.  **Git:** For cloning.
+4.  **API Keys & Credentials:**
+    - **OpenAI:** [platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
+    - **Google AI:** [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
+    - **GitHub OAuth App:** [github.com/settings/developers](https://github.com/settings/developers)
+    - **Google Cloud OAuth Credentials:** [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
+    - **Discord OAuth App:** [discord.com/developers/applications](https://discord.com/developers/applications)
+    - _(Optional Deployment)_ [Fly.io Account](https://fly.io/) & [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/).
 
 ### Running Locally
 
-1.  **Clone the Repository:**
-
+1.  **Clone:**
     ```bash
-    git clone https://github.com/your-username/comprehendo.git
+    git clone https://github.com/your-username/comprehendo.git # Replace if forked
     cd comprehendo
     ```
-
-    _(Replace `your-username` with the actual repository path if you forked it)._
-
-2.  **Install Dependencies:**
-
+2.  **Install:**
     ```bash
     npm install
+    # or yarn install
     ```
+3.  **Configure Environment:**
 
-    _(Or `yarn install` if you prefer yarn)._
+    - Copy `.env.example` to `.env.local`: `cp .env.example .env.local`
+    - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
+      - `OPENAI_API_KEY` (optional, if using OpenAI)
+      - `GOOGLE_AI_API_KEY` (optional, if using Google AI)
+      - `GITHUB_ID`, `GITHUB_SECRET` (optional, if enabling GitHub login)
+      - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
+      - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (optional, if enabling Discord login)
+      - `AUTH_SECRET`: Generate with `openssl rand -base64 32`
+      - `NEXTAUTH_URL=http://localhost:3000` (for local dev)
+      - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
+      - `ACTIVE_MODEL`: (Optional) Set to `gpt-3.5-turbo` or `gemini-2.0-flash-lite`. Defaults to Gemini if unset/invalid.
+    - Ensure at least one AI provider and one Auth provider are configured.
 
-3.  **Configure Environment Variables:**
-
-    - Copy the example environment file:
-      ```bash
-      cp .env.example .env.local
-      ```
-    - Edit the new `.env.local` file with a text editor.
-    - Fill in the values for `OPENAI_API_KEY`, `GOOGLE_AI_API_KEY`, `GITHUB_ID`, `GITHUB_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` using the credentials you obtained in the Prerequisites step.
-    - Generate a secret key for `AUTH_SECRET` by running `openssl rand -base64 32` in your terminal and pasting the output.
-    - Keep `NEXTAUTH_URL=http://localhost:3000` for local development.
-    - The `.env.example` file has comments explaining each variable.
-    - **(Admin Access)** Define `ADMIN_EMAILS` as a comma-separated list of email addresses that should have admin access (e.g., `admin1@example.com,admin2@example.com`).
-
-4.  **Run the Development Server:**
+4.  **Run Dev Server:**
 
     ```bash
     npm run dev
     ```
 
-5.  **Open the App:**
-    Navigate to [http://localhost:3000](http://localhost:3000) in your web browser.
+    _(Uses Turbopack by default)_
+
+5.  **Open App:** [http://localhost:3000](http://localhost:3000)
 
 ### Deploying to Fly.io (Optional)
 
-This project includes configuration for continuous deployment to Fly.io using GitHub Actions. When you push code to the `main` branch, it will automatically deploy.
+Continuous Deployment is set up via GitHub Actions (`.github/workflows/fly.yml`). Pushing to `main` triggers deployment.
 
-**First-Time Setup:**
+**First-Time Fly.io Setup:**
 
-1.  **Login to Fly CLI:**
-
-    ```bash
-    fly auth login
-    ```
-
-2.  **Create a Fly App:**
-
-    ```bash
-    # Choose a unique name for your app (e.g., my-comprehendo-app)
-    fly apps create <your-app-name>
-    ```
-
-3.  **Create a Persistent Volume:** (For the SQLite database)
-
-    ```bash
-    # Use the same app name as above. Choose a region (e.g., lhr for London).
-    fly volumes create sqlite_data --app <your-app-name> --region lhr --size 1
-    ```
-
+1.  **Login:** `fly auth login`
+2.  **Create App:** `fly apps create <your-app-name>` (Use a unique name)
+3.  **Create Volume:** `fly volumes create sqlite_data --app <your-app-name> --region <your-region> --size 1` (e.g., `lhr` for London)
 4.  **Set Production Secrets:**
-
-    - **Important:** Edit your `.env.local` file. Change `NEXTAUTH_URL` to your Fly app's URL (e.g., `https://<your-app-name>.fly.dev`). Make sure all other API keys and secrets are the production values you intend to use.
-    - Import the secrets into Fly.io:
-      ```bash
-      # Make sure you are in the project directory
-      fly secrets import --app <your-app-name> < .env.local
-      ```
-    - _Note:_ You can also set secrets individually using `fly secrets set KEY=VALUE --app <your-app-name>`.
-    - Make sure to also set the `ADMIN_EMAILS` secret if you want admin access in production:
-      ```bash
-      fly secrets set ADMIN_EMAILS="your_admin@example.com,another@example.com" --app <your-app-name>
-      ```
-
-5.  **Get Fly API Token:**
-
-    ```bash
-    fly auth token
-    ```
-
-    - Copy the displayed token.
-
-6.  **Add Token to GitHub Secrets:**
-    - Go to your GitHub repository > Settings > Secrets and variables > Actions.
-    - Click "New repository secret".
-    - Name the secret `FLY_API_TOKEN`.
-    - Paste the token you copied in the previous step into the "Value" field.
-    - Click "Add secret".
+    - **Crucial:** Edit `.env.local`, change `NEXTAUTH_URL` to `https://<your-app-name>.fly.dev`. Ensure all other keys/secrets are for production.
+    - Import secrets: `fly secrets import --app <your-app-name> < .env.local`
+    - Verify/set individual secrets if needed: `fly secrets set KEY=VALUE --app <your-app-name>`
+    - **Ensure `ADMIN_EMAILS` is set for production admin access.**
+5.  **Get Fly Token:** `fly auth token` (Copy the token)
+6.  **Add GitHub Secret:**
+    - Repo > Settings > Secrets and variables > Actions > "New repository secret".
+    - Name: `FLY_API_TOKEN`
+    - Value: Paste the token.
 
 **Deployment:**
 
-- With the above steps completed, simply push your code to the `main` branch on GitHub.
-  ```bash
-  git push origin main
-  ```
-- The GitHub Action defined in `.github/workflows/fly.yml` will automatically run `fly deploy` using your `FLY_API_TOKEN` and the secrets configured in Fly.io.
-- You can monitor the deployment progress in the "Actions" tab of your GitHub repository.
+- Push to `main`: `git push origin main`
+- Monitor in GitHub Actions tab.
 
 **Manual Deployment:**
-
-If you need to deploy manually (without pushing to `main`), run:
 
 ```bash
 fly deploy --app <your-app-name>
@@ -224,167 +186,161 @@ fly deploy --app <your-app-name>
 
 ### Switching AI Models
 
-To switch between OpenAI and Google AI models:
-
-- **Locally:** Change the `ACTIVE_MODEL` variable in your `.env.local` file.
-- **Production (Fly.io):** Update the secret in Fly.io:
-
+- **Locally:** Change `ACTIVE_MODEL` in `.env.local`.
+- **Production (Fly.io):** Update the secret:
   ```bash
-  fly secrets set ACTIVE_MODEL=gpt-3.5-turbo --app <your-app-name>
-  # or
-  fly secrets set ACTIVE_MODEL=gemini-2.0-flash-lite --app <your-app-name>
-
-  # Restart the app to apply the change
+  fly secrets set ACTIVE_MODEL=<model_name> --app <your-app-name>
+  # e.g., model_name = gpt-3.5-turbo or gemini-2.0-flash-lite
   fly apps restart <your-app-name>
   ```
 
 ## Development Workflow
 
-Comprehendo uses a modern development workflow with several tools to ensure code quality:
+Key scripts defined in `package.json`:
 
 ```bash
-# Format code using Prettier
-npm run format
+# Run dev server (with Turbopack)
+npm run dev
 
-# Check formatting without making changes
-npm run format:check
+# Build for production
+npm run build
 
-# Run all tests
+# Start production server locally
+npm run start
+
+# Check formatting & linting
+npm run verify
+
+# Fix formatting & linting, run type checks, unit tests, e2e tests
+npm run check
+
+# Run unit/integration tests (Jest)
 npm run test
 
-# Run tests in watch mode (useful during development)
+# Run Jest in watch mode
 npm run test:watch
 
-# Run ESLint
-npm run lint
-
-# Verify code (format + lint + build checks)
-npm run verify
+# Run end-to-end tests (Playwright)
+npm run test:e2e
 
 # Check for dependency updates
 npm run deps
 
-# Update dependencies to latest versions
+# Update dependencies interactively
 npm run deps:update
+
+# Remove node_modules, lockfile, build artifacts
+npm run nuke
 ```
 
 ### Testing Strategy
 
-Comprehendo uses a co-located testing approach, where test files are placed in the same directory as the code they test:
-
-- Tests are named using the `.test.tsx` or `.test.ts` extension
-- Tests are located next to the files they're testing (e.g., `Button.tsx` and `Button.test.tsx`)
-- This approach makes tests easy to find and maintain alongside the component or utility being tested
-
-Jest is configured to automatically find and run these test files across the codebase.
-
-Git hooks (powered by Husky) automatically run on commit and push:
-
-- **Pre-commit**: Formats staged files and runs tests related to changed files
-- **Pre-push**: Runs full formatting, linting, and build verification
-
-This approach allows for fast local development while ensuring that code pushed to the repository meets quality standards.
+- **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
+- **Unit/Integration**: Jest and React Testing Library (`npm test`).
+- **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
+- **Git Hooks**: Husky and lint-staged automatically run checks:
+  - **Pre-commit**: Formats staged files (`prettier`) and runs related Jest tests (`test:quick`).
+  - **Pre-push**: Runs `npm run verify` (full format check, lint, build checks) - currently disabled/not standard, verify `husky` config. Typically pre-push runs more comprehensive checks like `npm run check` or `npm run build`. _Correction: Pre-commit hook runs prettier and related tests._
 
 ## Production Considerations
 
-When deploying to production, consider the following:
-
-- **API Usage Monitoring**: Set up a dashboard to monitor OpenAI API usage and costs
-- **Persistent Cache**: Replace the in-memory cache with Redis or a database for a multi-server setup
-- **Rate Limit Adjustments**: Fine-tune the rate limits based on your user base and budget
-- **Security**: Implement additional security measures like CORS and potentially more complex request validation beyond Zod's schema checks
-- **Scaling**: Adjust Fly.io configuration in `fly.toml` for additional resources as needed
-- **Authentication**: Configure additional OAuth providers as needed
-- **Database Backups**: Set up regular backups of the SQLite database
-
-## User Experience Features
-
-- **Animated Feedback**: Visual cues and animations provide immediate feedback on user actions
-- **Progressive Loading**: Enhanced loading states with contextual information about what's being generated
-- **Highlighted Answers**: Correct text portions are highlighted in the reading passage after answering
-- **Adaptive Difficulty**: Content complexity automatically matches the selected CEFR level
-- **Mobile-Optimized**: Responsive design works on phones, tablets, and desktops
-- **User Profiles**: Track progress and preferences across sessions with user authentication
+- **API Monitoring**: Monitor AI provider dashboards for usage and costs.
+- **Rate Limits**: Adjust `MAX_REQUESTS_PER_HOUR` based on traffic and budget.
+- **Security**: Review CORS, consider stricter input validation if needed.
+- **Scaling**: Adjust Fly.io machine specs/count in `fly.toml`.
+- **Database Backups**: Implement a backup strategy for the SQLite volume on Fly.io (e.g., using `litestream` or manual snapshots).
+- **Sentry**: Configure DSN in environment variables for production error tracking.
 
 ## Customization
 
-You can customize various aspects of the application:
-
-- **Add More Languages**: Extend the `LANGUAGES` object in `app/components/TextGenerator.tsx`
-- **Visual Design**: Modify the Tailwind classes and gradients in component files
-- **API Prompt**: Adjust the prompt in the `generateText` function to change the content style
-- **Rate Limits**: Adjust the `MAX_REQUESTS_PER_HOUR` constant in `app/actions/exercise.ts` to change the number of allowed requests per IP per hour (default is 100).
-- **Cache Duration**: Change the `CACHE_TTL` value in `app/actions/exercise.ts`
-- **Authentication**: Add or remove OAuth providers in `app/api/auth/[...nextauth]/route.ts`
+- **Languages**: Extend `LANGUAGES` in `app/config/languages.ts`.
+- **Styling**: Modify Tailwind classes in components (`app/components`).
+- **AI Prompts**: Adjust prompts in `app/actions/exercise.ts`.
+- **Rate Limits**: Modify `MAX_REQUESTS_PER_HOUR` in `app/actions/exercise.ts`.
+- **Cache Behavior**: Modify database queries in `app/actions/exercise.ts`.
+- **Auth Providers**: Add/remove providers in `lib/authOptions.ts` and update environment variables.
 
 ## Code Structure
 
-- `/app`: Main application code (Next.js App Router)
-  - `/api`: API routes for OpenAI integration and authentication
-  - `/components`: React components
-  - `/globals.css`: Global styles and animations
-  - `layout.tsx`: Root layout with authentication provider
-  - `page.tsx`: Home page component
-- `/data`: SQLite database directory (development)
-- `/lib`: Utility functions and database configuration
-- `/public`: Static assets
-- `/scripts`: Helper scripts for development and deployment
+```
+/
+├── app/                      # Next.js App Router
+│   ├── [lang]/               # Language-specific routes (i18n)
+│   │   ├── page.tsx          # Main page component for a language
+│   │   └── layout.tsx        # Layout for language routes
+│   ├── actions/              # Server Actions (e.g., exercise generation)
+│   ├── api/                  # API routes (auth, potentially others)
+│   ├── components/           # Shared React components
+│   ├── config/               # Application configuration (languages, topics)
+│   ├── contexts/             # React Context providers (e.g., Language)
+│   ├── store/                # Zustand state stores
+│   ├── admin/                # Admin panel components/routes
+│   ├── layout.tsx            # Root layout
+│   ├── page.tsx              # Root page (redirects or landing)
+│   ├── globals.css           # Global styles
+│   ├── i18n.ts / i18n.client.ts # i18next config
+│   └── ...
+├── lib/                      # Shared libraries/utilities
+│   ├── db.ts                 # Database connection & schema setup
+│   ├── authOptions.ts        # NextAuth configuration
+│   ├── modelConfig.ts        # AI model configuration
+│   ├── domain/               # Domain schemas (Zod)
+│   └── ...
+├── public/                   # Static assets (images, locales, manifest.json)
+│   ├── locales/              # i18next translation files
+│   └── ...
+├── data/                     # SQLite database file (local development)
+├── docs/                     # Documentation files
+│   └── text_generator_state_diagram.md # State diagram
+├── scripts/                  # Utility scripts (e.g., db schema export)
+├── test/                     # Test configurations and utilities
+│   └── e2e/                  # Playwright E2E tests & auth state
+├── .env.example              # Example environment variables
+├── next.config.mjs           # Next.js configuration (check file extension)
+├── tailwind.config.ts        # Tailwind CSS configuration
+├── tsconfig.json             # TypeScript configuration
+├── jest.config.js            # Jest configuration
+├── playwright.config.ts      # Playwright configuration
+├── Dockerfile / fly.toml     # Deployment configuration
+├── package.json              # Project dependencies and scripts
+└── README.md                 # This file
+```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome!
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Troubleshooting
-
-- **API Key Issues**: Ensure your API keys are correctly set in the `.env.local` file or Fly.io secrets
-- **Rate Limit Errors**: The application limits requests to 100 per IP address per hour. If you encounter "rate limit exceeded" errors, wait for the current hour window to reset.
-- **Loading Indefinitely**: If content generation seems stuck, refresh the page and try with a different CEFR level
-- **Authentication Errors**: Check OAuth configuration and ensure redirect URIs are correctly set
-- **Database Errors**: Verify the SQLite volume is properly mounted in production
-- **Deployment Issues**: Check GitHub Actions logs for errors in the CI/CD pipeline
-
-## License
-
-MIT
+1.  Fork the repository.
+2.  Create branch: `git checkout -b feature/your-feature`.
+3.  Commit changes: `git commit -m 'Add amazing feature'`.
+4.  Push: `git push origin feature/your-feature`.
+5.  Open Pull Request.
 
 ## Admin Panel
 
-Comprehendo includes a basic admin panel accessible at the `/admin` route.
+Accessible at `/admin` for users whose email is in `ADMIN_EMAILS`.
 
-- **Access Control**: Only users logged in with an email address listed in the `ADMIN_EMAILS` environment variable can access this page. Attempts by non-admins will redirect to the homepage.
-- **Functionality**: The admin panel allows authorized users to:
-  - View a list of database tables (`users`, `quiz`).
-  - Select a table to view its data.
-  - Browse table data using pagination controls.
-- **Setup**: To enable admin access, set the `ADMIN_EMAILS` environment variable (comma-separated list) both locally (`.env.local`) and in your deployment environment (e.g., Fly.io secrets).
+**Features:**
 
-### Testing
+- View data from `users`, `quiz`, `question_feedback`, `rate_limits` tables.
+- Basic pagination.
+- Requires login; redirects non-admins.
 
-The project uses Jest for unit/integration tests and Playwright for end-to-end tests.
+**Setup:**
 
-- Run all tests: `npm run check` (includes linting, build)
-- Run Jest tests: `npm test` or `npm run test:watch`
-- Run Playwright E2E tests: `npm run test:e2e`
+- Set `ADMIN_EMAILS` environment variable locally (`.env.local`) and in deployment (e.g., Fly.io secrets), comma-separated.
 
-**E2E Test Authentication Setup:**
+### E2E Test Authentication Setup (for `/admin` tests)
 
-Some E2E tests verify authenticated user behavior (e.g., admin access).
-These tests rely on pre-generated authentication state files stored in `test/e2e/auth/`, which are **not** committed to version control due to containing sensitive JWTs.
+Playwright tests needing admin/non-admin roles require pre-generated auth state. These files (`test/e2e/auth/*.storageState.json`) are **not** committed.
 
-To run these tests locally, you must generate these files yourself:
+**To generate locally:**
 
-1.  **Create Files:** Ensure the following files exist (they might be empty initially):
-    - `test/e2e/auth/admin.storageState.json`
-    - `test/e2e/auth/nonAdmin.storageState.json`
-2.  **Log in as Admin:** Run the app (`npm run dev`) and log in via the UI as a user who **is** an admin (e.g., email listed in `ADMIN_EMAILS`).
-3.  **Extract Admin Token:** Open browser dev tools (F12), go to Application/Storage -> Cookies -> `localhost`. Find the `next-auth.session-token` cookie and copy its value.
-4.  **Update Admin File:** Paste the admin token value into `test/e2e/auth/admin.storageState.json`. The structure should look like this (replace the placeholder):
+1.  **Ensure Files Exist:** Create empty `test/e2e/auth/admin.storageState.json` and `test/e2e/auth/nonAdmin.storageState.json` if they don't exist.
+2.  **Run App:** `npm run dev`.
+3.  **Login as Admin:** Use the UI to log in as an admin user (email in `ADMIN_EMAILS`).
+4.  **Get Admin Cookie:** Open browser dev tools (F12) -> Application -> Cookies -> `localhost`. Copy the **value** of the `next-auth.session-token` cookie.
+5.  **Update `admin.storageState.json`:** Paste the token value into the file, matching this structure:
     ```json
     {
       "cookies": [
@@ -402,137 +358,99 @@ To run these tests locally, you must generate these files yourself:
       "origins": []
     }
     ```
-5.  **Log Out & Log in as Non-Admin:** Log out, then log in via the UI as a user who **is NOT** an admin.
-6.  **Extract Non-Admin Token:** Repeat step 3 to get the _new_ `next-auth.session-token` value.
-7.  **Update Non-Admin File:** Paste the non-admin token value into `test/e2e/auth/nonAdmin.storageState.json` using the same JSON structure as above.
+6.  **Log Out & Login as Non-Admin:** Log out, then log in as a regular user (email **not** in `ADMIN_EMAILS`).
+7.  **Get Non-Admin Cookie:** Repeat step 4 for the new session token.
+8.  **Update `nonAdmin.storageState.json`:** Paste the non-admin token using the same JSON structure as step 5.
 
-Once these files are correctly populated, the E2E tests requiring authentication should pass when run with `npm run test:e2e`.
+Now, `npm run test:e2e` should pass tests requiring authentication.
 
-## Deployment
+## Database
 
-The application is configured for deployment via Docker and includes a LiteFS setup for SQLite replication.
+Uses SQLite via `better-sqlite3`. The database file is `data/comprehendo.sqlite` locally, and stored on a persistent volume (`/data/comprehendo.sqlite`) in production (Fly.io).
 
-- Run the development server: `npm run dev`
-- Access the Admin Panel at `http://localhost:3000/admin`
-- Log in using one of the configured OAuth providers.
-- Navigate through the different database tables using the sidebar.
-- View a list of database tables (`users`, `quiz`).
-- Inspect individual rows by clicking on them.
-- Navigate through table pages using pagination controls.
-
-### SQLite Command Line
-
-Access the SQLite database directly (if running locally):
+### SQLite Command Line (Local)
 
 ```bash
-# Ensure the database file exists (it's created on first run)
+# Navigate to project root
 sqlite3 data/comprehendo.sqlite
 ```
 
-From the SQLite prompt, you can run SQL queries:
+Useful commands: `.tables`, `SELECT * FROM users LIMIT 5;`, `.schema quiz`, `.quit`.
 
-- `.tables`: View a list of database tables (`users`, `quiz`).
-- `SELECT * FROM users LIMIT 10;`: See the first 10 users.
-- `.schema quiz`: Show the schema for the `quiz` table.
-- `.quit`: Exit the SQLite prompt.
+### Database Schema
 
-## Admin Panel
+```sql
+-- From lib/db.ts initialization logic
 
-An admin panel is available at `/admin` for authorized users (defined by the `ADMIN_EMAILS` environment variable).
+CREATE TABLE IF NOT EXISTS quiz (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  language TEXT NOT NULL,          -- Target language of the passage (e.g., 'fr')
+  level TEXT NOT NULL,             -- CEFR level (e.g., 'B1')
+  content TEXT NOT NULL,           -- JSON string containing passage, question, options, explanation
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  question_language TEXT,        -- Language the question/options are in (e.g., 'en')
+  user_id INTEGER,               -- User who generated this (if logged in)
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
 
-**Features:**
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider_id TEXT NOT NULL,       -- User ID from the OAuth provider
+  provider TEXT NOT NULL,          -- OAuth provider name (e.g., 'github', 'google', 'discord')
+  name TEXT,                     -- User's display name
+  email TEXT,                    -- User's email address
+  image TEXT,                    -- URL to user's profile picture
+  first_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  language TEXT DEFAULT 'en',    -- Preferred UI language for the user
+  UNIQUE(provider_id, provider)  -- Ensure unique user per provider
+);
 
-- View and search data from application tables.
-- Basic table filtering and pagination.
-- Accessible only to users whose email is listed in the `ADMIN_EMAILS` env var.
+CREATE TABLE IF NOT EXISTS user_language_progress (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  language_code TEXT NOT NULL,     -- Target language being practiced (e.g., 'fr')
+  cefr_level TEXT NOT NULL DEFAULT 'A1', -- Current tracked level for this language
+  correct_streak INTEGER NOT NULL DEFAULT 0,
+  last_practiced TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, language_code)
+);
 
-**Example Table Views:**
+CREATE TABLE IF NOT EXISTS question_feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quiz_id INTEGER NOT NULL,        -- The quiz this feedback relates to
+  user_id INTEGER NOT NULL,        -- The user providing feedback
+  rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')), -- User's quality rating
+  user_answer TEXT,              -- The answer submitted by the user (e.g., 'A', 'B')
+  is_correct INTEGER,            -- 1 if correct, 0 if incorrect
+  submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
 
-- **Users:** See user login history, provider information.
-- **Quiz:** Browse generated quizzes and their content.
+CREATE TABLE IF NOT EXISTS rate_limits (
+  ip_address TEXT PRIMARY KEY,     -- User's IP address
+  request_count INTEGER NOT NULL DEFAULT 1, -- Number of requests in the current window
+  window_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Start time of the rate limit window
+);
 
-**Usage:**
-
-1.  Navigate to `/admin`.
-2.  Sign in if prompted (only admin users can proceed).
-3.  Select a table from the sidebar.
-4.  Browse, search, and navigate through the table data.
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_quiz_created_at ON quiz(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
+CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
+CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
+CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
+```
 
 ## Troubleshooting
 
-- **Database Connection Issues:** Ensure the `data/` directory exists and has write permissions. If running in a container, ensure the volume is correctly mounted.
-- **Authentication Errors:** Double-check your OAuth credentials and `NEXTAUTH_URL` in your environment variables. Ensure callback URLs match your setup.
-- **API Key Errors:** Verify your OpenAI and Google AI API keys are correct and have billing enabled if necessary.
-- **Admin Panel Access Denied:** Confirm the signed-in user's email is present in the `ADMIN_EMAILS` environment variable (comma-separated). For Fly.io, ensure the secret is set correctly.
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1.  Fork the repository.
-2.  Create a new branch (`git checkout -b feature/your-feature-name`).
-3.  Make your changes.
-4.  Ensure tests pass (`npm test`).
-5.  Run linters and formatters (`npm run lint`, `npm run format`).
-6.  Commit your changes (`git commit -m 'Add some feature'`).
-7.  Push to the branch (`git push origin feature/your-feature-name`).
-8.  Open a Pull Request.
+- **Database Connection:** Ensure `data/` dir exists locally. On Fly, check volume mount (`fly.toml`) and status (`fly status`).
+- **Auth Errors:** Verify `.env.local` / Fly secrets (`AUTH_SECRET`, provider IDs/secrets, `NEXTAUTH_URL`). Ensure OAuth callback URLs match exactly in provider settings (e.g., `http://localhost:3000/api/auth/callback/github` or `https://<app>.fly.dev/api/auth/callback/github`).
+- **API Key Errors:** Check AI provider keys in env/secrets. Ensure billing is enabled if required by the provider.
+- **Rate Limit Errors:** Wait for the hour window to reset. Check `rate_limits` table via SQLite or Admin Panel if needed. Consider increasing `MAX_REQUESTS_PER_HOUR` if appropriate.
+- **Admin Access Denied:** Confirm logged-in user's email is EXACTLY in `ADMIN_EMAILS` (case-sensitive, no extra spaces). Check Fly secrets value.
+- **Deployment Issues:** Examine GitHub Actions logs and `fly logs --app <your-app-name>`.
+- **PWA Issues:** Check `next.config.mjs` PWA settings and browser dev tools (Application -> Service Workers/Manifest).
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Database Schema Visualisation (Optional Tooling Example)
-
-If you have `dbdiagram.io` or a similar tool, you can visualize the schema using the SQL definition from `lib/db.ts`.
-
-**Example dbdiagram.io Code (Derived from `lib/db.ts`):**
-
-```dbml
-// lib/db.ts schema visualization
-
-Table quiz {
-  id INTEGER [pk, increment]
-  language TEXT [not null]
-  level TEXT [not null]
-  content TEXT [not null]
-  created_at TIMESTAMP [default: `CURRENT_TIMESTAMP`]
-  question_language TEXT
-  user_id INTEGER
-}
-
-Table users {
-  id INTEGER [pk, increment]
-  provider_id TEXT [not null]
-  provider TEXT [not null]
-  name TEXT
-  email TEXT
-  image TEXT
-  first_login TIMESTAMP [default: `CURRENT_TIMESTAMP`]
-  last_login TIMESTAMP [default: `CURRENT_TIMESTAMP`]
-  language TEXT [default: 'en']
-  Indexes {
-    (provider_id, provider) [unique]
-  }
-}
-
-Table user_language_progress {
-  user_id INTEGER [not null, pk]
-  language_code TEXT [not null, pk]
-  cefr_level TEXT [not null, default: 'A1']
-  correct_streak INTEGER [not null, default: 0]
-  last_practiced TIMESTAMP [default: `CURRENT_TIMESTAMP`]
-}
-
-Table question_feedback {
-  id INTEGER [pk, increment]
-  quiz_id INTEGER [not null]
-  user_id INTEGER [not null]
-  rating TEXT [not null, check: `rating IN ('good', 'bad')`]
-  submitted_at DATETIME [default: `CURRENT_TIMESTAMP`]
-}
-
-Ref: user_language_progress.user_id > users.id [delete: cascade]
-Ref: question_feedback.quiz_id > quiz.id [delete: cascade]
-Ref: question_feedback.user_id > users.id [delete: cascade]
-```
+MIT License. See [LICENSE](LICENSE) file.
