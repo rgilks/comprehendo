@@ -86,7 +86,13 @@ const TextGeneratorContainer = () => {
           )}
         </AnimateTransition>
 
-        <AnimateTransition show={showProgressTracker} type="fade-in" duration={400} unmountOnExit>
+        <AnimateTransition
+          show={showProgressTracker}
+          type="fade-in"
+          duration={400}
+          delay={150}
+          unmountOnExit
+        >
           <ProgressTracker />
         </AnimateTransition>
 

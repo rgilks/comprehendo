@@ -35,8 +35,8 @@ const Generator = () => {
       <AnimateTransition
         show={showFeedbackPrompt}
         type="fade-in"
-        duration={300}
-        delay={100}
+        duration={400}
+        delay={300}
         unmountOnExit
       >
         <div className="text-center p-4 bg-gray-800 rounded-lg border border-gray-700 shadow-md">
@@ -72,7 +72,7 @@ const Generator = () => {
         show={showGeneratorButton}
         type="fade-in"
         duration={400}
-        delay={showFeedbackPrompt ? 0 : 200}
+        delay={300}
         unmountOnExit
       >
         <button

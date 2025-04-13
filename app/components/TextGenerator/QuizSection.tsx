@@ -94,13 +94,12 @@ const QuizSection = () => {
           <h4 className="text-lg font-semibold mb-3 text-blue-300">{t('practice.explanation')}</h4>
           <div className="space-y-3 text-sm">
             {feedbackExplanations &&
-              Object.entries(feedbackExplanations).map(([key, explanation], index) => (
+              Object.entries(feedbackExplanations).map(([key, explanation]) => (
                 <AnimateTransition
                   key={key}
                   show={showExplanation}
                   type="slide-left"
                   duration={400}
-                  delay={100 * index} // Stagger the animations
                   className="w-full"
                 >
                   <div
