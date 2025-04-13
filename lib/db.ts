@@ -77,7 +77,9 @@ function initializeDatabase(): Database.Database {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         quiz_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')), 
+        rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')),
+        user_answer TEXT,
+        is_correct INTEGER,
         submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE

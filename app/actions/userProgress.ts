@@ -34,6 +34,8 @@ const submitAnswerSchema = z.object({
 const submitFeedbackSchema = z.object({
   quizId: z.number().int().positive(),
   rating: z.enum(['good', 'bad']),
+  userAnswer: z.string().optional(),
+  isCorrect: z.boolean().optional(),
 });
 
 export type UpdateProgressParams = z.infer<typeof updateProgressSchema>;
@@ -370,25 +372,20 @@ export const submitQuestionFeedback = async (
 ): Promise<SubmitFeedbackResponse> => {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as SessionUser | undefined;
-  const userId = sessionUser?.dbId;
 
-  console.log(
-    `[SubmitFeedback] Request received. UserID: ${userId ?? 'Anonymous'}, Params:`,
-    params
-  );
-
-  if (!userId) {
-    return { success: false, error: 'Unauthorized. User must be logged in to submit feedback.' };
+  if (!session || !sessionUser?.dbId) {
+    return { success: false, error: 'Unauthorized' };
   }
+  const userId = sessionUser.dbId;
 
   const parsedBody = submitFeedbackSchema.safeParse(params);
+
   if (!parsedBody.success) {
-    const errorDetails = JSON.stringify(parsedBody.error.flatten().fieldErrors);
-    console.error(`[SubmitFeedback] Invalid request parameters: ${errorDetails}`);
-    return { success: false, error: `Invalid request parameters: ${errorDetails}` };
+    console.error('[SubmitFeedback] Invalid parameters:', parsedBody.error);
+    return { success: false, error: 'Invalid parameters' };
   }
 
-  const { quizId, rating } = parsedBody.data;
+  const { quizId, rating, userAnswer, isCorrect } = parsedBody.data;
 
   try {
     const quizExists = db.prepare('SELECT id FROM quiz WHERE id = ?').get(quizId);
@@ -399,21 +396,25 @@ export const submitQuestionFeedback = async (
       return { success: false, error: `Quiz with ID ${quizId} not found.` };
     }
 
-    db.prepare('INSERT INTO question_feedback (quiz_id, user_id, rating) VALUES (?, ?, ?)').run(
-      quizId,
-      userId,
-      rating
-    );
+    db.prepare(
+      'INSERT INTO question_feedback (quiz_id, user_id, rating, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
+    ).run(quizId, userId, rating, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
 
     console.log(
-      `[SubmitFeedback] Feedback recorded for Quiz ID ${quizId}, User ID ${userId}, Rating: ${rating}`
+      `[SubmitFeedback] Feedback recorded for Quiz ID ${quizId}, User ID ${userId}, Rating: ${rating}, Answer: ${userAnswer}, Correct: ${isCorrect}`
     );
     return { success: true };
   } catch (dbError) {
     console.error('[SubmitFeedback] Database error:', dbError);
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     Sentry.captureException(dbError, {
-      extra: { quizId: params.quizId, rating: params.rating, userId },
+      extra: {
+        quizId: params.quizId,
+        rating: params.rating,
+        userAnswer: params.userAnswer,
+        isCorrect: params.isCorrect,
+        userId,
+      },
     });
     return { success: false, error: `Database error: ${message}` };
   }
