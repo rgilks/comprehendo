@@ -4,8 +4,6 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const TARGET_URL = `${BASE_URL}/en`;
 
 test.describe('Basic Workflow Test', () => {
-  // Test: should load, generate a question, and allow answering (removed)
-
   test('should allow changing UI language', async ({ page }) => {
     await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
 
@@ -51,7 +49,6 @@ test.describe('Basic Workflow Test', () => {
   });
 
   test('should show avatar after mock GitHub sign-in', async ({ page }) => {
-    // Intercept the session request to simulate a logged-in state
     await page.route('**/api/auth/session', async (route) => {
       const mockSession = {
         user: {
@@ -70,14 +67,12 @@ test.describe('Basic Workflow Test', () => {
 
     await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
 
-    // Locate the avatar image using its alt text, which comes from the mock session data.
     const avatarImage = page.locator('img[alt="Mock User"]');
 
     await expect(avatarImage, 'Avatar image should be visible after mock login').toBeVisible({
       timeout: 5000,
     });
 
-    // Check the src attribute - it will be modified by next/image, so check for the encoded base URL part
     const expectedEncodedUrlPart = 'https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F999999';
     await expect(
       avatarImage,

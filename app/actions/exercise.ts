@@ -19,10 +19,6 @@ interface RateLimitRow {
   id: number;
 }
 
-// interface UserRecord {
-//   id: number;
-// }
-
 interface GeneratedContentRow {
   id: number;
   language: string;
@@ -40,7 +36,6 @@ const _exerciseRequestBodySchema = z.object({
 
 export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
 
-// Define a custom error for AI response processing issues
 class AIResponseProcessingError extends Error {
   constructor(message: string) {
     super(message);
@@ -48,7 +43,6 @@ class AIResponseProcessingError extends Error {
   }
 }
 
-// Helper function to ensure caught value is an Error object
 function ensureError(error: unknown, defaultMessage: string = 'An unknown error occurred'): Error {
   if (error instanceof Error) {
     return error;
@@ -56,14 +50,10 @@ function ensureError(error: unknown, defaultMessage: string = 'An unknown error 
   return new Error(`${defaultMessage}: ${String(error)}`);
 }
 
-/**
- * Check if the user has exceeded rate limits
- */
 export const checkRateLimit = async (ip: string): Promise<boolean> => {
   if (!db) throw new Error('Database not initialized');
 
   try {
-    // Initialize DB table if not exists
     db.exec(`
       CREATE TABLE IF NOT EXISTS rate_limits (
         ip_address TEXT PRIMARY KEY,
@@ -132,9 +122,6 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
   }
 };
 
-/**
- * Get cached exercise content if available
- */
 export const getCachedExercise = async (
   passageLanguage: string,
   questionLanguage: string,
@@ -142,12 +129,9 @@ export const getCachedExercise = async (
   seedValue: number
 ): Promise<GeneratedContentRow | undefined> => {
   if (!db) throw new Error('Database not initialized');
-  // Proceed with database cache logic for logged-in users or other levels
   console.log('[API] Logged-in user or non-A1 level: Checking database cache.');
   try {
-    // Use non-null assertion
     const getCachedContent = (specificLevel: string) => {
-      // Use non-null assertion here as well
       const stmt = db.prepare<[string, string, string, number]>(
         `SELECT id, language, level, content, questions, created_at
          FROM generated_content
@@ -159,7 +143,6 @@ export const getCachedExercise = async (
         | undefined;
     };
 
-    // First try with exact CEFR level
     const cachedContent = getCachedContent(level);
 
     return cachedContent;
@@ -169,9 +152,6 @@ export const getCachedExercise = async (
   }
 };
 
-/**
- * Save generated exercise content to cache
- */
 export const saveExerciseToCache = async (
   passageLanguage: string,
   questionLanguage: string,
@@ -185,11 +165,10 @@ export const saveExerciseToCache = async (
     `[API] Attempting to save exercise to cache. Params: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, seed=${seedValue}, userId=${userId}`
   );
   try {
-    // Use RETURNING id to get the inserted row's ID
     const result = db
       .prepare(
         `
-        INSERT INTO generated_content (language, question_language, level, content, questions, created_at, seed_value, user_id) 
+        INSERT INTO generated_content (language, question_language, level, content, questions, created_at, seed_value, user_id)
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
         RETURNING id
       `
@@ -219,9 +198,6 @@ export const saveExerciseToCache = async (
   }
 };
 
-/**
- * Call the OpenAI API
- */
 async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling OpenAI API...');
   if (!openai) {
@@ -236,12 +212,10 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
       max_tokens: modelConfig.maxTokens,
     });
 
-    // Add checks before accessing properties
     const choice = completion?.choices?.[0];
     const result = choice?.message?.content;
 
     if (!result) {
-      // Log the structure if it's unexpected
       if (!completion) console.error('[API] OpenAI response completion object is missing.');
       else if (!completion.choices || completion.choices.length === 0)
         console.error('[API] OpenAI response choices array is missing or empty.');
@@ -254,17 +228,11 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
     console.log('[API] Received response from OpenAI.');
     return result;
   } catch (error: unknown) {
-    // Use String() for safe logging
     console.error('[API] OpenAI API raw error:', String(error));
-    // Throw a guaranteed Error object
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     throw ensureError(error, 'Failed to generate content using OpenAI');
   }
 }
 
-/**
- * Call the Google AI API
- */
 async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling Google AI API...');
   const genAI = getGoogleAIClient();
@@ -280,15 +248,13 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     });
 
     const result = await model.generateContent(prompt);
-    // Add checks before accessing properties
     const response = result?.response;
-    const text = response?.text(); // text() might throw if response is missing/malformed, but safer access
+    const text = response?.text();
 
     if (!text) {
-      // Log the structure if it's unexpected
       if (!result) console.error('[API] Google AI result object is missing.');
       else if (!response) console.error('[API] Google AI response object is missing.');
-      else console.error('[API] Google AI response text is missing or empty.'); // Assuming text() returned empty
+      else console.error('[API] Google AI response text is missing or empty.');
 
       throw new AIResponseProcessingError(
         'No content received or invalid structure from Google AI'
@@ -297,16 +263,11 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     console.log('[API] Received response from Google AI.');
     return text;
   } catch (error: unknown) {
-    // Use String() for safe logging
     console.error('[API] Google AI API raw error:', String(error));
-    // Throw a guaranteed Error object
     throw ensureError(error, 'Failed to generate content using Google AI');
   }
 }
 
-/**
- * Main server action
- */
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
 ): Promise<GenerateExerciseResult> => {
@@ -317,19 +278,15 @@ export const generateExerciseResponse = async (
   const session = await getServerSession();
   const userId = session?.user?.dbId || null;
 
-  // Destructure params
   const { passageLanguage, questionLanguage, cefrLevel: level } = params;
 
-  // Ensure param types are explicitly strings before use (belt and suspenders)
   const passageLanguageStr = String(passageLanguage);
   const questionLanguageStr = String(questionLanguage);
   const levelStr = String(level);
 
-  // Validate CEFR level before using it as an enum key
   const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
   if (!validCefrLevels.includes(levelStr as CEFRLevel)) {
     console.error(`[API] Invalid CEFR level received: ${levelStr}`);
-    // Return an empty PartialQuizData structure in the quizData field on error
     return {
       quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
       quizId: -1,
@@ -338,15 +295,13 @@ export const generateExerciseResponse = async (
   }
   const cefrLevelTyped = levelStr as CEFRLevel;
 
-  // Let TS infer topic type from if/else
   const topicResult = getRandomTopicForLevel(cefrLevelTyped);
-  let topic; // Let TS infer the type
+  let topic;
   if (typeof topicResult === 'string') {
     topic = topicResult;
   } else {
     topic = String(topicResult);
   }
-  // topic is now inferred as string
 
   const grammarGuidance: string = getGrammarGuidance(cefrLevelTyped);
   const vocabularyGuidance: string = getVocabularyGuidance(cefrLevelTyped);
@@ -358,11 +313,9 @@ export const generateExerciseResponse = async (
     `[API] Received request: lang=${passageLanguageStr}, qLang=${questionLanguageStr}, level=${levelStr}, ip=${ip}, userId=${userId}`
   );
 
-  // Rate Limiting
   console.log(`[API Perf] Rate Limit Check Start: ${Date.now()}`);
   if (!(await checkRateLimit(ip))) {
     console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
-    // Return an empty PartialQuizData structure in the quizData field on error
     return {
       quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
       quizId: -1,
@@ -371,8 +324,7 @@ export const generateExerciseResponse = async (
   }
   console.log(`[API Perf] Rate Limit Check End: ${Date.now()}`);
 
-  // --- Cache Check ---
-  const seedValue = Math.floor(Date.now() / (1000 * 60 * 60 * 24)); // Daily seed
+  const seedValue = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
   console.log(`[API Perf] Cache Check Start: ${Date.now()}`);
   const cachedExercise = await getCachedExercise(
     passageLanguage,
@@ -388,15 +340,11 @@ export const generateExerciseResponse = async (
     );
     try {
       console.log(`[API Perf] Cache Validation Start: ${Date.now()}`);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsedCachedContent = JSON.parse(cachedExercise.content);
       const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
 
       if (!validatedCachedData.success) {
         console.error('[API] Invalid data found in cache:', validatedCachedData.error.format());
-        // Decide how to handle invalid cache data - perhaps proceed to generate new content?
-        // For now, return error similar to generation failure.
-        // Return an empty PartialQuizData structure in the quizData field on error
         return {
           quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
           quizId: -1,
@@ -414,20 +362,17 @@ export const generateExerciseResponse = async (
         topic: fullData.topic,
       };
       return {
-        // Replace result: JSON.stringify(partialData) with quizData: partialData
         quizData: partialData,
-        quizId: cachedExercise.id, // Use the ID from the cache record
+        quizId: cachedExercise.id,
         cached: true,
       };
     } catch (error) {
       console.error('[API] Error processing cached exercise:', error);
-      // Fall through to generate new content if cache processing fails
     }
   } else {
     console.log(`[API] Cache miss for lang=${passageLanguage}, level=${level}, seed=${seedValue}`);
   }
 
-  // --- Generation ---
   let aiResponseContent: string | undefined;
   let validatedAiData: z.infer<typeof QuizDataSchema> | undefined;
 
@@ -435,8 +380,6 @@ export const generateExerciseResponse = async (
     const activeModel = getActiveModel();
     console.log(`[API] Using AI model: ${activeModel.displayName}`);
 
-    // Use template literal for prompt, keeping explicit String() casts
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     const prompt = `Generate a reading comprehension exercise based on the following parameters:
 - Topic: ${topic}
 - Passage Language: ${passageLangName} (${passageLanguageStr})
@@ -479,12 +422,9 @@ Ensure the entire output is a single, valid JSON object string without any surro
     console.log(`[API Perf] AI Call Start: ${Date.now()}`);
     if (activeModel.provider === 'openai') {
       aiResponseContent = await callOpenAI(prompt, activeModel);
-      // TODO: Extract usage data if OpenAI provides it
     } else if (activeModel.provider === 'google') {
       aiResponseContent = await callGoogleAI(prompt, activeModel);
-      // TODO: Extract usage data if Google AI provides it
     } else {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Unsupported model provider: ${activeModel.provider}`);
     }
     console.log(`[API Perf] AI Call End: ${Date.now()}`);
@@ -493,21 +433,18 @@ Ensure the entire output is a single, valid JSON object string without any surro
       throw new AIResponseProcessingError('Received empty response from AI model.');
     }
 
-    // --- Immediate Validation of AI Response ---
     console.log(`[API Perf] AI Response Validation Start: ${Date.now()}`);
     let parsedAiContent: unknown;
     try {
       parsedAiContent = JSON.parse(aiResponseContent);
     } catch (parseError: unknown) {
       console.error('[API] Failed to parse AI response JSON:', aiResponseContent);
-      // Ensure parseError is treated as Error or string for message
       const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
       throw new AIResponseProcessingError(
         `Failed to parse AI JSON response. Error: ${errorMessage}`
       );
     }
 
-    // safeParse handles unknown input type
     const validationResult = QuizDataSchema.safeParse(parsedAiContent);
 
     if (!validationResult.success) {
@@ -515,14 +452,13 @@ Ensure the entire output is a single, valid JSON object string without any surro
         '[API] AI response failed Zod validation:',
         JSON.stringify(validationResult.error.format(), null, 2)
       );
-      console.error('[API] Failing AI Response Content:', aiResponseContent); // Log the raw failing response
+      console.error('[API] Failing AI Response Content:', aiResponseContent);
       throw new AIResponseProcessingError(
         `AI response failed validation. Errors: ${JSON.stringify(validationResult.error.format())}`
       );
     }
     validatedAiData = validationResult.data;
     console.log(`[API Perf] AI Response Validation End: ${Date.now()}`);
-    // --- End Immediate Validation ---
 
     console.log(`[API Perf] Cache Save Start: ${Date.now()}`);
     const currentUserId = userId;
@@ -538,9 +474,6 @@ Ensure the entire output is a single, valid JSON object string without any surro
 
     if (quizId === undefined) {
       console.error('[API] Failed to save generated exercise to cache.');
-      // Decide if this is a critical error - maybe proceed without caching?
-      // For now, let's return an error indication.
-      // Return an empty PartialQuizData structure in the quizData field on error
       return {
         quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
         quizId: -1,
@@ -548,7 +481,6 @@ Ensure the entire output is a single, valid JSON object string without any surro
       };
     }
 
-    // Prepare partial data using the validated data
     const partialData: PartialQuizData = {
       paragraph: validatedAiData.paragraph,
       question: validatedAiData.question,
@@ -556,12 +488,10 @@ Ensure the entire output is a single, valid JSON object string without any surro
       topic: validatedAiData.topic,
     };
 
-    // Construct the final payload matching GenerateExerciseResult
     const payload: GenerateExerciseResult = {
-      // Replace result: JSON.stringify(partialData) with quizData: partialData
       quizData: partialData,
       quizId: quizId,
-      cached: !!cachedExercise, // Explicitly cast to boolean
+      cached: !!cachedExercise,
     };
 
     console.log(`[API Perf] Total generateExerciseResponse time: ${Date.now() - start}ms`);
@@ -569,14 +499,12 @@ Ensure the entire output is a single, valid JSON object string without any surro
   } catch (error: unknown) {
     console.error('[API] AI Response Processing Error:', error);
 
-    // Type guard for error message construction
     const errorMessage =
       error instanceof Error ? error.message : 'AI model response parsing failed';
 
     return {
-      // Replace result: '' with an empty PartialQuizData structure in the quizData field on error
       quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
-      quizId: -1, // Indicate error with a sentinel quizId
+      quizId: -1,
       error: errorMessage,
     };
   }

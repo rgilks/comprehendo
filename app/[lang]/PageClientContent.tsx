@@ -18,13 +18,7 @@ const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientCont
     if (lang === initialLanguage) {
       Object.keys(initialI18nStore[lang]).forEach((ns) => {
         if (!i18n.hasResourceBundle(lang, ns)) {
-          i18n.addResourceBundle(
-            lang,
-            ns,
-            initialI18nStore[lang][ns],
-            true, // deep merge
-            true // overwrite
-          );
+          i18n.addResourceBundle(lang, ns, initialI18nStore[lang][ns], true, true);
         }
       });
     }
@@ -32,7 +26,7 @@ const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientCont
 
   useEffect(() => {
     if (i18n.language !== initialLanguage) {
-      void i18n.changeLanguage(initialLanguage); // Handle potential promise
+      void i18n.changeLanguage(initialLanguage);
     }
   }, [initialLanguage]);
 

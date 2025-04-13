@@ -13,8 +13,6 @@ declare module 'next-auth' {
 
   interface Session {
     user?: User & {
-      // Ensure user object in session includes our custom fields
-      // Keep default fields if needed, e.g., name, email, image
       name?: string | null;
       email?: string | null;
       image?: string | null;

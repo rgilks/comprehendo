@@ -206,11 +206,9 @@ async function main() {
           sessionLog('Browser context closed.');
         }
       }
-      return userResults; // Return results for this user
+      return userResults;
     };
-    // --- End runUserSession function ---
 
-    // Create tasks for all users
     console.log(
       `[${new Date().toISOString()}] [Main] Creating ${numConcurrentUsers} user session tasks...`
     );

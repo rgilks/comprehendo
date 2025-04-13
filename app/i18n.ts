@@ -1,20 +1,17 @@
 import { createInstance, type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next/initReactI18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
-import { type Language } from '@/contexts/LanguageContext'; // Assuming Language type is here
-// import i18nConfig from '../../i18n.config'; // If you have a central config file
+import { type Language } from '@/contexts/LanguageContext';
 
-// Default configuration (consider moving to a separate config file like i18n.config.ts)
 const i18nConfig = {
   lng: 'en',
   fallbackLng: 'en',
   supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he'],
-  ns: ['common'], // Default namespaces
+  ns: ['common'],
   defaultNS: 'common',
   interpolation: {
-    escapeValue: false, // React already safes from xss
+    escapeValue: false,
   },
-  // Removed react: { useSuspense: false } from base config, set explicitly in init
 };
 
 export const initServerI18n = async (
@@ -33,9 +30,8 @@ export const initServerI18n = async (
       ...i18nConfig,
       lng: language,
       ns: namespaces,
-      // Remove preload: i18nConfig.supportedLngs,
       react: {
-        useSuspense: false, // Explicitly set useSuspense: false for SSR
+        useSuspense: false,
       },
     });
   return i18nInstance;

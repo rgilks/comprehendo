@@ -69,7 +69,7 @@ describe('Rate Limiting', () => {
   const checkIsWithinRateLimit = (timestamps: number[]): boolean => {
     const MAX_REQUESTS_PER_HOUR = 100;
     const now = Date.now();
-    const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
+    const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 
     const recentRequests = timestamps.filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW);
 
@@ -77,7 +77,7 @@ describe('Rate Limiting', () => {
   };
 
   test('should allow requests within rate limit', () => {
-    const isWithinLimit = checkIsWithinRateLimit([Date.now() - 10000]); // One recent request
+    const isWithinLimit = checkIsWithinRateLimit([Date.now() - 10000]);
     expect(isWithinLimit).toBe(true);
   });
 

@@ -69,7 +69,7 @@ export interface QuizSlice {
   ) => void;
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
-  submitFeedback: (rating: 'good' | 'bad') => Promise<void>; 
+  submitFeedback: (rating: 'good' | 'bad') => Promise<void>;
   resetQuizState: () => void;
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void;
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
