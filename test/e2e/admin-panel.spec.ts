@@ -19,8 +19,8 @@ test.describe('Admin Panel Basic Navigation', () => {
     await checkTableLoads(page, 'users');
   });
 
-  test('should display the generated_content table', async ({ page }) => {
-    await checkTableLoads(page, 'generated_content');
+  test('should display the quiz table', async ({ page }) => {
+    await checkTableLoads(page, 'quiz');
   });
 
   test('should display the usage_stats table', async ({ page }) => {

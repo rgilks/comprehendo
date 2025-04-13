@@ -198,7 +198,7 @@ export const submitAnswer = async (
   let feedbackData: FeedbackType = undefined;
 
   try {
-    const quizRecord = db.prepare('SELECT content FROM generated_content WHERE id = ?').get(id) as
+    const quizRecord = db.prepare('SELECT content FROM quiz WHERE id = ?').get(id) as
       | { content: string }
       | undefined;
 
@@ -391,7 +391,7 @@ export const submitQuestionFeedback = async (
   const { quizId, rating } = parsedBody.data;
 
   try {
-    const quizExists = db.prepare('SELECT id FROM generated_content WHERE id = ?').get(quizId);
+    const quizExists = db.prepare('SELECT id FROM quiz WHERE id = ?').get(quizId);
     if (!quizExists) {
       console.warn(
         `[SubmitFeedback] Attempt to submit feedback for non-existent quiz ID: ${quizId}`

@@ -20,13 +20,13 @@ interface RateLimitRow {
   id: number;
 }
 
-interface GeneratedContentRow {
+interface QuizRow {
   id: number;
   language: string;
   level: string;
   content: string;
-  questions: string;
   created_at: string;
+  question_language: string | null;
 }
 
 const _exerciseRequestBodySchema = z.object({
@@ -128,22 +128,19 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
 export const getCachedExercise = async (
   passageLanguage: string,
   questionLanguage: string,
-  level: string,
-  seedValue: number
-): Promise<GeneratedContentRow | undefined> => {
+  level: string
+): Promise<QuizRow | undefined> => {
   if (!db) throw new Error('Database not initialized');
   console.log('[API] Logged-in user or non-A1 level: Checking database cache.');
   try {
     const getCachedContent = (specificLevel: string) => {
-      const stmt = db.prepare<[string, string, string, number]>(
-        `SELECT id, language, level, content, questions, created_at
-         FROM generated_content
-         WHERE language = ? AND questions_language = ? AND level = ? AND seed_value = ?
+      const stmt = db.prepare<[string, string, string]>(
+        `SELECT id, language, level, content, created_at, question_language
+         FROM quiz
+         WHERE language = ? AND question_language = ? AND level = ?
          ORDER BY created_at DESC LIMIT 1`
       );
-      return stmt.get(passageLanguage, questionLanguage, specificLevel, seedValue) as
-        | GeneratedContentRow
-        | undefined;
+      return stmt.get(passageLanguage, questionLanguage, specificLevel) as QuizRow | undefined;
     };
 
     const cachedContent = getCachedContent(level);
@@ -160,32 +157,25 @@ export const saveExerciseToCache = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
-  seedValue: number,
   jsonContent: string,
   userId: number | null
 ): Promise<number | undefined> => {
   if (!db) throw new Error('Database not initialized');
   console.log(
-    `[API] Attempting to save exercise to cache. Params: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, seed=${seedValue}, userId=${userId}`
+    `[API] Attempting to save exercise to cache. Params: lang=${passageLanguage}, qLang=${questionLanguage}, level=${level}, userId=${userId}`
   );
   try {
     const result = db
       .prepare(
         `
-        INSERT INTO generated_content (language, question_language, level, content, questions, created_at, seed_value, user_id)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+        INSERT INTO quiz (language, question_language, level, content, created_at, user_id)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
         RETURNING id
       `
       )
-      .get(
-        passageLanguage,
-        questionLanguage,
-        level,
-        jsonContent,
-        jsonContent,
-        seedValue,
-        userId
-      ) as { id: number } | undefined;
+      .get(passageLanguage, questionLanguage, level, jsonContent, userId) as
+      | { id: number }
+      | undefined;
 
     if (result?.id) {
       console.log(`[API] Saved exercise to cache with ID: ${result.id}`);
@@ -333,19 +323,13 @@ export const generateExerciseResponse = async (
   }
   console.log(`[API Perf] Rate Limit Check End: ${Date.now()}`);
 
-  const seedValue = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
   console.log(`[API Perf] Cache Check Start: ${Date.now()}`);
-  const cachedExercise = await getCachedExercise(
-    passageLanguage,
-    questionLanguage,
-    level,
-    seedValue
-  );
+  const cachedExercise = await getCachedExercise(passageLanguage, questionLanguage, level);
   console.log(`[API Perf] Cache Check End: ${Date.now()}`);
 
   if (cachedExercise) {
     console.log(
-      `[API] Cache hit for lang=${passageLanguage}, level=${level}, seed=${seedValue}. Cache ID: ${cachedExercise.id}`
+      `[API] Cache hit for lang=${passageLanguage}, level=${level}. Cache ID: ${cachedExercise.id}`
     );
     try {
       console.log(`[API Perf] Cache Validation Start: ${Date.now()}`);
@@ -379,7 +363,7 @@ export const generateExerciseResponse = async (
       console.error('[API] Error processing cached exercise:', error);
     }
   } else {
-    console.log(`[API] Cache miss for lang=${passageLanguage}, level=${level}, seed=${seedValue}`);
+    console.log(`[API] Cache miss for lang=${passageLanguage}, level=${level}`);
   }
 
   let aiResponseContent: string | undefined;
@@ -481,7 +465,6 @@ Ensure the entire output is a single, valid JSON object string without any surro
       passageLanguage,
       questionLanguage,
       level,
-      seedValue,
       aiResponseContent,
       currentUserId
     );

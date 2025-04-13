@@ -6,15 +6,6 @@ import * as Sentry from '@sentry/nextjs';
 const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
-interface ColumnInfo {
-  cid: number;
-  name: string;
-  type: string;
-  notnull: number;
-  dflt_value: string | null;
-  pk: number;
-}
-
 const isBuildPhase =
   process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
@@ -47,15 +38,13 @@ function initializeDatabase(): Database.Database {
 
     console.log('[DB] Initializing/verifying database schema...');
     db.exec(`
-      CREATE TABLE IF NOT EXISTS generated_content (
+      CREATE TABLE IF NOT EXISTS quiz (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         language TEXT NOT NULL,
         level TEXT NOT NULL,
         content TEXT NOT NULL,
-        questions TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         question_language TEXT,
-        seed_value INTEGER,
         user_id INTEGER 
       );
       
@@ -95,74 +84,17 @@ function initializeDatabase(): Database.Database {
         user_id INTEGER NOT NULL,
         rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')), 
         submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (quiz_id) REFERENCES generated_content (id) ON DELETE CASCADE,
+        FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       );
 
-      CREATE INDEX IF NOT EXISTS idx_generated_content_created_at ON generated_content(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_quiz_created_at ON quiz(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_usage_stats_timestamp ON usage_stats(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
       CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
     `);
-
-    const usageStatsColumns = db.prepare('PRAGMA table_info(usage_stats)').all() as ColumnInfo[];
-    if (!usageStatsColumns.some((column) => column.name === 'user_id')) {
-      console.log('[DB] Adding user_id column to usage_stats table');
-      db.exec(
-        `ALTER TABLE usage_stats ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE`
-      );
-      console.log('[DB] Column user_id added successfully to usage_stats');
-    }
-
-    const generatedContentColumns = db
-      .prepare('PRAGMA table_info(generated_content)')
-      .all() as ColumnInfo[];
-    if (!generatedContentColumns.some((column) => column.name === 'question_language')) {
-      console.log('[DB] Adding question_language column to generated_content table');
-      db.exec(`ALTER TABLE generated_content ADD COLUMN question_language TEXT`);
-      console.log('[DB] Column question_language added successfully to generated_content');
-    }
-
-    if (!generatedContentColumns.some((column) => column.name === 'seed_value')) {
-      console.log('[DB] Adding seed_value column to generated_content table');
-      db.exec(`ALTER TABLE generated_content ADD COLUMN seed_value INTEGER`);
-      console.log('[DB] Column seed_value added successfully to generated_content');
-    }
-
-    if (!generatedContentColumns.some((column) => column.name === 'user_id')) {
-      console.log('[DB] Adding user_id column to generated_content table');
-      db.exec(`ALTER TABLE generated_content ADD COLUMN user_id INTEGER`);
-      console.log('[DB] Column user_id added successfully to generated_content');
-    }
-
-    const userColumns = db.prepare('PRAGMA table_info(users)').all() as ColumnInfo[];
-    const hasOldLevelColumn = userColumns.some((col) => col.name === 'current_cefr_level');
-    const hasOldStreakColumn = userColumns.some((col) => col.name === 'correct_streak');
-    if (hasOldLevelColumn) {
-      console.log('[DB] Attempting to drop old current_cefr_level column from users table');
-      try {
-        db.exec('ALTER TABLE users DROP COLUMN current_cefr_level');
-      } catch (e) {
-        console.warn('[DB] Could not drop current_cefr_level:', e);
-      }
-    }
-    if (hasOldStreakColumn) {
-      console.log('[DB] Attempting to drop old correct_streak column from users table');
-      try {
-        db.exec('ALTER TABLE users DROP COLUMN correct_streak');
-      } catch (e) {
-        console.warn('[DB] Could not drop correct_streak:', e);
-      }
-    }
-
-    try {
-      db.exec(`ALTER TABLE user_progress DROP COLUMN last_quiz_id;`);
-      console.log('[DB] Removed old last_quiz_id column from user_progress');
-    } catch (e) {
-      console.warn('[DB] Could not remove old last_quiz_id column:', e);
-    }
 
     console.log('[DB] Schema initialization/verification complete');
 

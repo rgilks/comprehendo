@@ -353,7 +353,7 @@ Comprehendo includes a basic admin panel accessible at the `/admin` route.
 
 - **Access Control**: Only users logged in with an email address listed in the `ADMIN_EMAILS` environment variable can access this page. Attempts by non-admins will redirect to the homepage.
 - **Functionality**: The admin panel allows authorized users to:
-  - View a list of database tables (`users`, `generated_content`, `usage_stats`).
+  - View a list of database tables (`users`, `quiz`, `usage_stats`).
   - Select a table to view its data.
   - Browse table data using pagination controls.
   - Refresh the data view.
@@ -406,3 +406,11 @@ Once these files are correctly populated, the E2E tests requiring authentication
 ## Deployment
 
 The application is configured for deployment via Docker and includes a LiteFS setup for SQLite replication.
+
+- Run the development server: `npm run dev`
+- Access the Admin Panel at `http://localhost:3000/admin`
+- Log in using one of the configured OAuth providers.
+- Navigate through the different database tables using the sidebar.
+- View a list of database tables (`users`, `quiz`, `usage_stats`).
+- Inspect individual rows by clicking on them.
+- Navigate through table pages using pagination controls.
