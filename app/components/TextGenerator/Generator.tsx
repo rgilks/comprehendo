@@ -3,7 +3,6 @@
 import React, { useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import AnimateTransition from '@/components/AnimateTransition';
 import { HandThumbUpIcon, HandThumbDownIcon } from '@heroicons/react/24/solid';
 import { useSession } from 'next-auth/react';
 
@@ -32,13 +31,7 @@ const Generator = () => {
 
   return (
     <div className="mt-6 md:mt-8" ref={contentContainerRef}>
-      <AnimateTransition
-        show={showFeedbackPrompt}
-        type="fade-in"
-        duration={400}
-        delay={300}
-        unmountOnExit
-      >
+      {showFeedbackPrompt && (
         <div className="text-center p-4 bg-gray-800 rounded-lg border border-gray-700 shadow-md">
           <p className="text-md font-semibold text-gray-200 mb-4">Was this question helpful?</p>
           <div className="flex justify-center space-x-6">
@@ -66,15 +59,9 @@ const Generator = () => {
             </button>
           </div>
         </div>
-      </AnimateTransition>
+      )}
 
-      <AnimateTransition
-        show={showGeneratorButton}
-        type="fade-in"
-        duration={400}
-        delay={300}
-        unmountOnExit
-      >
+      {showGeneratorButton && (
         <button
           onClick={generateTextHandler}
           disabled={loading}
@@ -115,7 +102,7 @@ const Generator = () => {
             t('practice.generateNewText')
           )}
         </button>
-      </AnimateTransition>
+      )}
     </div>
   );
 };

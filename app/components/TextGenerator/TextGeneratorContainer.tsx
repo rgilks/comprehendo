@@ -4,7 +4,6 @@ import React, { useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSession } from 'next-auth/react';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import AnimateTransition from '@/components/AnimateTransition';
 import LanguageSelector from './LanguageSelector';
 import LoginPrompt from './LoginPrompt';
 import ErrorDisplay from './ErrorDisplay';
@@ -54,7 +53,7 @@ const TextGeneratorContainer = () => {
 
   useEffect(() => {
     if (isContentVisible && generatedContentRef.current) {
-      generatedContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      generatedContentRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
     }
   }, [isContentVisible]);
 
@@ -69,32 +68,23 @@ const TextGeneratorContainer = () => {
         <LoginPrompt />
         <ErrorDisplay />
 
-        <AnimateTransition show={loading && !quizData} type="fade-in" duration={400} unmountOnExit>
-          <QuizSkeleton />
-        </AnimateTransition>
+        {/* Quiz Skeleton */}
+        {loading && !quizData && <QuizSkeleton />}
 
-        <AnimateTransition show={isContentVisible} type="fade-in" duration={400} unmountOnExit>
-          {quizData && !loading && (
-            <div
-              className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg"
-              data-testid="generated-content"
-              ref={generatedContentRef}
-            >
-              <ReadingPassage />
-              <QuizSection />
-            </div>
-          )}
-        </AnimateTransition>
+        {/* Generated Content */}
+        {isContentVisible && (
+          <div
+            className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg"
+            data-testid="generated-content"
+            ref={generatedContentRef}
+          >
+            <ReadingPassage />
+            <QuizSection />
+          </div>
+        )}
 
-        <AnimateTransition
-          show={showProgressTracker}
-          type="fade-in"
-          duration={400}
-          delay={150}
-          unmountOnExit
-        >
-          <ProgressTracker />
-        </AnimateTransition>
+        {/* Progress Tracker */}
+        {showProgressTracker && <ProgressTracker />}
 
         <Generator />
       </div>

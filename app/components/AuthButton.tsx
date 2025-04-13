@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Session } from 'next-auth';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import AnimateTransition from './AnimateTransition';
 
 interface AuthButtonProps {
   variant?: 'full' | 'icon-only';
@@ -79,50 +78,43 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
         </button>
 
         {/* Dropdown menu */}
-        <AnimateTransition
-          show={showUserMenu}
-          type="slide-down"
-          className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-10"
-          unmountOnExit
-        >
-          <div className="bg-gray-800 rounded-md shadow-xl border border-gray-700 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-700">
-              <p className="text-sm text-white">{session.user?.name}</p>
-              <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
-            </div>
-            <div className="py-1">
-              {session.user?.isAdmin && (
-                <Link
-                  href="/admin"
+        {showUserMenu && (
+          <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-10">
+            <div className="bg-gray-800 rounded-md shadow-xl border border-gray-700 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-700">
+                <p className="text-sm text-white">{session.user?.name}</p>
+                <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+              </div>
+              <div className="py-1">
+                {session.user?.isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    {t('navigation.admin')}
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    void signOut();
+                    setShowUserMenu(false);
+                  }}
+                  data-testid="sign-out-button"
                   className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
-                  onClick={() => setShowUserMenu(false)}
                 >
-                  {t('navigation.admin')}
-                </Link>
-              )}
-              <button
-                onClick={() => {
-                  void signOut();
-                  setShowUserMenu(false);
-                }}
-                data-testid="sign-out-button"
-                className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
-              >
-                {t('auth.signOut')}
-              </button>
+                  {t('auth.signOut')}
+                </button>
+              </div>
             </div>
           </div>
-        </AnimateTransition>
+        )}
       </div>
     );
   }
 
   return (
-    <AnimateTransition
-      show={true}
-      type="scale-up"
-      className={`flex gap-3 ${variant === 'full' ? 'flex-col sm:flex-row' : 'flex-row'}`}
-    >
+    <div className={`flex gap-3 ${variant === 'full' ? 'flex-col sm:flex-row' : 'flex-row'}`}>
       {/* Google Button */}
       <button
         onClick={() => {
@@ -165,7 +157,7 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
         </svg>
         {variant === 'full' && <span>{t('auth.signInGitHub')}</span>}
       </button>
-    </AnimateTransition>
+    </div>
   );
 };
 

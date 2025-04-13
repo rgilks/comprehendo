@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, memo } from 'react';
 import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
-import AnimateTransition from '@/components/AnimateTransition';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 
 interface TranslatableWordProps {
@@ -73,15 +72,11 @@ const TranslatableWord = memo(
         {...dataTestIdProps}
       >
         {word}
-        <AnimateTransition
-          show={showTranslation}
-          type="scale-up"
-          duration={200}
-          unmountOnExit
-          className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm"
-        >
-          <span className="font-medium">{translation || word}</span>
-        </AnimateTransition>
+        {showTranslation && (
+          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
+            <span className="font-medium">{translation || word}</span>
+          </div>
+        )}
       </span>
     );
   }

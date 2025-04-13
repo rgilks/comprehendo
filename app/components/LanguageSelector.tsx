@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { Language } from '@/contexts/LanguageContext';
-import AnimateTransition from '@/components/AnimateTransition';
 
 const LanguageSelector = () => {
   const { language, setLanguage, languages } = useLanguage();
@@ -61,32 +60,29 @@ const LanguageSelector = () => {
         </button>
       </div>
 
-      <AnimateTransition
-        show={isOpen}
-        type="slide-down"
-        className="origin-top-left absolute left-0 top-full mt-2 w-auto min-w-[100px] z-50"
-        unmountOnExit
-      >
-        <div
-          className="rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
-          role="menu"
-          aria-orientation="vertical"
-          aria-labelledby="menu-button"
-        >
-          <div className="py-1" role="none">
-            {(Object.keys(languages) as Language[]).map((lang) => (
-              <button
-                key={lang}
-                onClick={() => handleSelect(lang)}
-                className={`${language === lang ? 'bg-gray-700 text-white' : 'text-gray-300'} block w-full px-4 py-2 text-sm text-left hover:bg-gray-600 hover:text-white transition-colors`}
-                role="menuitem"
-              >
-                {languages[lang]}
-              </button>
-            ))}
+      {isOpen && (
+        <div className="origin-top-left absolute left-0 top-full mt-2 w-auto min-w-[100px] z-50">
+          <div
+            className="rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden"
+            role="menu"
+            aria-orientation="vertical"
+            aria-labelledby="menu-button"
+          >
+            <div className="py-1" role="none">
+              {(Object.keys(languages) as Language[]).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => handleSelect(lang)}
+                  className={`${language === lang ? 'bg-gray-700 text-white' : 'text-gray-300'} block w-full px-4 py-2 text-sm text-left hover:bg-gray-600 hover:text-white transition-colors`}
+                  role="menuitem"
+                >
+                  {languages[lang]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </AnimateTransition>
+      )}
     </div>
   );
 };

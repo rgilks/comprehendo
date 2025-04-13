@@ -5,7 +5,6 @@ import { BookOpenIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
 import { getTextDirection, type Language } from '@/contexts/LanguageContext';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import AnimateTransition from '@/components/AnimateTransition';
 import TranslatableWord from './TranslatableWord';
 import AudioControls from './AudioControls';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -81,27 +80,21 @@ const ReadingPassage = () => {
         <AudioControls />
       </div>
 
-      <AnimateTransition
-        show={true}
-        type="fade-in"
-        duration={600}
+      {/* Passage Content */}
+      <div
         className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
         data-testid="passage-content"
       >
         <div dir={getTextDirection(generatedPassageLanguage)}>
           {renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)}
         </div>
-      </AnimateTransition>
+      </div>
 
+      {/* Question Placeholder */}
       {!showQuestionSection && (
-        <AnimateTransition
-          show={true}
-          type="fade-in"
-          duration={400}
-          className="mt-4 text-center text-gray-400 text-sm animate-pulse"
-        >
+        <div className="mt-4 text-center text-gray-400 text-sm animate-pulse">
           {t('practice.questionWillAppear')}
-        </AnimateTransition>
+        </div>
       )}
     </>
   );
