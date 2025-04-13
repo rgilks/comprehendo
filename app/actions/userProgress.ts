@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
+import * as Sentry from '@sentry/nextjs';
 
 interface SessionUser extends NonNullable<Session['user']> {
   dbId?: number;
@@ -126,6 +127,7 @@ function calculateAndUpdateProgress(
     };
   } catch (dbError) {
     console.error(`[ProgressCalc] Database error for user ${userId}:`, dbError);
+    Sentry.captureException(dbError, { extra: { userId, language, isCorrect } });
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     return {
       currentLevel: 'A1',
@@ -251,7 +253,8 @@ export const submitAnswer = async (
       feedbackData = undefined;
     }
   } catch (error: unknown) {
-    console.error(`[SubmitAnswer] Error fetching/processing quiz ${id}:`, error);
+    console.error(`[SubmitAnswer] Error processing quiz ID ${id}:`, error);
+    Sentry.captureException(error, { extra: { quizId: id } });
     return {
       currentLevel: 'A1',
       currentStreak: 0,
@@ -343,12 +346,16 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
       currentStreak: userProgress.correct_streak,
     };
   } catch (dbError) {
-    console.error(`[GetProgress] Database error for user ${userId}:`, dbError);
+    console.error(
+      `[GetProgress] Database error for user ${userId}, language ${normalizedLanguage}:`,
+      dbError
+    );
+    Sentry.captureException(dbError, { extra: { userId, language: normalizedLanguage } });
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     return {
       currentLevel: 'A1',
       currentStreak: 0,
-      error: `A database error occurred: ${message}`,
+      error: `Failed to get progress: ${message}`,
     };
   }
 };
@@ -402,12 +409,12 @@ export const submitQuestionFeedback = async (
       `[SubmitFeedback] Feedback recorded for Quiz ID ${quizId}, User ID ${userId}, Rating: ${rating}`
     );
     return { success: true };
-  } catch (error: unknown) {
-    console.error(
-      `[SubmitFeedback] Error recording feedback for Quiz ID ${quizId}, User ID ${userId}:`,
-      error
-    );
-    const message = error instanceof Error ? error.message : 'Unknown database error';
-    return { success: false, error: `Failed to record feedback: ${message}` };
+  } catch (dbError) {
+    console.error('[SubmitFeedback] Database error:', dbError);
+    const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
+    Sentry.captureException(dbError, {
+      extra: { quizId: params.quizId, rating: params.rating, userId },
+    });
+    return { success: false, error: `Database error: ${message}` };
   }
 };

@@ -9,6 +9,7 @@ import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
+import * as Sentry from '@sentry/nextjs';
 
 const MAX_REQUESTS_PER_HOUR = 100;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
@@ -86,6 +87,7 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
         }
       } catch (parseError) {
         console.error(`[API] Failed to parse rate limit data for IP ${ip}:`, parseError);
+        Sentry.captureException(parseError);
         userRequests = [];
       }
       console.log(`[API] Found ${userRequests.length} previous requests for IP: ${ip}`);
@@ -118,6 +120,7 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('[API] Error checking rate limit:', error);
+    Sentry.captureException(error);
     return false;
   }
 };
@@ -148,6 +151,7 @@ export const getCachedExercise = async (
     return cachedContent;
   } catch (error) {
     console.error('[API] Error getting cached exercise:', error);
+    Sentry.captureException(error);
     return undefined;
   }
 };
@@ -194,6 +198,7 @@ export const saveExerciseToCache = async (
     }
   } catch (error) {
     console.error('[API] Error saving to cache during DB operation:', error);
+    Sentry.captureException(error);
     return undefined;
   }
 };
@@ -229,7 +234,9 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
     return result;
   } catch (error: unknown) {
     console.error('[API] OpenAI API raw error:', String(error));
-    throw ensureError(error, 'Failed to generate content using OpenAI');
+    const wrappedError = ensureError(error, 'Failed to generate content using OpenAI');
+    Sentry.captureException(wrappedError);
+    throw wrappedError;
   }
 }
 
@@ -264,7 +271,9 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     return text;
   } catch (error: unknown) {
     console.error('[API] Google AI API raw error:', String(error));
-    throw ensureError(error, 'Failed to generate content using Google AI');
+    const wrappedError = ensureError(error, 'Failed to generate content using Google AI');
+    Sentry.captureException(wrappedError);
+    throw wrappedError;
   }
 }
 
@@ -438,10 +447,16 @@ Ensure the entire output is a single, valid JSON object string without any surro
     try {
       parsedAiContent = JSON.parse(aiResponseContent);
     } catch (parseError: unknown) {
-      console.error('[API] Failed to parse AI response JSON:', aiResponseContent);
-      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+      console.error(
+        '[API] Failed to parse AI response JSON:',
+        parseError,
+        '\nRaw Response:\n',
+        aiResponseContent
+      );
+      const errorToCapture = ensureError(parseError, 'Failed to parse AI response JSON');
+      Sentry.captureException(errorToCapture, { extra: { aiResponseContent } });
       throw new AIResponseProcessingError(
-        `Failed to parse AI JSON response. Error: ${errorMessage}`
+        `Failed to parse AI JSON response. Error: ${errorToCapture.message}`
       );
     }
 

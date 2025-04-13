@@ -3,6 +3,7 @@
 import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
+import * as Sentry from '@sentry/nextjs';
 
 const isAdmin = async (): Promise<boolean> => {
   const session = await getServerSession(authOptions);
@@ -31,6 +32,7 @@ const getAllTableNames = (): string[] => {
     return tables.map((table) => table.name);
   } catch (error) {
     console.error('[Admin Actions] Error fetching table names:', error);
+    Sentry.captureException(error);
     return [];
   }
 };
@@ -103,6 +105,7 @@ export const getTableData = async (
     return { data: result };
   } catch (error) {
     console.error(`[Admin Actions] Error fetching paginated data for table ${tableName}:`, error);
+    Sentry.captureException(error, { extra: { tableName, page, limit } });
     return { error: 'Failed to fetch table data' };
   }
 };
