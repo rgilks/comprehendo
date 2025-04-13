@@ -154,6 +154,18 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
         </svg>
         {variant === 'full' && <span>{t('auth.signInGitHub')}</span>}
       </button>
+      <button
+        onClick={() => {
+          void signIn('discord');
+        }}
+        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 focus-visible:ring-[#5865F2] ${variant === 'icon-only' ? 'p-2 bg-[#5865F2] text-white rounded-full hover:bg-[#4f5bda]' : 'px-4 py-2 bg-[#5865F2] text-white rounded-lg hover:bg-[#4f5bda] gap-2 hover:translate-y-[-2px]'}`}
+        title={t('auth.signInDiscord')}
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M20.317 4.369a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.078.037c-.21.375-.444.864-.608 1.229a18.29 18.29 0 00-5.484 0 10.02 10.02 0 00-.617-1.229.076.076 0 00-.078-.037 19.736 19.736 0 00-4.885 1.515.069.069 0 00-.032.056c-.008.115-.018.255-.026.415a19.081 19.081 0 005.022 15.18.076.076 0 00.087.015 19.9 19.9 0 003.757-1.386 18.18 18.18 0 002.948 1.386.074.074 0 00.087-.015 19.078 19.078 0 005.022-15.18c-.01-.16-.02-.3-.028-.415a.07.07 0 00-.032-.056zM8.03 15.912c-1.104 0-2-.896-2-2s.896-2 2-2 2 .896 2 2-.896 2-2 2zm7.94 0c-1.104 0-2-.896-2-2s.896-2 2-2 2 .896 2 2-.896 2-2 2z" />
+        </svg>
+        {variant === 'full' && <span>{t('auth.signInDiscord')}</span>}
+      </button>
     </div>
   );
 };

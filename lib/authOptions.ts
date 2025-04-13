@@ -1,6 +1,7 @@
 import { User, Account } from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
+import Discord from 'next-auth/providers/discord';
 import { JWT } from 'next-auth/jwt';
 import { Session } from 'next-auth';
 import db from './db';
@@ -15,6 +16,8 @@ export const authEnvSchema = z
     GITHUB_SECRET: z.string().optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
+    DISCORD_CLIENT_ID: z.string().optional(),
+    DISCORD_CLIENT_SECRET: z.string().optional(),
     AUTH_SECRET: z.string({ required_error: '[NextAuth] ERROR: AUTH_SECRET is missing!' }),
     NEXTAUTH_URL: z.string().url().optional(),
     ADMIN_EMAILS: z.string().optional(),
@@ -47,6 +50,20 @@ export const authEnvSchema = z
         code: z.ZodIssueCode.custom,
         message: 'GOOGLE_CLIENT_ID is required when GOOGLE_CLIENT_SECRET is set',
         path: ['GOOGLE_CLIENT_ID'],
+      });
+    }
+    if (data.DISCORD_CLIENT_ID && !data.DISCORD_CLIENT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'DISCORD_CLIENT_SECRET is required when DISCORD_CLIENT_ID is set',
+        path: ['DISCORD_CLIENT_SECRET'],
+      });
+    }
+    if (!data.DISCORD_CLIENT_ID && data.DISCORD_CLIENT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'DISCORD_CLIENT_ID is required when DISCORD_CLIENT_SECRET is set',
+        path: ['DISCORD_CLIENT_ID'],
       });
     }
     if (!data.NEXTAUTH_URL && data.NODE_ENV === 'production') {
@@ -94,6 +111,20 @@ if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv?.GOOGLE_CLIENT_SECRET
 } else if (!validatedAuthEnv?.GOOGLE_CLIENT_ID && !validatedAuthEnv?.GOOGLE_CLIENT_SECRET) {
   console.warn(
     '[NextAuth] Google OAuth credentials missing (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)'
+  );
+}
+
+if (validatedAuthEnv?.DISCORD_CLIENT_ID && validatedAuthEnv?.DISCORD_CLIENT_SECRET) {
+  console.log('[NextAuth] Discord OAuth credentials found, adding provider');
+  providers.push(
+    Discord({
+      clientId: validatedAuthEnv.DISCORD_CLIENT_ID,
+      clientSecret: validatedAuthEnv.DISCORD_CLIENT_SECRET,
+    })
+  );
+} else if (!validatedAuthEnv?.DISCORD_CLIENT_ID && !validatedAuthEnv?.DISCORD_CLIENT_SECRET) {
+  console.warn(
+    '[NextAuth] Discord OAuth credentials missing (DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET)'
   );
 }
 
