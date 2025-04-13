@@ -32,7 +32,9 @@ const TranslatableWord = memo(
             const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
             const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
             const result = await getTranslation(word, sourceLang, targetLang);
-            setTranslation(result);
+            if (result) {
+              setTranslation(result);
+            }
           } finally {
             setIsLoading(false);
           }
