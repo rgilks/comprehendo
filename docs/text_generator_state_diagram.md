@@ -1,66 +1,52 @@
 ```mermaid
-stateDiagram
-    [*] --> Idle : Initial Load / Language Change
-    Idle --> LoadingGeneration : generateText()
-    Idle : User can change Language/Level
-    Idle : Displays ProgressTracker if no content
+stateDiagram-v2
+    [*] --> AuthCheck : Initial Load
 
-    LoadingGeneration --> DisplayingContent : API Success & Parse OK
-    LoadingGeneration --> Error : API Failure / Parse Error
-    LoadingGeneration : Shows QuizSkeleton
+    AuthCheck --> FetchingProgress : Is Authenticated
+    AuthCheck --> Idle : Not Authenticated / Auth Check Complete
 
-    DisplayingContent --> AwaitingAnswer : Question revealed (after delay)
-    DisplayingContent --> SpeakingPassage : handlePlayPause()
-    DisplayingContent : Shows ReadingPassage
-    DisplayingContent : Shows ProgressTracker if isAnswered=true
-
-    SpeakingPassage --> DisplayingContent : handleStop() / Speech Ends
-    SpeakingPassage : Play/Pause controls active
-    SpeakingPassage : Highlights current word
-
-    AwaitingAnswer --> ProcessingAnswer : handleAnswerSelect(answer)
-    AwaitingAnswer : Shows QuizSection (unanswered)
-
-    ProcessingAnswer --> DisplayingFeedback : submitAnswer() Success & Parse OK
-    ProcessingAnswer --> Error : submitAnswer() Failure / Parse Error
-
-    DisplayingFeedback --> LoadingGeneration : generateText() / loadNextQuiz()
-    DisplayingFeedback --> Idle : setPassageLanguage()
-    DisplayingFeedback : Shows QuizSection (answered)
-    DisplayingFeedback : Shows Explanation / Correct Answer
-    DisplayingFeedback : Shows ProgressTracker
-
-    Error --> Idle : User dismisses error / Retries / Changes Settings
-    Error : Displays ErrorDisplay component
-
-    state if_authenticated <<choice>>
-    [*] --> if_authenticated : Auth Status Check
-    if_authenticated --> FetchingProgress : status === 'authenticated'
-    if_authenticated --> Idle : status !== 'authenticated'
     FetchingProgress : isProgressLoading = true
-    FetchingProgress --> Idle : fetchUserProgress() complete
+    FetchingProgress --> Idle : fetchUserProgress() completes (Success/Error)
 
-    state if_login_prompt <<choice>>
-    Idle --> if_login_prompt: Check auth status
-    if_login_prompt --> ShowLoginPrompt : status !== 'authenticated'
-    if_login_prompt --> Idle : status === 'authenticated'
-    ShowLoginPrompt : Displays LoginPrompt component
+    Idle : Base state, selectors active
+    Idle --> LoadingGeneration : generateText() triggered (e.g., button click)
+    Idle --> LoadingGeneration : Language/Level change triggers regeneration
+
+    LoadingGeneration : loading=true, shows QuizSkeleton
+    LoadingGeneration --> DisplayingContent : generateText() API Success (resetQuizWithNewData called, triggers next quiz prefetch)
+    LoadingGeneration --> Error : generateText() API Failure / Parse Error
+
+    DisplayingContent : quizData, !loading, showContent. Shows ReadingPassage & QuizSection (unanswered).
+    DisplayingContent --> SpeakingPassage : handlePlayPause() (starts TTS)
+    DisplayingContent --> DisplayingFeedback : handleAnswerSelect(answer) (sets isAnswered=true, starts submitAnswer() async)
+
+    SpeakingPassage : isSpeakingPassage=true. Audio controls active. Highlights word.
+    SpeakingPassage --> DisplayingContent : handleStop() / Speech Ends (stopPassageSpeech called)
+
+    DisplayingFeedback : isAnswered=true, showExplanation=true. Shows QuizSection (answered), Explanation, ProgressTracker. Feedback details updated by submitAnswer() async result.
+    DisplayingFeedback --> DisplayingContent : loadNextQuiz() (if nextQuizAvailable from prefetch)
+    DisplayingFeedback --> LoadingGeneration : loadNextQuiz() (if !nextQuizAvailable)
+    DisplayingFeedback --> LoadingGeneration : Language/Level change triggers regeneration
+    DisplayingFeedback --> Error : submitAnswer() API Failure / Parse Error
+
+    Error : error != null. Shows ErrorDisplay.
+    Error --> Idle : User dismisses error (setError(null))
+    Error --> LoadingGeneration : User Retries (triggers generateText or relevant action)
 
 
-    %% --- Implementation Notes ---
-    %% Underlying state managed by Zustand store (useTextGeneratorStore)
-    %% Store logic organized into slices:
-    %% - uiSlice: loading, error, UI flags (showContent, showExplanation...)
-    %% - quizSlice: quizData, answers, feedback, generation/submission logic
-    %% - audioSlice: text-to-speech state and controls
-    %% - settingsSlice: language, cefrLevel preferences
-    %% - progressSlice: userStreak, progress fetching
+    %% --- State Derivations & UI Notes ---
+    %% UI Components shown based on state combinations:
+    %% - LoginPrompt: Idle (if !authenticated, depends on showLoginPrompt)
+    %% - QuizSkeleton: LoadingGeneration
+    %% - ReadingPassage, QuizSection: DisplayingContent, DisplayingFeedback
+    %% - ProgressTracker: DisplayingFeedback (or Idle if !quizData?) - Revisit ProgressTracker visibility condition
+    %% - ErrorDisplay: Error
+    %% - AudioControls: Active during SpeakingPassage, potentially visible DisplayingContent
 
-    %% --- Original Notes on specific state variables influencing view ---
-    %% loading (uiSlice): Controls QuizSkeleton visibility
-    %% quizData (quizSlice), showContent (uiSlice): Control main content visibility
-    %% isAnswered (quizSlice): Controls ProgressTracker visibility, QuizSection state
-    %% isSpeakingPassage, isPaused (audioSlice): Control AudioControls state
-    %% error (uiSlice): Controls ErrorDisplay visibility
-    %% showLoginPrompt (uiSlice): Controls LoginPrompt visibility (derived from auth status)
+    %% --- Underlying Store Slices (Zustand: useTextGeneratorStore) ---
+    %% - uiSlice: loading, error, showContent, showExplanation, showQuestionSection
+    %% - quizSlice: quizData, currentQuizId, selectedAnswer, isAnswered, feedback*, generateText(), handleAnswerSelect(), loadNextQuiz(), nextQuizAvailable
+    %% - audioSlice: isSpeakingPassage, isPaused, currentWordIndex, handlePlayPause(), handleStop(), speakText()
+    %% - settingsSlice: passageLanguage, cefrLevel (influence generateText params)
+    %% - progressSlice: isProgressLoading, userStreak, fetchUserProgress()
 ```

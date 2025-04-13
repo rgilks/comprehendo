@@ -2,7 +2,7 @@
 
 A multi-language reading comprehension practice tool powered by Next.js, OpenAI, and Google Gemini.
 
-[![CI/CD](https://github.com/your-username/comprehendo/actions/workflows/fly.yml/badge.svg)](https://github.com/your-username/comprehendo/actions/workflows/fly.yml)
+[![CI/CD](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml/badge.svg)](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml)
 
 ![Comprehendo Screenshot](public/screenshot.png)
 

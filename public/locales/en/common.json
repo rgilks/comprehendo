@@ -111,6 +111,7 @@
   "auth": {
     "signOut": "Sign Out",
     "signInGitHub": "Sign in with GitHub",
-    "signInGoogle": "Sign in with Google"
+    "signInGoogle": "Sign in with Google",
+    "signInDiscord": "Sign in with Discord"
   }
 }
