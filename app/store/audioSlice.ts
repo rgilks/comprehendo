@@ -154,14 +154,6 @@ export const createAudioSlice: StateCreator<
 
       utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
         console.error('Speech synthesis error:', event);
-        get().setError('Speech synthesis failed.');
-        set((state) => {
-          state.isSpeakingPassage = false;
-          state.isPaused = false;
-          state.currentWordIndex = null;
-          state.passageUtteranceRef = null;
-          state.wordsRef = [];
-        });
       };
 
       set((state) => {
@@ -185,7 +177,6 @@ export const createAudioSlice: StateCreator<
 
     utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
       console.error('Speech synthesis error:', event);
-      get().setError('Speech synthesis failed.');
     };
 
     window.speechSynthesis.speak(utterance);

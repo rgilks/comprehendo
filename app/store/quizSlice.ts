@@ -69,9 +69,9 @@ export interface QuizSlice {
   ) => void;
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
-  submitFeedback: (rating: 'good' | 'bad') => Promise<void>; // <-- NEW: Action to submit feedback
+  submitFeedback: (rating: 'good' | 'bad') => Promise<void>; 
   resetQuizState: () => void;
-  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void; // Use PartialQuizData
+  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void;
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
 }
@@ -142,6 +142,7 @@ export const createQuizSlice: StateCreator<
   },
 
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
+    get().stopPassageSpeech(); // Reset audio state
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
