@@ -35,6 +35,8 @@ function initializeDatabase(): Database.Database {
 
     db.pragma('foreign_keys = ON');
     console.log('[DB] Enabled foreign key constraints');
+    db.pragma('journal_mode = WAL');
+    console.log('[DB] Set journal mode to WAL');
 
     console.log('[DB] Initializing/verifying database schema...');
     db.exec(`
@@ -45,7 +47,8 @@ function initializeDatabase(): Database.Database {
         content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         question_language TEXT,
-        user_id INTEGER 
+        user_id INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       );
       
       CREATE TABLE IF NOT EXISTS users (
@@ -79,18 +82,18 @@ function initializeDatabase(): Database.Database {
         FOREIGN KEY (quiz_id) REFERENCES quiz (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
       );
+    
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        ip_address TEXT PRIMARY KEY,
+        request_count INTEGER NOT NULL DEFAULT 1,
+        window_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
 
       CREATE INDEX IF NOT EXISTS idx_quiz_created_at ON quiz(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
       CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
-      
-      CREATE TABLE IF NOT EXISTS rate_limits (
-        ip_address TEXT PRIMARY KEY,
-        request_count INTEGER NOT NULL DEFAULT 1,
-        window_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
     `);
 
     console.log('[DB] Schema initialization/verification complete');
