@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { HandThumbUpIcon, HandThumbDownIcon } from '@heroicons/react/24/solid';
 import { useSession } from 'next-auth/react';
+import QuizSkeleton from './QuizSkeleton';
 
 const Generator = () => {
   const { t } = useTranslation('common');
@@ -26,6 +27,8 @@ const Generator = () => {
 
   const showFeedbackPrompt =
     isAnswered && !feedbackSubmitted && !loading && status === 'authenticated';
+  const showFeedbackLoading =
+    isAnswered && !feedbackSubmitted && loading && status === 'authenticated';
   const showGeneratorButton =
     !loading && (!quizData || (isAnswered && (feedbackSubmitted || status !== 'authenticated')));
 
@@ -38,8 +41,7 @@ const Generator = () => {
             <button
               onClick={() => submitFeedback('good')}
               disabled={loading}
-              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 ${loading ? 'text-gray-600 cursor-not-allowed' : 'text-gray-300 hover:text-green-400 hover:bg-green-900/30'}
-              `}
+              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30`}
               aria-label="Good question"
               data-testid="feedback-good-button"
             >
@@ -49,8 +51,7 @@ const Generator = () => {
             <button
               onClick={() => submitFeedback('bad')}
               disabled={loading}
-              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 ${loading ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:text-red-400 hover:bg-red-900/30'}
-              `}
+              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30`}
               aria-label="Bad question"
               data-testid="feedback-bad-button"
             >
@@ -58,6 +59,12 @@ const Generator = () => {
               <span className="text-xs font-medium">No</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {showFeedbackLoading && (
+        <div className="mt-6">
+          <QuizSkeleton />
         </div>
       )}
 
