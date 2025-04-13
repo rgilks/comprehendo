@@ -95,43 +95,10 @@ function initializeDatabase(): Database.Database {
 
     console.log('[DB] Schema initialization/verification complete');
 
-    dbProxyInstance = new Proxy(db, {
-      get: (target, prop) => {
-        if (prop === 'prepare') {
-          return (sql: string) => {
-            const cachedStmt = target.prepare(sql);
-            return new Proxy(cachedStmt, {
-              get: (stmtTarget, stmtProp) => {
-                if (stmtProp === 'run' || stmtProp === 'get' || stmtProp === 'all') {
-                  return (...args: unknown[]) => {
-                    const formattedParams = args.map((param) => {
-                      if (typeof param === 'string' && param.length > 50) {
-                        return param.substring(0, 47) + '...';
-                      }
-                      return param;
-                    });
-                    console.log(
-                      `[DB] ${
-                        String(stmtProp) === 'run' ? 'Executing' : 'Querying'
-                      }: ${sql.split('\n')[0]}... Params: ${JSON.stringify(formattedParams)}`
-                    );
-                    if (stmtProp === 'run') return stmtTarget.run(...args);
-                    if (stmtProp === 'get') return stmtTarget.get(...args);
-                    if (stmtProp === 'all') return stmtTarget.all(...args);
-                    return Reflect.get(stmtTarget, stmtProp) as unknown;
-                  };
-                }
-                return Reflect.get(stmtTarget, stmtProp) as unknown;
-              },
-            });
-          };
-        }
-        return Reflect.get(target, prop) as unknown;
-      },
-    });
+    dbProxyInstance = db;
 
     isInitialized = true;
-    console.log('[DB] Database initialized successfully and proxy created.');
+    console.log('[DB] Database initialized successfully.');
     return dbProxyInstance;
   } catch (error) {
     console.error('[DB] Database initialization error:', error);
