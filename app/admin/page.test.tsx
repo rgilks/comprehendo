@@ -16,19 +16,16 @@ jest.mock('./actions', () => ({
 }));
 
 describe('AdminPage component', () => {
-  // Create controlled promise objects for tests
   let tableNamesPromiseResolve: (value: any) => void;
   let tableNamesPromise: Promise<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Setup controlled promises for mocked functions
     tableNamesPromise = new Promise((resolve) => {
       tableNamesPromiseResolve = resolve;
     });
 
-    // Mock implementations with controlled promises
     (getTableNames as jest.Mock).mockImplementation(() => tableNamesPromise);
     (getTableData as jest.Mock).mockImplementation(() =>
       Promise.resolve({
@@ -109,7 +106,7 @@ describe('AdminPage component', () => {
 
     await act(async () => {
       tableNamesPromiseResolve({ data: ['users', 'logs'] });
-      await tableNamesPromise; // Wait for the promise to resolve completely
+      await tableNamesPromise;
     });
 
     await waitFor(() => {
@@ -134,11 +131,9 @@ describe('AdminPage component', () => {
 
     await act(async () => {
       render(<AdminPage />);
-      // Resolve the promise with an error right away
       tableNamesPromiseResolve({ error: 'Unauthorized' });
     });
 
-    // Wait a tick for the promise to be handled
     await act(async () => {
       await tableNamesPromise;
     });

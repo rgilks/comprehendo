@@ -36,7 +36,6 @@ export default function AdminPage() {
       try {
         const result = await getTableNames();
 
-        // Only update state if component is still mounted
         if (!isMounted) return;
 
         if (result.error) {
@@ -45,23 +44,19 @@ export default function AdminPage() {
           setTableNames(result.data);
         }
       } catch (err) {
-        // Only update state if component is still mounted
         if (!isMounted) return;
 
         console.error('Error fetching table names:', err);
         setError('Failed to load tables');
       } finally {
-        // Only update state if component is still mounted
         if (!isMounted) return;
 
         setIsLoadingTables(false);
       }
     };
 
-    // Start the fetch operation and handle the floating promise properly
     void fetchTableNames();
 
-    // Cleanup function
     return () => {
       isMounted = false;
     };
@@ -78,7 +73,6 @@ export default function AdminPage() {
         setError(result.error);
         setTableData([]);
       } else if (result.data) {
-        // Batch state updates
         setTableData(result.data.data);
         setTotalRows(result.data.totalRows);
         setCurrentPage(result.data.page);
@@ -206,12 +200,10 @@ export default function AdminPage() {
         );
       }
 
-      // Only convert primitives to string
       if (typeof value === 'number' || typeof value === 'boolean') {
         return String(value);
       }
 
-      // Default case for any other types
       return '[Complex Value]';
     };
 
@@ -241,7 +233,6 @@ export default function AdminPage() {
     );
   };
 
-  // Convert event handlers for onClick to use void to handle the promises correctly
   const handleTableSelectClick = (tableName: string) => {
     void handleTableSelect(tableName);
   };

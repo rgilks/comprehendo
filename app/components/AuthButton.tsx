@@ -25,7 +25,6 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
     setIsMounted(true);
   }, []);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -46,7 +45,6 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
   if (session) {
     return (
       <div className="flex flex-wrap items-center gap-2 md:gap-4 relative" ref={userMenuRef}>
-        {/* User profile button */}
         <button
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           onClick={() => setShowUserMenu(!showUserMenu)}
@@ -77,7 +75,6 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
           </svg>
         </button>
 
-        {/* Dropdown menu */}
         {showUserMenu && (
           <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-10">
             <div className="bg-gray-800 rounded-md shadow-xl border border-gray-700 overflow-hidden">
@@ -115,7 +112,6 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
 
   return (
     <div className={`flex gap-3 ${variant === 'full' ? 'flex-col sm:flex-row' : 'flex-row'}`}>
-      {/* Google Button */}
       <button
         onClick={() => {
           void signIn('google');
@@ -144,7 +140,6 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
         </svg>
         {variant === 'full' && <span>{t('auth.signInGoogle')}</span>}
       </button>
-      {/* GitHub Button */}
       <button
         onClick={() => {
           void signIn('github');

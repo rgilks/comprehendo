@@ -8,7 +8,6 @@ import http from 'k6/http';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const SCREENSHOT_DIR = path.join(process.cwd(), 'screenshots');
 
-// Handle process termination
 process.on('SIGINT', async () => {
   console.log('\nGracefully shutting down...');
   process.exit(0);
@@ -22,11 +21,8 @@ async function runTest(page, cycleIndex, userId) {
     );
 
   try {
-    // Initial navigation handled by runUserSession
-    // Generate button should be ready after initial nav or previous cycle
     log('Ready for interaction.');
 
-    // --- Generation Step ---
     log('Clicking generate button...');
     const generateButton = await page.waitForSelector(
       '[data-testid="generate-button"]:not([disabled])',
@@ -35,10 +31,9 @@ async function runTest(page, cycleIndex, userId) {
     await generateButton.click();
     log('Generate button clicked.');
 
-    // --- Wait for Question OR Error ---
     log('Waiting for quiz section OR error message...');
     const quizSelector = '[data-testid="quiz-section"]';
-    const errorSelector = '[data-testid="error-display"] p'; // Assuming error text is in a <p> within this testid
+    const errorSelector = '[data-testid="error-display"] p';
 
     try {
       const result = await Promise.race([
@@ -49,19 +44,17 @@ async function runTest(page, cycleIndex, userId) {
       if (result === 'quiz') {
         log('Quiz section loaded.');
         const questionElement = await page.waitForSelector('[data-testid="quiz-question"]', {
-          timeout: 1000, // Shorter timeout as quiz section is already visible
+          timeout: 1000,
         });
         await page.waitForSelector('[data-testid="quiz-option-A"]', { timeout: 1000 });
 
         const actualQuestionText = await questionElement.textContent();
         log(`Quiz question loaded: "${actualQuestionText?.substring(0, 50)}..."`);
 
-        // --- Answer Question (Select Option A) ---
         log('Clicking option A...');
         await page.click('[data-testid="quiz-option-A"]', { timeout: 5000, force: true });
         log('Option A clicked.');
 
-        // --- Wait for Answer Processing (Generate button becomes enabled again) ---
         log('Waiting for answer processing (generate button enabled)...');
         await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
           timeout: 30000,
@@ -71,25 +64,21 @@ async function runTest(page, cycleIndex, userId) {
         const errorElement = await page.$(errorSelector);
         const errorText = errorElement ? await errorElement.textContent() : 'Unknown error';
         log(`Error message detected: "${errorText}". This is expected for anonymous cache misses.`);
-        // No further action needed for this cycle, server responded.
-        // We might need to wait for the generate button to be re-enabled if the error state doesn't do that automatically
         log('Waiting for generate button to potentially re-enable after error...');
         try {
           await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
-            timeout: 5000, // Shorter timeout if it re-enables quickly
+            timeout: 5000,
           });
           log('Generate button re-enabled after error.');
         } catch (enableError) {
           log('Generate button did not re-enable after error within timeout.');
-          // Depending on desired behavior, this could be a failure or just logged.
         }
       } else {
-        // Should not happen with Promise.race setup
         throw new Error('Unexpected result from Promise.race');
       }
     } catch (waitError) {
       log(`Error waiting for quiz or error: ${waitError.message}`);
-      throw waitError; // Propagate error to be caught by outer handler
+      throw waitError;
     }
 
     const endTime = performance.now();
@@ -97,13 +86,11 @@ async function runTest(page, cycleIndex, userId) {
     log(`Interaction cycle duration: ${duration.toFixed(0)}ms`);
     return duration;
   } catch (error) {
-    // Adjust error logging
     console.error(
       `[${new Date().toISOString()}] [User ${userId + 1} Cycle ${cycleIndex + 1}] Test failed:`,
       error.message
     );
     if (page) {
-      // Include user/cycle in failure screenshot name
       const failurePath = path.join(
         SCREENSHOT_DIR,
         `test-failure-user-${userId + 1}-cycle-${cycleIndex + 1}-${Date.now()}.png`
@@ -111,19 +98,15 @@ async function runTest(page, cycleIndex, userId) {
       log(`Saving failure screenshot to: ${failurePath}`);
       await page.screenshot({ path: failurePath });
     }
-    return -1; // Indicate failure
+    return -1;
   } finally {
-    // Context/Page is closed in runUserSession
   }
 }
 
 async function main() {
-  // --- Configuration ---
-  const numConcurrentUsers = 3; // Reduced from 5
-  const totalCycles = 20; // Reverted from 200
-  // --- End Configuration ---
+  const numConcurrentUsers = 3;
+  const totalCycles = 20;
 
-  // Revert back to calculating cycles per user
   if (totalCycles < numConcurrentUsers) {
     console.error('Error: totalCycles must be >= numConcurrentUsers');
     process.exit(1);
@@ -150,9 +133,8 @@ async function main() {
     globalBrowser = await chromium.launch({ headless: true });
     console.log(`[${new Date().toISOString()}] [Main] Global browser launched.`);
 
-    const userTasks = []; // Array to hold promises for each user session
+    const userTasks = [];
 
-    // --- Function to run a single user's session ---
     const runUserSession = async (userId) => {
       let context = null;
       let page = null;
@@ -168,13 +150,11 @@ async function main() {
 
         sessionLog(`Performing initial navigation to ${BASE_URL}/en...`);
         await page.goto(`${BASE_URL}/en`, { waitUntil: 'networkidle' });
-        // Simple wait for generate button after initial nav
         await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
           timeout: 30000,
         });
         sessionLog('Initial navigation and hydration complete.');
 
-        // Take initial load screenshot only once (e.g., for the first user)
         if (userId === 0) {
           sessionLog('Taking initial load screenshot...');
           await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'initial-load.png') });
@@ -182,21 +162,17 @@ async function main() {
         }
 
         sessionLog(`Starting ${cyclesPerUser} test cycles...`);
-        // Revert to for loop based on cyclesPerUser
         for (let i = 0; i < cyclesPerUser; i++) {
-          const duration = await runTest(page, i, userId); // Pass loop index i as cycleIndex
+          const duration = await runTest(page, i, userId);
           userResults.push(duration);
           if (duration === -1) {
             sessionLog(`Cycle ${i + 1} failed. Continuing if possible...`);
-            // break; // Optional: stop this user on failure
           }
-          // Add a larger delay between cycles for this user to reduce resource strain
           await new Promise((resolve) => setTimeout(resolve, 250));
         }
         sessionLog(`Finished ${cyclesPerUser} test cycles.`);
       } catch (sessionError) {
         sessionLog(`FATAL ERROR: ${sessionError.message}`);
-        // Push -1 for remaining cycles if session fails catastrophically
         const remainingCycles = cyclesPerUser - userResults.length;
         for (let k = 0; k < remainingCycles; k++) userResults.push(-1);
       } finally {
@@ -216,33 +192,26 @@ async function main() {
       userTasks.push(runUserSession(i));
     }
 
-    // Run all user sessions concurrently
     console.log(
       `[${new Date().toISOString()}] [Main] Starting ${numConcurrentUsers} concurrent user sessions...`
     );
-    // Use allSettled to ensure all promises complete, even if some reject
     const settledResults = await Promise.allSettled(userTasks);
     console.log(`[${new Date().toISOString()}] [Main] All user sessions finished.`);
 
-    // Process results and errors from allSettled
     let sessionFailures = 0;
     settledResults.forEach((result, index) => {
       if (result.status === 'fulfilled') {
-        // Add results from successful sessions
         allResults.push(...result.value);
       } else {
-        // Log rejected session promises and count failures
         console.error(`[Main] User ${index + 1} session failed catastrophically:`, result.reason);
         sessionFailures++;
-        // Estimate failed cycles for this user if needed, though allResults won't include them
-        // For simplicity, we rely on runTest pushing -1 for cycle failures within fulfilled sessions.
       }
     });
 
     console.log('\n=== Aggregated Results ===');
     const successfulCycles = allResults.filter((d) => d !== -1);
-    const totalCyclesAttempted = allResults.length; // Cycles from fulfilled sessions
-    const failedCycles = totalCyclesAttempted - successfulCycles.length; // Failures within fulfilled sessions
+    const totalCyclesAttempted = allResults.length;
+    const failedCycles = totalCyclesAttempted - successfulCycles.length;
 
     console.log(`Concurrent Users: ${numConcurrentUsers}`);
     console.log(`Total cycles attempted (in completed sessions): ${totalCyclesAttempted}`);
@@ -251,13 +220,12 @@ async function main() {
     console.log(`  Failed user sessions (catastrophic errors): ${sessionFailures}`);
 
     if (successfulCycles.length > 0) {
-      // Calculate average excluding the first cycle *of each fulfilled user session*
       let sumExcludingFirst = 0;
       let countExcludingFirst = 0;
 
       settledResults.forEach((result) => {
         if (result.status === 'fulfilled') {
-          const userRuns = result.value.filter((d) => d !== -1); // Successful runs for this user
+          const userRuns = result.value.filter((d) => d !== -1);
           if (userRuns.length > 1) {
             sumExcludingFirst += userRuns.slice(1).reduce((sum, d) => sum + d, 0);
             countExcludingFirst += userRuns.length - 1;
@@ -271,7 +239,6 @@ async function main() {
           `⏱️ Average duration excluding first cycle of each user: ${avgDurationExcludingFirst.toFixed(0)}ms`
         );
       } else if (successfulCycles.length > 0) {
-        // Handle case where users only ran 1 cycle or less successfully
         const overallAvg =
           successfulCycles.reduce((sum, d) => sum + d, 0) / successfulCycles.length;
         console.log(`📈 Overall average duration (incl. first cycles): ${overallAvg.toFixed(0)}ms`);
@@ -280,7 +247,6 @@ async function main() {
       console.log('No successful cycles to calculate average duration.');
     }
 
-    // Exit based on whether any cycle or session failed
     const anyFailures = failedCycles > 0 || sessionFailures > 0;
     process.exit(anyFailures ? 1 : 0);
   } catch (error) {
@@ -304,4 +270,4 @@ group('Load Landing Page', () => {
   check(res, { 'status is 200': (r) => r.status === 200 });
 });
 
-sleep(1); // Simulate user reading time
+sleep(1);

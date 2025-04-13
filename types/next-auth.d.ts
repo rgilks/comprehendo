@@ -3,9 +3,6 @@ import 'next-auth';
 import { JWT } from 'next-auth/jwt';
 
 declare module 'next-auth' {
-  /**
-   * Extends the built-in session.user type
-   */
   interface User {
     dbId?: number;
     isAdmin?: boolean;
@@ -21,9 +18,6 @@ declare module 'next-auth' {
 }
 
 declare module 'next-auth/jwt' {
-  /**
-   * Extends the built-in JWT type
-   */
   interface JWT {
     dbId?: number;
     isAdmin?: boolean;

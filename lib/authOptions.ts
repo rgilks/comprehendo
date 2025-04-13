@@ -8,7 +8,6 @@ import { AdapterUser } from 'next-auth/adapters';
 import { z } from 'zod';
 import type { NextAuthOptions } from 'next-auth';
 
-// --- Zod Schema for Auth Environment Variables ---
 export const authEnvSchema = z
   .object({
     GITHUB_ID: z.string().optional(),
@@ -54,7 +53,6 @@ export const authEnvSchema = z
     }
   });
 
-// Parse and validate auth environment variables at startup
 const authEnvVars = authEnvSchema.safeParse(process.env);
 
 if (!authEnvVars.success) {
@@ -62,12 +60,9 @@ if (!authEnvVars.success) {
     '❌ Invalid Auth environment variables:',
     JSON.stringify(authEnvVars.error.format(), null, 4)
   );
-  // Critical issues like missing AUTH_SECRET are caught by required_error
-  // Other warnings are logged. Proceed cautiously.
 }
 
 const validatedAuthEnv = authEnvVars.success ? authEnvVars.data : undefined;
-// --- End Zod Schema ---
 
 interface UserWithEmail extends User {
   email?: string | null;
@@ -75,7 +70,6 @@ interface UserWithEmail extends User {
 
 const providers = [];
 
-// Use validated env vars safely
 if (validatedAuthEnv?.GITHUB_ID && validatedAuthEnv?.GITHUB_SECRET) {
   console.log('[NextAuth] GitHub OAuth credentials found, adding provider');
   providers.push(
@@ -85,11 +79,9 @@ if (validatedAuthEnv?.GITHUB_ID && validatedAuthEnv?.GITHUB_SECRET) {
     })
   );
 } else if (!validatedAuthEnv?.GITHUB_ID && !validatedAuthEnv?.GITHUB_SECRET) {
-  // Only warn if neither is set, refinement handles case where only one is set
   console.warn('[NextAuth] GitHub OAuth credentials missing (GITHUB_ID and GITHUB_SECRET)');
 }
 
-// Use validated env vars safely
 if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv?.GOOGLE_CLIENT_SECRET) {
   console.log('[NextAuth] Google OAuth credentials found, adding provider');
   providers.push(
@@ -99,20 +91,15 @@ if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv?.GOOGLE_CLIENT_SECRET
     })
   );
 } else if (!validatedAuthEnv?.GOOGLE_CLIENT_ID && !validatedAuthEnv?.GOOGLE_CLIENT_SECRET) {
-  // Only warn if neither is set, refinement handles case where only one is set
   console.warn(
     '[NextAuth] Google OAuth credentials missing (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)'
   );
 }
 
-// Log active providers count
 console.log(`[NextAuth] Configured ${providers.length} authentication providers`);
-
-// Checks for AUTH_SECRET and NEXTAUTH_URL in production are handled by Zod validation above
 
 export const authOptions: NextAuthOptions = {
   providers,
-  // Use validated secret, provide default empty string if validation failed or env is undefined
   secret: validatedAuthEnv?.AUTH_SECRET || '',
   debug: (validatedAuthEnv?.NODE_ENV || process.env.NODE_ENV) !== 'production',
   session: {
@@ -127,7 +114,7 @@ export const authOptions: NextAuthOptions = {
             `
             INSERT INTO users (provider_id, provider, name, email, image, last_login)
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(provider_id, provider) 
+            ON CONFLICT(provider_id, provider)
             DO UPDATE SET name = ?, email = ?, image = ?, last_login = CURRENT_TIMESTAMP
           `
           ).run(
@@ -194,7 +181,6 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session: ({ session, token }: { session: Session; token: JWT }) => {
-      // Assign dbId and isAdmin fetched earlier
       if (session.user && token.sub && token.provider) {
         try {
           const userRecord = db
@@ -207,7 +193,7 @@ export const authOptions: NextAuthOptions = {
             'id' in userRecord &&
             typeof userRecord.id === 'number'
           ) {
-            session.user.dbId = userRecord.id; // Assign internal DB id
+            session.user.dbId = userRecord.id;
           } else {
             console.warn(
               `[AUTH Session Callback] Could not find user or userRecord format is incorrect for provider_id=${token.sub} and provider=${token.provider}.`
@@ -217,18 +203,14 @@ export const authOptions: NextAuthOptions = {
           console.error('[AUTH Session Callback] Error fetching internal user ID:', error);
         }
 
-        // Assign standard user ID from token
         session.user.id = token.sub;
-        // Assign isAdmin status from token
         const isAdminValue = token.isAdmin;
         session.user.isAdmin = isAdminValue;
       } else {
-        // Handle case where session.user or token.sub/provider is missing
         console.warn(
           '[AUTH Session Callback] session.user, token.sub, or token.provider missing. Cannot assign id/isAdmin.'
         );
       }
-      // Return the standard session object without the custom error property
       return session;
     },
   },

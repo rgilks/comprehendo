@@ -2,7 +2,6 @@ import { getServerSession } from 'next-auth';
 import { getTableNames, getTableData } from './actions';
 import db from '@/lib/db';
 
-// Mock actual function implementations since we're testing the actual code
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }));
@@ -11,7 +10,6 @@ jest.mock('@/lib/authOptions', () => ({
   authOptions: {},
 }));
 
-// Mock the database implementation
 jest.mock('@/lib/db', () => ({
   __esModule: true,
   default: {
@@ -20,25 +18,21 @@ jest.mock('@/lib/db', () => ({
       get: jest.fn(),
       run: jest.fn(),
     })),
-    transaction: jest.fn((cb) => cb()), // Mock transaction to just run the callback
+    transaction: jest.fn((cb) => cb()),
   },
 }));
 
-// Mock environment variables
 const originalEnv = process.env;
 
 describe('Admin actions security', () => {
-  // Set up and tear down for each test
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...originalEnv, ADMIN_EMAILS: 'admin@example.com,another@example.com' };
 
-    // Setup database mocks
     const mockAll = jest.fn().mockReturnValue([{ name: 'users' }, { name: 'logs' }]);
     const mockGet = jest.fn().mockReturnValue({ totalRows: 10 });
     const mockRun = jest.fn();
 
-    // Setup default prepare mock
     (db.prepare as jest.Mock).mockImplementation(() => ({
       all: mockAll,
       get: mockGet,

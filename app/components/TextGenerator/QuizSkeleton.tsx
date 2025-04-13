@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-// import AnimateTransition from '@/components/AnimateTransition'; // Remove import
 
 const QuizSkeleton = () => (
   <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
@@ -9,7 +8,6 @@ const QuizSkeleton = () => (
 
     <div className="space-y-3 mb-6">
       {[1, 2, 3, 4].map((i) => (
-        // Replaced AnimateTransition
         <div
           key={i}
           className={`h-3 bg-gray-700 rounded animate-pulse ${
@@ -23,7 +21,6 @@ const QuizSkeleton = () => (
 
     <div className="space-y-2">
       {[1, 2, 3, 4].map((i) => (
-        // Replaced AnimateTransition
         <div key={i} className="h-10 bg-gray-700 rounded w-full animate-pulse"></div>
       ))}
     </div>

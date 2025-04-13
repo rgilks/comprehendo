@@ -1,47 +1,20 @@
 import type { StateCreator } from 'zustand';
-// Removed unused Zod import
-// import { z } from 'zod';
-// import type { PartialQuizData } from '@/app/actions/exercise';
 import { submitAnswer, submitQuestionFeedback } from '@/app/actions/userProgress';
 import { generateExerciseResponse } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { getSession } from 'next-auth/react';
-import type { CEFRLevel } from '@/config/language-guidance'; // Keep CEFRLevel if used elsewhere in file
-import {} from '@/contexts/LanguageContext'; // Removed unused Language type and LANGUAGES map
+import type { CEFRLevel } from '@/config/language-guidance';
+import {} from '@/contexts/LanguageContext';
 import {
-  // QuizData, // Keep full QuizData if needed for feedback part, otherwise remove
-  PartialQuizData, // Use PartialQuizData
+  PartialQuizData,
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,
-} from '@/lib/domain/schemas'; // <-- Import centralized types/schemas
+} from '@/lib/domain/schemas';
 
-// Define QuizData type used within the store - Now using PartialQuizData mainly
-// type QuizData = PartialQuizData; // Now imported
-
-// --- Zod Schemas --- START
-// REMOVED QuizDataSchema definition
-// REMOVED export type QuizData = z.infer<typeof QuizDataSchema>;
-// REMOVED GenerateExerciseResultSchema definition
-// REMOVED SubmitAnswerResultSchema definition
-// --- Zod Schemas --- END
-
-// Define the shape of the pre-fetched quiz data
 interface NextQuizInfo {
   quizData: PartialQuizData;
   quizId: number;
 }
-
-// interface FeedbackResponse { // Removed unused type
-//   feedback: { // Removed unused type
-//     isCorrect: boolean; // Removed unused type
-//     correctAnswer: string; // Removed unused type
-//     explanations: Record<string, string>; // Removed unused type
-//     relevantText: string; // Removed unused type
-//   } | null; // Removed unused type
-//   currentStreak: number | null; // Removed unused type
-//   leveledUp: boolean | null; // Removed unused type
-//   currentLevel: CEFRLevel | null; // Removed unused type
-// } // Removed unused type
 
 export interface QuizSlice {
   quizData: PartialQuizData | null;
@@ -49,15 +22,14 @@ export interface QuizSlice {
   selectedAnswer: string | null;
   isAnswered: boolean;
   relevantTextRange: { start: number; end: number } | null;
-  // Feedback still likely uses full details, keep original structure if SubmitAnswerResult provides it
   feedbackIsCorrect: boolean | null;
   feedbackCorrectAnswer: string | null;
   feedbackExplanations: { A: string; B: string; C: string; D: string } | null;
   feedbackRelevantText: string | null;
-  nextQuizAvailable: NextQuizInfo | null; // Uses PartialQuizData via NextQuizInfo
-  feedbackSubmitted: boolean; // <-- NEW: Track if feedback was given for the current question
+  nextQuizAvailable: NextQuizInfo | null;
+  feedbackSubmitted: boolean;
 
-  setQuizData: (data: PartialQuizData | null) => void; // Use PartialQuizData
+  setQuizData: (data: PartialQuizData | null) => void;
   setSelectedAnswer: (answer: string | null) => void;
   setIsAnswered: (answered: boolean) => void;
   setRelevantTextRange: (range: { start: number; end: number } | null) => void;
@@ -92,7 +64,7 @@ export const createQuizSlice: StateCreator<
   feedbackExplanations: null,
   feedbackRelevantText: null,
   nextQuizAvailable: null,
-  feedbackSubmitted: false, // <-- NEW: Initial state
+  feedbackSubmitted: false,
 
   setQuizData: (data) =>
     set((state) => {
@@ -136,13 +108,13 @@ export const createQuizSlice: StateCreator<
       state.feedbackRelevantText = null;
       state.showQuestionSection = false;
       state.showExplanation = false;
-      state.nextQuizAvailable = null; // Clear prefetched quiz
-      state.feedbackSubmitted = false; // <-- NEW: Reset feedback submitted state
+      state.nextQuizAvailable = null;
+      state.feedbackSubmitted = false;
     });
   },
 
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
-    get().stopPassageSpeech(); // Reset audio state
+    get().stopPassageSpeech();
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
@@ -153,7 +125,7 @@ export const createQuizSlice: StateCreator<
       state.feedbackCorrectAnswer = null;
       state.feedbackExplanations = null;
       state.feedbackRelevantText = null;
-      state.showQuestionSection = true; // Show question immediately
+      state.showQuestionSection = true;
       state.showExplanation = false;
       state.showContent = true;
       state.loading = false;
@@ -161,15 +133,9 @@ export const createQuizSlice: StateCreator<
       const currentPassageLanguage = get().passageLanguage;
       state.generatedPassageLanguage = currentPassageLanguage;
       state.nextQuizAvailable = null;
-      state.feedbackSubmitted = false; // <-- NEW: Reset feedback submitted state
+      state.feedbackSubmitted = false;
     });
 
-    // No longer need timeout logic
-    // get().clearQuestionDelayTimeout();
-    // const timeoutId = setTimeout(() => get().setShowQuestionSection(true), 1000);
-    // get().setQuestionDelayTimeoutRef(timeoutId);
-
-    // Prefetch next quiz immediately after showing the current one
     void get().generateText(true);
   },
 
@@ -188,7 +154,6 @@ export const createQuizSlice: StateCreator<
       get().setLoading(true);
       get().setError(null);
       get().stopPassageSpeech();
-      // get().clearQuestionDelayTimeout(); // No longer needed
       get().resetQuizState();
       get().setShowContent(false);
     }
@@ -196,14 +161,12 @@ export const createQuizSlice: StateCreator<
     try {
       const { passageLanguage, cefrLevel, generatedQuestionLanguage } = get();
 
-      // Construct the params object
       const params = {
         passageLanguage: passageLanguage,
-        questionLanguage: generatedQuestionLanguage ?? 'en', // Use UI language or default
+        questionLanguage: generatedQuestionLanguage ?? 'en',
         cefrLevel: cefrLevel,
       };
 
-      // Pass the params object to the action
       const rawResponse = await generateExerciseResponse(params);
 
       const validatedResponse = GenerateExerciseResultSchema.safeParse(rawResponse as unknown);
@@ -219,29 +182,24 @@ export const createQuizSlice: StateCreator<
         throw new Error(response.error);
       }
 
-      // The response.quizData ALREADY contains the PartialQuizData object
-      // No need to parse response.result anymore.
       const quizData: PartialQuizData | null = response.quizData;
 
-      // Add language if missing (assuming PartialQuizData might have it optional)
       if (quizData && !quizData.language) {
         quizData.language = get().passageLanguage;
       }
 
-      // Now check the received quizData (which is PartialQuizData)
       if (!quizData) {
         throw new Error('Failed to generate text. No quiz data received from API.');
       }
 
-      // Use received quizData (PartialQuizData) and response.quizId
       if (isPrefetch) {
         get()._setNextQuizAvailable({
-          quizData: quizData, // Use PartialQuizData
+          quizData: quizData,
           quizId: response.quizId,
         });
         console.log('Next quiz pre-fetched.');
       } else {
-        get().resetQuizWithNewData(quizData, response.quizId); // Use PartialQuizData
+        get().resetQuizWithNewData(quizData, response.quizId);
       }
     } catch (error: unknown) {
       console.error('Error generating text:', String(error));
@@ -288,10 +246,8 @@ export const createQuizSlice: StateCreator<
         throw new Error('Question language missing');
       }
 
-      // Define expected User type part for session
       type SessionUserWithDbId = { dbId?: number | string };
 
-      // Construct the params object correctly
       const params: {
         id: number;
         ans: string;
@@ -307,7 +263,6 @@ export const createQuizSlice: StateCreator<
         lang: generatedQuestionLanguage,
       };
 
-      // Add cefrLevel conditionally
       if (cefrLevel) {
         params.cefrLevel = cefrLevel;
       }
@@ -317,40 +272,22 @@ export const createQuizSlice: StateCreator<
       const validatedResult = SubmitAnswerResultSchema.safeParse(rawResult as unknown);
 
       if (!validatedResult.success) {
-        // Access .message
         console.error('Zod validation error (submitAnswer):', validatedResult.error.message);
         throw new Error(`Invalid API response structure: ${validatedResult.error.message}`);
       }
 
-      const result = validatedResult.data; // Use validated data
-      // console.log('[QuizSlice handleAnswerSelect] API Result:', result); // Log the API result
+      const result = validatedResult.data;
 
       if (result.error) {
         throw new Error(result.error);
       }
 
       set((state) => {
-        // console.log('[QuizSlice handleAnswerSelect] Setting feedback state:', {
-        //   // Log state being set (accessing via result.feedback)
-        //   isCorrect: result.feedback?.isCorrect ?? null,
-        //   correctAnswer: result.feedback?.correctAnswer ?? null,
-        //   explanations: result.feedback?.explanations ?? null,
-        //   relevantText: result.feedback?.relevantText ?? null,
-        //   streak: result.currentStreak,
-        //   leveledUp: result.leveledUp,
-        //   currentLevel: result.currentLevel,
-        // });
         state.feedbackIsCorrect = result.feedback?.isCorrect ?? null;
         state.feedbackCorrectAnswer = result.feedback?.correctAnswer ?? null;
         state.feedbackExplanations = result.feedback?.explanations ?? null;
         state.feedbackRelevantText = result.feedback?.relevantText ?? null;
 
-        // Calculate and set relevantTextRange (accessing via result.feedback)
-        // This part might need adjustment if quizData is now PartialQuizData and lacks paragraph
-        // We need to ensure the paragraph is available SOMEWHERE when feedback comes in.
-        // OPTION: Fetch full QuizData on answer submission? Or ensure feedback includes paragraph?
-        // TEMPORARY: Assume feedbackRelevantText can be found in the potentially partial quizData.paragraph
-        // If quizData.paragraph is undefined, this will safely do nothing.
         if (state.quizData?.paragraph && result.feedback?.relevantText) {
           const paragraph = state.quizData.paragraph;
           const relevantText = result.feedback.relevantText;
@@ -358,16 +295,11 @@ export const createQuizSlice: StateCreator<
           if (startIndex !== -1) {
             const endIndex = startIndex + relevantText.length;
             state.relevantTextRange = { start: startIndex, end: endIndex };
-            // console.log(
-            //   '[QuizSlice handleAnswerSelect] Calculated relevantTextRange:',
-            //   state.relevantTextRange
-            // );
           } else {
             state.relevantTextRange = null;
-            // console.warn('[QuizSlice handleAnswerSelect] Relevant text not found in paragraph.');
           }
         } else {
-          state.relevantTextRange = null; // Reset if data is missing
+          state.relevantTextRange = null;
         }
 
         if (result.currentStreak !== undefined && result.currentStreak !== null) {
@@ -388,7 +320,6 @@ export const createQuizSlice: StateCreator<
     }
   },
 
-  // --- NEW: submitFeedback action --- START
   submitFeedback: async (rating): Promise<void> => {
     const { currentQuizId } = get();
     if (typeof currentQuizId !== 'number') {
@@ -401,7 +332,7 @@ export const createQuizSlice: StateCreator<
 
     try {
       set((state) => {
-        state.loading = true; // Indicate loading while submitting feedback
+        state.loading = true;
         state.error = null;
       });
 
@@ -422,7 +353,6 @@ export const createQuizSlice: StateCreator<
         state.loading = false;
       });
 
-      // Trigger loading the next quiz AFTER feedback is successfully submitted
       get().loadNextQuiz();
     } catch (error: unknown) {
       console.error('[SubmitFeedback] Error:', error);
@@ -432,5 +362,4 @@ export const createQuizSlice: StateCreator<
       });
     }
   },
-  // --- NEW: submitFeedback action --- END
 });

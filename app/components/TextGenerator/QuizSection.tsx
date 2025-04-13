@@ -20,8 +20,6 @@ const QuizSection = () => {
     feedbackExplanations,
   } = useTextGeneratorStore();
 
-  // Use the context language (user's selected language) instead of the generated question language
-  // This ensures questions and answers appear in the user's interface language
   const questionLanguage = contextQuestionLanguage;
 
   const handleAsyncClick = useCallback(
@@ -84,7 +82,6 @@ const QuizSection = () => {
           )}
         </div>
 
-        {/* Explanation Panel */}
         {showExplanation && !!feedbackExplanations && (
           <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
             <h4 className="text-lg font-semibold mb-3 text-blue-300">

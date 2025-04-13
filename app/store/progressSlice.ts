@@ -7,7 +7,7 @@ import type { CEFRLevel } from '@/config/language-guidance';
 
 const GetProgressResultSchema = z.object({
   streak: z.number().optional().nullable(),
-  currentLevel: z.string().optional().nullable(), // Assuming CEFRLevel is string-based
+  currentLevel: z.string().optional().nullable(),
   error: z.string().optional().nullable(),
 });
 
@@ -31,7 +31,6 @@ export const createProgressSlice: StateCreator<
       state.isProgressLoading = true;
     });
     const session = await getSession();
-    // Use type assertion that reflects the augmented session user type
     if (!(session?.user as { dbId?: number })?.dbId) {
       set((state) => {
         state.userStreak = null;

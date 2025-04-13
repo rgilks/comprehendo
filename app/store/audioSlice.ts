@@ -20,7 +20,6 @@ export interface AudioSlice {
   _setIsSpeechSupported: (supported: boolean) => void;
 }
 
-// Define the expected structure of the MyMemory API response
 interface MyMemoryResponseData {
   translatedText: string;
 }
