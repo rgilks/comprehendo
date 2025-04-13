@@ -20,6 +20,7 @@ const TextGeneratorContainer = () => {
   const { loading, quizData, showContent, isAnswered, fetchUserProgress } = useTextGeneratorStore();
 
   const contentContainerRef = useRef<HTMLDivElement>(null);
+  const generatedContentRef = useRef<HTMLDivElement>(null);
 
   // Determine if content is visible
   const isContentVisible = !!(quizData && !loading && showContent);
@@ -51,6 +52,12 @@ const TextGeneratorContainer = () => {
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
   }, [contextLanguage]);
 
+  useEffect(() => {
+    if (isContentVisible && generatedContentRef.current) {
+      generatedContentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [isContentVisible]);
+
   return (
     <div
       className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 relative"
@@ -71,6 +78,7 @@ const TextGeneratorContainer = () => {
             <div
               className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg"
               data-testid="generated-content"
+              ref={generatedContentRef}
             >
               <ReadingPassage />
               <QuizSection />
