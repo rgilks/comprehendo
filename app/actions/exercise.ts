@@ -15,9 +15,8 @@ const MAX_REQUESTS_PER_HOUR = 100;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 
 interface RateLimitRow {
-  requests: string;
-  updated_at: string;
-  id: number;
+  request_count: number;
+  window_start_time: string; // ISO 8601 string from SQLite TIMESTAMP
 }
 
 interface QuizRow {
@@ -56,60 +55,58 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
 
   try {
     const now = Date.now();
-    let userRequests: number[] = [];
+    const nowISO = new Date(now).toISOString();
 
     console.log(`[API] Checking rate limit for IP: ${ip}`);
     console.log(`[API Perf] Rate Limit - SELECT Start: ${Date.now()}`);
+
     const rateLimitRow = db
-      .prepare('SELECT requests, updated_at FROM rate_limits WHERE ip_address = ?')
+      .prepare('SELECT request_count, window_start_time FROM rate_limits WHERE ip_address = ?')
       .get(ip) as RateLimitRow | undefined;
+
     console.log(`[API Perf] Rate Limit - SELECT End: ${Date.now()}`);
 
     if (rateLimitRow) {
-      try {
-        const parsedRequests: unknown = JSON.parse(rateLimitRow.requests);
-        if (
-          Array.isArray(parsedRequests) &&
-          parsedRequests.every((item) => typeof item === 'number')
-        ) {
-          userRequests = parsedRequests;
+      const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
+      const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
+
+      if (isWithinWindow) {
+        if (rateLimitRow.request_count >= MAX_REQUESTS_PER_HOUR) {
+          console.log(
+            `[API] Rate limit exceeded for IP: ${ip}. Count: ${rateLimitRow.request_count}, Window Start: ${rateLimitRow.window_start_time}`
+          );
+          return false;
         } else {
-          console.warn(`[API] Invalid rate limit data found for IP ${ip}. Resetting.`);
-          userRequests = [];
+          console.log(`[API Perf] Rate Limit - UPDATE Start: ${Date.now()}`);
+          db.prepare(
+            'UPDATE rate_limits SET request_count = request_count + 1 WHERE ip_address = ?'
+          ).run(ip);
+          console.log(`[API Perf] Rate Limit - UPDATE End: ${Date.now()}`);
+          console.log(
+            `[API] Rate limit incremented for IP: ${ip}. New Count: ${
+              rateLimitRow.request_count + 1
+            }`
+          );
+          return true;
         }
-      } catch (parseError) {
-        console.error(`[API] Failed to parse rate limit data for IP ${ip}:`, parseError);
-        Sentry.captureException(parseError);
-        userRequests = [];
+      } else {
+        console.log(`[API] Rate limit window expired for IP: ${ip}. Resetting.`);
+        console.log(`[API Perf] Rate Limit - RESET Start: ${Date.now()}`);
+        db.prepare(
+          'UPDATE rate_limits SET request_count = 1, window_start_time = ? WHERE ip_address = ?'
+        ).run(nowISO, ip);
+        console.log(`[API Perf] Rate Limit - RESET End: ${Date.now()}`);
+        return true;
       }
-      console.log(`[API] Found ${userRequests.length} previous requests for IP: ${ip}`);
+    } else {
+      console.log(`[API] No rate limit record found for IP: ${ip}. Creating new record.`);
+      console.log(`[API Perf] Rate Limit - INSERT Start: ${Date.now()}`);
+      db.prepare(
+        'INSERT INTO rate_limits (ip_address, request_count, window_start_time) VALUES (?, 1, ?)'
+      ).run(ip, nowISO);
+      console.log(`[API Perf] Rate Limit - INSERT End: ${Date.now()}`);
+      return true;
     }
-
-    const recentRequests = userRequests.filter(
-      (timestamp: number) => now - timestamp < RATE_LIMIT_WINDOW
-    );
-    console.log(`[API] ${recentRequests.length} recent requests for IP: ${ip}`);
-
-    if (recentRequests.length >= MAX_REQUESTS_PER_HOUR) {
-      console.log(`[API] Rate limit exceeded for IP: ${ip}`);
-      return false;
-    }
-
-    const updatedRequests = [...recentRequests, now];
-    console.log(`[API] Updating rate limit for IP: ${ip} with ${updatedRequests.length} requests`);
-
-    console.log(`[API Perf] Rate Limit - INSERT/UPDATE Start: ${Date.now()}`);
-    db.prepare(
-      `
-      INSERT INTO rate_limits (ip_address, requests, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(ip_address) DO UPDATE SET
-      requests = ?, updated_at = CURRENT_TIMESTAMP
-    `
-    ).run(ip, JSON.stringify(updatedRequests), JSON.stringify(updatedRequests));
-    console.log(`[API Perf] Rate Limit - INSERT/UPDATE End: ${Date.now()}`);
-
-    return true;
   } catch (error) {
     console.error('[API] Error checking rate limit:', error);
     Sentry.captureException(error);

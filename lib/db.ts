@@ -88,8 +88,8 @@ function initializeDatabase(): Database.Database {
       
       CREATE TABLE IF NOT EXISTS rate_limits (
         ip_address TEXT PRIMARY KEY,
-        requests TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        request_count INTEGER NOT NULL DEFAULT 1,
+        window_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
