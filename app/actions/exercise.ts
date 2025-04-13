@@ -55,14 +55,6 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
   if (!db) throw new Error('Database not initialized');
 
   try {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS rate_limits (
-        ip_address TEXT PRIMARY KEY,
-        requests TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
     const now = Date.now();
     let userRequests: number[] = [];
 

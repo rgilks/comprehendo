@@ -85,6 +85,12 @@ function initializeDatabase(): Database.Database {
       CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
+      
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        ip_address TEXT PRIMARY KEY,
+        requests TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
     console.log('[DB] Schema initialization/verification complete');
