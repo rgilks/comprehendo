@@ -8,15 +8,12 @@ export interface UISlice {
   showContent: boolean;
   showQuestionSection: boolean;
   showExplanation: boolean;
-  questionDelayTimeoutRef: NodeJS.Timeout | null;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
   setShowLoginPrompt: (show: boolean) => void;
   setShowContent: (show: boolean) => void;
   setShowQuestionSection: (show: boolean) => void;
   setShowExplanation: (show: boolean) => void;
-  setQuestionDelayTimeoutRef: (ref: NodeJS.Timeout | null) => void;
-  clearQuestionDelayTimeout: () => void;
 }
 
 export const createUISlice: StateCreator<
@@ -24,14 +21,13 @@ export const createUISlice: StateCreator<
   [['zustand/immer', never]],
   [],
   UISlice
-> = (set, get) => ({
+> = (set, _get) => ({
   loading: false,
   error: null,
   showLoginPrompt: true,
   showContent: false,
   showQuestionSection: false,
   showExplanation: false,
-  questionDelayTimeoutRef: null,
 
   setError: (error) =>
     set((state) => {
@@ -57,18 +53,4 @@ export const createUISlice: StateCreator<
     set((state) => {
       state.showExplanation = show;
     }),
-  setQuestionDelayTimeoutRef: (ref) =>
-    set((state) => {
-      state.questionDelayTimeoutRef = ref;
-    }),
-
-  clearQuestionDelayTimeout: () => {
-    const timeoutRef = get().questionDelayTimeoutRef;
-    if (timeoutRef) {
-      clearTimeout(timeoutRef);
-      set((state) => {
-        state.questionDelayTimeoutRef = null;
-      });
-    }
-  },
 });

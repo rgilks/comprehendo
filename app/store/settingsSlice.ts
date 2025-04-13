@@ -40,7 +40,6 @@ export const createSettingsSlice: StateCreator<
 
   setPassageLanguage: (lang) => {
     get().stopPassageSpeech();
-    get().clearQuestionDelayTimeout();
 
     set((state) => {
       state.passageLanguage = lang;

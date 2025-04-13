@@ -27,12 +27,24 @@ import {
 
 // Define the shape of the pre-fetched quiz data
 interface NextQuizInfo {
-  quizData: PartialQuizData; // Use PartialQuizData
+  quizData: PartialQuizData;
   quizId: number;
 }
 
+// interface FeedbackResponse { // Removed unused type
+//   feedback: { // Removed unused type
+//     isCorrect: boolean; // Removed unused type
+//     correctAnswer: string; // Removed unused type
+//     explanations: Record<string, string>; // Removed unused type
+//     relevantText: string; // Removed unused type
+//   } | null; // Removed unused type
+//   currentStreak: number | null; // Removed unused type
+//   leveledUp: boolean | null; // Removed unused type
+//   currentLevel: CEFRLevel | null; // Removed unused type
+// } // Removed unused type
+
 export interface QuizSlice {
-  quizData: PartialQuizData | null; // Use PartialQuizData
+  quizData: PartialQuizData | null;
   currentQuizId: number | null;
   selectedAnswer: string | null;
   isAnswered: boolean;
@@ -122,7 +134,9 @@ export const createQuizSlice: StateCreator<
       state.feedbackCorrectAnswer = null;
       state.feedbackExplanations = null;
       state.feedbackRelevantText = null;
-      state.nextQuizAvailable = null;
+      state.showQuestionSection = false;
+      state.showExplanation = false;
+      state.nextQuizAvailable = null; // Clear prefetched quiz
       state.feedbackSubmitted = false; // <-- NEW: Reset feedback submitted state
     });
   },
@@ -138,7 +152,7 @@ export const createQuizSlice: StateCreator<
       state.feedbackCorrectAnswer = null;
       state.feedbackExplanations = null;
       state.feedbackRelevantText = null;
-      state.showQuestionSection = false;
+      state.showQuestionSection = true; // Show question immediately
       state.showExplanation = false;
       state.showContent = true;
       state.loading = false;
@@ -149,9 +163,12 @@ export const createQuizSlice: StateCreator<
       state.feedbackSubmitted = false; // <-- NEW: Reset feedback submitted state
     });
 
-    get().clearQuestionDelayTimeout();
-    const timeoutId = setTimeout(() => get().setShowQuestionSection(true), 1000);
-    get().setQuestionDelayTimeoutRef(timeoutId);
+    // No longer need timeout logic
+    // get().clearQuestionDelayTimeout();
+    // const timeoutId = setTimeout(() => get().setShowQuestionSection(true), 1000);
+    // get().setQuestionDelayTimeoutRef(timeoutId);
+
+    // Prefetch next quiz immediately after showing the current one
     void get().generateText(true);
   },
 
@@ -170,7 +187,7 @@ export const createQuizSlice: StateCreator<
       get().setLoading(true);
       get().setError(null);
       get().stopPassageSpeech();
-      get().clearQuestionDelayTimeout();
+      // get().clearQuestionDelayTimeout(); // No longer needed
       get().resetQuizState();
       get().setShowContent(false);
     }
