@@ -339,9 +339,17 @@ export const createQuizSlice: StateCreator<
         state.error = null;
       });
 
+      // Retrieve answer and correctness from state
+      const userAnswer = get().selectedAnswer;
+      const isCorrect = get().feedbackIsCorrect;
+
+      // console.log(`[SubmitFeedback] Submitting with userAnswer: ${userAnswer}, isCorrect: ${isCorrect}`); // Remove log
+
       const result = await submitQuestionFeedback({
         quizId: currentQuizId,
         rating: rating,
+        userAnswer: userAnswer ?? undefined, // Pass userAnswer (or undefined if null)
+        isCorrect: isCorrect ?? undefined, // Pass isCorrect (or undefined if null)
       });
 
       if (!result.success) {

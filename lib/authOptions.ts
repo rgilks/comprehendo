@@ -129,10 +129,6 @@ export const authOptions: NextAuthOptions = {
             user.email || null,
             user.image || null
           );
-          const maskedEmail = user.email ? user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : null;
-          console.log(
-            `[AUTH] User ${user.name || maskedEmail || user.id} logged in via ${account.provider}`
-          );
         }
       } catch (error) {
         console.error('[AUTH] Error storing user data:', error);
@@ -149,46 +145,14 @@ export const authOptions: NextAuthOptions = {
       user?: UserWithEmail;
       account?: Account | null;
     }) => {
-      console.log('[AUTH JWT Callback] Invoked.');
-
-      if (account && user && user.email) {
-        console.log(
-          `[AUTH JWT Callback] Processing token for user email: ${user.email} via provider: ${account.provider}`
-        );
-
-        const rawAdminEmails = validatedAuthEnv?.ADMIN_EMAILS;
-        console.log(`[AUTH JWT Callback] Raw ADMIN_EMAILS env var: '${rawAdminEmails || ''}'`);
-
-        let adminEmails: string[] = [];
-        if (typeof rawAdminEmails === 'string' && rawAdminEmails.length > 0) {
-          adminEmails = rawAdminEmails
-            .split(',')
-            .map((email) => email.trim())
-            .filter((email): email is string => !!email);
-        }
-
-        console.log(`[AUTH JWT Callback] Processed adminEmails array: [${adminEmails.join(', ')}]`);
-
-        const isAdmin = adminEmails.includes(user.email);
-
-        console.log(`[AUTH JWT Callback] Is user admin? ${isAdmin}`);
-
-        token.isAdmin = isAdmin;
+      if (account && user?.id && user?.email) {
         token.provider = account.provider;
-      } else {
-        console.log(
-          '[AUTH JWT Callback] Conditions not met for setting isAdmin (account/user/email missing).'
-        );
-      }
+        token.email = user.email;
 
-      return token;
-    },
-    session: ({ session, token }: { session: Session; token: JWT }) => {
-      if (session.user && token.sub && token.provider) {
         try {
           const userRecord = db
             .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
-            .get(token.sub, token.provider);
+            .get(user.id, account.provider);
 
           if (
             userRecord &&
@@ -196,24 +160,53 @@ export const authOptions: NextAuthOptions = {
             'id' in userRecord &&
             typeof userRecord.id === 'number'
           ) {
-            session.user.dbId = userRecord.id;
+            token.dbId = userRecord.id;
           } else {
-            console.warn(
-              `[AUTH Session Callback] Could not find user or userRecord format is incorrect for provider_id=${token.sub} and provider=${token.provider}.`
+            console.error(
+              `[AUTH JWT Callback] CRITICAL: Could not find user in DB during JWT creation for provider_id=${user.id}, provider=${account.provider}. dbId will be missing!`
             );
           }
         } catch (error) {
-          console.error('[AUTH Session Callback] Error fetching internal user ID:', error);
+          console.error(
+            '[AUTH JWT Callback] CRITICAL: DB error fetching user ID for token:',
+            error
+          );
           Sentry.captureException(error);
         }
 
-        session.user.id = token.sub;
-        const isAdminValue = token.isAdmin;
-        session.user.isAdmin = isAdminValue;
+        const rawAdminEmails = validatedAuthEnv?.ADMIN_EMAILS;
+        let adminEmails: string[] = [];
+        if (typeof rawAdminEmails === 'string' && rawAdminEmails.length > 0) {
+          adminEmails = rawAdminEmails
+            .split(',')
+            .map((e) => e.trim())
+            .filter(Boolean);
+        }
+        token.isAdmin = adminEmails.includes(user.email);
+      }
+
+      return token;
+    },
+    session: ({ session, token }: { session: Session; token: JWT }) => {
+      if (session.user) {
+        if (token.sub) {
+          session.user.id = token.sub;
+        }
+        if (typeof token.dbId === 'number') {
+          session.user.dbId = token.dbId;
+        } else {
+          console.warn(
+            '[AUTH Session Callback] dbId missing from token. Cannot assign to session.'
+          );
+        }
+        if (typeof token.isAdmin === 'boolean') {
+          session.user.isAdmin = token.isAdmin;
+        }
+        if (token.provider) {
+          session.user.provider = token.provider;
+        }
       } else {
-        console.warn(
-          '[AUTH Session Callback] session.user, token.sub, or token.provider missing. Cannot assign id/isAdmin.'
-        );
+        console.warn('[AUTH Session Callback] session.user object is missing!');
       }
       return session;
     },

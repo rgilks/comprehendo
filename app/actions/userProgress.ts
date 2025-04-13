@@ -400,9 +400,6 @@ export const submitQuestionFeedback = async (
       'INSERT INTO question_feedback (quiz_id, user_id, rating, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
     ).run(quizId, userId, rating, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
 
-    console.log(
-      `[SubmitFeedback] Feedback recorded for Quiz ID ${quizId}, User ID ${userId}, Rating: ${rating}, Answer: ${userAnswer}, Correct: ${isCorrect}`
-    );
     return { success: true };
   } catch (dbError) {
     console.error('[SubmitFeedback] Database error:', dbError);
