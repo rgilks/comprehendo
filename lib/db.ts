@@ -93,11 +93,25 @@ function initializeDatabase(): Database.Database {
         PRIMARY KEY (user_id, language_code)
       );
 
+      -- NEW TABLE for question feedback
+      CREATE TABLE IF NOT EXISTS question_feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quiz_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')), -- 'good' or 'bad'
+        submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (quiz_id) REFERENCES generated_content (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      );
+
       -- Indexes
       CREATE INDEX IF NOT EXISTS idx_generated_content_created_at ON generated_content(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_usage_stats_timestamp ON usage_stats(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
       CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
+      -- NEW INDEXES for question feedback
+      CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
+      CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
     `);
 
     // --- Column Migration/Cleanup (Only run once per instance) ---

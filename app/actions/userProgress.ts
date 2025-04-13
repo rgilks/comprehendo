@@ -5,11 +5,7 @@ import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
-import {
-  QuizDataSchema,
-  SubmitAnswerResultSchema,
-  type PartialQuizData,
-} from '@/lib/domain/schemas';
+import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
 
 // Define an interface for the session user that includes dbId
 interface SessionUser extends NonNullable<Session['user']> {
@@ -37,27 +33,29 @@ const submitAnswerSchema = z.object({
   cefrLevel: z.string().optional(),
 });
 
+// Schema for question feedback input
+const submitFeedbackSchema = z.object({
+  quizId: z.number().int().positive(),
+  rating: z.enum(['good', 'bad']), // Thumbs up/down represented as strings
+});
+
 export type UpdateProgressParams = z.infer<typeof updateProgressSchema>;
 export type GetProgressParams = z.infer<typeof getProgressSchema>;
+export type SubmitFeedbackParams = z.infer<typeof submitFeedbackSchema>;
 
 // Infer the feedback type from the centralized schema
 type FeedbackType = z.infer<typeof SubmitAnswerResultSchema>['feedback'];
 
-// --- UPDATED ProgressResponse to include feedback AND next quiz--- START
+// --- UPDATED ProgressResponse --- START
 export interface ProgressResponse {
   currentLevel: string;
   currentStreak: number;
   leveledUp?: boolean;
   error?: string; // Error related to processing the current answer/progress
   feedback?: FeedbackType;
-  // Add field for the next quiz data or generation error
-  nextQuiz?: {
-    quizData?: PartialQuizData;
-    quizId?: number;
-    error?: string; // Error specifically from generating the next quiz
-  };
+  // Removed nextQuiz field
 }
-// --- UPDATED ProgressResponse to include feedback AND next quiz --- END
+// --- UPDATED ProgressResponse --- END
 
 // --- Internal helper function for progress logic --- START
 // Extracted from original updateProgress to be reusable
@@ -309,7 +307,6 @@ export const submitAnswer = async (
         // Optionally add to responsePayload.error if needed
         // responsePayload.error = (responsePayload.error ? responsePayload.error + '; ' : '') + progressUpdate.dbError;
       }
-      // cefrLevelForGeneration = progressUpdate.currentLevel; // Update level for potential next quiz gen
     } catch (dbError) {
       // Catch errors specifically from the progress update block
       console.error(
@@ -417,3 +414,73 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
     };
   }
 };
+
+// --- NEW ACTION: submitQuestionFeedback --- START
+
+// Response type for feedback submission
+export interface SubmitFeedbackResponse {
+  success: boolean;
+  error?: string;
+}
+
+export const submitQuestionFeedback = async (
+  params: SubmitFeedbackParams
+): Promise<SubmitFeedbackResponse> => {
+  const session = await getServerSession(authOptions);
+  const sessionUser = session?.user as SessionUser | undefined;
+  const userId = sessionUser?.dbId;
+
+  console.log(
+    `[SubmitFeedback] Request received. UserID: ${userId ?? 'Anonymous'}, Params:`,
+    params
+  );
+
+  // Only logged-in users can submit feedback for now
+  if (!userId) {
+    return { success: false, error: 'Unauthorized. User must be logged in to submit feedback.' };
+  }
+
+  // Input Validation
+  const parsedBody = submitFeedbackSchema.safeParse(params);
+  if (!parsedBody.success) {
+    const errorDetails = JSON.stringify(parsedBody.error.flatten().fieldErrors);
+    console.error(`[SubmitFeedback] Invalid request parameters: ${errorDetails}`);
+    return { success: false, error: `Invalid request parameters: ${errorDetails}` };
+  }
+
+  const { quizId, rating } = parsedBody.data;
+
+  try {
+    // Check if the generated_content entry exists (optional but good practice)
+    const quizExists = db.prepare('SELECT id FROM generated_content WHERE id = ?').get(quizId);
+    if (!quizExists) {
+      console.warn(
+        `[SubmitFeedback] Attempt to submit feedback for non-existent quiz ID: ${quizId}`
+      );
+      return { success: false, error: `Quiz with ID ${quizId} not found.` };
+    }
+
+    // Insert feedback into the (assumed) question_feedback table
+    // NOTE: This assumes a table named 'question_feedback' exists with columns:
+    // quiz_id (INTEGER, FK to generated_content.id), user_id (INTEGER, FK to users.id), rating (TEXT), submitted_at (DATETIME)
+    db.prepare('INSERT INTO question_feedback (quiz_id, user_id, rating) VALUES (?, ?, ?)').run(
+      quizId,
+      userId,
+      rating
+    );
+
+    console.log(
+      `[SubmitFeedback] Feedback recorded for Quiz ID ${quizId}, User ID ${userId}, Rating: ${rating}`
+    );
+    return { success: true };
+  } catch (error: unknown) {
+    console.error(
+      `[SubmitFeedback] Error recording feedback for Quiz ID ${quizId}, User ID ${userId}:`,
+      error
+    );
+    const message = error instanceof Error ? error.message : 'Unknown database error';
+    return { success: false, error: `Failed to record feedback: ${message}` };
+  }
+};
+
+// --- NEW ACTION: submitQuestionFeedback --- END

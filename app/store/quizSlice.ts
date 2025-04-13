@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand';
 // Removed unused Zod import
 // import { z } from 'zod';
 // import type { PartialQuizData } from '@/app/actions/exercise';
-import { submitAnswer } from '@/app/actions/userProgress';
+import { submitAnswer, submitQuestionFeedback } from '@/app/actions/userProgress';
 import { generateExerciseResponse } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { getSession } from 'next-auth/react';
@@ -43,6 +43,7 @@ export interface QuizSlice {
   feedbackExplanations: { A: string; B: string; C: string; D: string } | null;
   feedbackRelevantText: string | null;
   nextQuizAvailable: NextQuizInfo | null; // Uses PartialQuizData via NextQuizInfo
+  feedbackSubmitted: boolean; // <-- NEW: Track if feedback was given for the current question
 
   setQuizData: (data: PartialQuizData | null) => void; // Use PartialQuizData
   setSelectedAnswer: (answer: string | null) => void;
@@ -56,6 +57,7 @@ export interface QuizSlice {
   ) => void;
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
+  submitFeedback: (rating: 'good' | 'bad') => Promise<void>; // <-- NEW: Action to submit feedback
   resetQuizState: () => void;
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void; // Use PartialQuizData
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
@@ -78,6 +80,7 @@ export const createQuizSlice: StateCreator<
   feedbackExplanations: null,
   feedbackRelevantText: null,
   nextQuizAvailable: null,
+  feedbackSubmitted: false, // <-- NEW: Initial state
 
   setQuizData: (data) =>
     set((state) => {
@@ -120,6 +123,7 @@ export const createQuizSlice: StateCreator<
       state.feedbackExplanations = null;
       state.feedbackRelevantText = null;
       state.nextQuizAvailable = null;
+      state.feedbackSubmitted = false; // <-- NEW: Reset feedback submitted state
     });
   },
 
@@ -142,6 +146,7 @@ export const createQuizSlice: StateCreator<
       const currentPassageLanguage = get().passageLanguage;
       state.generatedPassageLanguage = currentPassageLanguage;
       state.nextQuizAvailable = null;
+      state.feedbackSubmitted = false; // <-- NEW: Reset feedback submitted state
     });
 
     get().clearQuestionDelayTimeout();
@@ -364,4 +369,50 @@ export const createQuizSlice: StateCreator<
       });
     }
   },
+
+  // --- NEW: submitFeedback action --- START
+  submitFeedback: async (rating): Promise<void> => {
+    const { currentQuizId } = get();
+    if (typeof currentQuizId !== 'number') {
+      console.error('[SubmitFeedback] Invalid or missing quiz ID.');
+      set((state) => {
+        state.error = 'Cannot submit feedback: Invalid quiz ID.';
+      });
+      return;
+    }
+
+    try {
+      set((state) => {
+        state.loading = true; // Indicate loading while submitting feedback
+        state.error = null;
+      });
+
+      const result = await submitQuestionFeedback({
+        quizId: currentQuizId,
+        rating: rating,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to submit feedback.');
+      }
+
+      console.log(
+        `[SubmitFeedback] Feedback (${rating}) submitted successfully for quiz ${currentQuizId}.`
+      );
+      set((state) => {
+        state.feedbackSubmitted = true;
+        state.loading = false;
+      });
+
+      // Trigger loading the next quiz AFTER feedback is successfully submitted
+      get().loadNextQuiz();
+    } catch (error: unknown) {
+      console.error('[SubmitFeedback] Error:', error);
+      set((state) => {
+        state.error = `Failed to submit feedback: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        state.loading = false;
+      });
+    }
+  },
+  // --- NEW: submitFeedback action --- END
 });
