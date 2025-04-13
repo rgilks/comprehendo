@@ -44,7 +44,11 @@ export interface QuizSlice {
   handleAnswerSelect: (answer: string) => Promise<void>;
   submitFeedback: (rating: 'good' | 'bad') => Promise<void>;
   resetQuizState: () => void;
-  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void;
+  resetQuizWithNewData: (
+    newQuizData: PartialQuizData,
+    quizId: number,
+    shouldPrefetch?: boolean
+  ) => void;
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
 }
@@ -114,7 +118,7 @@ export const createQuizSlice: StateCreator<
     });
   },
 
-  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
+  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number, shouldPrefetch = true) => {
     get().stopPassageSpeech();
     set((state) => {
       state.quizData = newQuizData;
@@ -137,7 +141,9 @@ export const createQuizSlice: StateCreator<
       state.feedbackSubmitted = false;
     });
 
-    void get().generateText(true);
+    if (shouldPrefetch) {
+      void get().generateText(true);
+    }
   },
 
   loadNextQuiz: () => {
@@ -200,7 +206,7 @@ export const createQuizSlice: StateCreator<
         });
         console.log('Next quiz pre-fetched.');
       } else {
-        get().resetQuizWithNewData(quizData, response.quizId);
+        get().resetQuizWithNewData(quizData, response.quizId, false);
       }
     } catch (error: unknown) {
       console.error('Error generating text:', String(error));
@@ -324,11 +330,24 @@ export const createQuizSlice: StateCreator<
   },
 
   submitFeedback: async (rating): Promise<void> => {
-    const { currentQuizId } = get();
+    const { currentQuizId, passageLanguage, generatedQuestionLanguage, cefrLevel } = get();
+
     if (typeof currentQuizId !== 'number') {
-      console.error('[SubmitFeedback] Invalid or missing quiz ID.');
+      console.error('[SubmitFeedback][Store] Invalid or missing quiz ID.');
       set((state) => {
         state.error = 'Cannot submit feedback: Invalid quiz ID.';
+      });
+      return;
+    }
+
+    if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
+      console.error(
+        '[SubmitFeedback][Store] Missing language/level state required for fetching next question.',
+        { passageLanguage, generatedQuestionLanguage, cefrLevel }
+      );
+      set((state) => {
+        state.error =
+          'Cannot submit feedback: Missing required state (language/level). Please refresh.';
       });
       return;
     }
@@ -339,38 +358,52 @@ export const createQuizSlice: StateCreator<
         state.error = null;
       });
 
-      // Retrieve answer and correctness from state
       const userAnswer = get().selectedAnswer;
       const isCorrect = get().feedbackIsCorrect;
 
-      // console.log(`[SubmitFeedback] Submitting with userAnswer: ${userAnswer}, isCorrect: ${isCorrect}`); // Remove log
-
-      const result = await submitQuestionFeedback({
+      const params = {
         quizId: currentQuizId,
         rating: rating,
-        userAnswer: userAnswer ?? undefined, // Pass userAnswer (or undefined if null)
-        isCorrect: isCorrect ?? undefined, // Pass isCorrect (or undefined if null)
-      });
+        userAnswer: userAnswer ?? undefined,
+        isCorrect: isCorrect ?? undefined,
+        passageLanguage: passageLanguage,
+        questionLanguage: generatedQuestionLanguage,
+        currentLevel: cefrLevel,
+      };
+
+      const result = await submitQuestionFeedback(params);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to submit feedback.');
       }
 
       console.log(
-        `[SubmitFeedback] Feedback (${rating}) submitted successfully for quiz ${currentQuizId}.`
+        `[SubmitFeedback][Store] Feedback (${rating}) submitted successfully for quiz ${currentQuizId}.`
       );
       set((state) => {
         state.feedbackSubmitted = true;
-        state.loading = false;
       });
 
-      get().loadNextQuiz();
+      if (result.nextQuizData && result.nextQuizId) {
+        console.log(
+          `[SubmitFeedback][Store] Next quiz data received (ID: ${result.nextQuizId}). Loading...`
+        );
+        get().resetQuizWithNewData(result.nextQuizData, result.nextQuizId, false);
+      } else {
+        console.warn(
+          `[SubmitFeedback][Store] Feedback saved, but failed to get next quiz. Error: ${result.nextQuizError || 'Unknown reason'}`
+        );
+        set((state) => {
+          state.loading = false;
+        });
+      }
     } catch (error: unknown) {
-      console.error('Error submitting feedback:', error);
+      console.error('[SubmitFeedback][Store] Error during feedback submission process:', error);
       Sentry.captureException(error, { extra: { currentQuizId, rating } });
       set((state) => {
         state.error = `Failed to submit feedback: ${error instanceof Error ? error.message : 'Unknown error'}`;
         state.loading = false;
+        state.feedbackSubmitted = false;
       });
     }
   },

@@ -5,8 +5,14 @@ import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
-import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
+import {
+  QuizDataSchema,
+  SubmitAnswerResultSchema,
+  GenerateExerciseResult,
+  PartialQuizData,
+} from '@/lib/domain/schemas';
 import * as Sentry from '@sentry/nextjs';
+import { generateExerciseResponse, ExerciseRequestParams } from '../actions/exercise';
 
 interface SessionUser extends NonNullable<Session['user']> {
   dbId?: number;
@@ -36,6 +42,9 @@ const submitFeedbackSchema = z.object({
   rating: z.enum(['good', 'bad']),
   userAnswer: z.string().optional(),
   isCorrect: z.boolean().optional(),
+  passageLanguage: z.string(),
+  questionLanguage: z.string(),
+  currentLevel: z.string(),
 });
 
 export type UpdateProgressParams = z.infer<typeof updateProgressSchema>;
@@ -365,6 +374,10 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
 export interface SubmitFeedbackResponse {
   success: boolean;
   error?: string;
+  nextQuizData?: PartialQuizData | null;
+  nextQuizId?: number | null;
+  nextQuizError?: string;
+  cached?: boolean;
 }
 
 export const submitQuestionFeedback = async (
@@ -385,34 +398,86 @@ export const submitQuestionFeedback = async (
     return { success: false, error: 'Invalid parameters' };
   }
 
-  const { quizId, rating, userAnswer, isCorrect } = parsedBody.data;
+  const { quizId, rating, userAnswer, isCorrect, passageLanguage, questionLanguage, currentLevel } =
+    parsedBody.data;
 
+  // --- Step 1: Save Feedback --- //
+  let feedbackSuccess = false;
+  let feedbackError: string | undefined = undefined;
   try {
     const quizExists = db.prepare('SELECT id FROM quiz WHERE id = ?').get(quizId);
     if (!quizExists) {
       console.warn(
         `[SubmitFeedback] Attempt to submit feedback for non-existent quiz ID: ${quizId}`
       );
-      return { success: false, error: `Quiz with ID ${quizId} not found.` };
+      feedbackError = `Quiz with ID ${quizId} not found.`;
+    } else {
+      db.prepare(
+        'INSERT INTO question_feedback (quiz_id, user_id, rating, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
+      ).run(quizId, userId, rating, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
+      feedbackSuccess = true;
+      console.log(
+        `[SubmitFeedback] Feedback saved successfully for quiz ${quizId}, user ${userId}`
+      );
     }
-
-    db.prepare(
-      'INSERT INTO question_feedback (quiz_id, user_id, rating, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
-    ).run(quizId, userId, rating, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
-
-    return { success: true };
   } catch (dbError) {
-    console.error('[SubmitFeedback] Database error:', dbError);
+    console.error('[SubmitFeedback] Database error saving feedback:', dbError);
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     Sentry.captureException(dbError, {
-      extra: {
-        quizId: params.quizId,
-        rating: params.rating,
-        userAnswer: params.userAnswer,
-        isCorrect: params.isCorrect,
-        userId,
-      },
+      extra: { quizId, rating, userAnswer, isCorrect, userId },
     });
-    return { success: false, error: `Database error: ${message}` };
+    feedbackError = `Database error saving feedback: ${message}`;
+    feedbackSuccess = false;
   }
+
+  // --- Step 2: Fetch Next Exercise (if feedback was successful) --- //
+  let nextQuizResult: GenerateExerciseResult | null = null;
+  if (feedbackSuccess) {
+    try {
+      console.log(
+        `[SubmitFeedback] Fetching next exercise. Lang: ${passageLanguage}, Level: ${currentLevel}`
+      );
+      const nextExerciseParams: ExerciseRequestParams = {
+        passageLanguage: passageLanguage,
+        questionLanguage: questionLanguage,
+        cefrLevel: currentLevel,
+      };
+      // Assuming generateExerciseResponse handles user session internally if needed
+      nextQuizResult = await generateExerciseResponse(nextExerciseParams);
+      console.log(
+        `[SubmitFeedback] Fetched next exercise. ID: ${nextQuizResult.quizId}, Cached: ${nextQuizResult.cached ?? false}`
+      );
+    } catch (fetchError) {
+      console.error('[SubmitFeedback] Error fetching next exercise:', fetchError);
+      Sentry.captureException(fetchError, {
+        extra: { userId, passageLanguage, questionLanguage, currentLevel },
+      });
+      // Store the error but don't fail the whole operation, just the next quiz part
+      nextQuizResult = {
+        quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
+        quizId: -1,
+        error: fetchError instanceof Error ? fetchError.message : 'Failed to fetch next exercise',
+      };
+    }
+  }
+
+  // --- Step 3: Construct Response --- //
+  const response: SubmitFeedbackResponse = {
+    success: feedbackSuccess,
+    error: feedbackError,
+    nextQuizData: nextQuizResult?.quizData ?? null,
+    nextQuizId: nextQuizResult?.quizId ?? null,
+    nextQuizError: nextQuizResult?.error ?? undefined,
+    cached: nextQuizResult?.cached ?? undefined,
+  };
+
+  console.log(`[SubmitFeedback] Final response for user ${userId}:`, {
+    success: response.success,
+    error: response.error,
+    nextQuizId: response.nextQuizId,
+    nextQuizError: response.nextQuizError,
+    cached: response.cached,
+  });
+
+  return response;
 };
