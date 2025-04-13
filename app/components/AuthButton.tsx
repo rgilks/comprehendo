@@ -46,7 +46,7 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
     return (
       <div className="flex flex-wrap items-center gap-2 md:gap-4 relative" ref={userMenuRef}>
         <button
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 focus-visible:ring-blue-500 rounded-full p-1"
           onClick={() => setShowUserMenu(!showUserMenu)}
         >
           <div className="flex items-center gap-2">
@@ -75,37 +75,39 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
           </svg>
         </button>
 
-        {showUserMenu && (
-          <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-10">
-            <div className="bg-gray-800 rounded-md shadow-xl border border-gray-700 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-700">
-                <p className="text-sm text-white">{session.user?.name}</p>
-                <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
-              </div>
-              <div className="py-1">
-                {session.user?.isAdmin && (
-                  <Link
-                    href="/admin"
-                    className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
-                    onClick={() => setShowUserMenu(false)}
-                  >
-                    {t('navigation.admin')}
-                  </Link>
-                )}
-                <button
-                  onClick={() => {
-                    void signOut();
-                    setShowUserMenu(false);
-                  }}
-                  data-testid="sign-out-button"
-                  className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left"
+        <div
+          className={`absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-10 transition-all duration-200 ease-out origin-top-right ${showUserMenu ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+          aria-hidden={!showUserMenu}
+          role="menu"
+        >
+          <div className="bg-gray-800 rounded-md shadow-xl border border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-700">
+              <p className="text-sm text-white">{session.user?.name}</p>
+              <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
+            </div>
+            <div className="py-1">
+              {session.user?.isAdmin && (
+                <Link
+                  href="/admin"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left focus:outline-none focus-visible:bg-gray-700 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue-600"
+                  onClick={() => setShowUserMenu(false)}
                 >
-                  {t('auth.signOut')}
-                </button>
-              </div>
+                  {t('navigation.admin')}
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  void signOut();
+                  setShowUserMenu(false);
+                }}
+                data-testid="sign-out-button"
+                className="block px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors w-full text-left focus:outline-none focus-visible:bg-gray-700 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-blue-600"
+              >
+                {t('auth.signOut')}
+              </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -116,7 +118,7 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
         onClick={() => {
           void signIn('google');
         }}
-        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 gap-2 hover:translate-y-[-2px]'}`}
+        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 focus-visible:ring-blue-500 ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-white text-gray-800 rounded-lg hover:bg-gray-100 gap-2 hover:translate-y-[-2px]'}`}
         title={t('auth.signInGoogle')}
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -144,7 +146,7 @@ const AuthButton = ({ variant = 'full' }: AuthButtonProps) => {
         onClick={() => {
           void signIn('github');
         }}
-        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 gap-2 hover:translate-y-[-2px]'}`}
+        className={`flex items-center justify-center transition-all duration-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 focus-visible:ring-gray-500 ${variant === 'icon-only' ? 'p-2 bg-gray-700 text-white rounded-full hover:bg-gray-600' : 'px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 gap-2 hover:translate-y-[-2px]'}`}
         title={t('auth.signInGitHub')}
       >
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
