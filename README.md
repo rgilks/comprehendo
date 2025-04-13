@@ -27,7 +27,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Robust Validation**: Uses Zod for request validation on API routes
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions
 - **Continuous Deployment**: Automatic deployment to Fly.io when code is pushed to main branch
-- **Admin Panel**: A secure area for administrators to view application data (usage stats, generated content, users)
+- **Admin Panel**: A secure area for administrators to view application data (generated content, users)
 - **Internationalization**: Full i18n support for UI elements
 - **PWA Support**: Progressive Web App features for mobile installation
 - **Sentry Integration**: Real-time error tracking and monitoring
@@ -353,10 +353,9 @@ Comprehendo includes a basic admin panel accessible at the `/admin` route.
 
 - **Access Control**: Only users logged in with an email address listed in the `ADMIN_EMAILS` environment variable can access this page. Attempts by non-admins will redirect to the homepage.
 - **Functionality**: The admin panel allows authorized users to:
-  - View a list of database tables (`users`, `quiz`, `usage_stats`).
+  - View a list of database tables (`users`, `quiz`).
   - Select a table to view its data.
   - Browse table data using pagination controls.
-  - Refresh the data view.
 - **Setup**: To enable admin access, set the `ADMIN_EMAILS` environment variable (comma-separated list) both locally (`.env.local`) and in your deployment environment (e.g., Fly.io secrets).
 
 ### Testing
@@ -411,6 +410,123 @@ The application is configured for deployment via Docker and includes a LiteFS se
 - Access the Admin Panel at `http://localhost:3000/admin`
 - Log in using one of the configured OAuth providers.
 - Navigate through the different database tables using the sidebar.
-- View a list of database tables (`users`, `quiz`, `usage_stats`).
+- View a list of database tables (`users`, `quiz`).
 - Inspect individual rows by clicking on them.
 - Navigate through table pages using pagination controls.
+
+### SQLite Command Line
+
+Access the SQLite database directly (if running locally):
+
+```bash
+# Ensure the database file exists (it's created on first run)
+sqlite3 data/comprehendo.sqlite
+```
+
+From the SQLite prompt, you can run SQL queries:
+
+- `.tables`: View a list of database tables (`users`, `quiz`).
+- `SELECT * FROM users LIMIT 10;`: See the first 10 users.
+- `.schema quiz`: Show the schema for the `quiz` table.
+- `.quit`: Exit the SQLite prompt.
+
+## Admin Panel
+
+An admin panel is available at `/admin` for authorized users (defined by the `ADMIN_EMAILS` environment variable).
+
+**Features:**
+
+- View and search data from application tables.
+- Basic table filtering and pagination.
+- Accessible only to users whose email is listed in the `ADMIN_EMAILS` env var.
+
+**Example Table Views:**
+
+- **Users:** See user login history, provider information.
+- **Quiz:** Browse generated quizzes and their content.
+
+**Usage:**
+
+1.  Navigate to `/admin`.
+2.  Sign in if prompted (only admin users can proceed).
+3.  Select a table from the sidebar.
+4.  Browse, search, and navigate through the table data.
+
+## Troubleshooting
+
+- **Database Connection Issues:** Ensure the `data/` directory exists and has write permissions. If running in a container, ensure the volume is correctly mounted.
+- **Authentication Errors:** Double-check your OAuth credentials and `NEXTAUTH_URL` in your environment variables. Ensure callback URLs match your setup.
+- **API Key Errors:** Verify your OpenAI and Google AI API keys are correct and have billing enabled if necessary.
+- **Admin Panel Access Denied:** Confirm the signed-in user's email is present in the `ADMIN_EMAILS` environment variable (comma-separated). For Fly.io, ensure the secret is set correctly.
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/your-feature-name`).
+3.  Make your changes.
+4.  Ensure tests pass (`npm test`).
+5.  Run linters and formatters (`npm run lint`, `npm run format`).
+6.  Commit your changes (`git commit -m 'Add some feature'`).
+7.  Push to the branch (`git push origin feature/your-feature-name`).
+8.  Open a Pull Request.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Database Schema Visualisation (Optional Tooling Example)
+
+If you have `dbdiagram.io` or a similar tool, you can visualize the schema using the SQL definition from `lib/db.ts`.
+
+**Example dbdiagram.io Code (Derived from `lib/db.ts`):**
+
+```dbml
+// lib/db.ts schema visualization
+
+Table quiz {
+  id INTEGER [pk, increment]
+  language TEXT [not null]
+  level TEXT [not null]
+  content TEXT [not null]
+  created_at TIMESTAMP [default: `CURRENT_TIMESTAMP`]
+  question_language TEXT
+  user_id INTEGER
+}
+
+Table users {
+  id INTEGER [pk, increment]
+  provider_id TEXT [not null]
+  provider TEXT [not null]
+  name TEXT
+  email TEXT
+  image TEXT
+  first_login TIMESTAMP [default: `CURRENT_TIMESTAMP`]
+  last_login TIMESTAMP [default: `CURRENT_TIMESTAMP`]
+  language TEXT [default: 'en']
+  Indexes {
+    (provider_id, provider) [unique]
+  }
+}
+
+Table user_language_progress {
+  user_id INTEGER [not null, pk]
+  language_code TEXT [not null, pk]
+  cefr_level TEXT [not null, default: 'A1']
+  correct_streak INTEGER [not null, default: 0]
+  last_practiced TIMESTAMP [default: `CURRENT_TIMESTAMP`]
+}
+
+Table question_feedback {
+  id INTEGER [pk, increment]
+  quiz_id INTEGER [not null]
+  user_id INTEGER [not null]
+  rating TEXT [not null, check: `rating IN ('good', 'bad')`]
+  submitted_at DATETIME [default: `CURRENT_TIMESTAMP`]
+}
+
+Ref: user_language_progress.user_id > users.id [delete: cascade]
+Ref: question_feedback.quiz_id > quiz.id [delete: cascade]
+Ref: question_feedback.user_id > users.id [delete: cascade]
+```

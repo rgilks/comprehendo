@@ -22,8 +22,4 @@ test.describe('Admin Panel Basic Navigation', () => {
   test('should display the quiz table', async ({ page }) => {
     await checkTableLoads(page, 'quiz');
   });
-
-  test('should display the usage_stats table', async ({ page }) => {
-    await checkTableLoads(page, 'usage_stats');
-  });
 });

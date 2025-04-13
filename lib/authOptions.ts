@@ -113,8 +113,8 @@ export const authOptions: NextAuthOptions = {
         if (user && account) {
           db.prepare(
             `
-            INSERT INTO users (provider_id, provider, name, email, image, last_login)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO users (provider_id, provider, name, email, image, last_login, language)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(provider_id, provider)
             DO UPDATE SET name = ?, email = ?, image = ?, last_login = CURRENT_TIMESTAMP
           `
@@ -124,6 +124,7 @@ export const authOptions: NextAuthOptions = {
             user.name || null,
             user.email || null,
             user.image || null,
+            'en',
             user.name || null,
             user.email || null,
             user.image || null

@@ -79,8 +79,6 @@ export const getTableData = async (
     let orderByClause = 'ORDER BY ROWID DESC';
     if (tableName === 'quiz' && allowedTableNames.includes('quiz')) {
       orderByClause = 'ORDER BY created_at DESC';
-    } else if (tableName === 'usage_stats' && allowedTableNames.includes('usage_stats')) {
-      orderByClause = 'ORDER BY timestamp DESC';
     } else if (tableName === 'users' && allowedTableNames.includes('users')) {
       orderByClause = 'ORDER BY last_login DESC';
     }

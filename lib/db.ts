@@ -48,15 +48,6 @@ function initializeDatabase(): Database.Database {
         user_id INTEGER 
       );
       
-      CREATE TABLE IF NOT EXISTS usage_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ip_address TEXT,
-        language TEXT NOT NULL,
-        level TEXT NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
-      );
-
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         provider_id TEXT NOT NULL,
@@ -66,6 +57,7 @@ function initializeDatabase(): Database.Database {
         image TEXT,
         first_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        language TEXT DEFAULT 'en',
         UNIQUE(provider_id, provider)
       );
       
@@ -89,7 +81,6 @@ function initializeDatabase(): Database.Database {
       );
 
       CREATE INDEX IF NOT EXISTS idx_quiz_created_at ON quiz(created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_usage_stats_timestamp ON usage_stats(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
       CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
