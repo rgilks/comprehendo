@@ -64,11 +64,8 @@ const ReadingPassage = () => {
   }
 
   return (
-    <>
-      <div
-        className="flex flex-col items-start space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mb-4"
-        data-testid="reading-passage"
-      >
+    <div data-testid="reading-passage" className="mb-6">
+      <div className="flex flex-col items-start space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mb-4">
         <div className="flex items-center text-blue-400">
           <BookOpenIcon className="w-5 h-5 mr-2" />
           <span className="text-lg font-medium" data-testid="passage-title">
@@ -92,7 +89,7 @@ const ReadingPassage = () => {
           {t('practice.questionWillAppear')}
         </div>
       )}
-    </>
+    </div>
   );
 };
 

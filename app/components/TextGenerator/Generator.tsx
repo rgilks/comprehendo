@@ -25,6 +25,20 @@ const Generator = () => {
     void generateText();
   }, [generateText]);
 
+  const handleFeedbackSubmit = useCallback(
+    (rating: 'good' | 'bad') => {
+      if (contentContainerRef.current) {
+        contentContainerRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+      // Call the store action *after* scrolling
+      void submitFeedback(rating);
+    },
+    [submitFeedback] // contentContainerRef is stable
+  );
+
   const showFeedbackPrompt =
     isAnswered && !feedbackSubmitted && !loading && status === 'authenticated';
   const showFeedbackLoading =
@@ -33,13 +47,13 @@ const Generator = () => {
     !loading && (!quizData || (isAnswered && (feedbackSubmitted || status !== 'authenticated')));
 
   return (
-    <div className="mt-6 md:mt-8" ref={contentContainerRef}>
+    <div ref={contentContainerRef}>
       {showFeedbackPrompt && (
         <div className="text-center p-4 bg-gray-800 rounded-lg border border-gray-700 shadow-md">
           <p className="text-md font-semibold text-gray-200 mb-4">Was this question helpful?</p>
           <div className="flex justify-center space-x-6">
             <button
-              onClick={() => submitFeedback('good')}
+              onClick={() => handleFeedbackSubmit('good')}
               disabled={loading}
               className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30`}
               aria-label="Good question"
@@ -49,7 +63,7 @@ const Generator = () => {
               <span className="text-xs font-medium">Yes</span>
             </button>
             <button
-              onClick={() => submitFeedback('bad')}
+              onClick={() => handleFeedbackSubmit('bad')}
               disabled={loading}
               className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30`}
               aria-label="Bad question"
@@ -63,7 +77,7 @@ const Generator = () => {
       )}
 
       {showFeedbackLoading && (
-        <div className="mt-6">
+        <div>
           <QuizSkeleton />
         </div>
       )}

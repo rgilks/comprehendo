@@ -43,12 +43,6 @@ const TextGeneratorContainer = () => {
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
   }, [contextLanguage]);
 
-  useEffect(() => {
-    if (isContentVisible && generatedContentRef.current) {
-      generatedContentRef.current.scrollIntoView({ behavior: 'auto', block: 'start' });
-    }
-  }, [isContentVisible]);
-
   return (
     <div
       className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 relative"
@@ -64,7 +58,7 @@ const TextGeneratorContainer = () => {
 
         {isContentVisible && (
           <div
-            className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg"
+            className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700 shadow-lg mt-6"
             data-testid="generated-content"
             ref={generatedContentRef}
           >
