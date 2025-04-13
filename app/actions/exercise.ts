@@ -289,7 +289,6 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
 ): Promise<GenerateExerciseResult> => {
-  const start = Date.now();
   const headersList = await headers();
   const ip = headersList.get('x-forwarded-for') || 'unknown';
   const session = await getServerSession(authOptions);
@@ -454,7 +453,6 @@ export const generateExerciseResponse = async (
       };
     } catch (error: unknown) {
       console.error('[API] Error during AI Generation Path:', error);
-      const errorMessage = error instanceof Error ? error.message : 'AI model generation failed';
       Sentry.captureException(error);
       // If AI generation fails, fall through to try the cache as a last resort
       console.warn('[API] AI Generation failed, falling back to cache check.');
