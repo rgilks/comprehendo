@@ -1,9 +1,22 @@
-import { getServerSession } from 'next-auth';
 import { getTableNames, getTableData } from './actions';
 import db from '@/lib/db';
+import { getServerSession } from 'next-auth';
+
+jest.mock('@sentry/nextjs', () => ({
+  captureException: jest.fn(),
+}));
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
+}));
+
+jest.mock('next/router', () => ({
+  useRouter: jest.fn(() => ({
+    events: {
+      on: jest.fn(),
+      off: jest.fn(),
+    },
+  })),
 }));
 
 jest.mock('@/lib/authOptions', () => ({
