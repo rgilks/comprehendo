@@ -330,23 +330,33 @@ Accessible at `/admin` for users whose email is in `ADMIN_EMAILS`.
 
 - Set `ADMIN_EMAILS` environment variable locally (`.env.local`) and in deployment (e.g., Fly.io secrets), comma-separated.
 
-### E2E Test Authentication Setup (for `/admin` tests)
+### E2E Test Authentication Setup
 
-Playwright tests needing admin/non-admin roles require pre-generated auth state. These files (`test/e2e/auth/*.storageState.json`) are **not** committed.
+Certain Playwright end-to-end tests (especially those involving `/admin` access or user-specific behavior) require pre-generated authentication state to simulate logged-in users. This avoids needing to perform UI logins within the tests themselves. We need separate files for an admin user and a regular (non-admin) user.
 
-**To generate locally:**
+These state files (`test/e2e/auth/*.storageState.json`) contain session information and are **not** committed to Git (as specified in `.gitignore`).
 
-1.  **Ensure Files Exist:** Create empty `test/e2e/auth/admin.storageState.json` and `test/e2e/auth/nonAdmin.storageState.json` if they don't exist.
-2.  **Run App:** `npm run dev`.
-3.  **Login as Admin:** Use the UI to log in as an admin user (email in `ADMIN_EMAILS`).
-4.  **Get Admin Cookie:** Open browser dev tools (F12) -> Application -> Cookies -> `localhost`. Copy the **value** of the `next-auth.session-token` cookie.
-5.  **Update `admin.storageState.json`:** Paste the token value into the file, matching this structure:
+**Prerequisites:**
+
+- At least one OAuth provider (GitHub, Google, Discord) is configured in your `.env.local`.
+- The `ADMIN_EMAILS` variable is set in your `.env.local` with the email of your designated admin test user.
+- You have access to both an admin test account and a non-admin test account for one of the configured OAuth providers.
+
+**To generate the state files locally:**
+
+1.  **Ensure Files Exist:** If they don't already exist, create empty files named exactly:
+    - `test/e2e/auth/admin.storageState.json`
+    - `test/e2e/auth/nonAdmin.storageState.json`
+2.  **Run App:** Start the development server: `npm run dev`.
+3.  **Login as Admin:** Using your browser, navigate to `http://localhost:3000` and log in as the **admin** user (whose email is listed in `ADMIN_EMAILS`).
+4.  **Get Admin Cookie:** Open your browser's developer tools (usually F12). Go to the `Application` tab (Chrome/Edge) or `Storage` tab (Firefox), find `Cookies` for `http://localhost:3000`, and copy the **value** of the `next-auth.session-token` cookie.
+5.  **Update `admin.storageState.json`:** Open the `test/e2e/auth/admin.storageState.json` file. Paste the copied admin token value, **replacing only the `YOUR_ADMIN_TOKEN_VALUE_HERE` placeholder**. Ensure the rest of the JSON structure remains exactly as shown:
     ```json
     {
       "cookies": [
         {
           "name": "next-auth.session-token",
-          "value": "PASTE_ADMIN_TOKEN_HERE",
+          "value": "YOUR_ADMIN_TOKEN_VALUE_HERE",
           "domain": "localhost",
           "path": "/",
           "expires": -1,
@@ -358,11 +368,17 @@ Playwright tests needing admin/non-admin roles require pre-generated auth state.
       "origins": []
     }
     ```
-6.  **Log Out & Login as Non-Admin:** Log out, then log in as a regular user (email **not** in `ADMIN_EMAILS`).
-7.  **Get Non-Admin Cookie:** Repeat step 4 for the new session token.
-8.  **Update `nonAdmin.storageState.json`:** Paste the non-admin token using the same JSON structure as step 5.
+6.  **Log Out & Login as Non-Admin:** In your browser, log out of the application. Then, log back in as a regular **non-admin** user (an account whose email is **not** in `ADMIN_EMAILS`).
+7.  **Get Non-Admin Cookie:** Repeat step 4 to get the new `next-auth.session-token` value for the non-admin user.
+8.  **Update `nonAdmin.storageState.json`:** Open the `test/e2e/auth/nonAdmin.storageState.json` file. Paste the copied non-admin token value, **replacing only the `YOUR_NON_ADMIN_TOKEN_VALUE_HERE` placeholder**, using the same JSON structure as in step 5.
 
-Now, `npm run test:e2e` should pass tests requiring authentication.
+**Verification:**
+
+Once both files are correctly populated, `npm run test:e2e` should now be able to successfully run tests that require admin or non-admin authentication.
+
+**Troubleshooting:**
+
+- If authentication tests still fail, double-check that you copied the correct cookie _value_ (not the name), pasted it into the correct file, and that the JSON structure in both `.storageState.json` files is valid and matches the example exactly (except for the token value itself).
 
 ## Database
 
