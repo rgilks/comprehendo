@@ -22,7 +22,12 @@ const LoginPrompt = () => {
         {t('practice.signInPrompt.message')}
       </p>
       <div className="flex items-center justify-center gap-3 w-full">
-        <AuthButton variant="short" />
+        <div className="flex md:hidden items-center justify-center gap-3 w-full">
+          <AuthButton variant="icon-only" />
+        </div>
+        <div className="hidden md:flex items-center justify-center gap-3 w-full">
+          <AuthButton variant="short" />
+        </div>
       </div>
       <button
         onClick={() => setShowLoginPrompt(false)}
