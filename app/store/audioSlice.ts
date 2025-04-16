@@ -280,24 +280,33 @@ export const createAudioSlice: StateCreator<
     const speechLang = SPEECH_LANGUAGES[lang];
     const baseLangCode = speechLang.split('-')[0];
 
-    const voices = window.speechSynthesis
-      .getVoices()
-      .filter((voice) => voice.lang.startsWith(baseLangCode + '-') || voice.lang === baseLangCode)
-      // Filter out macOS default voices with the pattern "Name (Language (Region))"
-      .filter(
-        (voice) =>
-          navigator.platform.toUpperCase().indexOf('MAC') < 0 ||
-          !/\s\(.*\s\(.*\)\)$/.test(voice.name)
-      )
+    const platform = navigator.platform.toUpperCase();
+    const isIOS =
+      platform.indexOf('IPHONE') >= 0 ||
+      platform.indexOf('IPAD') >= 0 ||
+      platform.indexOf('IPOD') >= 0;
 
-      .map((voice): { uri: string; displayName: string; originalLang: string } => {
+    let voices = window.speechSynthesis.getVoices();
+
+    // Filter voices based on language
+    if (isIOS) {
+      voices = voices.filter((voice) => voice.lang === speechLang);
+    } else {
+      voices = voices.filter(
+        (voice) => voice.lang.startsWith(baseLangCode + '-') || voice.lang === baseLangCode
+      );
+    }
+
+    // Filter out macOS default voices with the pattern "Name (Language (Region))"
+    voices = voices.filter(
+      (voice) =>
+        navigator.platform.toUpperCase().indexOf('MAC') < 0 || !/\s\(.*\s\(.*\)\)$/.test(voice.name)
+    );
+
+    const processedVoices = voices.map(
+      (voice): { uri: string; displayName: string; originalLang: string } => {
         let displayName = voice.name;
-        const platform = navigator.platform.toUpperCase();
         const isWindows = platform.indexOf('WIN') >= 0;
-        const isIOS =
-          platform.indexOf('IPHONE') >= 0 ||
-          platform.indexOf('IPAD') >= 0 ||
-          platform.indexOf('IPOD') >= 0;
 
         // Simplify Windows voice names
         if (isWindows && displayName.startsWith('Microsoft ')) {
@@ -306,20 +315,23 @@ export const createAudioSlice: StateCreator<
             displayName = match[1];
           }
         }
-        // Simplify iOS voice names (remove trailing parentheses like " (Enhanced)" or " (Language (Region))")
+        // Simplify iOS voice names
         else if (isIOS) {
+          displayName = displayName.replace(/\s\((Enhanced|Default|Premium|Compact)\)$/i, '');
           displayName = displayName.replace(/\s\(.*\)$/, '');
         }
 
         return { uri: voice.voiceURI, displayName, originalLang: voice.lang };
-      });
+      }
+    );
 
-    const nameCounts = voices.reduce<Record<string, number>>((acc, voice) => {
+    // Deduplication logic
+    const nameCounts = processedVoices.reduce<Record<string, number>>((acc, voice) => {
       acc[voice.displayName] = (acc[voice.displayName] || 0) + 1;
       return acc;
     }, {});
 
-    const finalVoicesWithLang = voices.map((voice) => {
+    const finalVoicesWithLang = processedVoices.map((voice) => {
       if (nameCounts[voice.displayName] > 1) {
         return {
           ...voice,
