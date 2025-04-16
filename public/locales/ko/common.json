@@ -81,7 +81,12 @@
     "currentStreak": "현재 연속 정답",
     "startStreak": "연속 정답 기록 시작하기",
     "keepGoing": "계속 진행하세요! 더 많은 문제를 맞춰보세요",
-    "almostLevelUp": "레벨 업까지 정답 하나 남았습니다!"
+    "almostLevelUp": "레벨 업까지 정답 하나 남았습니다!",
+    "correctAnswer": "정답",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "번역하려면 단어 위에 마우스를 올리거나 클릭하세요. 크레딧은 제한되어 있습니다.",
+    "relevantText": "관련 텍스트",
+    "showExplanation": "설명 보기"
   },
   "admin": {
     "title": "관리",

@@ -81,7 +81,12 @@
     "currentStreak": "רצף נוכחי",
     "startStreak": "ענה נכון כדי להתחיל רצף",
     "keepGoing": "המשך כך! ענה נכון על עוד שאלות",
-    "almostLevelUp": "עוד תשובה נכונה אחת לעליית רמה!"
+    "almostLevelUp": "עוד תשובה נכונה אחת לעליית רמה!",
+    "correctAnswer": "תשובה נכונה",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "רחף מעל מילים או לחץ עליהן לתרגום. הזיכויים מוגבלים.",
+    "relevantText": "טקסט רלוונטי",
+    "showExplanation": "הצג הסבר"
   },
   "admin": {
     "title": "ניהול",

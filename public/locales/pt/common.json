@@ -81,7 +81,12 @@
     "currentStreak": "Sequência Atual",
     "startStreak": "Responda corretamente para iniciar uma sequência",
     "keepGoing": "Continue assim! Responda mais perguntas corretamente",
-    "almostLevelUp": "Mais uma resposta correta para subir de nível!"
+    "almostLevelUp": "Mais uma resposta correta para subir de nível!",
+    "correctAnswer": "Resposta Correta",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "Passe o mouse ou clique nas palavras para tradução. Os créditos são limitados.",
+    "relevantText": "Texto Relevante",
+    "showExplanation": "Mostrar Explicação"
   },
   "admin": {
     "title": "Administração",

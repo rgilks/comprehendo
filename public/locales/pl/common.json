@@ -81,7 +81,12 @@
     "currentStreak": "Bieżąca seria",
     "startStreak": "",
     "keepGoing": "Kontynuuj! Odpowiedz poprawnie na więcej pytań",
-    "almostLevelUp": "Jeszcze jedna poprawna odpowiedź do awansu!"
+    "almostLevelUp": "Jeszcze jedna poprawna odpowiedź do awansu!",
+    "correctAnswer": "Odpowiedź prawidłowa",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "Najedź kursorem lub kliknij słowa, aby je przetłumaczyć. Kredyty są ograniczone.",
+    "relevantText": "Tekst powiązany",
+    "showExplanation": "Pokaż wyjaśnienie"
   },
   "admin": {
     "title": "Panel administratora",

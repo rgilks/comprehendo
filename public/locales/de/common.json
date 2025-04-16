@@ -81,7 +81,12 @@
     "currentStreak": "Aktuelle Serie",
     "startStreak": "Antworte richtig, um eine Serie zu starten",
     "keepGoing": "Mach weiter! Beantworte mehr Fragen richtig",
-    "almostLevelUp": "Noch eine richtige Antwort bis zum Levelaufstieg!"
+    "almostLevelUp": "Noch eine richtige Antwort bis zum Levelaufstieg!",
+    "correctAnswer": "Richtige Antwort",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "Fahren Sie mit der Maus über Wörter oder klicken Sie darauf, um sie zu übersetzen. Credits sind begrenzt.",
+    "relevantText": "Relevanter Text",
+    "showExplanation": "Erklärung anzeigen"
   },
   "admin": {
     "title": "Verwaltung",
