@@ -50,6 +50,10 @@ const AudioControls = () => {
     return null;
   }
 
+  if (!availableVoices || availableVoices.length === 0) {
+    return null;
+  }
+
   return (
     <div className="flex items-center space-x-3">
       <button
