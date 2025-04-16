@@ -26,7 +26,7 @@ const Generator = () => {
   }, [generateText]);
 
   const handleFeedbackSubmit = useCallback(
-    (rating: 'good' | 'bad') => {
+    (is_good: boolean) => {
       if (contentContainerRef.current) {
         contentContainerRef.current.scrollIntoView({
           behavior: 'smooth',
@@ -34,7 +34,7 @@ const Generator = () => {
         });
       }
       // Call the store action *after* scrolling
-      void submitFeedback(rating);
+      void submitFeedback(is_good);
     },
     [submitFeedback] // contentContainerRef is stable
   );
@@ -53,7 +53,7 @@ const Generator = () => {
           <p className="text-md font-semibold text-gray-200 mb-4">Was this question helpful?</p>
           <div className="flex justify-center space-x-6">
             <button
-              onClick={() => handleFeedbackSubmit('good')}
+              onClick={() => handleFeedbackSubmit(true)}
               disabled={loading}
               className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30`}
               aria-label="Good question"
@@ -63,7 +63,7 @@ const Generator = () => {
               <span className="text-xs font-medium">Yes</span>
             </button>
             <button
-              onClick={() => handleFeedbackSubmit('bad')}
+              onClick={() => handleFeedbackSubmit(false)}
               disabled={loading}
               className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30`}
               aria-label="Bad question"

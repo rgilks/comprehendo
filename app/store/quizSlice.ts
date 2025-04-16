@@ -42,7 +42,7 @@ export interface QuizSlice {
   ) => void;
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
-  submitFeedback: (rating: 'good' | 'bad') => Promise<void>;
+  submitFeedback: (is_good: boolean) => Promise<void>;
   resetQuizState: () => void;
   resetQuizWithNewData: (
     newQuizData: PartialQuizData,
@@ -329,7 +329,7 @@ export const createQuizSlice: StateCreator<
     }
   },
 
-  submitFeedback: async (rating): Promise<void> => {
+  submitFeedback: async (is_good: boolean): Promise<void> => {
     const { currentQuizId, passageLanguage, generatedQuestionLanguage, cefrLevel } = get();
 
     if (typeof currentQuizId !== 'number') {
@@ -363,7 +363,7 @@ export const createQuizSlice: StateCreator<
 
       const params = {
         quizId: currentQuizId,
-        rating: rating,
+        is_good: is_good ? 1 : 0,
         userAnswer: userAnswer ?? undefined,
         isCorrect: isCorrect ?? undefined,
         passageLanguage: passageLanguage,
@@ -378,7 +378,7 @@ export const createQuizSlice: StateCreator<
       }
 
       console.log(
-        `[SubmitFeedback][Store] Feedback (${rating}) submitted successfully for quiz ${currentQuizId}.`
+        `[SubmitFeedback][Store] Feedback (${is_good}) submitted successfully for quiz ${currentQuizId}.`
       );
       set((state) => {
         state.feedbackSubmitted = true;
@@ -399,7 +399,7 @@ export const createQuizSlice: StateCreator<
       }
     } catch (error: unknown) {
       console.error('[SubmitFeedback][Store] Error during feedback submission process:', error);
-      Sentry.captureException(error, { extra: { currentQuizId, rating } });
+      Sentry.captureException(error, { extra: { currentQuizId, is_good } });
       set((state) => {
         state.error = `Failed to submit feedback: ${error instanceof Error ? error.message : 'Unknown error'}`;
         state.loading = false;

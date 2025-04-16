@@ -39,7 +39,7 @@ const submitAnswerSchema = z.object({
 
 const submitFeedbackSchema = z.object({
   quizId: z.number().int().positive(),
-  rating: z.enum(['good', 'bad']),
+  is_good: z.number().int().min(0).max(1),
   userAnswer: z.string().optional(),
   isCorrect: z.boolean().optional(),
   passageLanguage: z.string(),
@@ -67,7 +67,6 @@ function calculateAndUpdateProgress(
   isCorrect: boolean
 ): { currentLevel: string; currentStreak: number; leveledUp: boolean; dbError?: string } {
   const normalizedLanguage = language.toLowerCase().slice(0, 2);
-  console.log(`[ProgressCalc] Calculating for user ${userId}, language: ${normalizedLanguage}`);
 
   try {
     const userProgress = db
@@ -82,9 +81,6 @@ function calculateAndUpdateProgress(
     let correct_streak: number;
 
     if (!userProgress) {
-      console.log(
-        `[ProgressCalc] No record found for user ${userId}, language ${normalizedLanguage}. Creating default A1 record.`
-      );
       db.prepare('INSERT INTO user_language_progress (user_id, language_code) VALUES (?, ?)').run(
         userId,
         normalizedLanguage
@@ -105,21 +101,12 @@ function calculateAndUpdateProgress(
           current_cefr_level = CEFR_LEVELS[currentLevelIndex + 1];
           correct_streak = 0;
           leveledUp = true;
-          console.log(
-            `[ProgressCalc] User ${userId}, Lang ${normalizedLanguage}: Leveled up to ${current_cefr_level}`
-          );
         } else {
           correct_streak = 0;
-          console.log(
-            `[ProgressCalc] User ${userId}, Lang ${normalizedLanguage}: Reached max level, streak reset.`
-          );
         }
       }
     } else {
       if (correct_streak > 0) {
-        console.log(
-          `[ProgressCalc] User ${userId}, Lang ${normalizedLanguage}: Streak reset from ${correct_streak}.`
-        );
       }
       correct_streak = 0;
     }
@@ -128,16 +115,12 @@ function calculateAndUpdateProgress(
       'UPDATE user_language_progress SET cefr_level = ?, correct_streak = ?, last_practiced = CURRENT_TIMESTAMP WHERE user_id = ? AND language_code = ?'
     ).run(current_cefr_level, correct_streak, userId, normalizedLanguage);
 
-    console.log(
-      `[ProgressCalc] Updated progress for user ${userId}, language ${normalizedLanguage}. New Level: ${current_cefr_level}, Streak: ${correct_streak}`
-    );
     return {
       currentLevel: current_cefr_level,
       currentStreak: correct_streak,
       leveledUp: leveledUp,
     };
   } catch (dbError) {
-    console.error(`[ProgressCalc] Database error for user ${userId}:`, dbError);
     Sentry.captureException(dbError, { extra: { userId, language, isCorrect } });
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     return {
@@ -182,8 +165,6 @@ export const submitAnswer = async (
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user as SessionUser | undefined;
   const userId = sessionUser?.dbId;
-
-  console.log(`[SubmitAnswer] Request received. UserID: ${userId ?? 'Anonymous'}, Params:`, params);
 
   const parsedBody = submitAnswerSchema.safeParse(params);
   if (!parsedBody.success) {
@@ -238,9 +219,6 @@ export const submitAnswer = async (
 
     if (typeof ans === 'string' && ans in fullQuizData.options) {
       isCorrect = ans === fullQuizData.correctAnswer;
-      console.log(
-        `[SubmitAnswer] Answer check. User Ans: ${ans}, Correct Ans: ${fullQuizData.correctAnswer}, Result: ${isCorrect}`
-      );
 
       if (
         typeof fullQuizData.correctAnswer === 'string' &&
@@ -254,13 +232,9 @@ export const submitAnswer = async (
           relevantText: fullQuizData.relevantText,
         };
       } else {
-        console.warn(
-          `[SubmitAnswer] Cannot construct full feedback for Quiz ID ${id} due to missing data (correctAnswer, explanations, or relevantText).`
-        );
         feedbackData = undefined;
       }
     } else {
-      console.warn(`[SubmitAnswer] Invalid or missing answer provided: ${ans}`);
       feedbackData = undefined;
     }
   } catch (error: unknown) {
@@ -307,7 +281,6 @@ export const submitAnswer = async (
     responsePayload.leveledUp = false;
   }
 
-  console.log('[SubmitAnswer] Sending Response Payload:', responsePayload);
   return responsePayload;
 };
 
@@ -398,61 +371,58 @@ export const submitQuestionFeedback = async (
     return { success: false, error: 'Invalid parameters' };
   }
 
-  const { quizId, rating, userAnswer, isCorrect, passageLanguage, questionLanguage, currentLevel } =
-    parsedBody.data;
+  const {
+    quizId,
+    is_good,
+    userAnswer,
+    isCorrect,
+    passageLanguage,
+    questionLanguage,
+    currentLevel,
+  } = parsedBody.data;
 
-  // --- Step 1: Save Feedback --- //
   let feedbackSuccess = false;
   let feedbackError: string | undefined = undefined;
   try {
     const quizExists = db.prepare('SELECT id FROM quiz WHERE id = ?').get(quizId);
     if (!quizExists) {
-      console.warn(
-        `[SubmitFeedback] Attempt to submit feedback for non-existent quiz ID: ${quizId}`
-      );
       feedbackError = `Quiz with ID ${quizId} not found.`;
     } else {
       db.prepare(
-        'INSERT INTO question_feedback (quiz_id, user_id, rating, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
-      ).run(quizId, userId, rating, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
-      feedbackSuccess = true;
-      console.log(
-        `[SubmitFeedback] Feedback saved successfully for quiz ${quizId}, user ${userId}`
+        'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
+      ).run(
+        quizId,
+        userId,
+        is_good,
+        userAnswer,
+        isCorrect === undefined ? null : isCorrect ? 1 : 0
       );
+      feedbackSuccess = true;
     }
   } catch (dbError) {
     console.error('[SubmitFeedback] Database error saving feedback:', dbError);
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     Sentry.captureException(dbError, {
-      extra: { quizId, rating, userAnswer, isCorrect, userId },
+      extra: { quizId, is_good, userAnswer, isCorrect, userId },
     });
     feedbackError = `Database error saving feedback: ${message}`;
     feedbackSuccess = false;
   }
 
-  // --- Step 2: Fetch Next Exercise (if feedback was successful) --- //
   let nextQuizResult: GenerateExerciseResult | null = null;
   if (feedbackSuccess) {
     try {
-      console.log(
-        `[SubmitFeedback] Fetching next exercise. Lang: ${passageLanguage}, Level: ${currentLevel}`
-      );
       const nextExerciseParams: ExerciseRequestParams = {
         passageLanguage: passageLanguage,
         questionLanguage: questionLanguage,
         cefrLevel: currentLevel,
       };
-      // Assuming generateExerciseResponse handles user session internally if needed
       nextQuizResult = await generateExerciseResponse(nextExerciseParams);
-      console.log(
-        `[SubmitFeedback] Fetched next exercise. ID: ${nextQuizResult.quizId}, Cached: ${nextQuizResult.cached ?? false}`
-      );
     } catch (fetchError) {
       console.error('[SubmitFeedback] Error fetching next exercise:', fetchError);
       Sentry.captureException(fetchError, {
         extra: { userId, passageLanguage, questionLanguage, currentLevel },
       });
-      // Store the error but don't fail the whole operation, just the next quiz part
       nextQuizResult = {
         quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
         quizId: -1,
@@ -461,7 +431,6 @@ export const submitQuestionFeedback = async (
     }
   }
 
-  // --- Step 3: Construct Response --- //
   const response: SubmitFeedbackResponse = {
     success: feedbackSuccess,
     error: feedbackError,
@@ -470,14 +439,6 @@ export const submitQuestionFeedback = async (
     nextQuizError: nextQuizResult?.error ?? undefined,
     cached: nextQuizResult?.cached ?? undefined,
   };
-
-  console.log(`[SubmitFeedback] Final response for user ${userId}:`, {
-    success: response.success,
-    error: response.error,
-    nextQuizId: response.nextQuizId,
-    nextQuizError: response.nextQuizError,
-    cached: response.cached,
-  });
 
   return response;
 };

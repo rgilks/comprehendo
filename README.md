@@ -435,7 +435,7 @@ CREATE TABLE IF NOT EXISTS question_feedback (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   quiz_id INTEGER NOT NULL,        -- The quiz this feedback relates to
   user_id INTEGER NOT NULL,        -- The user providing feedback
-  rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')), -- User's quality rating
+  is_good INTEGER NOT NULL CHECK(is_good IN (0, 1)), -- User's rating
   user_answer TEXT,              -- The answer submitted by the user (e.g., 'A', 'B')
   is_correct INTEGER,            -- 1 if correct, 0 if incorrect
   submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
