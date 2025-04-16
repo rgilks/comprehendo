@@ -80,26 +80,35 @@ const AudioControls = () => {
 
       {availableVoices && availableVoices.length > 0 && (
         <div className="flex items-center space-x-1">
-          <div className="relative">
-            <select
-              value={selectedVoiceURI || ''}
-              onChange={(e) => setSelectedVoiceURI(e.target.value)}
-              className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-gray-600 focus:border-gray-500 text-sm cursor-pointer"
-              title={t('common.selectVoice')}
-            >
-              {availableVoices.map((voice) => (
-                <option key={voice.uri} value={voice.uri}>
-                  {voice.displayName}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-              <ChevronDownIcon className="w-4 h-4" />
+          {availableVoices.length > 1 ? (
+            <div className="relative">
+              <select
+                value={selectedVoiceURI || ''}
+                onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-gray-600 focus:border-gray-500 text-sm cursor-pointer max-w-[150px] truncate"
+                title={t('common.selectVoice')}
+              >
+                {availableVoices.map((voice) => (
+                  <option key={voice.uri} value={voice.uri} title={voice.displayName}>
+                    {voice.displayName}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <ChevronDownIcon className="w-4 h-4" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              className="flex items-center bg-gray-700 border border-gray-600 text-white py-2 px-3 rounded text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]"
+              title={availableVoices[0].displayName}
+            >
+              {availableVoices[0].displayName}
+            </div>
+          )}
           <button
             onClick={() => setIsInfoModalOpen(true)}
-            className="text-gray-400 hover:text-blue-400 transition-colors p-1"
+            className="text-gray-400 hover:text-blue-400 transition-colors p-1 flex-shrink-0"
             title={t('voiceInfo.tooltip')}
           >
             <InformationCircleIcon className="w-5 h-5" />
