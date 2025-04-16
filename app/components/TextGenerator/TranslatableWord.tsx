@@ -24,6 +24,7 @@ const TranslatableWord = memo(
 
     const handleMouseEnter = useCallback(() => {
       setIsHovered(true);
+
       if (shouldTranslate && !translation && !isLoading) {
         void (async () => {
           setIsLoading(true);

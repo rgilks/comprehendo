@@ -2,7 +2,6 @@ import type { StateCreator } from 'zustand';
 import { submitAnswer, submitQuestionFeedback } from '@/app/actions/userProgress';
 import { generateExerciseResponse } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
-import { getSession } from 'next-auth/react';
 import type { CEFRLevel } from '@/config/language-guidance';
 import {} from '@/contexts/LanguageContext';
 import {
@@ -17,6 +16,8 @@ interface NextQuizInfo {
   quizId: number;
 }
 
+export type HoverProgressionPhase = 'initial' | 'credits';
+
 export interface QuizSlice {
   quizData: PartialQuizData | null;
   currentQuizId: number | null;
@@ -29,6 +30,11 @@ export interface QuizSlice {
   feedbackRelevantText: string | null;
   nextQuizAvailable: NextQuizInfo | null;
   feedbackSubmitted: boolean;
+
+  hoverProgressionPhase: HoverProgressionPhase;
+  correctAnswersInPhase: number;
+  hoverCreditsAvailable: number;
+  hoverCreditsUsed: number;
 
   setQuizData: (data: PartialQuizData | null) => void;
   setSelectedAnswer: (answer: string | null) => void;
@@ -51,7 +57,12 @@ export interface QuizSlice {
   ) => void;
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
+
+  useHoverCredit: () => boolean;
 }
+
+const INITIAL_HOVER_CREDITS = 3;
+const INITIAL_PHASE_THRESHOLD = 5;
 
 export const createQuizSlice: StateCreator<
   TextGeneratorState,
@@ -70,6 +81,11 @@ export const createQuizSlice: StateCreator<
   feedbackRelevantText: null,
   nextQuizAvailable: null,
   feedbackSubmitted: false,
+
+  hoverProgressionPhase: 'credits',
+  correctAnswersInPhase: 0,
+  hoverCreditsAvailable: INITIAL_HOVER_CREDITS,
+  hoverCreditsUsed: 0,
 
   setQuizData: (data) =>
     set((state) => {
@@ -115,6 +131,9 @@ export const createQuizSlice: StateCreator<
       state.showExplanation = false;
       state.nextQuizAvailable = null;
       state.feedbackSubmitted = false;
+      state.hoverCreditsAvailable =
+        get().hoverProgressionPhase === 'initial' ? Infinity : INITIAL_HOVER_CREDITS;
+      state.hoverCreditsUsed = 0;
     });
   },
 
@@ -139,6 +158,10 @@ export const createQuizSlice: StateCreator<
       state.generatedPassageLanguage = currentPassageLanguage;
       state.nextQuizAvailable = null;
       state.feedbackSubmitted = false;
+
+      const currentPhase = state.hoverProgressionPhase;
+      state.hoverCreditsAvailable = currentPhase === 'initial' ? Infinity : INITIAL_HOVER_CREDITS;
+      state.hoverCreditsUsed = 0;
     });
 
     if (shouldPrefetch) {
@@ -233,7 +256,6 @@ export const createQuizSlice: StateCreator<
       state.isAnswered = true;
       state.showExplanation = true;
     });
-    const session = await getSession();
     const { currentQuizId } = get();
 
     if (typeof currentQuizId !== 'number') {
@@ -254,26 +276,19 @@ export const createQuizSlice: StateCreator<
         throw new Error('Question language missing');
       }
 
-      type SessionUserWithDbId = { dbId?: number | string };
-
       const params: {
-        id: number;
-        ans: string;
-        userId?: number | string;
+        id?: number;
+        ans?: string;
         learn: string;
         lang: string;
         cefrLevel?: string;
       } = {
         id: currentQuizId,
         ans: answer,
-        userId: (session?.user as SessionUserWithDbId)?.dbId,
         learn: passageLanguage,
         lang: generatedQuestionLanguage,
+        cefrLevel: cefrLevel,
       };
-
-      if (cefrLevel) {
-        params.cefrLevel = cefrLevel;
-      }
 
       const rawResult = await submitAnswer(params);
 
@@ -301,8 +316,10 @@ export const createQuizSlice: StateCreator<
           const relevantText = result.feedback.relevantText;
           const startIndex = paragraph.indexOf(relevantText);
           if (startIndex !== -1) {
-            const endIndex = startIndex + relevantText.length;
-            state.relevantTextRange = { start: startIndex, end: endIndex };
+            state.relevantTextRange = {
+              start: startIndex,
+              end: startIndex + relevantText.length,
+            };
           } else {
             state.relevantTextRange = null;
           }
@@ -316,21 +333,43 @@ export const createQuizSlice: StateCreator<
         if (result.leveledUp && result.currentLevel) {
           state.cefrLevel = result.currentLevel as CEFRLevel;
         }
+
+        if (result.feedback?.isCorrect) {
+          state.correctAnswersInPhase += 1;
+          if (
+            state.hoverProgressionPhase === 'initial' &&
+            state.correctAnswersInPhase >= INITIAL_PHASE_THRESHOLD
+          ) {
+            state.hoverProgressionPhase = 'credits';
+            state.correctAnswersInPhase = 0;
+            console.log('Transitioning to hover credits phase!');
+          }
+        } else {
+          if (state.hoverProgressionPhase === 'initial') {
+            state.correctAnswersInPhase = 0;
+          }
+        }
       });
+
+      void get().generateText(true);
     } catch (error: unknown) {
       console.error('Error submitting answer:', error);
-      Sentry.captureException(error, { extra: { currentQuizId, answer } });
+      Sentry.captureException(error);
       set((state) => {
-        state.feedbackIsCorrect = null;
-        const message: string =
-          error instanceof Error ? error.message : 'Unknown error submitting answer';
-        state.error = `Failed to submit answer: ${message}. Please try again.`;
+        state.error = error instanceof Error ? error.message : 'Failed to submit answer.';
       });
     }
   },
 
   submitFeedback: async (is_good: boolean): Promise<void> => {
-    const { currentQuizId, passageLanguage, generatedQuestionLanguage, cefrLevel } = get();
+    const {
+      currentQuizId,
+      selectedAnswer,
+      feedbackIsCorrect,
+      passageLanguage,
+      generatedQuestionLanguage,
+      cefrLevel,
+    } = get();
 
     if (typeof currentQuizId !== 'number') {
       console.error('[SubmitFeedback][Store] Invalid or missing quiz ID.');
@@ -358,8 +397,8 @@ export const createQuizSlice: StateCreator<
         state.error = null;
       });
 
-      const userAnswer = get().selectedAnswer;
-      const isCorrect = get().feedbackIsCorrect;
+      const userAnswer = selectedAnswer;
+      const isCorrect = feedbackIsCorrect;
 
       const params = {
         quizId: currentQuizId,
@@ -406,5 +445,19 @@ export const createQuizSlice: StateCreator<
         state.feedbackSubmitted = false;
       });
     }
+  },
+
+  useHoverCredit: () => {
+    const currentCredits = get().hoverCreditsAvailable;
+    if (currentCredits > 0) {
+      set((state) => {
+        if (state.hoverCreditsAvailable > 0) {
+          state.hoverCreditsAvailable -= 1;
+          state.hoverCreditsUsed += 1;
+        }
+      });
+      return true;
+    }
+    return false;
   },
 });

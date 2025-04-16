@@ -19,6 +19,8 @@ const ReadingPassage = () => {
     isSpeakingPassage,
     relevantTextRange,
     generatedPassageLanguage,
+    hoverProgressionPhase,
+    hoverCreditsAvailable,
   } = useTextGeneratorStore();
 
   const actualQuestionLanguage = questionLanguage;
@@ -72,7 +74,17 @@ const ReadingPassage = () => {
             {t('practice.passageTitle')}
           </span>
         </div>
-        <AudioControls />
+        <div className="flex items-center space-x-4">
+          {hoverProgressionPhase === 'credits' && (
+            <div
+              className="text-sm font-medium text-yellow-400 bg-gray-700/50 px-2 py-1 rounded"
+              data-testid="hover-credits-display"
+            >
+              {t('practice.hoverCredits', { count: hoverCreditsAvailable })}
+            </div>
+          )}
+          <AudioControls />
+        </div>
       </div>
 
       <div
