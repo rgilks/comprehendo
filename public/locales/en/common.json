@@ -66,7 +66,7 @@
     "generateNewText": "Give me something to read",
     "supportingTextPrefix": "Supporting text: ",
     "passageLanguageLabel": "Learning",
-    "questionWillAppear": "Question will appear shortly...",
+    "questionWillAppear": "Question will appear after reading...",
     "passageTitle": "Reading Passage",
     "signInPrompt": {
       "message": "Sign in to track your progress and see your learning history!",
@@ -81,7 +81,12 @@
     "currentStreak": "Current Streak",
     "startStreak": "",
     "keepGoing": "Keep going! Answer more questions correctly",
-    "almostLevelUp": "One more correct answer to level up!"
+    "almostLevelUp": "One more correct answer to level up!",
+    "correctAnswer": "Correct Answer",
+    "hoverCredits": "Hover Credits: {{count}}",
+    "relevantText": "Relevant Text",
+    "showExplanation": "Show Explanation",
+    "hideExplanation": "Hide Explanation"
   },
   "admin": {
     "title": "Admin",
