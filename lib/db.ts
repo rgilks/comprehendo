@@ -77,7 +77,7 @@ function initializeDatabase(): Database.Database {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         quiz_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        rating TEXT NOT NULL CHECK(rating IN ('good', 'bad')),
+        is_good INTEGER NOT NULL,
         user_answer TEXT,
         is_correct INTEGER,
         submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
