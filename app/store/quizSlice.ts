@@ -50,11 +50,7 @@ export interface QuizSlice {
   handleAnswerSelect: (answer: string) => Promise<void>;
   submitFeedback: (is_good: boolean) => Promise<void>;
   resetQuizState: () => void;
-  resetQuizWithNewData: (
-    newQuizData: PartialQuizData,
-    quizId: number,
-    shouldPrefetch?: boolean
-  ) => void;
+  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void;
   _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
 
@@ -137,7 +133,7 @@ export const createQuizSlice: StateCreator<
     });
   },
 
-  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number, shouldPrefetch = true) => {
+  resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
     get().stopPassageSpeech();
     set((state) => {
       state.quizData = newQuizData;
@@ -164,9 +160,7 @@ export const createQuizSlice: StateCreator<
       state.hoverCreditsUsed = 0;
     });
 
-    if (shouldPrefetch) {
-      void get().generateText(true);
-    }
+    void get().generateText(true);
   },
 
   loadNextQuiz: () => {
@@ -229,7 +223,7 @@ export const createQuizSlice: StateCreator<
         });
         console.log('Next quiz pre-fetched.');
       } else {
-        get().resetQuizWithNewData(quizData, response.quizId, false);
+        get().resetQuizWithNewData(quizData, response.quizId);
       }
     } catch (error: unknown) {
       console.error('Error generating text:', String(error));
@@ -350,8 +344,6 @@ export const createQuizSlice: StateCreator<
           }
         }
       });
-
-      void get().generateText(true);
     } catch (error: unknown) {
       console.error('Error submitting answer:', error);
       Sentry.captureException(error);
@@ -395,6 +387,7 @@ export const createQuizSlice: StateCreator<
       set((state) => {
         state.loading = true;
         state.error = null;
+        state.feedbackSubmitted = false;
       });
 
       const userAnswer = selectedAnswer;
@@ -413,24 +406,26 @@ export const createQuizSlice: StateCreator<
       const result = await submitQuestionFeedback(params);
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to submit feedback.');
+        throw new Error(result.error || 'Failed to submit feedback via API.');
       }
 
       console.log(
         `[SubmitFeedback][Store] Feedback (${is_good}) submitted successfully for quiz ${currentQuizId}.`
       );
+
       set((state) => {
         state.feedbackSubmitted = true;
       });
 
-      if (result.nextQuizData && result.nextQuizId) {
+      const nextQuiz = get().nextQuizAvailable;
+      if (nextQuiz) {
         console.log(
-          `[SubmitFeedback][Store] Next quiz data received (ID: ${result.nextQuizId}). Loading...`
+          `[SubmitFeedback][Store] Prefetched quiz data found (ID: ${nextQuiz.quizId}). Loading immediately...`
         );
-        get().resetQuizWithNewData(result.nextQuizData, result.nextQuizId, false);
+        get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
       } else {
         console.warn(
-          `[SubmitFeedback][Store] Feedback saved, but failed to get next quiz. Error: ${result.nextQuizError || 'Unknown reason'}`
+          `[SubmitFeedback][Store] Feedback saved, but no prefetched quiz was available to display.`
         );
         set((state) => {
           state.loading = false;
