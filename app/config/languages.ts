@@ -10,7 +10,8 @@ export type Language =
   | 'ja'
   | 'ko'
   | 'hi'
-  | 'he';
+  | 'he'
+  | 'fil';
 
 export const LANGUAGES: Record<Language, string> = {
   en: 'English',
@@ -25,6 +26,7 @@ export const LANGUAGES: Record<Language, string> = {
   ko: '한국어',
   hi: 'हिंदी',
   he: 'עברית',
+  fil: 'Filipino',
 };
 
 export const SPEECH_LANGUAGES: Record<Language, string> = {
@@ -40,6 +42,7 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
   ko: 'ko-KR',
   hi: 'hi-IN',
   he: 'he-IL',
+  fil: 'fil-PH',
 };
 
 // Define languages available for learning content
@@ -58,6 +61,7 @@ export const LEARNING_LANGUAGES: Record<LearningLanguage, string> = {
   // ko: '한국어',
   hi: 'हिंदी',
   he: 'עברית',
+  fil: 'Filipino',
 };
 
 export const RTL_LANGUAGES: Language[] = ['he'];

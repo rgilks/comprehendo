@@ -8,7 +8,7 @@ i18n.use(initReactI18next);
 void i18n.init({
   lng: 'en',
   fallbackLng: 'en',
-  supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he'],
+  supportedLngs: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he', 'fil'],
   ns: ['common'],
   defaultNS: 'common',
   interpolation: {
