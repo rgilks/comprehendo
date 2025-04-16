@@ -5,14 +5,8 @@ import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
-import {
-  QuizDataSchema,
-  SubmitAnswerResultSchema,
-  GenerateExerciseResult,
-  PartialQuizData,
-} from '@/lib/domain/schemas';
+import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
 import * as Sentry from '@sentry/nextjs';
-import { generateExerciseResponse, ExerciseRequestParams } from '../actions/exercise';
 
 interface SessionUser extends NonNullable<Session['user']> {
   dbId?: number;
@@ -347,9 +341,6 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
 export interface SubmitFeedbackResponse {
   success: boolean;
   error?: string;
-  nextQuizData?: PartialQuizData | null;
-  nextQuizId?: number | null;
-  nextQuizError?: string;
   cached?: boolean;
 }
 
@@ -371,15 +362,7 @@ export const submitQuestionFeedback = async (
     return { success: false, error: 'Invalid parameters' };
   }
 
-  const {
-    quizId,
-    is_good,
-    userAnswer,
-    isCorrect,
-    passageLanguage,
-    questionLanguage,
-    currentLevel,
-  } = parsedBody.data;
+  const { quizId, is_good, userAnswer, isCorrect } = parsedBody.data;
 
   let feedbackSuccess = false;
   let feedbackError: string | undefined = undefined;
@@ -409,35 +392,9 @@ export const submitQuestionFeedback = async (
     feedbackSuccess = false;
   }
 
-  let nextQuizResult: GenerateExerciseResult | null = null;
-  if (feedbackSuccess) {
-    try {
-      const nextExerciseParams: ExerciseRequestParams = {
-        passageLanguage: passageLanguage,
-        questionLanguage: questionLanguage,
-        cefrLevel: currentLevel,
-      };
-      nextQuizResult = await generateExerciseResponse(nextExerciseParams);
-    } catch (fetchError) {
-      console.error('[SubmitFeedback] Error fetching next exercise:', fetchError);
-      Sentry.captureException(fetchError, {
-        extra: { userId, passageLanguage, questionLanguage, currentLevel },
-      });
-      nextQuizResult = {
-        quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
-        quizId: -1,
-        error: fetchError instanceof Error ? fetchError.message : 'Failed to fetch next exercise',
-      };
-    }
-  }
-
   const response: SubmitFeedbackResponse = {
     success: feedbackSuccess,
     error: feedbackError,
-    nextQuizData: nextQuizResult?.quizData ?? null,
-    nextQuizId: nextQuizResult?.quizId ?? null,
-    nextQuizError: nextQuizResult?.error ?? undefined,
-    cached: nextQuizResult?.cached ?? undefined,
   };
 
   return response;
