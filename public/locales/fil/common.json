@@ -1,0 +1,142 @@
+{
+  "title": "Comprehendo",
+  "subtitle": "Isang AI-powered na tool sa pag-aaral ng wika para mapabuti ang iyong pag-unawa sa pagbasa",
+  "powered_by": "Pinapagana ng Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
+  "navigation": {
+    "home": "Tahanan",
+    "practice": "Pagsasanay",
+    "admin": "Admin"
+  },
+  "practice": {
+    "title": "Pagsasanay sa Pagbasa",
+    "level": "Antas",
+    "cefr": {
+      "title": "I-customize ang Iyong Pagsasanay",
+      "description": "Ano ang antas ng iyong kasanayan?",
+      "levels": {
+        "A1": {
+          "name": "Baguhan",
+          "description": "Mga pangunahing parirala, simpleng tanong"
+        },
+        "A2": {
+          "name": "Elementarya",
+          "description": "Mga pamilyar na paksa, simpleng pangungusap"
+        },
+        "B1": {
+          "name": "Intermedya",
+          "description": "Mga pang-araw-araw na bagay, pangunahing opinyon"
+        },
+        "B2": {
+          "name": "Mataas na Intermedya",
+          "description": "Mga teknikal na talakayan, malinaw na pananaw"
+        },
+        "C1": {
+          "name": "Abante",
+          "description": "Mga kumplikadong paksa, kusang pagpapahayag"
+        },
+        "C2": {
+          "name": "Kasanayan",
+          "description": "Halos lahat, may nuanced na pagpapahayag"
+        }
+      }
+    },
+    "passageLanguage": "Wika ng Talata",
+    "questionLanguage": "Wika ng Tanong",
+    "generate": "Bumuo",
+    "loading": "Naglo-load...",
+    "error": "Nagkaroon ng error",
+    "tryAgain": "Subukang Muli",
+    "passage": "Talata",
+    "question": "Tanong",
+    "options": {
+      "a": "Opsyon A",
+      "b": "Opsyon B",
+      "c": "Opsyon C",
+      "d": "Opsyon D"
+    },
+    "submit": "Ipasa",
+    "correct": "Tama!",
+    "incorrect": "Mali",
+    "explanation": "Paliwanag",
+    "next": "Susunod",
+    "readingTime": "Oras ng pagbasa...",
+    "answerQuestionBelow": "Sagutin ang tanong sa ibaba",
+    "generateNewText": "Bigyan mo ako ng babasahin",
+    "supportingTextPrefix": "Sumusuportang teksto: ",
+    "passageLanguageLabel": "Pag-aaral",
+    "questionWillAppear": "Lalabas ang tanong maya-maya...",
+    "passageTitle": "Sipi sa Pagbasa",
+    "signInPrompt": {
+      "message": "Mag-sign in para masubaybayan ang iyong pag-unlad at makita ang iyong kasaysayan sa pag-aaral!",
+      "dismiss": "I-dismiss"
+    },
+    "leveledUp": "Umakyat sa antas",
+    "streakIncreased": "Nadagdagan ang streak sa",
+    "streakCompleted": "Nakumpleto ang streak! Umakyat sa antas!",
+    "correctStreak": "Streak ng mga tamang sagot",
+    "progressUpdateError": "Nabigong i-update ang pag-unlad",
+    "yourProgress": "Ang Iyong Pag-unlad",
+    "currentStreak": "Kasalukuyang Streak",
+    "startStreak": "",
+    "keepGoing": "Ituloy mo lang! Sagutin pa ang mga tanong nang tama",
+    "almostLevelUp": "Isang tamang sagot na lang para umakyat sa antas!"
+  },
+  "admin": {
+    "title": "Admin",
+    "users": "Mga User",
+    "settings": "Mga Setting",
+    "logout": "Mag-logout"
+  },
+  "common": {
+    "language": "Wika",
+    "theme": "Tema",
+    "dark": "Madilim",
+    "light": "Maliwanag",
+    "system": "System",
+    "translating": "Nagsasalin...",
+    "errorPrefix": "Error:",
+    "generating": "Bumubuo...",
+    "pause": "I-pause",
+    "play": "I-play",
+    "stop": "Ihinto",
+    "volume": "Lakas ng Tunog",
+    "selectVoice": "Pumili ng Boses"
+  },
+  "loadingTranslations": "Naglo-load ng mga pagsasalin...",
+  "pwa": {
+    "installPrompt": "I-install ang Comprehendo para sa mabilis na access.",
+    "installButton": "I-install ang App"
+  },
+  "auth": {
+    "signOut": "Mag-sign Out",
+    "signInGitHub": "Mag-sign in gamit ang GitHub",
+    "signInGoogle": "Mag-sign in gamit ang Google",
+    "signInDiscord": "Mag-sign in gamit ang Discord"
+  },
+  "voiceInfo": {
+    "title": "Magdagdag ng Maraming Boses",
+    "intro": "Gumagamit ang application na ito ng mga boses na naka-install sa iyong operating system. Hanapin ang mga setting ng text-to-speech sa iyong device para magdagdag ng marami pang boses:",
+    "tooltip": "Paano magdagdag ng maraming boses",
+    "macos": {
+      "title": "macOS",
+      "path": "System Settings > Accessibility > Spoken Content"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Settings > Time & language > Speech"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Settings > Accessibility > Spoken Content > Voices"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(Maaaring bahagyang mag-iba ang path depende sa manufacturer)",
+      "path": "Settings > Accessibility > Text-to-speech output"
+    },
+    "qualityNote": "Tip: Ang mga boses na may mas malaking download size ay madalas na nagbibigay ng mas mataas na kalidad.",
+    "restartNote": "Pagkatapos mag-install ng mga bagong boses, i-restart ang iyong web browser para lumabas sila sa listahan ng pagpipilian."
+  }
+}
