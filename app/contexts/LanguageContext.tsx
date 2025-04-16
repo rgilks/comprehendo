@@ -6,10 +6,32 @@ import i18n from '../i18n.client';
 
 import { type Language, LANGUAGES, SPEECH_LANGUAGES, getTextDirection } from '../config/languages';
 
+// Define the languages specifically available for the UI based on locale files
+const SUPPORTED_UI_LANG_CODES: Language[] = [
+  'en',
+  'ko',
+  'pt',
+  'ru',
+  'zh',
+  'es',
+  'fr',
+  'he',
+  'hi',
+  'it',
+  'ja',
+  'de',
+];
+
+const UI_LANGUAGES = Object.fromEntries(
+  Object.entries(LANGUAGES).filter(([langCode]) =>
+    SUPPORTED_UI_LANG_CODES.includes(langCode as Language)
+  )
+) as Record<(typeof SUPPORTED_UI_LANG_CODES)[number], string>;
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => Promise<void>;
-  languages: typeof LANGUAGES;
+  languages: typeof UI_LANGUAGES;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -57,7 +79,11 @@ export const LanguageProvider = ({
 
   return (
     <LanguageContext.Provider
-      value={{ language, setLanguage: handleLanguageChange, languages: LANGUAGES }}
+      value={{
+        language,
+        setLanguage: handleLanguageChange,
+        languages: UI_LANGUAGES,
+      }}
     >
       {children}
     </LanguageContext.Provider>
@@ -72,4 +98,5 @@ export const useLanguage = () => {
   return context;
 };
 
-export { getTextDirection, LANGUAGES, SPEECH_LANGUAGES, type Language };
+// Export the filtered list for potential external use if needed
+export { getTextDirection, UI_LANGUAGES, SPEECH_LANGUAGES, type Language };

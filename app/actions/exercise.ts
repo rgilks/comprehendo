@@ -5,7 +5,7 @@ import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { headers } from 'next/headers';
 import { getActiveModel, getGoogleAIClient, openai, ModelConfig } from '@/lib/modelConfig';
-import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
+import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
