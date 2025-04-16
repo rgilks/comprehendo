@@ -21,6 +21,8 @@ const SUPPORTED_UI_LANG_CODES: Language[] = [
   'ja',
   'de',
   'fil',
+  'el',
+  'pl',
 ];
 
 const UI_LANGUAGES = Object.fromEntries(

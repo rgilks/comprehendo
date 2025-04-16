@@ -1,0 +1,142 @@
+{
+  "title": "Comprehendo",
+  "subtitle": "Narzędzie do nauki języków oparte na sztucznej inteligencji, które poprawia rozumienie tekstu czytanego",
+  "powered_by": "Obsługiwane przez Google Gemini",
+  "github": "GitHub",
+  "brand": "Comprehendo",
+  "navigation": {
+    "home": "Strona główna",
+    "practice": "Ćwiczenia",
+    "admin": "Panel administratora"
+  },
+  "practice": {
+    "title": "Ćwiczenia z czytania",
+    "level": "Poziom",
+    "cefr": {
+      "title": "Dostosuj swoje ćwiczenia",
+      "description": "Jaki jest Twój poziom znajomości języka?",
+      "levels": {
+        "A1": {
+          "name": "Początkujący",
+          "description": "Podstawowe zwroty, proste pytania"
+        },
+        "A2": {
+          "name": "Podstawowy",
+          "description": "Znane tematy, proste zdania"
+        },
+        "B1": {
+          "name": "Średniozaawansowany",
+          "description": "Sprawy codzienne, podstawowe opinie"
+        },
+        "B2": {
+          "name": "Wyższy średniozaawansowany",
+          "description": "Dyskusje techniczne, jasne punkty widzenia"
+        },
+        "C1": {
+          "name": "Zaawansowany",
+          "description": "Złożone tematy, spontaniczne wypowiedzi"
+        },
+        "C2": {
+          "name": "Biegły",
+          "description": "Praktycznie wszystko, zniuansowane wypowiedzi"
+        }
+      }
+    },
+    "passageLanguage": "Język fragmentu",
+    "questionLanguage": "Język pytania",
+    "generate": "Generuj",
+    "loading": "Ładowanie...",
+    "error": "Wystąpił błąd",
+    "tryAgain": "Spróbuj ponownie",
+    "passage": "Fragment",
+    "question": "Pytanie",
+    "options": {
+      "a": "Opcja A",
+      "b": "Opcja B",
+      "c": "Opcja C",
+      "d": "Opcja D"
+    },
+    "submit": "Prześlij",
+    "correct": "Prawidłowo!",
+    "incorrect": "Nieprawidłowo",
+    "explanation": "Wyjaśnienie",
+    "next": "Następny",
+    "readingTime": "Czas czytania...",
+    "answerQuestionBelow": "Odpowiedz na poniższe pytanie",
+    "generateNewText": "Daj mi coś do przeczytania",
+    "supportingTextPrefix": "Tekst pomocniczy: ",
+    "passageLanguageLabel": "Nauka",
+    "questionWillAppear": "Pytanie pojawi się wkrótce...",
+    "passageTitle": "Fragment do czytania",
+    "signInPrompt": {
+      "message": "Zaloguj się, aby śledzić swoje postępy i przeglądać historię nauki!",
+      "dismiss": "Odrzuć"
+    },
+    "leveledUp": "Awans na poziom",
+    "streakIncreased": "Seria zwiększona do",
+    "streakCompleted": "Seria ukończona! Awans!",
+    "correctStreak": "Seria poprawnych odpowiedzi",
+    "progressUpdateError": "Nie udało się zaktualizować postępów",
+    "yourProgress": "Twój postęp",
+    "currentStreak": "Bieżąca seria",
+    "startStreak": "",
+    "keepGoing": "Kontynuuj! Odpowiedz poprawnie na więcej pytań",
+    "almostLevelUp": "Jeszcze jedna poprawna odpowiedź do awansu!"
+  },
+  "admin": {
+    "title": "Panel administratora",
+    "users": "Użytkownicy",
+    "settings": "Ustawienia",
+    "logout": "Wyloguj"
+  },
+  "common": {
+    "language": "Język",
+    "theme": "Motyw",
+    "dark": "Ciemny",
+    "light": "Jasny",
+    "system": "Systemowy",
+    "translating": "Tłumaczenie...",
+    "errorPrefix": "Błąd:",
+    "generating": "Generowanie...",
+    "pause": "Pauza",
+    "play": "Odtwórz",
+    "stop": "Zatrzymaj",
+    "volume": "Głośność",
+    "selectVoice": "Wybierz głos"
+  },
+  "loadingTranslations": "Ładowanie tłumaczeń...",
+  "pwa": {
+    "installPrompt": "Zainstaluj Comprehendo, aby uzyskać szybki dostęp.",
+    "installButton": "Zainstaluj aplikację"
+  },
+  "auth": {
+    "signOut": "Wyloguj się",
+    "signInGitHub": "Zaloguj się przez GitHub",
+    "signInGoogle": "Zaloguj się przez Google",
+    "signInDiscord": "Zaloguj się przez Discord"
+  },
+  "voiceInfo": {
+    "title": "Dodaj więcej głosów",
+    "intro": "Ta aplikacja korzysta z głosów zainstalowanych w systemie operacyjnym. Znajdź ustawienia zamiany tekstu na mowę na swoim urządzeniu, aby dodać więcej głosów:",
+    "tooltip": "Jak dodać więcej głosów",
+    "macos": {
+      "title": "macOS",
+      "path": "Ustawienia systemowe > Dostępność > Zawartość mówiona"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Ustawienia > Czas i język > Mowa"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Ustawienia > Dostępność > Zawartość mówiona > Głosy"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(Ścieżka może się nieznacznie różnić w zależności od producenta)",
+      "path": "Ustawienia > Dostępność > Synteza mowy"
+    },
+    "qualityNote": "Wskazówka: Głosy o większym rozmiarze pobierania często zapewniają wyższą jakość.",
+    "restartNote": "Po zainstalowaniu nowych głosów uruchom ponownie przeglądarkę internetową, aby pojawiły się na liście wyboru."
+  }
+}

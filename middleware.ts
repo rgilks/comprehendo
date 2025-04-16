@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-const locales = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'he', 'fil'];
+const locales = [
+  'en',
+  'es',
+  'fr',
+  'de',
+  'it',
+  'pt',
+  'ru',
+  'zh',
+  'ja',
+  'ko',
+  'hi',
+  'he',
+  'fil',
+  'el',
+  'pl',
+];
 const defaultLocale = 'en';
 
 const middleware = async (req: import('next/server').NextRequest) => {
