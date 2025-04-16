@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 
 import { type UISlice, createUISlice } from './uiSlice';
 import { type SettingsSlice, createSettingsSlice } from './settingsSlice';
@@ -14,6 +15,8 @@ export { type CEFRLevel } from '@/config/language-guidance';
 export type { QuizData };
 
 export type TextGeneratorState = UISlice & SettingsSlice & QuizSlice & AudioSlice & ProgressSlice;
+
+enableMapSet();
 
 export const useTextGeneratorStore = create<TextGeneratorState>()(
   immer((...args) => ({

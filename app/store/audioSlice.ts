@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand';
 import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
 import type { TextGeneratorState } from './textGeneratorStore';
+import { translateWordWithGoogle } from '../actions/translate';
 
 // Define the structure for storing voice information
 interface VoiceInfo {
@@ -18,6 +19,7 @@ export interface AudioSlice {
   wordsRef: string[];
   availableVoices: VoiceInfo[];
   selectedVoiceURI: string | null;
+  translationCache: Map<string, string>;
 
   setVolumeLevel: (volume: number) => void;
   stopPassageSpeech: () => void;
@@ -28,15 +30,6 @@ export interface AudioSlice {
   _setIsSpeechSupported: (supported: boolean) => void;
   _updateAvailableVoices: (lang: Language) => void;
   setSelectedVoiceURI: (uri: string | null) => void;
-}
-
-interface MyMemoryResponseData {
-  translatedText: string;
-}
-
-interface MyMemoryResponse {
-  responseData?: MyMemoryResponseData;
-  responseStatus: number;
 }
 
 export const createAudioSlice: StateCreator<
@@ -54,6 +47,7 @@ export const createAudioSlice: StateCreator<
   wordsRef: [],
   availableVoices: [],
   selectedVoiceURI: null,
+  translationCache: new Map<string, string>(),
 
   _setIsSpeechSupported: (supported) =>
     set((state) => {
@@ -251,26 +245,29 @@ export const createAudioSlice: StateCreator<
       return null;
     }
 
+    // Generate a unique key for the cache
+    const cacheKey = `${cleanedWord}-${sourceLang}-${targetLang}`;
+    const cachedTranslation = get().translationCache.get(cacheKey);
+
+    // Return cached result if it exists
+    if (cachedTranslation) {
+      return cachedTranslation;
+    }
+
     try {
-      const response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanedWord)}&langpair=${sourceLang}|${targetLang}`
-      );
+      const translation = await translateWordWithGoogle(cleanedWord, targetLang, sourceLang);
 
-      if (!response.ok) {
-        console.error(`Translation API request failed with status ${response.status}`);
-        return null;
+      // Store the successful translation in the cache
+      if (translation) {
+        set((state) => {
+          state.translationCache.set(cacheKey, translation);
+        });
       }
 
-      const data = (await response.json()) as MyMemoryResponse;
-
-      if (data.responseStatus === 200 && data.responseData?.translatedText) {
-        return data.responseData.translatedText;
-      } else {
-        console.warn('No translation available or API error:', data);
-        return null;
-      }
+      return translation;
     } catch (error: unknown) {
-      console.error('Translation error:', error);
+      console.error('Error calling translateWordWithGoogle action:', error);
+      get().setError('Translation service failed.');
       return null;
     }
   },
