@@ -10,8 +10,16 @@ import QuizSkeleton from './QuizSkeleton';
 const Generator = () => {
   const { t } = useTranslation('common');
   const { status } = useSession();
-  const { loading, quizData, isAnswered, generateText, feedbackSubmitted, submitFeedback } =
-    useTextGeneratorStore();
+  const {
+    loading,
+    quizData,
+    isAnswered,
+    generateText,
+    feedbackSubmitted,
+    submitFeedback,
+    nextQuizAvailable,
+    loadNextQuiz,
+  } = useTextGeneratorStore();
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
   const generateTextHandler = useCallback(() => {
@@ -22,8 +30,12 @@ const Generator = () => {
       });
     }
 
-    void generateText();
-  }, [generateText]);
+    if (nextQuizAvailable) {
+      loadNextQuiz();
+    } else {
+      void generateText();
+    }
+  }, [generateText, nextQuizAvailable, loadNextQuiz]);
 
   const handleFeedbackSubmit = useCallback(
     (is_good: boolean) => {
@@ -33,10 +45,9 @@ const Generator = () => {
           block: 'start',
         });
       }
-      // Call the store action *after* scrolling
       void submitFeedback(is_good);
     },
-    [submitFeedback] // contentContainerRef is stable
+    [submitFeedback]
   );
 
   const showFeedbackPrompt =
