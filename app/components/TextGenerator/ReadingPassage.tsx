@@ -80,7 +80,7 @@ const ReadingPassage = () => {
               className="text-sm font-medium text-yellow-400 bg-gray-700/50 px-2 py-1 rounded"
               data-testid="hover-credits-display"
             >
-              {t('practice.hoverCredits', { count: hoverCreditsAvailable })}
+              {hoverCreditsAvailable}
             </div>
           )}
           <AudioControls />
