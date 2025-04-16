@@ -1,15 +1,15 @@
 import type { StateCreator } from 'zustand';
-import { type Language } from '@/contexts/LanguageContext';
+import { type LearningLanguage } from '@/config/languages';
 import { type CEFRLevel } from '@/config/language-guidance';
-import type { TextGeneratorState } from './textGeneratorStore';
+import type { Language, TextGeneratorState } from './textGeneratorStore';
 
 export interface SettingsSlice {
-  passageLanguage: Language;
-  generatedPassageLanguage: Language | null;
+  passageLanguage: LearningLanguage;
+  generatedPassageLanguage: LearningLanguage | null;
   generatedQuestionLanguage: Language | null;
   cefrLevel: CEFRLevel;
-  setPassageLanguage: (lang: Language) => void;
-  setGeneratedPassageLanguage: (lang: Language | null) => void;
+  setPassageLanguage: (lang: LearningLanguage) => void;
+  setGeneratedPassageLanguage: (lang: LearningLanguage | null) => void;
   setGeneratedQuestionLanguage: (lang: Language | null) => void;
   setCefrLevel: (level: CEFRLevel) => void;
 }

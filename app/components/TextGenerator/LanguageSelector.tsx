@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { GlobeAltIcon, BookOpenIcon } from '@heroicons/react/24/solid';
-import { LANGUAGES, type Language } from '@/contexts/LanguageContext';
+import { LEARNING_LANGUAGES, type LearningLanguage } from '@/config/languages';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
 
@@ -36,12 +36,12 @@ const LanguageSelector = () => {
           id="passage-language-select"
           data-testid="language-select"
           value={passageLanguage}
-          onChange={(e) => setPassageLanguage(e.target.value as Language)}
+          onChange={(e) => setPassageLanguage(e.target.value as LearningLanguage)}
           className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors col-span-1"
         >
-          {(Object.keys(LANGUAGES) as Language[]).map((lang) => (
+          {(Object.keys(LEARNING_LANGUAGES) as LearningLanguage[]).map((lang) => (
             <option key={lang} value={lang}>
-              {LANGUAGES[lang]}
+              {LEARNING_LANGUAGES[lang]}
             </option>
           ))}
         </select>

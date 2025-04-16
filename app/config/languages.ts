@@ -42,6 +42,24 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
   he: 'he-IL',
 };
 
+// Define languages available for learning content
+export type LearningLanguage = Exclude<Language, 'zh' | 'ja' | 'ko'>;
+
+export const LEARNING_LANGUAGES: Record<LearningLanguage, string> = {
+  en: 'English',
+  es: 'Español',
+  fr: 'Français',
+  de: 'Deutsch',
+  it: 'Italiano',
+  pt: 'Português',
+  ru: 'Русский',
+  // zh: '中文',
+  // ja: '日本語',
+  // ko: '한국어',
+  hi: 'हिंदी',
+  he: 'עברית',
+};
+
 export const RTL_LANGUAGES: Language[] = ['he'];
 
 export const getTextDirection = (language: Language): 'ltr' | 'rtl' => {
