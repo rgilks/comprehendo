@@ -81,7 +81,12 @@
     "currentStreak": "Série Actuelle",
     "startStreak": "Répondez correctement pour démarrer une série",
     "keepGoing": "Continuez ! Répondez correctement à plus de questions",
-    "almostLevelUp": "Encore une bonne réponse pour passer au niveau supérieur !"
+    "almostLevelUp": "Encore une bonne réponse pour passer au niveau supérieur !",
+    "correctAnswer": "Bonne réponse",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "Survolez ou cliquez sur les mots pour les traduire. Les crédits sont limités.",
+    "relevantText": "Texte pertinent",
+    "showExplanation": "Afficher l'explication"
   },
   "admin": {
     "title": "Administration",

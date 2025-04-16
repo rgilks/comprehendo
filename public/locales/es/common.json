@@ -81,7 +81,12 @@
     "currentStreak": "Racha Actual",
     "startStreak": "Responde correctamente para iniciar una racha",
     "keepGoing": "¡Sigue así! Responde más preguntas correctamente",
-    "almostLevelUp": "¡Una respuesta correcta más para subir de nivel!"
+    "almostLevelUp": "¡Una respuesta correcta más para subir de nivel!",
+    "correctAnswer": "Respuesta Correcta",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "Pasa el cursor o haz clic en las palabras para traducirlas. Los créditos son limitados.",
+    "relevantText": "Texto Relevante",
+    "showExplanation": "Mostrar Explicación"
   },
   "admin": {
     "title": "Administración",

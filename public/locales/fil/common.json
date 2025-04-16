@@ -81,7 +81,12 @@
     "currentStreak": "Kasalukuyang Streak",
     "startStreak": "",
     "keepGoing": "Ituloy mo lang! Sagutin pa ang mga tanong nang tama",
-    "almostLevelUp": "Isang tamang sagot na lang para umakyat sa antas!"
+    "almostLevelUp": "Isang tamang sagot na lang para umakyat sa antas!",
+    "correctAnswer": "Tamang Sagot",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "Mag-hover o mag-click sa mga salita para sa pagsasalin. Limitado ang mga kredito.",
+    "relevantText": "Kaugnay na Teksto",
+    "showExplanation": "Ipakita ang Paliwanag"
   },
   "admin": {
     "title": "Admin",

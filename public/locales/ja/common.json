@@ -81,7 +81,12 @@
     "currentStreak": "現在の連続正解",
     "startStreak": "連続正解を開始するには正しく回答してください",
     "keepGoing": "続けてください！より多くの質問に正しく答えてください",
-    "almostLevelUp": "レベルアップまであと1問正解！"
+    "almostLevelUp": "レベルアップまであと1問正解！",
+    "correctAnswer": "正解",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "単語にカーソルを合わせるかクリックすると翻訳します。クレジットは制限されています。",
+    "relevantText": "関連テキスト",
+    "showExplanation": "説明を表示"
   },
   "admin": {
     "title": "管理",

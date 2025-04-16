@@ -81,7 +81,12 @@
     "currentStreak": "当前连胜",
     "startStreak": "正确回答以开始连胜",
     "keepGoing": "继续加油！正确回答更多问题",
-    "almostLevelUp": "再答对一题即可升级！"
+    "almostLevelUp": "再答对一题即可升级！",
+    "correctAnswer": "正确答案",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "悬停或点击单词进行翻译。积分有限。",
+    "relevantText": "相关文本",
+    "showExplanation": "显示解释"
   },
   "admin": {
     "title": "管理",

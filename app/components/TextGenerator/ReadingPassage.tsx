@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback } from 'react';
-import { BookOpenIcon } from '@heroicons/react/24/solid';
+import React, { useCallback, useState } from 'react';
+import { BookOpenIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
 import { getTextDirection, type Language } from '@/contexts/LanguageContext';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
@@ -11,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const ReadingPassage = () => {
   const { t } = useTranslation('common');
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const { language: questionLanguage } = useLanguage();
   const {
     quizData,
@@ -74,13 +76,29 @@ const ReadingPassage = () => {
             {t('practice.passageTitle')}
           </span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 relative">
           {hoverProgressionPhase === 'credits' && (
             <div
-              className="text-sm font-medium text-yellow-400 bg-gray-700/50 px-2 py-1 rounded"
+              className="flex items-center text-sm font-medium text-yellow-400 bg-gray-700/50 px-2 py-1 rounded"
               data-testid="hover-credits-display"
             >
-              {hoverCreditsAvailable}
+              <span>{t('practice.hoverCredits', { count: hoverCreditsAvailable })}</span>
+              <span
+                onMouseEnter={() => setIsTooltipVisible(true)}
+                onMouseLeave={() => setIsTooltipVisible(false)}
+                className="ml-1.5 cursor-help flex items-center relative"
+              >
+                <InformationCircleIcon className="w-5 h-5 text-gray-400 hover:text-yellow-300" />
+                {isTooltipVisible && (
+                  <div
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 border border-gray-600"
+                    role="tooltip"
+                  >
+                    {t('practice.hoverCreditsTooltip')}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800"></div>
+                  </div>
+                )}
+              </span>
             </div>
           )}
           <AudioControls />

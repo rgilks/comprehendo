@@ -81,7 +81,12 @@
     "currentStreak": "वर्तमान क्रम",
     "startStreak": "क्रम शुरू करने के लिए सही उत्तर दें",
     "keepGoing": "जारी रखें! अधिक प्रश्नों का सही उत्तर दें",
-    "almostLevelUp": "स्तर बढ़ाने के लिए एक और सही उत्तर!"
+    "almostLevelUp": "स्तर बढ़ाने के लिए एक और सही उत्तर!",
+    "correctAnswer": "सही जवाब",
+    "hoverCredits": "{{count}}",
+    "hoverCreditsTooltip": "अनुवाद के लिए शब्दों पर होवर करें या क्लिक करें। क्रेडिट सीमित हैं।",
+    "relevantText": "प्रासंगिक पाठ",
+    "showExplanation": "स्पष्टीकरण दिखाएं"
   },
   "admin": {
     "title": "एडमिन",
