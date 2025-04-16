@@ -1,20 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  SpeakerWaveIcon,
-  PlayIcon,
-  PauseIcon,
-  ChevronDownIcon,
-  InformationCircleIcon,
-} from '@heroicons/react/24/solid';
+import React, { useEffect } from 'react';
+import { SpeakerWaveIcon, PlayIcon, PauseIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
-import VoiceInfoModal from './VoiceInfoModal';
 
 const AudioControls = () => {
   const { t } = useTranslation('common');
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const {
     isSpeechSupported,
     isSpeakingPassage,
@@ -110,16 +102,8 @@ const AudioControls = () => {
               {availableVoices[0].displayName}
             </div>
           )}
-          <button
-            onClick={() => setIsInfoModalOpen(true)}
-            className="text-gray-400 hover:text-blue-400 transition-colors p-1 flex-shrink-0"
-            title={t('voiceInfo.tooltip')}
-          >
-            <InformationCircleIcon className="w-5 h-5" />
-          </button>
         </div>
       )}
-      <VoiceInfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
     </div>
   );
 };

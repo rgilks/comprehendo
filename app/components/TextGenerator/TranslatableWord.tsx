@@ -14,7 +14,7 @@ interface TranslatableWordProps {
 
 const TranslatableWord = memo(
   ({ word, fromLang, toLang, isCurrentWord, isRelevant }: TranslatableWordProps) => {
-    const [isHovered, setIsHovered] = useState(false);
+    const [isTranslationVisible, setIsTranslationVisible] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -28,10 +28,13 @@ const TranslatableWord = memo(
 
     const shouldTranslate = fromLang !== toLang;
 
-    const handleMouseEnter = useCallback(() => {
-      setIsHovered(true);
+    const handleClick = useCallback(() => {
+      speakText(word, fromLang);
 
-      if (shouldTranslate && !translation && !isLoading) {
+      const currentlyVisible = isTranslationVisible;
+      setIsTranslationVisible(!currentlyVisible);
+
+      if (!currentlyVisible && shouldTranslate && !translation && !isLoading) {
         if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
           void (async () => {
             setIsLoading(true);
@@ -47,18 +50,22 @@ const TranslatableWord = memo(
                 }
               } else {
                 console.log('Translation fetch returned no result.');
+                setIsTranslationVisible(false);
               }
             } catch (error) {
               console.error('Error fetching translation:', error);
+              setIsTranslationVisible(false);
             } finally {
               setIsLoading(false);
             }
           })();
         } else {
-          console.log('Hover translation blocked: No credits left.');
+          console.log('Click translation blocked: No credits left.');
+          setIsTranslationVisible(false);
         }
       }
     }, [
+      isTranslationVisible,
       word,
       fromLang,
       toLang,
@@ -69,15 +76,8 @@ const TranslatableWord = memo(
       hoverProgressionPhase,
       decrementHoverCredit,
       hoverCreditsAvailable,
+      speakText,
     ]);
-
-    const handleMouseLeave = useCallback(() => {
-      setIsHovered(false);
-    }, []);
-
-    const handleClick = useCallback(() => {
-      speakText(word, fromLang);
-    }, [word, fromLang, speakText]);
 
     let combinedClassName = 'cursor-pointer transition-all duration-300 px-1 -mx-1 relative group';
     if (isRelevant) {
@@ -85,23 +85,18 @@ const TranslatableWord = memo(
     } else if (isCurrentWord) {
       combinedClassName += ' bg-blue-500 text-white rounded';
     } else {
-      combinedClassName += ' hover:text-blue-400';
+      combinedClassName += ' hover:underline';
     }
 
-    const showTranslation = isHovered && shouldTranslate && !isLoading && translation !== null;
+    const showTranslationPopup =
+      isTranslationVisible && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 
     return (
-      <span
-        className={combinedClassName}
-        onClick={handleClick}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        {...dataTestIdProps}
-      >
+      <span className={combinedClassName} onClick={handleClick} {...dataTestIdProps}>
         {word}
-        {showTranslation && (
+        {showTranslationPopup && (
           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
             <span className="font-medium">{translation || word}</span>
           </div>
