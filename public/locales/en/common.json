@@ -101,7 +101,8 @@
     "pause": "Pause",
     "play": "Play",
     "stop": "Stop",
-    "volume": "Volume"
+    "volume": "Volume",
+    "selectVoice": "Select Voice"
   },
   "loadingTranslations": "Loading translations...",
   "pwa": {
@@ -113,5 +114,29 @@
     "signInGitHub": "Sign in with GitHub",
     "signInGoogle": "Sign in with Google",
     "signInDiscord": "Sign in with Discord"
+  },
+  "voiceInfo": {
+    "title": "Add More Voices",
+    "intro": "This application uses the voices installed on your operating system. Find the text-to-speech settings on your device to add more voices:",
+    "tooltip": "How to add more voices",
+    "macos": {
+      "title": "macOS",
+      "path": "System Settings > Accessibility > Spoken Content"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Settings > Time & language > Speech"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Settings > Accessibility > Spoken Content > Voices"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(Path may vary slightly by manufacturer)",
+      "path": "Settings > Accessibility > Text-to-speech output"
+    },
+    "qualityNote": "Tip: Voices with larger download sizes often provide higher quality.",
+    "restartNote": "After installing new voices, restart your web browser for them to appear in the selection list."
   }
 }

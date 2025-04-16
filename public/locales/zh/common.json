@@ -111,6 +111,31 @@
   "auth": {
     "signOut": "退出",
     "signInGitHub": "使用 GitHub 登录",
-    "signInGoogle": "使用 Google 登录"
+    "signInGoogle": "使用 Google 登录",
+    "signInDiscord": "使用 Discord 登录"
+  },
+  "voiceInfo": {
+    "title": "添加更多语音",
+    "intro": "此应用程序使用您操作系统上安装的语音。在您的设备上找到文本转语音设置以添加更多语音：",
+    "tooltip": "如何添加更多语音",
+    "macos": {
+      "title": "macOS",
+      "path": "系统设置 > 辅助功能 > 朗读内容"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "设置 > 时间和语言 > 语音"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "设置 > 辅助功能 > 朗读内容 > 声音"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(路径可能因制造商而略有不同)",
+      "path": "设置 > 辅助功能 > 文字转语音输出"
+    },
+    "qualityNote": "提示：下载文件较大的语音通常提供更高的质量。",
+    "restartNote": "安装新语音后，请重新启动您的网络浏览器，使其出现在选择列表中。"
   }
 }

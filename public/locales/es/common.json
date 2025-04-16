@@ -111,6 +111,31 @@
   "auth": {
     "signOut": "Cerrar sesión",
     "signInGitHub": "Iniciar sesión con GitHub",
-    "signInGoogle": "Iniciar sesión con Google"
+    "signInGoogle": "Iniciar sesión con Google",
+    "signInDiscord": "Iniciar sesión con Discord"
+  },
+  "voiceInfo": {
+    "title": "Añadir Más Voces",
+    "intro": "Esta aplicación utiliza las voces instaladas en tu sistema operativo. Encuentra la configuración de texto a voz en tu dispositivo para añadir más voces:",
+    "tooltip": "Cómo añadir más voces",
+    "macos": {
+      "title": "macOS",
+      "path": "Ajustes del Sistema > Accesibilidad > Contenido leído"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Configuración > Hora e idioma > Voz"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Ajustes > Accesibilidad > Contenido leído > Voces"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(La ruta puede variar ligeramente según el fabricante)",
+      "path": "Ajustes > Accesibilidad > Salida de texto a voz"
+    },
+    "qualityNote": "Consejo: Las voces con mayor tamaño de descarga suelen ofrecer mayor calidad.",
+    "restartNote": "Después de instalar nuevas voces, reinicia tu navegador web para que aparezcan en la lista de selección."
   }
 }

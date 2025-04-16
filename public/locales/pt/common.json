@@ -110,7 +110,32 @@
   },
   "auth": {
     "signOut": "Sair",
-    "signInGitHub": "Entrar com GitHub",
-    "signInGoogle": "Entrar com Google"
+    "signInGitHub": "Entrar com o GitHub",
+    "signInGoogle": "Entrar com o Google",
+    "signInDiscord": "Entrar com o Discord"
+  },
+  "voiceInfo": {
+    "title": "Adicionar Mais Vozes",
+    "intro": "Esta aplicação utiliza as vozes instaladas no seu sistema operativo. Encontre as definições de conversão de texto em voz no seu dispositivo para adicionar mais vozes:",
+    "tooltip": "Como adicionar mais vozes",
+    "macos": {
+      "title": "macOS",
+      "path": "Definições do Sistema > Acessibilidade > Conteúdo Falado"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Definições > Hora e Idioma > Fala"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Definições > Acessibilidade > Conteúdo Falado > Vozes"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(O caminho pode variar ligeiramente dependendo do fabricante)",
+      "path": "Definições > Acessibilidade > Saída de texto para voz"
+    },
+    "qualityNote": "Dica: Vozes com maior tamanho de download geralmente oferecem maior qualidade.",
+    "restartNote": "Após instalar novas vozes, reinicie o seu navegador web para que elas apareçam na lista de seleção."
   }
 }

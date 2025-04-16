@@ -110,7 +110,32 @@
   },
   "auth": {
     "signOut": "로그아웃",
-    "signInGitHub": "GitHub로 로그인",
-    "signInGoogle": "Google로 로그인"
+    "signInGitHub": "GitHub으로 로그인",
+    "signInGoogle": "Google로 로그인",
+    "signInDiscord": "Discord로 로그인"
+  },
+  "voiceInfo": {
+    "title": "음성 추가",
+    "intro": "이 애플리케이션은 운영 체제에 설치된 음성을 사용합니다. 기기의 텍스트 음성 변환 설정을 찾아 더 많은 음성을 추가하세요:",
+    "tooltip": "음성을 추가하는 방법",
+    "macos": {
+      "title": "macOS",
+      "path": "시스템 설정 > 손쉬운 사용 > 콘텐츠 말하기"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "설정 > 시간 및 언어 > 음성"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "설정 > 손쉬운 사용 > 콘텐츠 말하기 > 음성"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(경로는 제조사에 따라 약간 다를 수 있습니다)",
+      "path": "설정 > 접근성 > 텍스트 음성 변환 출력"
+    },
+    "qualityNote": "팁: 다운로드 크기가 큰 음성이 종종 더 높은 품질을 제공합니다.",
+    "restartNote": "새 음성을 설치한 후 웹 브라우저를 다시 시작하면 선택 목록에 나타납니다."
   }
 }

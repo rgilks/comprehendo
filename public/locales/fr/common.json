@@ -111,6 +111,31 @@
   "auth": {
     "signOut": "Se déconnecter",
     "signInGitHub": "Se connecter avec GitHub",
-    "signInGoogle": "Se connecter avec Google"
+    "signInGoogle": "Se connecter avec Google",
+    "signInDiscord": "Se connecter avec Discord"
+  },
+  "voiceInfo": {
+    "title": "Ajouter Plus de Voix",
+    "intro": "Cette application utilise les voix installées sur votre système d'exploitation. Trouvez les paramètres de synthèse vocale sur votre appareil pour ajouter plus de voix :",
+    "tooltip": "Comment ajouter plus de voix",
+    "macos": {
+      "title": "macOS",
+      "path": "Réglages Système > Accessibilité > Contenu énoncé"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Paramètres > Heure et langue > Voix"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Réglages > Accessibilité > Contenu énoncé > Voix"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(Le chemin peut varier légèrement selon le fabricant)",
+      "path": "Paramètres > Accessibilité > Sortie de la synthèse vocale"
+    },
+    "qualityNote": "Astuce : Les voix avec une taille de téléchargement plus importante offrent souvent une meilleure qualité.",
+    "restartNote": "Après avoir installé de nouvelles voix, redémarrez votre navigateur web pour qu'elles apparaissent dans la liste de sélection."
   }
 }

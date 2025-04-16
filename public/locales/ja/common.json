@@ -111,6 +111,31 @@
   "auth": {
     "signOut": "サインアウト",
     "signInGitHub": "GitHubでサインイン",
-    "signInGoogle": "Googleでサインイン"
+    "signInGoogle": "Googleでサインイン",
+    "signInDiscord": "Discordでサインイン"
+  },
+  "voiceInfo": {
+    "title": "音声を追加する",
+    "intro": "このアプリケーションは、お使いのオペレーティングシステムにインストールされている音声を使用します。デバイスのテキスト読み上げ設定を見つけて、音声を追加してください：",
+    "tooltip": "音声を追加する方法",
+    "macos": {
+      "title": "macOS",
+      "path": "システム設定 > アクセシビリティ > 読み上げコンテンツ"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "設定 > 時刻と言語 > 音声認識"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "設定 > アクセシビリティ > 読み上げコンテンツ > 声"
+    },
+    "android": {
+      "title": "Android",
+      "note": "（パスはメーカーによって若干異なる場合があります）",
+      "path": "設定 > ユーザー補助 > テキスト読み上げ出力"
+    },
+    "qualityNote": "ヒント：ダウンロードサイズの大きい音声は、より高品質であることが多いです。",
+    "restartNote": "新しい音声をインストールした後、Webブラウザを再起動すると、選択リストに表示されます。"
   }
 }

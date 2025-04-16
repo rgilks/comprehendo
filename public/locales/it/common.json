@@ -111,6 +111,31 @@
   "auth": {
     "signOut": "Esci",
     "signInGitHub": "Accedi con GitHub",
-    "signInGoogle": "Accedi con Google"
+    "signInGoogle": "Accedi con Google",
+    "signInDiscord": "Accedi con Discord"
+  },
+  "voiceInfo": {
+    "title": "Aggiungi Altre Voci",
+    "intro": "Questa applicazione utilizza le voci installate sul tuo sistema operativo. Trova le impostazioni di sintesi vocale sul tuo dispositivo per aggiungere altre voci:",
+    "tooltip": "Come aggiungere altre voci",
+    "macos": {
+      "title": "macOS",
+      "path": "Impostazioni di Sistema > Accessibilità > Contenuto letto"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Impostazioni > Data/ora e lingua > Riconoscimento vocale"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Impostazioni > Accessibilità > Contenuto letto > Voci"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(Il percorso potrebbe variare leggermente a seconda del produttore)",
+      "path": "Impostazioni > Accessibilità > Sintesi vocale"
+    },
+    "qualityNote": "Suggerimento: Le voci con dimensioni di download maggiori spesso offrono una qualità superiore.",
+    "restartNote": "Dopo aver installato nuove voci, riavvia il browser web affinché appaiano nell'elenco di selezione."
   }
 }

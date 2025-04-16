@@ -111,6 +111,31 @@
   "auth": {
     "signOut": "Abmelden",
     "signInGitHub": "Mit GitHub anmelden",
-    "signInGoogle": "Mit Google anmelden"
+    "signInGoogle": "Mit Google anmelden",
+    "signInDiscord": "Mit Discord anmelden"
+  },
+  "voiceInfo": {
+    "title": "Weitere Stimmen hinzufügen",
+    "intro": "Diese Anwendung verwendet die auf Ihrem Betriebssystem installierten Stimmen. Suchen Sie die Text-zu-Sprache-Einstellungen auf Ihrem Gerät, um weitere Stimmen hinzuzufügen:",
+    "tooltip": "So fügen Sie weitere Stimmen hinzu",
+    "macos": {
+      "title": "macOS",
+      "path": "Systemeinstellungen > Bedienungshilfen > Gesprochene Inhalte"
+    },
+    "windows": {
+      "title": "Windows 10/11",
+      "path": "Einstellungen > Zeit und Sprache > Spracherkennung"
+    },
+    "ios": {
+      "title": "iOS / iPadOS",
+      "path": "Einstellungen > Bedienungshilfen > Gesprochene Inhalte > Stimmen"
+    },
+    "android": {
+      "title": "Android",
+      "note": "(Pfad kann je nach Hersteller leicht variieren)",
+      "path": "Einstellungen > Bedienungshilfen > Text-in-Sprache-Ausgabe"
+    },
+    "qualityNote": "Tipp: Stimmen mit größerer Downloadgröße bieten oft eine höhere Qualität.",
+    "restartNote": "Starten Sie nach der Installation neuer Stimmen Ihren Webbrowser neu, damit sie in der Auswahlliste erscheinen."
   }
 }
