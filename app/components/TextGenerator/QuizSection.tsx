@@ -97,9 +97,7 @@ const QuizSection = () => {
                     >
                       <strong
                         className={`font-semibold ${key === feedbackCorrectAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
-                      >
-                        {key}:
-                      </strong>{' '}
+                      ></strong>{' '}
                       <span className="text-gray-300">{explanation}</span>
                     </div>
                   </div>
