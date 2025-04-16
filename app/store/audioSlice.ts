@@ -317,59 +317,34 @@ export const createAudioSlice: StateCreator<
         }
         // Simplify iOS voice names
         else if (isIOS) {
-          displayName = displayName.replace(/\s\((Enhanced|Default|Premium|Compact)\)$/i, '');
-          displayName = displayName.replace(/\s\(.*\)$/, '');
+          // Try removing everything from the first space and opening parenthesis onwards
+          const parenIndex = displayName.indexOf(' (');
+          if (parenIndex !== -1) {
+            displayName = displayName.substring(0, parenIndex);
+          }
         }
 
         return { uri: voice.voiceURI, displayName, originalLang: voice.lang };
       }
     );
 
-    // Deduplication logic
-    const nameCounts = processedVoices.reduce<Record<string, number>>((acc, voice) => {
-      acc[voice.displayName] = (acc[voice.displayName] || 0) + 1;
-      return acc;
-    }, {});
-
-    const finalVoicesWithLang = processedVoices.map((voice) => {
-      if (nameCounts[voice.displayName] > 1) {
-        return {
-          ...voice,
-          displayName: `${voice.displayName} (${voice.originalLang})`,
-        };
+    // Deduplication logic: Keep only the first voice for each unique simplified display name
+    const uniqueVoicesMap = new Map<string, { uri: string; displayName: string }>();
+    for (const voice of processedVoices) {
+      if (!uniqueVoicesMap.has(voice.displayName)) {
+        uniqueVoicesMap.set(voice.displayName, { uri: voice.uri, displayName: voice.displayName });
       }
-      return voice;
-    });
-
-    const finalNameCounts = finalVoicesWithLang.reduce<Record<string, number>>((acc, voice) => {
-      acc[voice.displayName] = (acc[voice.displayName] || 0) + 1;
-      return acc;
-    }, {});
-
-    const finalNumberedVoices = finalVoicesWithLang.map((voice) => {
-      if (finalNameCounts[voice.displayName] > 1) {
-        const index = finalVoicesWithLang
-          .filter((v) => v.displayName === voice.displayName)
-          .findIndex((v) => v.uri === voice.uri);
-        return {
-          ...voice,
-          displayName: `${voice.displayName} ${index + 1}`,
-        };
-      }
-      return voice;
-    });
+    }
+    const finalUniqueVoices = Array.from(uniqueVoicesMap.values());
 
     set((state) => {
-      state.availableVoices = finalNumberedVoices.map(({ uri, displayName }) => ({
-        uri,
-        displayName,
-      }));
-      const currentSelectedVoiceAvailable = finalNumberedVoices.some(
+      state.availableVoices = finalUniqueVoices;
+      const currentSelectedVoiceAvailable = finalUniqueVoices.some(
         (v) => v.uri === state.selectedVoiceURI
       );
 
       if (!currentSelectedVoiceAvailable) {
-        state.selectedVoiceURI = finalNumberedVoices.length > 0 ? finalNumberedVoices[0].uri : null;
+        state.selectedVoiceURI = finalUniqueVoices.length > 0 ? finalUniqueVoices[0].uri : null;
       }
     });
   },
