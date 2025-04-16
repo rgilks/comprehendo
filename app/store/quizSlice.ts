@@ -57,7 +57,7 @@ export interface QuizSlice {
   useHoverCredit: () => boolean;
 }
 
-const INITIAL_HOVER_CREDITS = 3;
+const INITIAL_HOVER_CREDITS = 5;
 const INITIAL_PHASE_THRESHOLD = 5;
 
 export const createQuizSlice: StateCreator<

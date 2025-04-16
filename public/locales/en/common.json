@@ -83,7 +83,6 @@
     "keepGoing": "Keep going! Answer more questions correctly",
     "almostLevelUp": "One more correct answer to level up!",
     "correctAnswer": "Correct Answer",
-    "hoverCredits": "Hover Credits: {{count}}",
     "relevantText": "Relevant Text",
     "showExplanation": "Show Explanation",
     "hideExplanation": "Hide Explanation"

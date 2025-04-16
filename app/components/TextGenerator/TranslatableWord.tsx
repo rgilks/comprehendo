@@ -18,7 +18,13 @@ const TranslatableWord = memo(
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const { speakText, getTranslation } = useTextGeneratorStore();
+    const {
+      speakText,
+      getTranslation,
+      useHoverCredit: decrementHoverCredit,
+      hoverProgressionPhase,
+      hoverCreditsAvailable,
+    } = useTextGeneratorStore();
 
     const shouldTranslate = fromLang !== toLang;
 
@@ -26,21 +32,44 @@ const TranslatableWord = memo(
       setIsHovered(true);
 
       if (shouldTranslate && !translation && !isLoading) {
-        void (async () => {
-          setIsLoading(true);
-          try {
-            const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
-            const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
-            const result = await getTranslation(word, sourceLang, targetLang);
-            if (result) {
-              setTranslation(result);
+        if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
+          void (async () => {
+            setIsLoading(true);
+            try {
+              const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
+              const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
+              const result = await getTranslation(word, sourceLang, targetLang);
+
+              if (result) {
+                setTranslation(result);
+                if (hoverProgressionPhase === 'credits') {
+                  decrementHoverCredit();
+                }
+              } else {
+                console.log('Translation fetch returned no result.');
+              }
+            } catch (error) {
+              console.error('Error fetching translation:', error);
+            } finally {
+              setIsLoading(false);
             }
-          } finally {
-            setIsLoading(false);
-          }
-        })();
+          })();
+        } else {
+          console.log('Hover translation blocked: No credits left.');
+        }
       }
-    }, [word, fromLang, toLang, getTranslation, translation, isLoading, shouldTranslate]);
+    }, [
+      word,
+      fromLang,
+      toLang,
+      getTranslation,
+      translation,
+      isLoading,
+      shouldTranslate,
+      hoverProgressionPhase,
+      decrementHoverCredit,
+      hoverCreditsAvailable,
+    ]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
