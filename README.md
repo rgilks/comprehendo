@@ -12,16 +12,18 @@ Comprehendo is an AI-powered language learning application designed to help user
 
 ## Features
 
-- **Multi-language Support**: Practice reading comprehension in English, Italian, Spanish, French, or German (confirm languages).
+- **Multi-language Support**:
+  - Practice reading comprehension in various languages including English, Spanish, French, German, Italian, Portuguese, Russian, Hindi, Hebrew, Filipino, Latin, Greek, and Polish (defined in `app/config/languages.ts`).
+  - The user interface is available in numerous languages (detected via available JSON files in `public/locales/`).
 - **CEFR Level Selection**: Choose from six proficiency levels (A1-C2) to match your current language skills.
 - **AI-Generated Content**: Fresh, unique reading passages generated for each practice session.
 - **Multiple AI Model Support**: Switch between OpenAI's GPT-3.5 Turbo and Google's Gemini 2.0 Flash-Lite via environment variables.
 - **Interactive Quiz Format**: Answer multiple-choice questions and receive immediate feedback.
 - **Detailed Explanations**: Learn why answers are correct or incorrect with thorough explanations.
 - **Text Highlighting**: See the relevant portion of text highlighted after answering.
-- **Word Translation**: Hover over any word to see its translation in English (verify implementation).
-- **Text-to-Speech**: Listen to passages and individual words with adjustable volume (verify implementation).
-- **User Authentication**: Secure login via GitHub, Google, and Discord OAuth.
+- **Word Translation**: Hover over any word to see its translation (powered by Google Translate API - requires `GOOGLE_TRANSLATE_API_KEY`).
+- **Text-to-Speech**: Listen to passages and individual words using your browser/OS built-in capabilities (Web Speech API).
+- **User Authentication**: Secure login via GitHub, Google, and Discord OAuth (providers enabled based on configured credentials).
 - **Data Persistence**: Store user preferences and usage statistics in an SQLite database.
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 - **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback using Tailwind CSS.
@@ -30,17 +32,17 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions.
 - **Continuous Deployment**: Automatic deployment to Fly.io via GitHub Actions when code is pushed to the `main` branch.
 - **Admin Panel**: A secure area for administrators to view application data (users, quizzes, feedback).
-- **Internationalization (i18n)**: Full i18n support for UI elements using `i18next`.
+- **Internationalization (i18n)**: Full i18n support for UI elements using `i18next` and locale files in `public/locales/`.
 - **PWA Support**: Progressive Web App features for mobile installation using `@ducanh2912/next-pwa`.
 - **Sentry Integration**: Real-time error tracking and performance monitoring.
 - **State Management**: Uses `zustand` for lightweight global state management.
-- **Database Caching**: SQLite database for caching generated exercises.
+- **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
 - **Testing**:
   - Unit and integration tests with Jest & React Testing Library.
   - End-to-end tests with Playwright.
 - **Code Quality**:
   - ESLint and Prettier for linting and formatting.
-  * Husky and lint-staged for Git hooks (pre-commit/pre-push checks).
+  - Husky and lint-staged for Git hooks (see Testing Strategy section).
 
 * **State Diagram**: Visual representation of the text generation process. [View State Diagram](docs/text_generator_state_diagram.md)
 
@@ -82,14 +84,14 @@ Comprehendo implements strategies to manage AI API costs:
   - Uses a fixed-window counter based on IP address, stored in the `rate_limits` SQLite table.
   - Default limit: **100 requests per hour** per IP to the exercise generation endpoint (`POST /api/exercise`).
   - Applies to all users (anonymous and logged-in).
-  - Implemented in `app/actions/exercise.ts`.
-  - Exceeding the limit logs a warning to Sentry (if configured).
+  - Implemented in `app/actions/exercise.ts` via the `checkRateLimit` function.
+  - Exceeding the limit logs a warning to Sentry (if configured) and blocks the request.
   - Adjust `MAX_REQUESTS_PER_HOUR` in `app/actions/exercise.ts`.
 - **Database Caching**:
   - Successful AI-generated exercises (passage, question, choices, explanation) are stored in the `quiz` SQLite table.
-  - Before calling the AI, the system checks for a suitable cached exercise based on language, level, and user interaction history (via `question_feedback` table).
+  - Before calling the AI, the system checks for a suitable cached exercise based on language, level, and user interaction history (via `question_feedback` table) using the `getCachedExercise` function in `app/actions/exercise.ts`.
   - This significantly reduces redundant API calls.
-- **User Feedback Loop**: User feedback on questions (via `question_feedback` table) can potentially inform cache selection or future generation (verify implementation detail).
+- **User Feedback Loop**: User feedback on questions (stored in the `question_feedback` table) is used to avoid showing previously seen questions to logged-in users when fetching from the cache.
 - **Multi-model Support**: Easily switch between OpenAI and Google AI models via the `ACTIVE_MODEL` environment variable to leverage different cost structures.
 
 ## CEFR Levels Explained
@@ -105,8 +107,8 @@ Comprehendo implements strategies to manage AI API costs:
 
 ### Prerequisites
 
-1.  **Node.js:** Version 18 or higher (Check `.nvmrc` or project docs if specific version needed).
-2.  **npm or yarn:** Package manager.
+1.  **Node.js:** Version 18 or higher (Recommend setting this in `package.json` `engines` field).
+2.  **npm:** Package manager (Scripts configured for npm).
 3.  **Git:** For cloning.
 4.  **API Keys & Credentials:**
     - **OpenAI:** [platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
@@ -114,6 +116,7 @@ Comprehendo implements strategies to manage AI API costs:
     - **GitHub OAuth App:** [github.com/settings/developers](https://github.com/settings/developers)
     - **Google Cloud OAuth Credentials:** [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
     - **Discord OAuth App:** [discord.com/developers/applications](https://discord.com/developers/applications)
+    - **Google Translate API Key:** (Optional, for hover translations) [console.cloud.google.com/apis/library/translate.googleapis.com](https://console.cloud.google.com/apis/library/translate.googleapis.com)
     - _(Optional Deployment)_ [Fly.io Account](https://fly.io/) & [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/).
 
 ### Running Locally
@@ -141,7 +144,8 @@ Comprehendo implements strategies to manage AI API costs:
       - `NEXTAUTH_URL=http://localhost:3000` (for local dev)
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
       - `ACTIVE_MODEL`: (Optional) Set to `gpt-3.5-turbo` or `gemini-2.0-flash-lite`. Defaults to Gemini if unset/invalid.
-    - Ensure at least one AI provider and one Auth provider are configured.
+      - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
+    - Ensure at least one AI provider and one Auth provider (if desired) are configured.
 
 4.  **Run Dev Server:**
 
@@ -223,11 +227,14 @@ npm run test:watch
 # Run end-to-end tests (Playwright)
 npm run test:e2e
 
+# Run tests and generate coverage report
+npm run test:coverage
+
+# Run tests related to changed files (used by lint-staged)
+npm run test:quick
+
 # Check for dependency updates
 npm run deps
-
-# Update dependencies interactively
-npm run deps:update
 
 # Remove node_modules, lockfile, build artifacts
 npm run nuke
@@ -238,9 +245,9 @@ npm run nuke
 - **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
 - **Unit/Integration**: Jest and React Testing Library (`npm test`).
 - **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
-- **Git Hooks**: Husky and lint-staged automatically run checks:
-  - **Pre-commit**: Formats staged files (`prettier`) and runs related Jest tests (`test:quick`).
-  - **Pre-push**: Runs `npm run verify` (full format check, lint, build checks) - currently disabled/not standard, verify `husky` config. Typically pre-push runs more comprehensive checks like `npm run check` or `npm run build`. _Correction: Pre-commit hook runs prettier and related tests._
+- **Git Hooks**: Husky manages Git hooks defined in `.husky/`:
+  - **Pre-commit (`.husky/pre-commit`)**: Runs `npm run check` (includes formatting, linting, type checks, unit tests, and e2e tests).
+  - **Pre-push (`.husky/pre-push`)**: Runs `npm run preview-build` to ensure the application builds successfully before pushing.
 
 ## Production Considerations
 
