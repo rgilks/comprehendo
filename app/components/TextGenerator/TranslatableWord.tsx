@@ -71,11 +71,28 @@ const TranslatableWord = memo(
     const handleClick = useCallback(() => {
       speakText(word, fromLang);
 
-      if (!isClicked) {
-        setIsClicked(true);
-        void handleTranslationFetch();
+      if (!isClicked && shouldTranslate) {
+        const canAttemptTranslation =
+          hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0;
+
+        if (canAttemptTranslation) {
+          setIsClicked(true);
+          void handleTranslationFetch();
+        } else {
+          // Optional: Log that the state change was blocked due to credits - REMOVING
+          // console.log(`[TranslatableWord: ${word}] Click interaction blocked (no state change): No credits left.`);
+        }
       }
-    }, [speakText, word, fromLang, isClicked, handleTranslationFetch]);
+    }, [
+      speakText,
+      word,
+      fromLang,
+      isClicked,
+      shouldTranslate,
+      hoverProgressionPhase,
+      hoverCreditsAvailable,
+      handleTranslationFetch,
+    ]);
 
     const handleMouseEnter = useCallback(() => {
       setIsHovering(true);
@@ -95,7 +112,9 @@ const TranslatableWord = memo(
     } else if (isClicked) {
       combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
-      combinedClassName += ' hover:underline';
+      if (hoverProgressionPhase !== 'credits' || hoverCreditsAvailable > 0) {
+        combinedClassName += ' hover:underline';
+      }
     }
 
     const showTranslationPopup =
