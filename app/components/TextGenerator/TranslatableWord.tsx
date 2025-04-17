@@ -14,7 +14,8 @@ interface TranslatableWordProps {
 
 const TranslatableWord = memo(
   ({ word, fromLang, toLang, isCurrentWord, isRelevant }: TranslatableWordProps) => {
-    const [isTranslationVisible, setIsTranslationVisible] = useState(false);
+    const [isClicked, setIsClicked] = useState(false);
+    const [isHovering, setIsHovering] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -28,77 +29,97 @@ const TranslatableWord = memo(
 
     const shouldTranslate = fromLang !== toLang;
 
-    const handleClick = useCallback(() => {
-      speakText(word, fromLang);
+    const handleTranslationFetch = useCallback(async () => {
+      if (!shouldTranslate || translation || isLoading) return;
 
-      const currentlyVisible = isTranslationVisible;
-      setIsTranslationVisible(!currentlyVisible);
+      if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
+        setIsLoading(true);
+        try {
+          const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
+          const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
+          const result = await getTranslation(word, sourceLang, targetLang);
 
-      if (!currentlyVisible && shouldTranslate && !translation && !isLoading) {
-        if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
-          void (async () => {
-            setIsLoading(true);
-            try {
-              const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
-              const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
-              const result = await getTranslation(word, sourceLang, targetLang);
-
-              if (result) {
-                setTranslation(result);
-                if (hoverProgressionPhase === 'credits') {
-                  decrementHoverCredit();
-                }
-              } else {
-                console.log('Translation fetch returned no result.');
-                setIsTranslationVisible(false);
-              }
-            } catch (error) {
-              console.error('Error fetching translation:', error);
-              setIsTranslationVisible(false);
-            } finally {
-              setIsLoading(false);
+          if (result) {
+            setTranslation(result);
+            if (hoverProgressionPhase === 'credits') {
+              decrementHoverCredit();
             }
-          })();
-        } else {
-          console.log('Click translation blocked: No credits left.');
-          setIsTranslationVisible(false);
+          } else {
+            console.log('Translation fetch returned no result.');
+          }
+        } catch (error) {
+          console.error('Error fetching translation:', error);
+        } finally {
+          setIsLoading(false);
         }
+      } else {
+        console.log('Click translation blocked: No credits left.');
       }
     }, [
-      isTranslationVisible,
-      word,
+      shouldTranslate,
+      translation,
+      isLoading,
+      hoverProgressionPhase,
+      hoverCreditsAvailable,
       fromLang,
       toLang,
       getTranslation,
-      translation,
-      isLoading,
-      shouldTranslate,
-      hoverProgressionPhase,
+      word,
       decrementHoverCredit,
-      hoverCreditsAvailable,
-      speakText,
     ]);
 
-    let combinedClassName = 'cursor-pointer transition-all duration-300 px-1 -mx-1 relative group';
+    const handleClick = useCallback(() => {
+      speakText(word, fromLang);
+
+      if (!isClicked) {
+        setIsClicked(true);
+        void handleTranslationFetch();
+      }
+    }, [speakText, word, fromLang, isClicked, handleTranslationFetch]);
+
+    const handleMouseEnter = useCallback(() => {
+      setIsHovering(true);
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+      setIsHovering(false);
+    }, []);
+
+    let combinedClassName =
+      'cursor-pointer transition-all duration-300 px-1 -mx-1 relative group rounded';
+
     if (isRelevant) {
-      combinedClassName += ' bg-yellow-300 text-black rounded';
+      combinedClassName += ' bg-yellow-300 text-black';
     } else if (isCurrentWord) {
-      combinedClassName += ' bg-blue-500 text-white rounded';
+      combinedClassName += ' bg-blue-500 text-white';
+    } else if (isClicked) {
+      combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
       combinedClassName += ' hover:underline';
     }
 
     const showTranslationPopup =
-      isTranslationVisible && shouldTranslate && !isLoading && translation !== null;
+      isClicked && isHovering && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 
     return (
-      <span className={combinedClassName} onClick={handleClick} {...dataTestIdProps}>
+      <span
+        className={combinedClassName}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        {...dataTestIdProps}
+      >
         {word}
         {showTranslationPopup && (
           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
-            <span className="font-medium">{translation || word}</span>
+            <span className="font-medium">{translation}</span>
+          </div>
+        )}
+        {isClicked && isHovering && isLoading && (
+          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
+            <span className="italic text-sm">Translating...</span>
           </div>
         )}
       </span>

@@ -69,7 +69,7 @@ const ReadingPassage = () => {
     <div data-testid="reading-passage" className="mb-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center text-blue-400">
-          <BookOpenIcon className="w-5 h-5 mr-2" />
+          <BookOpenIcon className="w-5 h-5 mr-2 hidden sm:inline-flex" />
           <span className="text-lg font-medium hidden sm:inline" data-testid="passage-title">
             {t('practice.passageTitle')}
           </span>
