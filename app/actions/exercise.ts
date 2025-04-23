@@ -348,6 +348,9 @@ export const generateExerciseResponse = async (
         throw new Error(`Unsupported model provider: ${activeModel.provider}`);
       }
 
+      // Log the raw AI response content
+      console.log('[API] Raw AI response content:', aiResponseContent);
+
       if (!aiResponseContent) {
         throw new AIResponseProcessingError('Received empty response from AI model.');
       }
