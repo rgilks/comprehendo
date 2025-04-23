@@ -264,7 +264,11 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     });
 
     const result = await model.generateContent(prompt);
+    // Log full Google AI result for deeper debugging
+    console.log('[API] Google AI full result:', result);
     const response = result?.response;
+    // Log raw Google AI response object
+    console.log('[API] Google AI raw response object:', response);
     const text = response?.text();
 
     if (!text) {
