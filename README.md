@@ -6,6 +6,10 @@ A multi-language reading comprehension practice tool powered by Next.js, OpenAI,
 
 ![Comprehendo Screenshot](public/screenshot.png)
 
+<div align="center">
+  <a href='https://ko-fi.com/N4N31DPNUS' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+</div>
+
 ## Overview
 
 Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding. Word translations are powered by the MyMemory Translation API (if integrated, otherwise specify).

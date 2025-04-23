@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
+import Image from 'next/image';
 import LanguageSelector from '@/components/LanguageSelector';
 import AuthButton from '@/components/AuthButton';
 import TextGenerator from '@/components/TextGenerator';
@@ -47,6 +48,17 @@ const HomeContent = () => {
             >
               {t('github')}
             </Link>
+          </p>
+          <p className="mt-4 text-center">
+            <a href="https://ko-fi.com/N4N31DPNUS" target="_blank" rel="noopener noreferrer">
+              <Image
+                width={145}
+                height={36}
+                style={{ display: 'block', margin: 'auto' }}
+                src="https://storage.ko-fi.com/cdn/kofi2.png?v=6"
+                alt="Buy Me a Coffee at ko-fi.com"
+              />
+            </a>
           </p>
         </footer>
       </div>
