@@ -6,6 +6,7 @@ export type ModelProvider = 'openai' | 'google';
 export type ModelName =
   | 'gpt-3.5-turbo'
   | 'gemini-2.0-flash-lite'
+  | 'gemini-2.0-flash'
   | 'gemini-2.5-flash-preview-04-17';
 
 export interface ModelConfig {
@@ -26,6 +27,12 @@ export const MODELS: Record<ModelName, ModelConfig> = {
     provider: 'google',
     name: 'gemini-2.0-flash-lite',
     displayName: 'Gemini 2.0 Flash-Lite',
+    maxTokens: 500,
+  },
+  'gemini-2.0-flash': {
+    provider: 'google',
+    name: 'gemini-2.0-flash',
+    displayName: 'Gemini 2.0 Flash',
     maxTokens: 500,
   },
   'gemini-2.5-flash-preview-04-17': {
@@ -84,7 +91,7 @@ export const getActiveModel = (): ModelConfig => {
   }
 
   console.warn(
-    `Warning: ACTIVE_MODEL env var is not set or invalid. Falling back to default: ${MODELS['gemini-2.0-flash-lite'].displayName}`
+    `Warning: ACTIVE_MODEL env var is not set or invalid. Falling back to default: ${MODELS['gemini-2.0-flash'].displayName}`
   );
-  return MODELS['gemini-2.5-flash-preview-04-17'];
+  return MODELS['gemini-2.0-flash'];
 };
