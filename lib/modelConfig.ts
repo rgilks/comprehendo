@@ -86,5 +86,5 @@ export const getActiveModel = (): ModelConfig => {
   console.warn(
     `Warning: ACTIVE_MODEL env var is not set or invalid. Falling back to default: ${MODELS['gemini-2.0-flash-lite'].displayName}`
   );
-  return MODELS['gemini-2.0-flash-lite'];
+  return MODELS['gemini-2.5-flash-preview-04-17'];
 };
