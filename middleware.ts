@@ -21,6 +21,30 @@ const locales = [
 const defaultLocale = 'en';
 
 const middleware = async (req: import('next/server').NextRequest) => {
+  const userAgent = req.headers.get('user-agent') || 'unknown';
+
+  // --- Bot Filtering ---
+  const botUserAgents = [
+    'SentryUptimeBot',
+    'UptimeRobot',
+    'Pingdom',
+    'Site24x7',
+    'BetterUptime',
+    'StatusCake',
+    'AhrefsBot',
+    'SemrushBot',
+    'MJ12bot',
+    'DotBot',
+    'PetalBot',
+    'Bytespider',
+  ];
+
+  if (botUserAgents.some((botSubstring) => userAgent.includes(botSubstring))) {
+    console.log(`[Middleware] Blocking bot: ${userAgent}. Returning 200 OK.`);
+    return new NextResponse(null, { status: 200 });
+  }
+  // --- End Bot Filtering ---
+
   const token = await getToken({ req });
   const isAdmin = token?.isAdmin === true;
   const pathname = req.nextUrl.pathname;
@@ -40,7 +64,6 @@ const middleware = async (req: import('next/server').NextRequest) => {
   try {
     // Enhanced Logging
     const ip = req.headers.get('fly-client-ip') || req.headers.get('x-forwarded-for') || 'unknown';
-    const userAgent = req.headers.get('user-agent') || 'unknown';
     console.log(
       `[Middleware] Request: ${req.method} ${pathname} - IP: ${ip} - User-Agent: ${userAgent}`
     );
