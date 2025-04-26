@@ -4,7 +4,7 @@ import { z } from 'zod';
 import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { headers } from 'next/headers';
-import { getActiveModel, getGoogleAIClient, openai, ModelConfig } from '@/lib/modelConfig';
+import { getActiveModel, getGoogleAIClient, ModelConfig } from '@/lib/modelConfig';
 import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
@@ -198,42 +198,6 @@ export const saveExerciseToCache = async (
   }
 };
 
-async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
-  console.log('[API] Calling OpenAI API...');
-  if (!openai) {
-    throw new Error('OpenAI client is not initialized. Check OPENAI_API_KEY.');
-  }
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: modelConfig.name,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: modelConfig.maxTokens,
-    });
-
-    const choice = completion?.choices?.[0];
-    const result = choice?.message?.content;
-
-    if (!result) {
-      if (!completion) console.error('[API] OpenAI response completion object is missing.');
-      else if (!completion.choices || completion.choices.length === 0)
-        console.error('[API] OpenAI response choices array is missing or empty.');
-      else if (!choice.message) console.error('[API] OpenAI response message object is missing.');
-      else if (!choice.message.content)
-        console.error('[API] OpenAI response message content is missing.');
-
-      throw new AIResponseProcessingError('No content received or invalid structure from OpenAI');
-    }
-    console.log('[API] Received response from OpenAI.');
-    return result;
-  } catch (error: unknown) {
-    console.error('[API] OpenAI API raw error:', String(error));
-    const wrappedError = ensureError(error, 'Failed to generate content using OpenAI');
-    throw wrappedError;
-  }
-}
-
 async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling Google AI API...');
   const genAI = getGoogleAIClient();
@@ -327,14 +291,7 @@ export const generateExerciseResponse = async (
 
       const prompt = `Generate a reading comprehension exercise based on the following parameters:\n- Topic: ${String(topic)}\n- Passage Language: ${passageLangName} (${passageLanguageStr})\n- Question Language: ${questionLangName} (${questionLanguageStr})\n- CEFR Level: ${levelStr}\n- Grammar Guidance: ${grammarGuidance}\n- Vocabulary Guidance: ${vocabularyGuidance}\n\nInstructions:\n1. Create a short paragraph (3-6 sentences) in ${passageLanguageStr} suitable for a ${levelStr} learner, focusing on the topic \"${String(topic)}\".\n2. Write ONE multiple-choice question in ${questionLanguageStr}. The question should target ONE of the following comprehension skills based on the paragraph: (a) main idea, (b) specific detail, (c) inference (requiring understanding information implied but not explicitly stated), OR (d) vocabulary in context (asking the meaning of a word/phrase as used in the paragraph).\n3. Provide four answer options (A, B, C, D) in ${questionLanguageStr}. Only one option should be correct.\n4. Create plausible distractors (incorrect options B, C, D): These should relate to the topic but be clearly contradicted, unsupported by the paragraph, or represent common misinterpretations based *only* on the text. Avoid options that are completely unrelated or rely on outside knowledge. **Ensure distractors are incorrect specifically because they contradict or are unsupported by the provided paragraph.**\n5. **CRITICAL REQUIREMENT:** The question **must be impossible** to answer correctly *without* reading and understanding the provided paragraph. The answer **must depend solely** on the specific details or implications within the text. Avoid any questions solvable by general knowledge or common sense.\n6. Identify the correct answer key (A, B, C, or D).\n7. Provide a brief explanation (in ${questionLanguageStr}) for why the correct answer is right and each incorrect option is wrong. CRITICALLY, each explanation MUST explicitly reference the specific part of the paragraph that supports the correct answer or contradicts the incorrect option.\n8. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguageStr}) that provides the primary evidence for the correct answer (\"relevantText\").\n\nOutput Format: Respond ONLY with a valid JSON object containing the following keys:\n- \"paragraph\": (string) The generated paragraph in ${passageLanguageStr}.\n- \"topic\": (string) The topic used: \"${String(topic)}\".\n- \"question\": (string) The multiple-choice question in ${questionLanguageStr}.\n- \"options\": (object) An object with keys \"A\", \"B\", \"C\", \"D\", where each value is an answer option string in ${questionLanguageStr}.\n- \"correctAnswer\": (string) The key (\"A\", \"B\", \"C\", or \"D\") of the correct answer.\n- \"explanations\": (object) An object with keys \"A\", \"B\", \"C\", \"D\", where each value is the explanation string in ${questionLanguageStr} for that option, explicitly referencing the text.\n- \"relevantText\": (string) The sentence or phrase from the paragraph in ${passageLanguageStr} that supports the correct answer.\n\nExample JSON structure:\n{\n  \"paragraph\": \"...\",\n  \"topic\": \"...\",\n  \"question\": \"...\",\n  \"options\": { \"A\": \"...\", \"B\": \"...\", \"C\": \"...\", \"D\": \"...\" },\n  \"correctAnswer\": \"B\",\n  \"explanations\": { \"A\": \"Explanation referencing text...\", \"B\": \"Explanation referencing text...\", \"C\": \"Explanation referencing text...\", \"D\": \"Explanation referencing text...\" },\n  \"relevantText\": \"...\"\n}\n\nEnsure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.\n`;
 
-      let aiResponseContent: string | undefined;
-      if (activeModel.provider === 'openai') {
-        aiResponseContent = await callOpenAI(prompt, activeModel);
-      } else if (activeModel.provider === 'google') {
-        aiResponseContent = await callGoogleAI(prompt, activeModel);
-      } else {
-        throw new Error(`Unsupported model provider: ${String(activeModel.provider)}`);
-      }
+      const aiResponseContent = await callGoogleAI(prompt, activeModel);
 
       // Log the raw AI response content
       console.log('[API] Raw AI response content:', aiResponseContent);

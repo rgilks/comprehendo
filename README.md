@@ -1,6 +1,6 @@
 # Comprehendo
 
-A multi-language reading comprehension practice tool powered by Next.js, OpenAI, and Google Gemini.
+A multi-language reading comprehension practice tool powered by Next.js and Google Gemini.
 
 [![CI/CD](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml/badge.svg)](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml)
 
@@ -21,7 +21,6 @@ Comprehendo is an AI-powered language learning application designed to help user
   - The user interface is available in numerous languages (detected via available JSON files in `public/locales/`).
 - **CEFR Level Selection**: Choose from six proficiency levels (A1-C2) to match your current language skills.
 - **AI-Generated Content**: Fresh, unique reading passages generated for each practice session.
-- **Multiple AI Model Support**: Switch between OpenAI's GPT-3.5 Turbo and Google's Gemini 2.0 Flash-Lite via environment variables.
 - **Interactive Quiz Format**: Answer multiple-choice questions and receive immediate feedback.
 - **Detailed Explanations**: Learn why answers are correct or incorrect with thorough explanations.
 - **Text Highlighting**: See the relevant portion of text highlighted after answering.
@@ -56,7 +55,6 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Tailwind CSS**: Utility-first CSS framework
 - **TypeScript**: Strong typing for code quality
 - **next-auth**: Authentication (GitHub, Google, Discord)
-- **OpenAI SDK**: GPT-3.5 Turbo integration
 - **Google Generative AI SDK**: Gemini 2.0 Flash-Lite integration
 - **SQLite**: `better-sqlite3` for database storage
 - **Zod**: Schema validation
@@ -94,7 +92,6 @@ Comprehendo implements strategies to manage AI API costs:
   - Before calling the AI, the system checks for a suitable cached exercise based on language, level, and user interaction history (via `question_feedback` table) using the `getCachedExercise` function in `app/actions/exercise.ts`.
   - This significantly reduces redundant API calls.
 - **User Feedback Loop**: User feedback on questions (stored in the `question_feedback` table) is used to avoid showing previously seen questions to logged-in users when fetching from the cache.
-- **Multi-model Support**: Easily switch between OpenAI and Google AI models via the `ACTIVE_MODEL` environment variable to leverage different cost structures.
 
 ## CEFR Levels Explained
 
@@ -113,7 +110,6 @@ Comprehendo implements strategies to manage AI API costs:
 2.  **npm:** Package manager (Scripts configured for npm).
 3.  **Git:** For cloning.
 4.  **API Keys & Credentials:**
-    - **OpenAI:** [platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
     - **Google AI:** [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
     - **GitHub OAuth App:** [github.com/settings/developers](https://github.com/settings/developers)
     - **Google Cloud OAuth Credentials:** [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
@@ -137,7 +133,6 @@ Comprehendo implements strategies to manage AI API costs:
 
     - Copy `.env.example` to `.env.local`: `cp .env.example .env.local`
     - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
-      - `OPENAI_API_KEY` (optional, if using OpenAI)
       - `GOOGLE_AI_API_KEY` (optional, if using Google AI)
       - `GITHUB_ID`, `GITHUB_SECRET` (optional, if enabling GitHub login)
       - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
@@ -145,7 +140,6 @@ Comprehendo implements strategies to manage AI API costs:
       - `AUTH_SECRET`: Generate with `openssl rand -base64 32`
       - `NEXTAUTH_URL=http://localhost:3000` (for local dev)
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
-      - `ACTIVE_MODEL`: (Optional) Set to `gpt-3.5-turbo` or `gemini-2.0-flash-lite`. Defaults to Gemini if unset/invalid.
       - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
     - Ensure at least one AI provider and one Auth provider (if desired) are configured.
 
@@ -189,16 +183,6 @@ Continuous Deployment is set up via GitHub Actions (`.github/workflows/fly.yml`)
 ```bash
 fly deploy --app <your-app-name>
 ```
-
-### Switching AI Models
-
-- **Locally:** Change `ACTIVE_MODEL` in `.env.local`.
-- **Production (Fly.io):** Update the secret:
-  ```bash
-  fly secrets set ACTIVE_MODEL=<model_name> --app <your-app-name>
-  # e.g., model_name = gpt-3.5-turbo or gemini-2.0-flash-lite
-  fly apps restart <your-app-name>
-  ```
 
 ## Development Workflow
 
