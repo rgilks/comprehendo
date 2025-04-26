@@ -4,7 +4,6 @@ import { getProgress } from '@/app/actions/userProgress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/config/language-guidance';
-import * as Sentry from '@sentry/nextjs';
 
 const GetProgressResultSchema = z.object({
   streak: z.number().optional().nullable(),
@@ -69,7 +68,6 @@ export const createProgressSlice: StateCreator<
       }
     } catch (error: unknown) {
       console.error('Error fetching user progress:', String(error));
-      Sentry.captureException(error);
       set((state) => {
         state.userStreak = null;
       });

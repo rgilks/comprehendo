@@ -9,7 +9,6 @@ import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
-import * as Sentry from '@sentry/nextjs';
 import { authOptions } from '@/lib/authOptions';
 
 const MAX_REQUESTS_PER_HOUR = 100;
@@ -76,16 +75,6 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
           console.log(
             `[API] Rate limit exceeded for IP: ${ip}. Count: ${rateLimitRow.request_count}, Window Start: ${rateLimitRow.window_start_time}`
           );
-          Sentry.captureMessage(`Rate limit exceeded for IP: ${ip}`, {
-            level: 'warning',
-            extra: {
-              ip_address: ip,
-              request_count: rateLimitRow.request_count,
-              window_start_time: rateLimitRow.window_start_time,
-              max_requests: MAX_REQUESTS_PER_HOUR,
-              rate_limit_window_ms: RATE_LIMIT_WINDOW,
-            },
-          });
           return false;
         } else {
           console.log(`[API Perf] Rate Limit - UPDATE Start: ${Date.now()}`);
@@ -120,7 +109,6 @@ export const checkRateLimit = async (ip: string): Promise<boolean> => {
     }
   } catch (error) {
     console.error('[API] Error checking rate limit:', error);
-    Sentry.captureException(error);
     return false;
   }
 };
@@ -166,7 +154,6 @@ export const getCachedExercise = async (
     return result;
   } catch (error) {
     console.error('[API] Error getting cached exercise:', error);
-    Sentry.captureException(error, { extra: { userId, passageLanguage, questionLanguage, level } });
     return undefined;
   }
 };
@@ -207,7 +194,6 @@ export const saveExerciseToCache = async (
     }
   } catch (error) {
     console.error('[API] Error saving to cache during DB operation:', error);
-    Sentry.captureException(error, { extra: { userId, passageLanguage, questionLanguage, level } });
     return undefined;
   }
 };
@@ -244,7 +230,6 @@ async function callOpenAI(prompt: string, modelConfig: ModelConfig): Promise<str
   } catch (error: unknown) {
     console.error('[API] OpenAI API raw error:', String(error));
     const wrappedError = ensureError(error, 'Failed to generate content using OpenAI');
-    Sentry.captureException(wrappedError);
     throw wrappedError;
   }
 }
@@ -285,7 +270,6 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
   } catch (error: unknown) {
     console.error('[API] Google AI API raw error:', String(error));
     const wrappedError = ensureError(error, 'Failed to generate content using Google AI');
-    Sentry.captureException(wrappedError);
     throw wrappedError;
   }
 }
@@ -349,7 +333,7 @@ export const generateExerciseResponse = async (
       } else if (activeModel.provider === 'google') {
         aiResponseContent = await callGoogleAI(prompt, activeModel);
       } else {
-        throw new Error(`Unsupported model provider: ${activeModel.provider}`);
+        throw new Error(`Unsupported model provider: ${String(activeModel.provider)}`);
       }
 
       // Log the raw AI response content
@@ -370,7 +354,6 @@ export const generateExerciseResponse = async (
           aiResponseContent
         );
         const errorToCapture = ensureError(parseError, 'Failed to parse AI response JSON');
-        Sentry.captureException(errorToCapture, { extra: { aiResponseContent } });
         throw new AIResponseProcessingError(
           `Failed to parse AI JSON response. Error: ${errorToCapture.message}`
         );
@@ -460,14 +443,14 @@ export const generateExerciseResponse = async (
       };
     } catch (error: unknown) {
       console.error('[API] Error during AI Generation Path:', error);
-      Sentry.captureException(error);
       // If AI generation fails, fall through to try the cache as a last resort
       console.warn('[API] AI Generation failed, falling back to cache check.');
     }
   }
 
   // --- Fallback Path: Use Cached Exercise ---
-  const cachedExercise = await getCachedExercise(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const cachedExercise: QuizRow | undefined = await getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
@@ -533,7 +516,6 @@ export const countCachedExercises = async (
     return result?.count ?? 0;
   } catch (error) {
     console.error('[API] Error counting cached exercises:', error);
-    Sentry.captureException(error, { extra: { passageLanguage, questionLanguage, level } });
     return 0; // Return 0 on error to avoid blocking generation if counting fails
   }
 };

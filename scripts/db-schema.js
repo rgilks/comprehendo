@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const sqlite3 = require('better-sqlite3');
-const path = require('path');
+import sqlite3 from 'better-sqlite3';
+import path from 'path';
 
 const dbPath = path.join(process.cwd(), 'data', 'comprehendo.sqlite');
 console.log(`Connecting to database at ${dbPath}`);

@@ -2,6 +2,7 @@
   "name": "comprehendo",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -23,7 +24,6 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "@google/generative-ai": "^0.24.0",
     "@heroicons/react": "^2.2.0",
-    "@sentry/nextjs": "^9.12.0",
     "better-sqlite3": "^11.9.1",
     "i18next": "^24.2.3",
     "i18next-resources-to-backend": "^1.2.1",

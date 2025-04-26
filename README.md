@@ -38,7 +38,6 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Admin Panel**: A secure area for administrators to view application data (users, quizzes, feedback).
 - **Internationalization (i18n)**: Full i18n support for UI elements using `i18next` and locale files in `public/locales/`.
 - **PWA Support**: Progressive Web App features for mobile installation using `@ducanh2912/next-pwa`.
-- **Sentry Integration**: Real-time error tracking and performance monitoring.
 - **State Management**: Uses `zustand` for lightweight global state management.
 - **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
 - **Testing**:
@@ -63,7 +62,6 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Zod**: Schema validation
 - **i18next / react-i18next**: Internationalization
 - **@ducanh2912/next-pwa**: PWA features
-- **@sentry/nextjs**: Error tracking
 - **zustand**: State management
 - **Playwright**: End-to-end testing
 - **Jest / React Testing Library**: Unit/Integration testing
@@ -89,7 +87,7 @@ Comprehendo implements strategies to manage AI API costs:
   - Default limit: **100 requests per hour** per IP to the exercise generation endpoint (`POST /api/exercise`).
   - Applies to all users (anonymous and logged-in).
   - Implemented in `app/actions/exercise.ts` via the `checkRateLimit` function.
-  - Exceeding the limit logs a warning to Sentry (if configured) and blocks the request.
+  - Exceeding the limit logs blocks the request.
   - Adjust `MAX_REQUESTS_PER_HOUR` in `app/actions/exercise.ts`.
 - **Database Caching**:
   - Successful AI-generated exercises (passage, question, choices, explanation) are stored in the `quiz` SQLite table.
@@ -260,7 +258,6 @@ npm run nuke
 - **Security**: Review CORS, consider stricter input validation if needed.
 - **Scaling**: Adjust Fly.io machine specs/count in `fly.toml`.
 - **Database Backups**: Implement a backup strategy for the SQLite volume on Fly.io (e.g., using `litestream` or manual snapshots).
-- **Sentry**: Configure DSN in environment variables for production error tracking.
 
 ## Customization
 

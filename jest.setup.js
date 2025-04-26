@@ -54,7 +54,7 @@ global.console = {
   // log: jest.fn(),
 };
 
-const actualNextServer = jest.requireActual('next/server');
+// const actualNextServer = jest.requireActual('next/server'); // Not currently used
 
 jest.mock('next/server', () => {
   class NextRequest {

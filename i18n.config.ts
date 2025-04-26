@@ -2,7 +2,8 @@ import { initReactI18next } from 'react-i18next';
 import i18next from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 
-i18next
+// Add void to handle the promise initialization
+void i18next
   .use(initReactI18next)
   .use(
     resourcesToBackend(

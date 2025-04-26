@@ -1,7 +1,7 @@
-const { chromium } = require('playwright');
-const { performance } = require('perf_hooks');
-const fs = require('fs');
-const path = require('path');
+import { chromium } from 'playwright';
+import { performance } from 'perf_hooks';
+import fs from 'fs';
+import path from 'path';
 import { check, group, sleep } from 'k6';
 import http from 'k6/http';
 
@@ -70,7 +70,7 @@ async function runTest(page, cycleIndex, userId) {
             timeout: 5000,
           });
           log('Generate button re-enabled after error.');
-        } catch (enableError) {
+        } catch /* (enableError) */ {
           log('Generate button did not re-enable after error within timeout.');
         }
       } else {

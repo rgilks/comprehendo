@@ -9,7 +9,6 @@ import {
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,
 } from '@/lib/domain/schemas';
-import * as Sentry from '@sentry/nextjs';
 
 interface NextQuizInfo {
   quizData: PartialQuizData;
@@ -228,7 +227,6 @@ export const createQuizSlice: StateCreator<
     } catch (error: unknown) {
       console.error('Error generating text:', String(error));
       if (!isPrefetch) {
-        Sentry.captureException(error);
         const message: string =
           error instanceof Error ? error.message : 'An unknown error occurred';
         get().setError(message);
@@ -346,7 +344,6 @@ export const createQuizSlice: StateCreator<
       });
     } catch (error: unknown) {
       console.error('Error submitting answer:', error);
-      Sentry.captureException(error);
       set((state) => {
         state.error = error instanceof Error ? error.message : 'Failed to submit answer.';
       });
@@ -433,7 +430,6 @@ export const createQuizSlice: StateCreator<
       }
     } catch (error: unknown) {
       console.error('[SubmitFeedback][Store] Error during feedback submission process:', error);
-      Sentry.captureException(error, { extra: { currentQuizId, is_good } });
       set((state) => {
         state.error = `Failed to submit feedback: ${error instanceof Error ? error.message : 'Unknown error'}`;
         state.loading = false;

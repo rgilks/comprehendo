@@ -25,13 +25,12 @@ const middleware = async (req: import('next/server').NextRequest) => {
   const isAdmin = token?.isAdmin === true;
   const pathname = req.nextUrl.pathname;
   const isAdminRoute = pathname.startsWith('/admin');
-  const isSentryPageRoute = pathname.startsWith('/sentry-example-page');
 
   const pathnameIsMissingLocale = locales.every(
     (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
   );
 
-  if (pathnameIsMissingLocale && !isAdminRoute && !isSentryPageRoute) {
+  if (pathnameIsMissingLocale && !isAdminRoute) {
     const locale = req.cookies.get('NEXT_LOCALE')?.value || defaultLocale;
     const url = req.nextUrl.clone();
     url.pathname = `/${locale}${pathname}`;
@@ -50,7 +49,7 @@ const middleware = async (req: import('next/server').NextRequest) => {
     }
     console.log(`[Middleware] Allowing access to ${pathname}`);
     return NextResponse.next();
-  } catch (error) {
+  } catch {
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 };
