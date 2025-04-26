@@ -38,7 +38,15 @@ const middleware = async (req: import('next/server').NextRequest) => {
   }
 
   try {
-    console.log(`[Middleware] Path: ${pathname}`);
+    // Enhanced Logging
+    const ip = req.headers.get('fly-client-ip') || req.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    console.log(
+      `[Middleware] Request: ${req.method} ${pathname} - IP: ${ip} - User-Agent: ${userAgent}`
+    );
+
+    // Original Logging
+    // console.log(`[Middleware] Path: ${pathname}`);
     console.log(`[Middleware] isAdmin check result: ${isAdmin}`);
 
     if (isAdminRoute && !isAdmin) {
