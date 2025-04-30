@@ -17,6 +17,7 @@ const locales = [
   'fil',
   'el',
   'pl',
+  'th',
 ];
 const defaultLocale = 'en';
 

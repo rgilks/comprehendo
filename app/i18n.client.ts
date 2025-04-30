@@ -24,6 +24,7 @@ void i18n.init({
     'fil',
     'el',
     'pl',
+    'th',
   ],
   ns: ['common'],
   defaultNS: 'common',

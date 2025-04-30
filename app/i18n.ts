@@ -22,6 +22,7 @@ const i18nConfig = {
     'fil',
     'el',
     'pl',
+    'th',
   ],
   ns: ['common'],
   defaultNS: 'common',
