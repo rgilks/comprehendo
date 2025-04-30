@@ -10,7 +10,7 @@ import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/l
 import { getRandomTopicForLevel } from '@/config/topics';
 import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
-
+import { GoogleGenAI, GenerationConfig } from '@google/genai';
 const MAX_REQUESTS_PER_HOUR = 100;
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
 
@@ -200,39 +200,55 @@ export const saveExerciseToCache = async (
 
 async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling Google AI API...');
-  const genAI = getGoogleAIClient();
+  const genAI: GoogleGenAI = getGoogleAIClient();
   if (!genAI) throw new Error('Google AI client not initialized');
 
-  try {
-    const model = genAI.getGenerativeModel({
-      model: modelConfig.name,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: modelConfig.maxTokens,
-      },
-    });
+  // Define generation config
+  const generationConfig: GenerationConfig = {
+    maxOutputTokens: modelConfig.maxTokens,
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,
+    frequencyPenalty: 0.3,
+    presencePenalty: 0.2,
+    candidateCount: 1,
+    responseMimeType: 'application/json',
+  };
 
-    const result = await model.generateContent(prompt);
+  try {
+    // Construct the request object according to @google/genai structure
+    const request = {
+      model: modelConfig.name,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }], // Pass prompt inside contents array
+      generationConfig: generationConfig, // Pass generationConfig directly
+    };
+
+    // Log the request structure for debugging
+    // console.log('[API] Google AI request object:', JSON.stringify(request, null, 2));
+
+    const result = await genAI.models.generateContent(request);
+
     // Log full Google AI result for deeper debugging
-    console.log('[API] Google AI full result:', result);
-    const response = result?.response;
-    // Log raw Google AI response object
-    console.log('[API] Google AI raw response object:', response);
-    const text = response?.text();
+    console.log('[API] Google AI full result:', JSON.stringify(result, null, 2)); // Stringify for better logging
+
+    // Access text directly from the result object as per @google/genai examples
+    const text = result.text; // Access text directly
 
     if (!text) {
-      if (!result) console.error('[API] Google AI result object is missing.');
-      else if (!response) console.error('[API] Google AI response object is missing.');
-      else console.error('[API] Google AI response text is missing or empty.');
-
+      console.error(
+        '[API] Failed to extract text from Google AI response:',
+        JSON.stringify(result, null, 2) // Stringify for better logging
+      );
       throw new AIResponseProcessingError(
-        'No content received or invalid structure from Google AI'
+        'No content received from Google AI or failed to extract text.'
       );
     }
+
     console.log('[API] Received response from Google AI.');
     return text;
   } catch (error: unknown) {
     console.error('[API] Google AI API raw error:', String(error));
+    console.error('[API] Error details:', error); // Log the full error object
     const wrappedError = ensureError(error, 'Failed to generate content using Google AI');
     throw wrappedError;
   }
