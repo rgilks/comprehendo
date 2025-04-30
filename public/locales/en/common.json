@@ -89,6 +89,24 @@
     "showExplanation": "Show Explanation",
     "hideExplanation": "Hide Explanation"
   },
+  "languages": {
+    "learning": {
+      "en": "English",
+      "fil": "Filipino",
+      "fr": "French",
+      "de": "German",
+      "el": "Greek",
+      "he": "Hebrew",
+      "hi": "Hindi",
+      "it": "Italian",
+      "la": "Latin",
+      "pl": "Polish",
+      "pt": "Portuguese",
+      "ru": "Russian",
+      "es": "Spanish",
+      "th": "Thai"
+    }
+  },
   "admin": {
     "title": "Admin",
     "users": "Users",

@@ -88,6 +88,24 @@
     "relevantText": "Texto Relevante",
     "showExplanation": "Mostrar Explicação"
   },
+  "languages": {
+    "learning": {
+      "en": "Inglês",
+      "fil": "Filipino",
+      "fr": "Francês",
+      "de": "Alemão",
+      "el": "Grego",
+      "he": "Hebraico",
+      "hi": "Hindi",
+      "it": "Italiano",
+      "la": "Latim",
+      "pl": "Polonês",
+      "pt": "Português",
+      "ru": "Russo",
+      "es": "Espanhol",
+      "th": "Tailandês"
+    }
+  },
   "admin": {
     "title": "Administração",
     "users": "Usuários",

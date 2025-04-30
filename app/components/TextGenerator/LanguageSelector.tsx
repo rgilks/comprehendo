@@ -40,8 +40,8 @@ const LanguageSelector = () => {
           className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors col-span-1"
         >
           {(Object.keys(LEARNING_LANGUAGES) as LearningLanguage[]).map((lang) => (
-            <option key={lang} value={lang}>
-              {LEARNING_LANGUAGES[lang]}
+            <option key={lang} value={lang} className="bg-gray-800 text-white">
+              {t(`languages.learning.${lang}`)}
             </option>
           ))}
         </select>

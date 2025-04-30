@@ -88,6 +88,24 @@
     "relevantText": "Kaugnay na Teksto",
     "showExplanation": "Ipakita ang Paliwanag"
   },
+  "languages": {
+    "learning": {
+      "en": "Ingles",
+      "fil": "Filipino",
+      "fr": "Pranses",
+      "de": "Aleman",
+      "el": "Griyego",
+      "he": "Hebreo",
+      "hi": "Hindi",
+      "it": "Italyano",
+      "la": "Latin",
+      "pl": "Polako",
+      "pt": "Portuges",
+      "ru": "Ruso",
+      "es": "Espanyol",
+      "th": "Thai"
+    }
+  },
   "admin": {
     "title": "Admin",
     "users": "Mga User",
