@@ -8,22 +8,22 @@ import { type Language, LANGUAGES, SPEECH_LANGUAGES, getTextDirection } from '..
 
 // Define the languages specifically available for the UI based on locale files
 const SUPPORTED_UI_LANG_CODES: Language[] = [
-  'en',
-  'ko',
-  'pt',
-  'ru',
-  'zh',
-  'es',
-  'fr',
-  'he',
-  'hi',
-  'it',
-  'ja',
-  'de',
-  'fil',
-  'el',
-  'pl',
-  'th',
+  'zh', // Chinese
+  'en', // English
+  'fil', // Filipino
+  'fr', // French
+  'de', // German
+  'el', // Greek
+  'he', // Hebrew
+  'hi', // Hindi
+  'it', // Italian
+  'ja', // Japanese
+  'ko', // Korean
+  'pl', // Polish
+  'pt', // Portuguese
+  'ru', // Russian
+  'es', // Spanish
+  'th', // Thai
 ];
 
 const UI_LANGUAGES = Object.fromEntries(

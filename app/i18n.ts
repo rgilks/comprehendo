@@ -7,22 +7,22 @@ const i18nConfig = {
   lng: 'en',
   fallbackLng: 'en',
   supportedLngs: [
-    'en',
-    'es',
-    'fr',
-    'de',
-    'it',
-    'pt',
-    'ru',
-    'zh',
-    'ja',
-    'ko',
-    'hi',
-    'he',
-    'fil',
-    'el',
-    'pl',
-    'th',
+    'zh', // Chinese
+    'en', // English
+    'fil', // Filipino
+    'fr', // French
+    'de', // German
+    'el', // Greek
+    'he', // Hebrew
+    'hi', // Hindi
+    'it', // Italian
+    'ja', // Japanese
+    'ko', // Korean
+    'pl', // Polish
+    'pt', // Portuguese
+    'ru', // Russian
+    'es', // Spanish
+    'th', // Thai
   ],
   ns: ['common'],
   defaultNS: 'common',

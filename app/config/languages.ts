@@ -1,82 +1,80 @@
 export type Language =
-  | 'en'
-  | 'es'
-  | 'fr'
-  | 'de'
-  | 'it'
-  | 'pt'
-  | 'ru'
-  | 'zh'
-  | 'ja'
-  | 'ko'
-  | 'hi'
-  | 'he'
-  | 'fil'
-  | 'la'
-  | 'el'
-  | 'pl'
-  | 'th';
+  | 'zh' // Chinese
+  | 'en' // English
+  | 'fil' // Filipino
+  | 'fr' // French
+  | 'de' // German
+  | 'el' // Greek
+  | 'he' // Hebrew
+  | 'hi' // Hindi
+  | 'it' // Italian
+  | 'ja' // Japanese
+  | 'ko' // Korean
+  | 'la' // Latin
+  | 'pl' // Polish
+  | 'pt' // Portuguese
+  | 'ru' // Russian
+  | 'es' // Spanish
+  | 'th'; // Thai
 
 export const LANGUAGES: Record<Language, string> = {
+  zh: '中文',
   en: 'English',
-  es: 'Español',
+  fil: 'Filipino',
   fr: 'Français',
   de: 'Deutsch',
+  el: 'Ελληνικά',
+  he: 'עברית',
+  hi: 'हिंदी',
   it: 'Italiano',
-  pt: 'Português',
-  ru: 'Русский',
-  zh: '中文',
   ja: '日本語',
   ko: '한국어',
-  hi: 'हिंदी',
-  he: 'עברית',
-  fil: 'Filipino',
   la: 'Latin',
-  el: 'Ελληνικά',
   pl: 'Polski',
+  pt: 'Português',
+  ru: 'Русский',
+  es: 'Español',
   th: 'ไทย',
 };
 
 export const SPEECH_LANGUAGES: Record<Language, string> = {
+  zh: 'zh-CN',
   en: 'en-US',
-  es: 'es-ES',
+  fil: 'fil-PH',
   fr: 'fr-FR',
   de: 'de-DE',
+  el: 'el-GR',
+  he: 'he-IL',
+  hi: 'hi-IN',
   it: 'it-IT',
-  pt: 'pt-PT',
-  ru: 'ru-RU',
-  zh: 'zh-CN',
   ja: 'ja-JP',
   ko: 'ko-KR',
-  hi: 'hi-IN',
-  he: 'he-IL',
-  fil: 'fil-PH',
   la: 'la-VA',
-  el: 'el-GR',
   pl: 'pl-PL',
+  pt: 'pt-PT',
+  ru: 'ru-RU',
+  es: 'es-ES',
   th: 'th-TH',
 };
 
 // Define languages available for learning content
-export type LearningLanguage = Exclude<Language, 'zh' | 'ja' | 'ko'>;
+export type LearningLanguage = Exclude<Language, 'zh' | 'ja' | 'ko' | 'la'>; // Also excluded Latin as it might not be typical learning content
 
 export const LEARNING_LANGUAGES: Record<LearningLanguage, string> = {
+  // Chinese, Japanese, Korean excluded by type
   en: 'English',
-  es: 'Español',
+  fil: 'Filipino',
   fr: 'Français',
   de: 'Deutsch',
+  el: 'Ελληνικά',
+  he: 'עברית',
+  hi: 'हिंदी',
   it: 'Italiano',
+  // Latin excluded by type
+  pl: 'Polski',
   pt: 'Português',
   ru: 'Русский',
-  // zh: '中文',
-  // ja: '日本語',
-  // ko: '한국어',
-  hi: 'हिंदी',
-  he: 'עברית',
-  fil: 'Filipino',
-  la: 'Latin',
-  el: 'Ελληνικά',
-  pl: 'Polski',
+  es: 'Español',
   th: 'ไทย',
 };
 
