@@ -208,25 +208,47 @@ export const submitAnswer = async (
     }
 
     const fullQuizData = parsedContent.data;
+    const correctAnswerKey = fullQuizData.correctAnswer as keyof typeof fullQuizData.options | null;
+    const allExplanations = fullQuizData.allExplanations;
 
-    if (typeof ans === 'string' && ans in fullQuizData.options) {
-      isCorrect = ans === fullQuizData.correctAnswer;
+    if (
+      typeof ans === 'string' &&
+      ans in fullQuizData.options &&
+      correctAnswerKey &&
+      allExplanations
+    ) {
+      const chosenAnswerKey = ans as keyof typeof fullQuizData.options;
+      isCorrect = chosenAnswerKey === correctAnswerKey;
 
-      if (
-        typeof fullQuizData.correctAnswer === 'string' &&
-        fullQuizData.explanations &&
-        typeof fullQuizData.relevantText === 'string'
-      ) {
+      const correctExplanation = allExplanations[correctAnswerKey];
+      const relevantText = fullQuizData.relevantText;
+      let chosenIncorrectExplanation: string | undefined | null = null;
+
+      if (!isCorrect) {
+        chosenIncorrectExplanation = allExplanations[chosenAnswerKey];
+      }
+
+      if (correctExplanation && relevantText) {
         feedbackData = {
           isCorrect: isCorrect,
-          correctAnswer: fullQuizData.correctAnswer,
-          explanations: fullQuizData.explanations,
-          relevantText: fullQuizData.relevantText,
+          correctAnswer: correctAnswerKey,
+          correctExplanation: correctExplanation,
+          chosenIncorrectExplanation: chosenIncorrectExplanation,
+          relevantText: relevantText,
         };
       } else {
+        // Handle case where essential feedback parts are missing from the parsed data
+        console.warn(
+          `[SubmitAnswer] Missing correctExplanation or relevantText for quiz ID ${id}.`
+        );
         feedbackData = undefined;
       }
     } else {
+      // Handle cases where answer is invalid, or essential data is missing
+      if (!correctAnswerKey)
+        console.warn(`[SubmitAnswer] Missing correctAnswerKey for quiz ID ${id}.`);
+      if (!allExplanations)
+        console.warn(`[SubmitAnswer] Missing allExplanations for quiz ID ${id}.`);
       feedbackData = undefined;
     }
   } catch (error: unknown) {

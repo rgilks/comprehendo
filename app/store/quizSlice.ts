@@ -25,7 +25,8 @@ export interface QuizSlice {
   relevantTextRange: { start: number; end: number } | null;
   feedbackIsCorrect: boolean | null;
   feedbackCorrectAnswer: string | null;
-  feedbackExplanations: { A: string; B: string; C: string; D: string } | null;
+  feedbackCorrectExplanation: string | null;
+  feedbackChosenIncorrectExplanation: string | null;
   feedbackRelevantText: string | null;
   nextQuizAvailable: NextQuizInfo | null;
   feedbackSubmitted: boolean;
@@ -42,7 +43,8 @@ export interface QuizSlice {
   setFeedback: (
     correct: boolean | null,
     correctAnswer: string | null,
-    explanations: { A: string; B: string; C: string; D: string } | null,
+    correctExplanation: string | null,
+    chosenIncorrectExplanation: string | null,
     relevantText: string | null
   ) => void;
   generateText: (isPrefetch?: boolean) => Promise<void>;
@@ -72,7 +74,8 @@ export const createQuizSlice: StateCreator<
   relevantTextRange: null,
   feedbackIsCorrect: null,
   feedbackCorrectAnswer: null,
-  feedbackExplanations: null,
+  feedbackCorrectExplanation: null,
+  feedbackChosenIncorrectExplanation: null,
   feedbackRelevantText: null,
   nextQuizAvailable: null,
   feedbackSubmitted: false,
@@ -98,11 +101,18 @@ export const createQuizSlice: StateCreator<
     set((state) => {
       state.relevantTextRange = range;
     }),
-  setFeedback: (correct, correctAnswer, explanations, relevantText) =>
+  setFeedback: (
+    correct,
+    correctAnswer,
+    correctExplanation,
+    chosenIncorrectExplanation,
+    relevantText
+  ) =>
     set((state) => {
       state.feedbackIsCorrect = correct;
       state.feedbackCorrectAnswer = correctAnswer;
-      state.feedbackExplanations = explanations;
+      state.feedbackCorrectExplanation = correctExplanation;
+      state.feedbackChosenIncorrectExplanation = chosenIncorrectExplanation;
       state.feedbackRelevantText = relevantText;
     }),
 
@@ -120,7 +130,8 @@ export const createQuizSlice: StateCreator<
       state.relevantTextRange = null;
       state.feedbackIsCorrect = null;
       state.feedbackCorrectAnswer = null;
-      state.feedbackExplanations = null;
+      state.feedbackCorrectExplanation = null;
+      state.feedbackChosenIncorrectExplanation = null;
       state.feedbackRelevantText = null;
       state.showQuestionSection = false;
       state.showExplanation = false;
@@ -142,7 +153,8 @@ export const createQuizSlice: StateCreator<
       state.relevantTextRange = null;
       state.feedbackIsCorrect = null;
       state.feedbackCorrectAnswer = null;
-      state.feedbackExplanations = null;
+      state.feedbackCorrectExplanation = null;
+      state.feedbackChosenIncorrectExplanation = null;
       state.feedbackRelevantText = null;
       state.showQuestionSection = true;
       state.showExplanation = false;
@@ -300,7 +312,9 @@ export const createQuizSlice: StateCreator<
       set((state) => {
         state.feedbackIsCorrect = result.feedback?.isCorrect ?? null;
         state.feedbackCorrectAnswer = result.feedback?.correctAnswer ?? null;
-        state.feedbackExplanations = result.feedback?.explanations ?? null;
+        state.feedbackCorrectExplanation = result.feedback?.correctExplanation ?? null;
+        state.feedbackChosenIncorrectExplanation =
+          result.feedback?.chosenIncorrectExplanation ?? null;
         state.feedbackRelevantText = result.feedback?.relevantText ?? null;
 
         if (state.quizData?.paragraph && result.feedback?.relevantText) {

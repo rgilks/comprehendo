@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getTextDirection } from '@/contexts/LanguageContext';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
 
 const QuizSection = () => {
   const { t } = useTranslation('common');
@@ -16,8 +17,10 @@ const QuizSection = () => {
     showExplanation,
     showQuestionSection,
     handleAnswerSelect,
+    feedbackIsCorrect,
     feedbackCorrectAnswer,
-    feedbackExplanations,
+    feedbackCorrectExplanation,
+    feedbackChosenIncorrectExplanation,
   } = useTextGeneratorStore();
 
   const questionLanguage = contextQuestionLanguage;
@@ -51,7 +54,7 @@ const QuizSection = () => {
                 key={key}
                 onClick={handleAsyncClick(key)}
                 disabled={isAnswered}
-                className={`w-full text-left p-3 rounded-md border transition-colors ${
+                className={`w-full text-left p-3 rounded-md border transition-colors relative ${
                   isAnswered && feedbackCorrectAnswer
                     ? key === feedbackCorrectAnswer
                       ? 'bg-green-900/50 border-green-700 text-green-100'
@@ -65,46 +68,42 @@ const QuizSection = () => {
                 data-testid={`quiz-option-${key}`}
               >
                 {value}
+                {isAnswered &&
+                  showExplanation &&
+                  !feedbackIsCorrect &&
+                  selectedAnswer === key &&
+                  feedbackChosenIncorrectExplanation && (
+                    <div
+                      className="mt-2 p-2 text-sm bg-red-900/60 ring-1 ring-red-600/60 rounded text-red-100 flex items-start space-x-2"
+                      data-testid="chosen-incorrect-explanation-text"
+                      dir={getTextDirection(questionLanguage)}
+                    >
+                      <InformationCircleIcon className="h-5 w-5 flex-shrink-0 text-red-300 mt-0.5" />
+                      <span>{feedbackChosenIncorrectExplanation}</span>
+                    </div>
+                  )}
               </button>
             ))}
           </div>
-          {isAnswered && showExplanation && (
+
+          {isAnswered && showExplanation && feedbackCorrectExplanation && (
             <div
-              className="mt-4 p-4 bg-gray-800/50 border border-gray-700 rounded-md"
-              data-testid="quiz-explanation"
+              className="mt-6 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow"
+              data-testid="correct-explanation-section"
             >
-              <p className="text-gray-300" dir={getTextDirection(questionLanguage)}>
-                {feedbackCorrectAnswer &&
-                  feedbackExplanations &&
-                  feedbackExplanations[feedbackCorrectAnswer as keyof typeof feedbackExplanations]}
-              </p>
+              <h4 className="text-lg font-semibold mb-3 text-blue-300">
+                {t('practice.explanation')}
+              </h4>
+              <div
+                className="p-2 rounded bg-green-900/30 ring-1 ring-green-600/50 text-green-200"
+                data-testid="correct-explanation-text"
+                dir={getTextDirection(questionLanguage)}
+              >
+                {feedbackCorrectExplanation}
+              </div>
             </div>
           )}
         </div>
-
-        {showExplanation && !!feedbackExplanations && (
-          <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
-            <h4 className="text-lg font-semibold mb-3 text-blue-300">
-              {t('practice.explanation')}
-            </h4>
-            <div className="space-y-3 text-sm">
-              {feedbackExplanations &&
-                Object.entries(feedbackExplanations).map(([key, explanation]) => (
-                  <div key={key} className={`w-full ${!showExplanation ? 'hidden' : ''}`}>
-                    <div
-                      className={`p-2 rounded ${key === feedbackCorrectAnswer ? 'bg-green-900/30 ring-1 ring-green-600/50' : ''} ${selectedAnswer === key && key !== feedbackCorrectAnswer ? 'bg-red-900/30 ring-1 ring-red-600/50' : ''}`}
-                      data-testid={`feedback-description-${key}`}
-                    >
-                      <strong
-                        className={`font-semibold ${key === feedbackCorrectAnswer ? 'text-green-300' : selectedAnswer === key ? 'text-red-300' : 'text-gray-300'}`}
-                      ></strong>{' '}
-                      <span className="text-gray-300">{explanation}</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
       </>
     )
   );

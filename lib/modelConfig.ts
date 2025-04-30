@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 
 export type ModelProvider = 'google';
@@ -51,18 +51,37 @@ if (!envVars.success) {
   );
 }
 
-const validatedEnv = envVars.success ? envVars.data : {};
+// --- Lazy Client Initialization ---
+let genAIClient: GoogleGenAI | null = null;
 
-export const getGoogleAIClient = () => {
-  const apiKey = validatedEnv.GOOGLE_AI_API_KEY;
-
-  if (!apiKey) {
-    console.warn('Warning: GOOGLE_AI_API_KEY is not set or invalid');
+export const getGoogleAIClient = (): GoogleGenAI => {
+  // Return existing client if already initialized
+  if (genAIClient) {
+    return genAIClient;
   }
 
-  return new GoogleGenerativeAI(apiKey || '');
+  // Read API key from environment at runtime
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+
+  if (!apiKey) {
+    const errorMsg =
+      '[GoogleAI Client] CRITICAL: GOOGLE_AI_API_KEY environment variable is not set. Cannot initialize client.';
+    console.error(errorMsg);
+    // Throw an error to prevent proceeding without a key
+    throw new Error(errorMsg);
+  }
+
+  console.log('[GoogleAI Client] Initializing GoogleGenAI client...');
+  try {
+    genAIClient = new GoogleGenAI({ apiKey });
+    return genAIClient;
+  } catch (error) {
+    console.error('[GoogleAI Client] Failed to initialize GoogleGenAI client:', error);
+    // Re-throw the error to indicate failure
+    throw error;
+  }
 };
 
 export const getActiveModel = (): ModelConfig => {
-  return MODELS['gemini-2.0-flash'];
+  return MODELS['gemini-2.5-flash-preview-04-17'];
 };

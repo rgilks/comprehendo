@@ -7,11 +7,12 @@ export const QuizDataSchema = z.object({
   topic: z.string().optional().nullable(),
   question: z.string(),
   options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  explanations: z
+  correctExplanation: z.string().optional().nullable(),
+  correctAnswer: z.string().optional().nullable(),
+  allExplanations: z
     .object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() })
     .optional()
     .nullable(),
-  correctAnswer: z.string().optional().nullable(),
   relevantText: z.string().optional().nullable(),
 });
 
@@ -44,12 +45,8 @@ export const SubmitAnswerResultSchema = z.object({
     .object({
       isCorrect: z.boolean(),
       correctAnswer: z.string(),
-      explanations: z.object({
-        A: z.string(),
-        B: z.string(),
-        C: z.string(),
-        D: z.string(),
-      }),
+      correctExplanation: z.string(),
+      chosenIncorrectExplanation: z.string().optional().nullable(),
       relevantText: z.string(),
     })
     .optional()
