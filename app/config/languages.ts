@@ -58,24 +58,24 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
 };
 
 // Define languages available for learning content
-export type LearningLanguage = Exclude<Language, 'zh' | 'ja' | 'ko' | 'la'>; // Also excluded Latin as it might not be typical learning content
+export type LearningLanguage = Exclude<Language, 'zh' | 'ja' | 'ko'>; // Excluded Chinese, Japanese, Korean
 
 export const LEARNING_LANGUAGES: Record<LearningLanguage, string> = {
-  // Chinese, Japanese, Korean excluded by type
+  // Displaying English names for better usability
   en: 'English',
   fil: 'Filipino',
-  fr: 'Français',
-  de: 'Deutsch',
-  el: 'Ελληνικά',
-  he: 'עברית',
-  hi: 'हिंदी',
-  it: 'Italiano',
-  // Latin excluded by type
-  pl: 'Polski',
-  pt: 'Português',
-  ru: 'Русский',
-  es: 'Español',
-  th: 'ไทย',
+  fr: 'French',
+  de: 'German',
+  el: 'Greek',
+  he: 'Hebrew',
+  hi: 'Hindi',
+  it: 'Italian',
+  la: 'Latin',
+  pl: 'Polish',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  es: 'Spanish',
+  th: 'Thai',
 };
 
 export const RTL_LANGUAGES: Language[] = ['he'];
