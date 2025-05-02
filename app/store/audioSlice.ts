@@ -49,7 +49,7 @@ export const createAudioSlice: StateCreator<
   selectedVoiceURI: null,
   translationCache: new Map<string, string>(),
 
-  _setIsSpeechSupported: (supported) =>
+  _setIsSpeechSupported: (supported) => {
     set((state) => {
       state.isSpeechSupported = supported;
       if (supported && typeof window !== 'undefined') {
@@ -58,7 +58,8 @@ export const createAudioSlice: StateCreator<
         };
         get()._updateAvailableVoices(get().passageLanguage);
       }
-    }),
+    });
+  },
 
   setVolumeLevel: (volume) => {
     set((state) => {
@@ -109,12 +110,7 @@ export const createAudioSlice: StateCreator<
       isPaused,
       volume,
       stopPassageSpeech,
-      passageUtteranceRef,
     } = get();
-
-    if (passageUtteranceRef && false) {
-      console.log('Dummy usage of passageUtteranceRef to satisfy build');
-    }
 
     if (!isSpeechSupported || !quizData?.paragraph || !generatedPassageLanguage) return;
 
@@ -176,7 +172,7 @@ export const createAudioSlice: StateCreator<
       utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
         const logPayload = {
           event,
-          text: quizData?.paragraph?.substring(0, 100) + '...',
+          text: quizData.paragraph.substring(0, 100) + '...',
           voiceURI: utterance.voice?.voiceURI,
           lang: utterance.lang,
         };
@@ -219,7 +215,7 @@ export const createAudioSlice: StateCreator<
     utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
       const logPayload = {
         event,
-        text: text?.substring(0, 100) + '...',
+        text: text.substring(0, 100) + '...',
         voiceURI: utterance.voice?.voiceURI,
         lang: utterance.lang,
       };
@@ -277,11 +273,30 @@ export const createAudioSlice: StateCreator<
     const speechLang = SPEECH_LANGUAGES[lang];
     const baseLangCode = speechLang.split('-')[0];
 
-    const platform = navigator.platform.toUpperCase();
-    const isIOS =
-      platform.indexOf('IPHONE') >= 0 ||
-      platform.indexOf('IPAD') >= 0 ||
-      platform.indexOf('IPOD') >= 0;
+    // Helper function to get platform info
+    const getPlatformInfo = () => {
+      const ua = navigator.userAgent;
+      const nav = navigator as Navigator & { userAgentData?: { platform: string } };
+      if (typeof nav.userAgentData?.platform === 'string') {
+        const platform = nav.userAgentData.platform.toUpperCase();
+        return {
+          isIOS: platform === 'IOS' || platform === 'IPADOS',
+          isMac: platform === 'MACOS',
+          isWindows: platform === 'WINDOWS',
+          platformString: platform,
+        };
+      }
+      // Fallback using userAgent string parsing
+      const upperUA = ua.toUpperCase();
+      return {
+        isIOS: /IPHONE|IPAD|IPOD/.test(upperUA),
+        isMac: /MACINTOSH|MAC OS X/.test(upperUA),
+        isWindows: /WIN/.test(upperUA),
+        platformString: upperUA, // Less reliable, just use UA for filters if needed
+      };
+    };
+
+    const { isIOS, isMac, isWindows } = getPlatformInfo();
 
     let voices = window.speechSynthesis.getVoices();
 
@@ -295,15 +310,12 @@ export const createAudioSlice: StateCreator<
     }
 
     // Filter out macOS default voices with the pattern "Name (Language (Region))"
-    voices = voices.filter(
-      (voice) =>
-        navigator.platform.toUpperCase().indexOf('MAC') < 0 || !/\s\(.*\s\(.*\)\)$/.test(voice.name)
-    );
+    voices = voices.filter((voice) => !isMac || !/\s\(.*\s\(.*\)\)$/.test(voice.name));
 
     const processedVoices = voices.map(
       (voice): { uri: string; displayName: string; originalLang: string } => {
         let displayName = voice.name;
-        const isWindows = platform.indexOf('WIN') >= 0;
+        // Note: isWindows is now derived from the helper function above
 
         // Simplify Windows voice names
         if (isWindows && displayName.startsWith('Microsoft ')) {
@@ -353,7 +365,9 @@ export const createAudioSlice: StateCreator<
     if (get().isSpeakingPassage) {
       const { handlePlayPause } = get();
       get().stopPassageSpeech();
-      setTimeout(() => handlePlayPause(), 100);
+      setTimeout(() => {
+        handlePlayPause();
+      }, 100);
     }
   },
 });

@@ -38,7 +38,9 @@ const LanguageSelector = () => {
         <button
           id="language-select-button"
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            setIsOpen(!isOpen);
+          }}
           className="bg-transparent text-white text-xs md:text-sm border border-gray-600 rounded-md px-2 py-1 md:px-3 md:py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer inline-flex justify-between items-center w-auto min-w-[80px] md:min-w-[100px]"
           aria-haspopup="true"
           aria-expanded={isOpen}
@@ -72,7 +74,9 @@ const LanguageSelector = () => {
               {(Object.keys(languages) as Language[]).map((lang) => (
                 <button
                   key={lang}
-                  onClick={() => handleSelect(lang)}
+                  onClick={() => {
+                    handleSelect(lang);
+                  }}
                   className={`${language === lang ? 'bg-gray-700 text-white' : 'text-gray-300'} block w-full px-4 py-2 text-sm text-left hover:bg-gray-600 hover:text-white transition-colors`}
                   role="menuitem"
                 >

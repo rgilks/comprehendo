@@ -99,8 +99,6 @@ function calculateAndUpdateProgress(
         }
       }
     } else {
-      if (correct_streak > 0) {
-      }
       correct_streak = 0;
     }
 
@@ -143,12 +141,17 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
 
   const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
 
-  return {
+  const response: ProgressResponse = {
     currentLevel: progressResult.currentLevel,
     currentStreak: progressResult.currentStreak,
     leveledUp: progressResult.leveledUp,
-    error: progressResult.dbError,
   };
+
+  if (progressResult.dbError) {
+    response.error = progressResult.dbError;
+  }
+
+  return response;
 };
 
 export const submitAnswer = async (
@@ -409,8 +412,11 @@ export const submitQuestionFeedback = async (
 
   const response: SubmitFeedbackResponse = {
     success: feedbackSuccess,
-    error: feedbackError,
   };
+
+  if (feedbackError) {
+    response.error = feedbackError;
+  }
 
   return response;
 };

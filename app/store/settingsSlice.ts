@@ -25,18 +25,21 @@ export const createSettingsSlice: StateCreator<
   generatedQuestionLanguage: null,
   cefrLevel: 'A1',
 
-  setGeneratedPassageLanguage: (lang) =>
+  setGeneratedPassageLanguage: (lang) => {
     set((state) => {
       state.generatedPassageLanguage = lang;
-    }),
-  setGeneratedQuestionLanguage: (lang) =>
+    });
+  },
+  setGeneratedQuestionLanguage: (lang) => {
     set((state) => {
       state.generatedQuestionLanguage = lang;
-    }),
-  setCefrLevel: (level) =>
+    });
+  },
+  setCefrLevel: (level) => {
     set((state) => {
       state.cefrLevel = level;
-    }),
+    });
+  },
 
   setPassageLanguage: (lang) => {
     get().stopPassageSpeech();

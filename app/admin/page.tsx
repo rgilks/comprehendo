@@ -36,21 +36,15 @@ export default function AdminPage() {
       try {
         const result = await getTableNames();
 
-        if (!isMounted) return;
-
         if (result.error) {
           setError(result.error);
         } else if (result.data) {
           setTableNames(result.data);
         }
       } catch (err) {
-        if (!isMounted) return;
-
         console.error('Error fetching table names:', err);
         setError('Failed to load tables');
       } finally {
-        if (!isMounted) return;
-
         setIsLoadingTables(false);
       }
     };
@@ -192,7 +186,7 @@ export default function AdminPage() {
         return value;
       }
 
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === 'object') {
         return (
           <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
             {JSON.stringify(value, null, 2)}
@@ -266,7 +260,7 @@ export default function AdminPage() {
             <h2 className="font-bold">Unauthorized</h2>
             <p>You must be logged in to access the admin area.</p>
           </div>
-        ) : !(session.user as { isAdmin?: boolean })?.isAdmin ? (
+        ) : !(session.user as { isAdmin?: boolean }).isAdmin ? (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <h2 className="font-bold">Unauthorized</h2>
             <p>You do not have admin permissions.</p>
@@ -288,7 +282,9 @@ export default function AdminPage() {
                       {tableNames.map((name) => (
                         <button
                           key={name}
-                          onClick={() => handleTableSelectClick(name)}
+                          onClick={() => {
+                            handleTableSelectClick(name);
+                          }}
                           className={`${buttonBaseClass} ${selectedTable === name ? primaryButtonClass : secondaryButtonClass}`}
                         >
                           {name}
@@ -369,7 +365,9 @@ export default function AdminPage() {
                                   <tr
                                     key={rowIndex}
                                     className="hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => setSelectedRowData(row)}
+                                    onClick={() => {
+                                      setSelectedRowData(row);
+                                    }}
                                   >
                                     {Object.values(row).map((value, colIndex) => (
                                       <td
@@ -382,7 +380,7 @@ export default function AdminPage() {
                                             : value
                                           : value === null || value === undefined
                                             ? 'NULL'
-                                            : typeof value === 'object' && value !== null
+                                            : typeof value === 'object'
                                               ? JSON.stringify(value)
                                               : typeof value === 'number' ||
                                                   typeof value === 'boolean'

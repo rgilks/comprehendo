@@ -51,8 +51,6 @@ function ensureError(error: unknown, defaultMessage: string = 'An unknown error 
 }
 
 export const checkRateLimit = async (ip: string): Promise<boolean> => {
-  if (!db) throw new Error('Database not initialized');
-
   try {
     const now = Date.now();
     const nowISO = new Date(now).toISOString();
@@ -119,8 +117,6 @@ export const getCachedExercise = async (
   level: string,
   userId: number | null
 ): Promise<QuizRow | undefined> => {
-  if (!db) throw new Error('Database not initialized');
-
   try {
     let stmt;
     let result;
@@ -165,8 +161,6 @@ export const saveExerciseToCache = async (
   jsonContent: string,
   userId: number | null
 ): Promise<number | undefined> => {
-  if (!db) throw new Error('Database not initialized');
-
   try {
     const result = db
       .prepare(
@@ -201,7 +195,6 @@ export const saveExerciseToCache = async (
 async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
   console.log('[API] Calling Google AI API...');
   const genAI: GoogleGenAI = getGoogleAIClient();
-  if (!genAI) throw new Error('Google AI client not initialized');
 
   // Define generation config
   const generationConfig: GenerationConfig = {
@@ -298,14 +291,23 @@ export const generateExerciseResponse = async (
       const topic = typeof topicResult === 'string' ? topicResult : String(topicResult);
       const grammarGuidance: string = getGrammarGuidance(cefrLevelTyped);
       const vocabularyGuidance: string = getVocabularyGuidance(cefrLevelTyped);
-      const passageLangName: string =
-        LANGUAGES[passageLanguageStr as Language] ?? passageLanguageStr;
-      const questionLangName: string =
-        LANGUAGES[questionLanguageStr as Language] ?? questionLanguageStr;
+      const passageLangName: string = LANGUAGES[passageLanguageStr as Language];
+      const questionLangName: string = LANGUAGES[questionLanguageStr as Language];
 
       const activeModel = getActiveModel();
 
-      const prompt = `Generate a reading comprehension exercise based on the following parameters:\n- Topic: ${String(topic)}\n- Passage Language: ${passageLangName} (${passageLanguageStr})\n- Question Language: ${questionLangName} (${questionLanguageStr})\n- CEFR Level: ${levelStr}\n- Grammar Guidance: ${grammarGuidance}\n- Vocabulary Guidance: ${vocabularyGuidance}\n\nInstructions:\n1. Create a short paragraph (3-6 sentences) in ${passageLanguageStr} suitable for a ${levelStr} learner, focusing on the topic \"${String(topic)}\".\n2. Write ONE multiple-choice question in ${questionLanguageStr}. The question should target ONE of the following comprehension skills based on the paragraph: (a) main idea, (b) specific detail, (c) inference (requiring understanding information implied but not explicitly stated), OR (d) vocabulary in context (asking the meaning of a word/phrase as used in the paragraph).\n3. Provide four answer options (A, B, C, D) in ${questionLanguageStr}. Only one option should be correct.\n4. Create plausible distractors (incorrect options B, C, D): These should relate to the topic but be clearly contradicted, unsupported by the paragraph, or represent common misinterpretations based *only* on the text. Avoid options that are completely unrelated or rely on outside knowledge. **Ensure distractors are incorrect specifically because they contradict or are unsupported by the provided paragraph.**\n5. **CRITICAL REQUIREMENT:** The question **must be impossible** to answer correctly *without* reading and understanding the provided paragraph. The answer **must depend solely** on the specific details or implications within the text. Avoid any questions solvable by general knowledge or common sense.\n6. Identify the correct answer key (A, B, C, or D).\n7. Provide **concise explanations** (in ${questionLanguageStr}) for **ALL options (A, B, C, D)**. For the correct answer, explain why it's right. For incorrect answers, explain specifically why they are wrong according to the text. Each explanation MUST explicitly reference the specific part of the paragraph that supports or contradicts the option.\n8. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguageStr}) that provides the primary evidence for the correct answer (\"relevantText\").\n\nOutput Format: Respond ONLY with a valid JSON object containing the following keys:\n- \"paragraph\": (string) The generated paragraph in ${passageLanguageStr}.\n- \"topic\": (string) The topic used: \"${String(topic)}\".\n- \"question\": (string) The multiple-choice question in ${questionLanguageStr}.\n- \"options\": (object) An object with keys \"A\", \"B\", \"C\", \"D\", where each value is an answer option string in ${questionLanguageStr}.\n- \"correctAnswer\": (string) The key (\"A\", \"B\", \"C\", or \"D\") of the correct answer.\n- \"allExplanations\": (object) An object with keys \"A\", \"B\", \"C\", \"D\", where each value is the concise explanation string in ${questionLanguageStr} for that option, explicitly referencing the text.\n- \"relevantText\": (string) The sentence or phrase from the paragraph in ${passageLanguageStr} that supports the correct answer.\n\nExample JSON structure:\n{\n  \"paragraph\": \"...\",\n  \"topic\": \"...\",\n  \"question\": \"...\",\n  \"options\": { \"A\": \"...\", \"B\": \"...\", \"C\": \"...\", \"D\": \"...\" },\n  \"correctAnswer\": \"B\",\n  \"allExplanations\": { \"A\": \"Explanation A referencing text...\", \"B\": \"Explanation B referencing text...\", \"C\": \"Explanation C referencing text...\", \"D\": \"Explanation D referencing text...\" },\n  \"relevantText\": \"...\"\n}\n\nEnsure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.\n`;
+      const prompt = `Generate a reading comprehension exercise based on the following parameters:\n- Topic: ${String(topic)}\n- Passage Language: ${passageLangName} (${passageLanguageStr})\n- Question Language: ${questionLangName} (${questionLanguageStr})\n- CEFR Level: ${levelStr}\n- Grammar Guidance: ${grammarGuidance}\n- Vocabulary Guidance: ${vocabularyGuidance}\n\nInstructions:\n1. Create a short paragraph (3-6 sentences) in ${passageLanguageStr} suitable for a ${levelStr} learner, focusing on the topic "${String(topic)}".\n2. Write ONE multiple-choice question in ${questionLanguageStr}. The question should target ONE of the following comprehension skills based on the paragraph: (a) main idea, (b) specific detail, (c) inference (requiring understanding information implied but not explicitly stated), OR (d) vocabulary in context (asking the meaning of a word/phrase as used in the paragraph).\n3. Provide four answer options (A, B, C, D) in ${questionLanguageStr}. Only one option should be correct.\n4. Create plausible distractors (incorrect options B, C, D): These should relate to the topic but be clearly contradicted, unsupported by the paragraph, or represent common misinterpretations based *only* on the text. Avoid options that are completely unrelated or rely on outside knowledge. **Ensure distractors are incorrect specifically because they contradict or are unsupported by the provided paragraph.**\n5. **CRITICAL REQUIREMENT:** The question **must be impossible** to answer correctly *without* reading and understanding the provided paragraph. The answer **must depend solely** on the specific details or implications within the text. Avoid any questions solvable by general knowledge or common sense.\n6. Identify the correct answer key (A, B, C, or D).\n7. Provide **concise explanations** (in ${questionLanguageStr}) for **ALL options (A, B, C, D)**. For the correct answer, explain why it's right. For incorrect answers, explain specifically why they are wrong according to the text. Each explanation MUST explicitly reference the specific part of the paragraph that supports or contradicts the option.\n8. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguageStr}) that provides the primary evidence for the correct answer ("relevantText").\n\nOutput Format: Respond ONLY with a valid JSON object containing the following keys:\n- "paragraph": (string) The generated paragraph in ${passageLanguageStr}.\n- "topic": (string) The topic used: "${String(topic)}".\n- "question": (string) The multiple-choice question in ${questionLanguageStr}.\n- "options": (object) An object with keys "A", "B", "C", "D", where each value is an answer option string in ${questionLanguageStr}.\n- "correctAnswer": (string) The key ("A", "B", "C", or "D") of the correct answer.\n- "allExplanations": (object) An object with keys "A", "B", "C", "D", where each value is the concise explanation string in ${questionLanguageStr} for that option, explicitly referencing the text.\n- "relevantText": (string) The sentence or phrase from the paragraph in ${passageLanguageStr} that supports the correct answer.\n\nExample JSON structure:\n{
+  "paragraph": "...",
+  "topic": "...",
+  "question": "...",
+  "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
+  "correctAnswer": "B",
+  "allExplanations": { "A": "Explanation A referencing text...", "B": "Explanation B referencing text...", "C": "Explanation C referencing text...", "D": "Explanation D referencing text..." },
+  "relevantText": "..."
+}
+
+Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
+`;
 
       const aiResponseContent = await callGoogleAI(prompt, activeModel);
 
@@ -358,7 +360,7 @@ export const generateExerciseResponse = async (
 
       // --- Direct User ID Lookup before saving ---
       let finalUserId: number | null = null;
-      if (session?.user?.id && session?.user?.provider) {
+      if (session?.user.id && session.user.provider) {
         try {
           const userRecord = db
             .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
@@ -381,7 +383,7 @@ export const generateExerciseResponse = async (
         }
       } else {
         console.warn(
-          `[API] Cannot perform direct lookup: Missing session.user.id (${session?.user?.id}) or session.user.provider (${session?.user?.provider})`
+          `[API] Cannot perform direct lookup: Missing session.user.id (${session?.user.id}) or session.user.provider (${session?.user.provider})`
         );
       }
       // --- End Direct User ID Lookup ---
@@ -431,17 +433,17 @@ export const generateExerciseResponse = async (
   }
 
   // --- Fallback Path: Use Cached Exercise ---
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
   const cachedExercise: QuizRow | undefined = await getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
-    session?.user?.dbId || null
+    session?.user.dbId || null
   );
 
   if (cachedExercise) {
     try {
-      const parsedCachedContent = JSON.parse(cachedExercise.content);
+      const parsedCachedContent: unknown = JSON.parse(cachedExercise.content);
       const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
 
       if (!validatedCachedData.success) {
@@ -470,7 +472,7 @@ export const generateExerciseResponse = async (
 
   // --- Final Fallback: No Question Available ---
   console.error(
-    `[API] Exhausted options: Failed to generate and no suitable cache found for lang=${passageLanguage}, level=${level}, user=${session?.user?.dbId ?? 'anonymous'}.`
+    `[API] Exhausted options: Failed to generate and no suitable cache found for lang=${passageLanguage}, level=${level}, user=${session?.user.dbId ?? 'anonymous'}.`
   );
   return {
     quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
@@ -485,7 +487,6 @@ export const countCachedExercises = async (
   questionLanguage: string,
   level: string
 ): Promise<number> => {
-  if (!db) throw new Error('Database not initialized');
   try {
     const stmt = db.prepare<[string, string, string]>(
       `SELECT COUNT(*) as count

@@ -32,7 +32,7 @@ export default async function Page({ params }: PageProps) {
 
   const i18nInstance = await initServerI18n(lang, 'common');
 
-  const resources = i18nInstance?.store?.data || {};
+  const resources = i18nInstance.store.data;
 
   return <PageClientContent initialLanguage={lang} initialI18nStore={resources} />;
 }

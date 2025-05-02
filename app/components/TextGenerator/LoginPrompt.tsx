@@ -30,7 +30,9 @@ const LoginPrompt = () => {
         </div>
       </div>
       <button
-        onClick={() => setShowLoginPrompt(false)}
+        onClick={() => {
+          setShowLoginPrompt(false);
+        }}
         className="absolute top-2 right-2 p-1 text-blue-300 hover:text-white hover:bg-blue-800/50 rounded-full transition-colors"
         aria-label={t('practice.signInPrompt.dismiss')}
         title={t('practice.signInPrompt.dismiss')}

@@ -29,28 +29,34 @@ export const createUISlice: StateCreator<
   showQuestionSection: false,
   showExplanation: false,
 
-  setError: (error) =>
+  setError: (error) => {
     set((state) => {
       state.error = error;
-    }),
-  setLoading: (loading) =>
+    });
+  },
+  setLoading: (loading) => {
     set((state) => {
       state.loading = loading;
-    }),
-  setShowLoginPrompt: (show) =>
+    });
+  },
+  setShowLoginPrompt: (show) => {
     set((state) => {
       state.showLoginPrompt = show;
-    }),
-  setShowContent: (show) =>
+    });
+  },
+  setShowContent: (show) => {
     set((state) => {
       state.showContent = show;
-    }),
-  setShowQuestionSection: (show) =>
+    });
+  },
+  setShowQuestionSection: (show) => {
     set((state) => {
       state.showQuestionSection = show;
-    }),
-  setShowExplanation: (show) =>
+    });
+  },
+  setShowExplanation: (show) => {
     set((state) => {
       state.showExplanation = show;
-    }),
+    });
+  },
 });

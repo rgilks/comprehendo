@@ -85,41 +85,47 @@ export const createQuizSlice: StateCreator<
   hoverCreditsAvailable: INITIAL_HOVER_CREDITS,
   hoverCreditsUsed: 0,
 
-  setQuizData: (data) =>
+  setQuizData: (data) => {
     set((state) => {
       state.quizData = data;
-    }),
-  setSelectedAnswer: (answer) =>
+    });
+  },
+  setSelectedAnswer: (answer) => {
     set((state) => {
       state.selectedAnswer = answer;
-    }),
-  setIsAnswered: (answered) =>
+    });
+  },
+  setIsAnswered: (answered) => {
     set((state) => {
       state.isAnswered = answered;
-    }),
-  setRelevantTextRange: (range) =>
+    });
+  },
+  setRelevantTextRange: (range) => {
     set((state) => {
       state.relevantTextRange = range;
-    }),
+    });
+  },
   setFeedback: (
     correct,
     correctAnswer,
     correctExplanation,
     chosenIncorrectExplanation,
     relevantText
-  ) =>
+  ) => {
     set((state) => {
       state.feedbackIsCorrect = correct;
       state.feedbackCorrectAnswer = correctAnswer;
       state.feedbackCorrectExplanation = correctExplanation;
       state.feedbackChosenIncorrectExplanation = chosenIncorrectExplanation;
       state.feedbackRelevantText = relevantText;
-    }),
+    });
+  },
 
-  _setNextQuizAvailable: (info) =>
+  _setNextQuizAvailable: (info) => {
     set((state) => {
       state.nextQuizAvailable = info;
-    }),
+    });
+  },
 
   resetQuizState: () => {
     set((state) => {
@@ -219,12 +225,8 @@ export const createQuizSlice: StateCreator<
 
       const quizData: PartialQuizData | null = response.quizData;
 
-      if (quizData && !quizData.language) {
+      if (!quizData.language) {
         quizData.language = get().passageLanguage;
-      }
-
-      if (!quizData) {
-        throw new Error('Failed to generate text. No quiz data received from API.');
       }
 
       if (isPrefetch) {
@@ -382,7 +384,7 @@ export const createQuizSlice: StateCreator<
       return;
     }
 
-    if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
+    if (!generatedQuestionLanguage) {
       console.error(
         '[SubmitFeedback][Store] Missing language/level state required for fetching next question.',
         { passageLanguage, generatedQuestionLanguage, cefrLevel }

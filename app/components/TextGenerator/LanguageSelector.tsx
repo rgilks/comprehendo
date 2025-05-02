@@ -36,7 +36,9 @@ const LanguageSelector = () => {
           id="passage-language-select"
           data-testid="language-select"
           value={passageLanguage}
-          onChange={(e) => setPassageLanguage(e.target.value as LearningLanguage)}
+          onChange={(e) => {
+            setPassageLanguage(e.target.value as LearningLanguage);
+          }}
           className="w-full px-3 py-2 text-sm text-white bg-gray-700 border border-gray-600 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors col-span-1"
         >
           {(Object.keys(LEARNING_LANGUAGES) as LearningLanguage[]).map((lang) => (

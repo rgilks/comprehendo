@@ -22,7 +22,7 @@ const AudioControls = () => {
   } = useTextGeneratorStore();
 
   useEffect(() => {
-    if (passageLanguage && isSpeechSupported) {
+    if (isSpeechSupported) {
       if (window.speechSynthesis.getVoices().length === 0) {
         window.speechSynthesis.onvoiceschanged = () => {
           _updateAvailableVoices(passageLanguage);
@@ -32,7 +32,7 @@ const AudioControls = () => {
       }
     }
     return () => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
+      if (typeof window !== 'undefined') {
         window.speechSynthesis.onvoiceschanged = null;
       }
     };
@@ -42,7 +42,7 @@ const AudioControls = () => {
     return null;
   }
 
-  if (!availableVoices || availableVoices.length === 0) {
+  if (availableVoices.length === 0) {
     return null;
   }
 
@@ -68,19 +68,23 @@ const AudioControls = () => {
           max="1"
           step="0.1"
           value={volume}
-          onChange={(e) => setVolumeLevel(parseFloat(e.target.value))}
+          onChange={(e) => {
+            setVolumeLevel(parseFloat(e.target.value));
+          }}
           className="w-24 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
           title={t('common.volume')}
         />
       </div>
 
-      {availableVoices && availableVoices.length > 0 && (
+      {availableVoices.length > 0 && (
         <div className="flex items-center space-x-1">
           {availableVoices.length > 1 ? (
             <div className="relative">
               <select
                 value={selectedVoiceURI || ''}
-                onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                onChange={(e) => {
+                  setSelectedVoiceURI(e.target.value);
+                }}
                 className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-gray-600 focus:border-gray-500 text-sm cursor-pointer max-w-[150px] truncate"
                 title={t('common.selectVoice')}
               >

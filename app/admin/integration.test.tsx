@@ -1,32 +1,34 @@
 import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import { useSession } from 'next-auth/react';
 import { getServerSession } from 'next-auth';
 import AdminPage from './page';
+import { expect } from 'vitest';
+import { Mock } from 'vitest';
 
-jest.mock('next-auth/react', () => ({
-  useSession: jest.fn(),
+vi.mock('next-auth/react', () => ({
+  useSession: vi.fn(),
 }));
 
-jest.mock('next-auth', () => ({
-  getServerSession: jest.fn(),
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn(),
 }));
 
-jest.mock('@/lib/authOptions', () => ({
+vi.mock('@/lib/authOptions', () => ({
   authOptions: {},
 }));
 
-jest.mock('@/lib/db', () => {
+vi.mock('@/lib/db', () => {
   const mockDb = {
-    prepare: jest.fn(),
-    transaction: jest.fn((callback) => callback()),
+    prepare: vi.fn(),
+    transaction: vi.fn((callback) => callback()),
   };
 
   mockDb.prepare.mockImplementation(() => ({
-    all: jest.fn().mockReturnValue([{ name: 'users' }, { name: 'logs' }]),
-    get: jest.fn().mockReturnValue({ totalRows: 10 }),
-    run: jest.fn(),
+    all: vi.fn().mockReturnValue([{ name: 'users' }, { name: 'logs' }]),
+    get: vi.fn().mockReturnValue({ totalRows: 10 }),
+    run: vi.fn(),
   }));
 
   return mockDb;
@@ -34,16 +36,16 @@ jest.mock('@/lib/db', () => {
 
 import { getTableNames, getTableData } from './actions';
 
-jest.mock('./actions', () => ({
-  getTableNames: jest.fn(),
-  getTableData: jest.fn(),
+vi.mock('./actions', () => ({
+  getTableNames: vi.fn(),
+  getTableData: vi.fn(),
 }));
 
 const originalEnv = process.env;
 
 describe('Admin page security integration', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.env = { ...originalEnv, ADMIN_EMAILS: 'admin@example.com,another@example.com' };
   });
 
@@ -53,7 +55,7 @@ describe('Admin page security integration', () => {
 
   describe('Admin access for unauthorized users', () => {
     it('should prevent non-admin users from accessing data through both client and server', async () => {
-      (useSession as jest.Mock).mockReturnValue({
+      (useSession as Mock).mockReturnValue({
         data: {
           user: {
             name: 'Regular User',
@@ -64,12 +66,12 @@ describe('Admin page security integration', () => {
         status: 'authenticated',
       });
 
-      (getServerSession as jest.Mock).mockResolvedValue({
+      (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Regular User', email: 'user@example.com' },
       });
 
-      (getTableNames as jest.Mock).mockResolvedValue({ error: 'Unauthorized' });
-      (getTableData as jest.Mock).mockResolvedValue({ error: 'Unauthorized' });
+      (getTableNames as Mock).mockResolvedValue({ error: 'Unauthorized' });
+      (getTableData as Mock).mockResolvedValue({ error: 'Unauthorized' });
 
       await act(async () => {
         render(<AdminPage />);
@@ -88,7 +90,7 @@ describe('Admin page security integration', () => {
 
   describe('Admin access for authorized users', () => {
     it('should allow admin users to access data through both client and server', async () => {
-      (useSession as jest.Mock).mockReturnValue({
+      (useSession as Mock).mockReturnValue({
         data: {
           user: {
             name: 'Admin User',
@@ -99,12 +101,12 @@ describe('Admin page security integration', () => {
         status: 'authenticated',
       });
 
-      (getServerSession as jest.Mock).mockResolvedValue({
+      (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
 
-      (getTableNames as jest.Mock).mockResolvedValue({ data: ['users', 'logs'] });
-      (getTableData as jest.Mock).mockResolvedValue({
+      (getTableNames as Mock).mockResolvedValue({ data: ['users', 'logs'] });
+      (getTableData as Mock).mockResolvedValue({
         data: {
           data: [{ id: 1, name: 'Test User' }],
           totalRows: 10,
@@ -137,14 +139,14 @@ describe('Admin page security integration', () => {
       ];
 
       for (const testCase of testCases) {
-        (getServerSession as jest.Mock).mockResolvedValue({
+        (getServerSession as Mock).mockResolvedValue({
           user: { name: 'Test User', email: testCase.email },
         });
 
         if (testCase.expected) {
-          (getTableNames as jest.Mock).mockResolvedValue({ data: ['users', 'logs'] });
+          (getTableNames as Mock).mockResolvedValue({ data: ['users', 'logs'] });
         } else {
-          (getTableNames as jest.Mock).mockResolvedValue({ error: 'Unauthorized' });
+          (getTableNames as Mock).mockResolvedValue({ error: 'Unauthorized' });
         }
 
         const result = await getTableNames();

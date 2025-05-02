@@ -7,7 +7,7 @@ import { authOptions } from '@/lib/authOptions';
 const isAdmin = async (): Promise<boolean> => {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session?.user.email) {
     return false;
   }
 

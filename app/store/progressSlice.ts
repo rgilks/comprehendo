@@ -31,7 +31,7 @@ export const createProgressSlice: StateCreator<
       state.isProgressLoading = true;
     });
     const session = await getSession();
-    if (!(session?.user as { dbId?: number })?.dbId) {
+    if (!(session?.user as { dbId?: number }).dbId) {
       set((state) => {
         state.userStreak = null;
         state.isProgressLoading = false;

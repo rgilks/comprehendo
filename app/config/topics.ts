@@ -204,11 +204,6 @@ export const topicsByLevel: CEFRTopics = {
 
 export const getTopicsForLevel = (level: string): string[] => {
   const levelTopics = topicsByLevel[level];
-
-  if (!levelTopics) {
-    return [];
-  }
-
   return levelTopics.flatMap((category) => category.topics);
 };
 

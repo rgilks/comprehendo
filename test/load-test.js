@@ -99,7 +99,6 @@ async function runTest(page, cycleIndex, userId) {
       await page.screenshot({ path: failurePath });
     }
     return -1;
-  } finally {
   }
 }
 
@@ -266,7 +265,7 @@ main().catch((error) => {
 });
 
 group('Load Landing Page', () => {
-  const res = http.get(__ENV.BASE_URL || 'http://localhost:3000/');
+  const res = http.get(process.env.BASE_URL || 'http://localhost:3000/');
   check(res, { 'status is 200': (r) => r.status === 200 });
 });
 

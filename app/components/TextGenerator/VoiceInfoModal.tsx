@@ -26,7 +26,9 @@ const VoiceInfoModal: React.FC<VoiceInfoModalProps> = ({ isOpen, onClose }) => {
     >
       <div
         className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg text-white border border-gray-700"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+        onClick={(e) => {
+          e.stopPropagation();
+        }} // Prevent closing when clicking inside modal
       >
         <div className="flex justify-between items-center mb-4">
           <h2 id="voice-info-title" className="text-xl font-semibold text-blue-400">

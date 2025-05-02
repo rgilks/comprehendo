@@ -84,7 +84,7 @@ export async function translateWordWithGoogle(
       return null;
     }
 
-    const translatedText = data?.data?.translations?.[0]?.translatedText;
+    const translatedText = data.data?.translations?.[0]?.translatedText;
 
     if (translatedText) {
       return translatedText;

@@ -87,7 +87,7 @@ interface UserWithEmail extends User {
 
 const providers = [];
 
-if (validatedAuthEnv?.GITHUB_ID && validatedAuthEnv?.GITHUB_SECRET) {
+if (validatedAuthEnv?.GITHUB_ID && validatedAuthEnv.GITHUB_SECRET) {
   console.log('[NextAuth] GitHub OAuth credentials found, adding provider');
   providers.push(
     GitHub({
@@ -99,7 +99,7 @@ if (validatedAuthEnv?.GITHUB_ID && validatedAuthEnv?.GITHUB_SECRET) {
   console.warn('[NextAuth] GitHub OAuth credentials missing (GITHUB_ID and GITHUB_SECRET)');
 }
 
-if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv?.GOOGLE_CLIENT_SECRET) {
+if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv.GOOGLE_CLIENT_SECRET) {
   console.log('[NextAuth] Google OAuth credentials found, adding provider');
   providers.push(
     Google({
@@ -113,7 +113,7 @@ if (validatedAuthEnv?.GOOGLE_CLIENT_ID && validatedAuthEnv?.GOOGLE_CLIENT_SECRET
   );
 }
 
-if (validatedAuthEnv?.DISCORD_CLIENT_ID && validatedAuthEnv?.DISCORD_CLIENT_SECRET) {
+if (validatedAuthEnv?.DISCORD_CLIENT_ID && validatedAuthEnv.DISCORD_CLIENT_SECRET) {
   console.log('[NextAuth] Discord OAuth credentials found, adding provider');
   providers.push(
     Discord({
@@ -140,7 +140,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     signIn: ({ user, account }: { user: User | AdapterUser; account: Account | null }) => {
       try {
-        if (user && account) {
+        if (account) {
           db.prepare(
             `
             INSERT INTO users (provider_id, provider, name, email, image, last_login, language)
@@ -174,7 +174,7 @@ export const authOptions: NextAuthOptions = {
       user?: UserWithEmail;
       account?: Account | null;
     }) => {
-      if (account && user?.id && user?.email) {
+      if (account && user?.id && user.email) {
         token.provider = account.provider;
         token.email = user.email;
 
@@ -216,25 +216,19 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session: ({ session, token }: { session: Session; token: JWT }) => {
-      if (session.user) {
-        if (token.sub) {
-          session.user.id = token.sub;
-        }
-        if (typeof token.dbId === 'number') {
-          session.user.dbId = token.dbId;
-        } else {
-          console.warn(
-            '[AUTH Session Callback] dbId missing from token. Cannot assign to session.'
-          );
-        }
-        if (typeof token.isAdmin === 'boolean') {
-          session.user.isAdmin = token.isAdmin;
-        }
-        if (token.provider) {
-          session.user.provider = token.provider;
-        }
+      if (token.sub) {
+        session.user.id = token.sub;
+      }
+      if (typeof token.dbId === 'number') {
+        session.user.dbId = token.dbId;
       } else {
-        console.warn('[AUTH Session Callback] session.user object is missing!');
+        console.warn('[AUTH Session Callback] dbId missing from token. Cannot assign to session.');
+      }
+      if (typeof token.isAdmin === 'boolean') {
+        session.user.isAdmin = token.isAdmin;
+      }
+      if (token.provider) {
+        session.user.provider = token.provider;
       }
       return session;
     },
