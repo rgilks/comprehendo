@@ -1,6 +1,7 @@
 import React from 'react';
+import { FormattedValueDisplay } from './FormattedValueDisplay';
 
-// Consolidate button styles - these might be shared or moved later
+// Remove this comment
 
 interface RowDetailViewProps {
   rowData: Record<string, unknown>;
@@ -19,65 +20,6 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({
   isDeleting,
   onClose,
 }) => {
-  const renderValue = (key: string, value: unknown) => {
-    if (value === null || value === undefined) {
-      return <span className="text-gray-500 italic">NULL</span>;
-    }
-
-    if (typeof value === 'boolean') {
-      return value ? 'True' : 'False';
-    }
-
-    if (typeof value === 'number') {
-      return String(value);
-    }
-
-    if (typeof value === 'string' && (key === 'created_at' || key === 'updated_at')) {
-      try {
-        const date = new Date(value);
-        if (!isNaN(date.getTime())) {
-          return date.toLocaleString(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'medium',
-          });
-        }
-      } catch {
-        // Intentionally empty
-      }
-    }
-
-    if (typeof value === 'string') {
-      const trimmedValue = value.trim();
-      if (
-        (trimmedValue.startsWith('{') && trimmedValue.endsWith('}')) ||
-        (trimmedValue.startsWith('[') && trimmedValue.endsWith(']'))
-      ) {
-        try {
-          const parsedJson = JSON.parse(trimmedValue) as Record<string, unknown>;
-          return (
-            <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
-              {JSON.stringify(parsedJson, null, 2)}
-            </pre>
-          );
-        } catch {
-          // Intentionally empty
-        }
-      }
-      return value;
-    }
-
-    if (typeof value === 'object') {
-      return (
-        <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
-          {JSON.stringify(value, null, 2)}
-        </pre>
-      );
-    }
-
-    // Fallback for other types
-    return '[Unsupported Value]';
-  };
-
   const handleDelete = () => {
     if (onDelete) {
       onDelete();
@@ -108,7 +50,9 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({
                   className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} px-4 py-3 sm:px-6`}
                 >
                   <dt className="text-sm font-medium text-gray-600 break-words mb-1">{key}</dt>
-                  <dd className="text-sm text-gray-900 break-words">{renderValue(key, value)}</dd>
+                  <dd className="text-sm text-gray-900 break-words">
+                    <FormattedValueDisplay valueKey={key} value={value} />
+                  </dd>
                 </div>
               ))}
             </dl>

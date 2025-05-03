@@ -36,39 +36,51 @@ export const DataTableControls: React.FC<DataTableControlsProps> = ({
 
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-0 mb-4 text-sm min-h-[38px]">
-      {currentPage === 1 && showControls ? (
-        <button
-          onClick={onRefresh}
-          disabled={isLoading}
-          className={`${refreshButtonClass} px-3 py-1 sm:px-4 sm:py-2`}
-          aria-label="Refresh data"
-        >
-          <HeroRefreshIcon className="h-4 w-4" aria-hidden="true" />
-          <span>{isLoading ? 'Refreshing...' : 'Refresh'}</span>
-        </button>
+      {showControls ? (
+        currentPage === 1 ? (
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className={`${refreshButtonClass} px-3 py-1 sm:px-4 sm:py-2`}
+            aria-label="Refresh data"
+          >
+            <HeroRefreshIcon className="h-4 w-4" aria-hidden="true" />
+            <span>{isLoading ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        ) : (
+          <button
+            onClick={onPreviousPage}
+            disabled={currentPage <= 1 || isLoading}
+            className={secondaryButtonClass}
+            aria-label="Previous page"
+          >
+            <HeroChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )
       ) : (
-        <button
-          onClick={onPreviousPage}
-          disabled={currentPage <= 1 || isLoading || !showControls}
-          className={`${secondaryButtonClass} ${!showControls ? 'invisible' : ''}`}
-          aria-label="Previous page"
-        >
-          <HeroChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
-        </button>
+        <div className="w-[calc(100%/3)] sm:w-auto"></div>
       )}
 
-      <span className={`text-gray-300 ${!showControls ? 'invisible' : ''}`}>
-        Page {currentPage} of {totalPages} (Total: {totalRows} rows)
-      </span>
+      {showControls ? (
+        <span className="text-gray-700">
+          Page {currentPage} of {totalPages} (Total: {totalRows} rows)
+        </span>
+      ) : (
+        <div className="w-[calc(100%/3)] sm:w-auto"></div>
+      )}
 
-      <button
-        onClick={onNextPage}
-        disabled={currentPage >= totalPages || isLoading || !showControls}
-        className={`${secondaryButtonClass} ${!showControls ? 'invisible' : ''}`}
-        aria-label="Next page"
-      >
-        <HeroChevronRightIcon className="h-4 w-4" aria-hidden="true" />
-      </button>
+      {showControls ? (
+        <button
+          onClick={onNextPage}
+          disabled={currentPage >= totalPages || isLoading}
+          className={secondaryButtonClass}
+          aria-label="Next page"
+        >
+          <HeroChevronRightIcon className="h-4 w-4" aria-hidden="true" />
+        </button>
+      ) : (
+        <div className="w-[calc(100%/3)] sm:w-auto"></div>
+      )}
     </div>
   );
 };

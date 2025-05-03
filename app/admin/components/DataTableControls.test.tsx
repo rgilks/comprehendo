@@ -76,6 +76,7 @@ describe('DataTableControls', () => {
   it('hides controls when there are no rows', () => {
     render(<DataTableControls {...defaultProps} totalRows={0} />);
     expect(screen.queryByLabelText('Refresh data')).not.toBeInTheDocument();
+    // Controls should not be rendered at all
     expect(screen.queryByLabelText('Previous page')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Next page')).not.toBeInTheDocument();
     expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
@@ -84,6 +85,7 @@ describe('DataTableControls', () => {
   it('hides controls when there is an error', () => {
     render(<DataTableControls {...defaultProps} error="Failed to load" />);
     expect(screen.queryByLabelText('Refresh data')).not.toBeInTheDocument();
+    // Controls should not be rendered at all
     expect(screen.queryByLabelText('Previous page')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Next page')).not.toBeInTheDocument();
     expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
