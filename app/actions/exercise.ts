@@ -2,13 +2,18 @@
 
 import { z } from 'zod';
 import db from '@/lib/db';
-import { getServerSession } from 'next-auth';
+import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
 import { getActiveModel } from '@/lib/modelConfig';
 import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
-import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
+import {
+  QuizDataSchema,
+  GenerateExerciseResult,
+  type PartialQuizData,
+  QuizData,
+} from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import {
@@ -30,6 +35,166 @@ const _exerciseRequestBodySchema = z.object({
 });
 
 export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
+
+// Helper function for AI generation and validation
+const _generateAndValidateExercise = async ({
+  topic,
+  passageLanguage,
+  questionLanguage,
+  passageLangName,
+  questionLangName,
+  level,
+  grammarGuidance,
+  vocabularyGuidance,
+}: {
+  topic: string;
+  passageLanguage: Language;
+  questionLanguage: Language;
+  passageLangName: string;
+  questionLangName: string;
+  level: CEFRLevel;
+  grammarGuidance: string;
+  vocabularyGuidance: string;
+}): Promise<QuizData> => {
+  const activeModel = getActiveModel();
+
+  const prompt = generateExercisePrompt({
+    topic,
+    passageLanguage,
+    questionLanguage,
+    passageLangName,
+    questionLangName,
+    level,
+    grammarGuidance,
+    vocabularyGuidance,
+  });
+
+  const cleanedAiResponseContent = await callGoogleAI(prompt, activeModel);
+
+  let parsedAiContent: unknown;
+  try {
+    parsedAiContent = JSON.parse(cleanedAiResponseContent);
+  } catch (parseError: unknown) {
+    console.error(
+      '[API:_generateAndValidateExercise] Failed to parse AI response JSON:',
+      parseError,
+      '\nCleaned Response:\n',
+      cleanedAiResponseContent
+    );
+    const errorToCapture = parseError instanceof Error ? parseError : new Error(String(parseError));
+    throw new AIResponseProcessingError(
+      `Failed to parse AI JSON response. Error: ${errorToCapture.message}`,
+      errorToCapture // Pass original error
+    );
+  }
+
+  const validationResult = QuizDataSchema.safeParse(parsedAiContent);
+  if (!validationResult.success) {
+    console.error(
+      '[API:_generateAndValidateExercise] AI response failed Zod validation:',
+      JSON.stringify(validationResult.error.format(), null, 2)
+    );
+    console.error(
+      '[API:_generateAndValidateExercise] Failing AI Response Content:',
+      cleanedAiResponseContent
+    );
+    throw new AIResponseProcessingError(
+      `AI response failed validation. Errors: ${JSON.stringify(validationResult.error.format())}`
+    );
+  }
+  // We return the full data here, the caller will decide what to save/return
+  return validationResult.data;
+};
+
+// Helper function to get DB user ID from session
+const _getDbUserIdFromSession = (session: Session | null): number | null => {
+  if (session?.user.id && session.user.provider) {
+    try {
+      const userRecord = db
+        .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
+        .get(session.user.id, session.user.provider);
+      if (
+        userRecord &&
+        typeof userRecord === 'object' &&
+        'id' in userRecord &&
+        typeof userRecord.id === 'number'
+      ) {
+        return userRecord.id;
+      } else {
+        console.warn(
+          `[API:_getDbUserIdFromSession] Direct lookup failed: Could not find user for providerId: ${session.user.id}, provider: ${session.user.provider}`
+        );
+        return null;
+      }
+    } catch (dbError) {
+      console.error('[API:_getDbUserIdFromSession] Direct lookup DB error:', dbError);
+      return null; // Return null on DB error
+    }
+  } else {
+    console.warn(
+      `[API:_getDbUserIdFromSession] Cannot perform direct lookup: Missing session.user.id (${session?.user.id}) or session.user.provider (${session?.user.provider})`
+    );
+    return null;
+  }
+};
+
+// Helper function to get and validate a cached exercise
+const _getValidatedCachedExercise = (
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  userId: number | null
+): { quizData: PartialQuizData; quizId: number } | undefined => {
+  const cachedExercise: QuizRow | undefined = getCachedExercise(
+    passageLanguage,
+    questionLanguage,
+    level,
+    userId
+  );
+
+  if (cachedExercise) {
+    try {
+      const parsedCachedContent: unknown = JSON.parse(cachedExercise.content);
+      const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
+
+      if (!validatedCachedData.success) {
+        console.error(
+          '[API:_getValidatedCachedExercise] Invalid data found in cache for ID',
+          cachedExercise.id,
+          ':',
+          validatedCachedData.error.format()
+        );
+        // If cache data is invalid, treat it as a cache miss
+        return undefined;
+      } else {
+        // Type is inferred correctly after successful validation
+        const fullData = validatedCachedData.data;
+        const partialData: PartialQuizData = {
+          paragraph: fullData.paragraph,
+          question: fullData.question,
+          options: fullData.options,
+          topic: fullData.topic,
+        };
+        return {
+          quizData: partialData,
+          quizId: cachedExercise.id,
+        };
+      }
+    } catch (error) {
+      console.error(
+        '[API:_getValidatedCachedExercise] Error processing cached exercise ID',
+        cachedExercise.id,
+        ':',
+        error
+      );
+      // If processing fails, treat it as a cache miss
+      return undefined;
+    }
+  }
+
+  // No cached exercise found
+  return undefined;
+};
 
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
@@ -58,7 +223,7 @@ export const generateExerciseResponse = async (
 
   // --- Rate Limit Check ---
   const isAllowed = checkRateLimit(ip);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/await-thenable
+
   if (!isAllowed) {
     console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
     // If rate limited, immediately try to fall back to cache
@@ -69,7 +234,7 @@ export const generateExerciseResponse = async (
   const cachedCount = countCachedExercises(passageLanguage, questionLanguage, level);
 
   // --- Primary Path: Generate New Exercise ---
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/await-thenable
+
   if (isAllowed && cachedCount < CACHE_GENERATION_THRESHOLD) {
     try {
       const topicResult = getRandomTopicForLevel(cefrLevelTyped);
@@ -79,90 +244,32 @@ export const generateExerciseResponse = async (
       const passageLangName: string = LANGUAGES[passageLanguageStr as Language];
       const questionLangName: string = LANGUAGES[questionLanguageStr as Language];
 
-      const activeModel = getActiveModel();
-
-      // Generate the prompt using the new function
-      const prompt = generateExercisePrompt({
-        topic: topic,
+      // Generate the exercise using the helper function
+      const validatedAiData = await _generateAndValidateExercise({
+        topic,
         passageLanguage: passageLanguageStr as Language,
         questionLanguage: questionLanguageStr as Language,
-        passageLangName: passageLangName,
-        questionLangName: questionLangName,
+        passageLangName,
+        questionLangName,
         level: cefrLevelTyped,
-        grammarGuidance: grammarGuidance,
-        vocabularyGuidance: vocabularyGuidance,
+        grammarGuidance,
+        vocabularyGuidance,
       });
 
-      // Call the AI using the new function (which includes cleaning)
-      const cleanedAiResponseContent = await callGoogleAI(prompt, activeModel);
-
-      let parsedAiContent: unknown;
-      try {
-        parsedAiContent = JSON.parse(cleanedAiResponseContent);
-      } catch (parseError: unknown) {
-        console.error(
-          '[API] Failed to parse AI response JSON:',
-          parseError,
-          '\nCleaned Response:\n',
-          cleanedAiResponseContent
-        );
-        const errorToCapture =
-          parseError instanceof Error ? parseError : new Error(String(parseError));
-        throw new AIResponseProcessingError(
-          `Failed to parse AI JSON response. Error: ${errorToCapture.message}`
-        );
-      }
-
-      const validationResult = QuizDataSchema.safeParse(parsedAiContent);
-      if (!validationResult.success) {
-        console.error(
-          '[API] AI response failed Zod validation:',
-          JSON.stringify(validationResult.error.format(), null, 2)
-        );
-        console.error('[API] Failing AI Response Content:', cleanedAiResponseContent);
-        throw new AIResponseProcessingError(
-          `AI response failed validation. Errors: ${JSON.stringify(
-            validationResult.error.format()
-          )}`
-        );
-      }
-      const validatedAiData = validationResult.data;
+      // Prepare the content to be saved (original cleaned string)
+      // Note: We need the string form to save to cache. We re-parse if we fetch from cache.
+      // This assumes _generateAndValidateExercise successfully parsed it, so JSON.stringify should work.
+      const contentToCache = JSON.stringify(validatedAiData);
 
       // --- Direct User ID Lookup before saving ---
-      let finalUserId: number | null = null;
-      if (session?.user.id && session.user.provider) {
-        try {
-          const userRecord = db
-            .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
-            .get(session.user.id, session.user.provider);
-          if (
-            userRecord &&
-            typeof userRecord === 'object' &&
-            'id' in userRecord &&
-            typeof userRecord.id === 'number'
-          ) {
-            finalUserId = userRecord.id;
-          } else {
-            console.warn(
-              `[API] Direct lookup failed: Could not find user for providerId: ${session.user.id}, provider: ${session.user.provider}`
-            );
-          }
-        } catch (dbError) {
-          console.error('[API] Direct lookup DB error:', dbError);
-          // Proceed with finalUserId as null
-        }
-      } else {
-        console.warn(
-          `[API] Cannot perform direct lookup: Missing session.user.id (${session?.user.id}) or session.user.provider (${session?.user.provider})`
-        );
-      }
+      const finalUserId = _getDbUserIdFromSession(session);
       // --- End Direct User ID Lookup ---
 
       const quizId = saveExerciseToCache(
         passageLanguage,
         questionLanguage,
         level,
-        cleanedAiResponseContent, // Save the CLEANED JSON
+        contentToCache, // Save the stringified validated data
         finalUserId // Use the directly looked-up ID
       );
 
@@ -241,41 +348,19 @@ export const generateExerciseResponse = async (
   }
 
   // --- Fallback Path: Use Cached Exercise ---
-
-  const cachedExercise: QuizRow | undefined = getCachedExercise(
+  const userIdForCacheLookup = session?.user.dbId || _getDbUserIdFromSession(session); // Try dbId first, then lookup
+  const validatedCacheResult = _getValidatedCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
-    session?.user.dbId || null
+    userIdForCacheLookup
   );
 
-  if (cachedExercise) {
-    try {
-      const parsedCachedContent: unknown = JSON.parse(cachedExercise.content);
-      const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
-
-      if (!validatedCachedData.success) {
-        console.error('[API] Invalid data found in cache:', validatedCachedData.error.format());
-        // Don't return error, try generating if possible or return empty
-      } else {
-        // Type is inferred correctly after successful validation
-        const fullData = validatedCachedData.data;
-        const partialData: PartialQuizData = {
-          paragraph: fullData.paragraph,
-          question: fullData.question,
-          options: fullData.options,
-          topic: fullData.topic,
-        };
-        return {
-          quizData: partialData,
-          quizId: cachedExercise.id,
-          cached: true,
-        };
-      }
-    } catch (error) {
-      console.error('[API] Error processing cached exercise:', error);
-      // Fall through if cache processing fails
-    }
+  if (validatedCacheResult) {
+    return {
+      ...validatedCacheResult, // Contains quizData and quizId
+      cached: true,
+    };
   }
 
   // --- Final Fallback: No Question Available ---
