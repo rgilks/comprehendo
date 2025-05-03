@@ -50,11 +50,7 @@ test.describe('Core Reading Comprehension Flow', () => {
     for (let i = 0; i < mockApiResponse.options.length; i++) {
       const optionLocator = page.locator(`[data-testid="answer-option-${i}"]`);
       const optionText = mockApiResponse.options[i];
-      if (optionText === undefined) {
-        throw new Error(`Mock data missing option text at index ${i}`);
-      } else {
-        await expect(optionLocator).toContainText(optionText);
-      }
+      await expect(optionLocator).toContainText(optionText);
       await expect(optionLocator).toBeEnabled();
     }
 
@@ -66,11 +62,7 @@ test.describe('Core Reading Comprehension Flow', () => {
     const feedbackLocator = page.locator('[data-testid="feedback-explanation"]');
     await expect(feedbackLocator).toBeVisible();
     const incorrectExplanation = mockApiResponse.explanation.incorrect[0];
-    if (incorrectExplanation === undefined) {
-      throw new Error('Mock data missing incorrect explanation at index 0');
-    } else {
-      await expect(feedbackLocator).toContainText(incorrectExplanation);
-    }
+    await expect(feedbackLocator).toContainText(incorrectExplanation);
     await expect(page.locator('[data-testid="relevant-text"]')).not.toBeVisible(); // Relevant text shouldn't show for incorrect
     await expect(page.locator('[data-testid="next-exercise-button"]')).not.toBeVisible(); // Next button shouldn't show yet
 

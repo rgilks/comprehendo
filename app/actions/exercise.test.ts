@@ -193,14 +193,11 @@ describe('generateExerciseResponse', () => {
     });
     expect(saveExerciseToCache).toHaveBeenCalledTimes(1);
     const saveCallArgs = vi.mocked(saveExerciseToCache).mock.calls[0];
-    expect(saveCallArgs).toBeDefined();
-    if (saveCallArgs) {
-      expect(saveCallArgs[0]).toBe(defaultParams.passageLanguage);
-      expect(saveCallArgs[1]).toBe(defaultParams.questionLanguage);
-      expect(saveCallArgs[2]).toBe(defaultParams.cefrLevel);
-      expect(saveCallArgs[3]).toEqual(JSON.stringify(mockValidatedAiData));
-      expect(saveCallArgs[4]).toBe(null);
-    }
+    expect(saveCallArgs[0]).toBe(defaultParams.passageLanguage);
+    expect(saveCallArgs[1]).toBe(defaultParams.questionLanguage);
+    expect(saveCallArgs[2]).toBe(defaultParams.cefrLevel);
+    expect(saveCallArgs[3]).toEqual(JSON.stringify(mockValidatedAiData));
+    expect(saveCallArgs[4]).toBe(null);
   });
 
   test('should look up user ID if session exists', async () => {

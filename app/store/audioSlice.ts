@@ -351,9 +351,7 @@ export const createAudioSlice: StateCreator<
       );
 
       if (!currentSelectedVoiceAvailable) {
-        // Ensure the first voice exists before accessing its URI
-        const firstVoice = finalUniqueVoices[0];
-        state.selectedVoiceURI = firstVoice ? firstVoice.uri : null;
+        state.selectedVoiceURI = finalUniqueVoices.length > 0 ? finalUniqueVoices[0].uri : null;
       }
     });
   },

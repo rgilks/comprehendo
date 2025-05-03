@@ -204,9 +204,6 @@ export const topicsByLevel: CEFRTopics = {
 
 export const getTopicsForLevel = (level: string): string[] => {
   const levelTopics = topicsByLevel[level];
-  if (!levelTopics) {
-    return [];
-  }
   return levelTopics.flatMap((category) => category.topics);
 };
 
@@ -218,6 +215,5 @@ export const getRandomTopicForLevel = (level: string): string => {
   }
 
   const randomIndex = Math.floor(Math.random() * topics.length);
-  const topic = topics[randomIndex];
-  return topic ?? 'General knowledge';
+  return topics[randomIndex];
 };
