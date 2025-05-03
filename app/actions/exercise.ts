@@ -12,15 +12,12 @@ import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/
 import { authOptions } from '@/lib/authOptions';
 import { GoogleGenAI, GenerationConfig } from '@google/genai';
 import { checkRateLimit } from '@/lib/rate-limiter';
-
-interface QuizRow {
-  id: number;
-  language: string;
-  level: string;
-  content: string;
-  created_at: string;
-  question_language: string | null;
-}
+import {
+  getCachedExercise,
+  saveExerciseToCache,
+  countCachedExercises,
+  type QuizRow,
+} from '@/lib/exercise-cache';
 
 const _exerciseRequestBodySchema = z.object({
   passageLanguage: z.string(),
@@ -45,87 +42,6 @@ const ensureError = (
     return error;
   }
   return new Error(`${defaultMessage}: ${String(error)}`);
-};
-
-export const getCachedExercise = async (
-  passageLanguage: string,
-  questionLanguage: string,
-  level: string,
-  userId: number | null
-): Promise<QuizRow | undefined> => {
-  try {
-    let stmt;
-    let result;
-
-    if (userId !== null) {
-      const sql = `SELECT 
-           q.id, q.language, q.level, q.content, q.created_at, q.question_language
-         FROM 
-           quiz q
-         LEFT JOIN 
-           question_feedback qf ON q.id = qf.quiz_id AND qf.user_id = ?
-         WHERE 
-           q.language = ? 
-           AND q.question_language = ? 
-           AND q.level = ?
-           AND qf.user_id IS NULL -- Ensure no feedback exists for this user
-         ORDER BY 
-           q.created_at DESC 
-         LIMIT 1`;
-      stmt = db.prepare<[number, string, string, string]>(sql);
-      result = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
-    } else {
-      const sql = `SELECT id, language, level, content, created_at, question_language
-         FROM quiz
-         WHERE language = ? AND question_language = ? AND level = ?
-         ORDER BY created_at DESC LIMIT 1`;
-      stmt = db.prepare<[string, string, string]>(sql);
-      result = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
-    }
-
-    return result;
-  } catch (error) {
-    console.error('[API] Error getting cached exercise:', error);
-    return undefined;
-  }
-};
-
-export const saveExerciseToCache = async (
-  passageLanguage: string,
-  questionLanguage: string,
-  level: string,
-  jsonContent: string,
-  userId: number | null
-): Promise<number | undefined> => {
-  try {
-    const result = db
-      .prepare(
-        `
-        INSERT INTO quiz (language, question_language, level, content, created_at, user_id)
-        VALUES (?, ?, ?, ?, datetime('now'), ?) -- Use datetime('now') explicitly and 6 placeholders
-        RETURNING id
-      `
-      )
-      .get(
-        passageLanguage,
-        questionLanguage,
-        level,
-        jsonContent,
-        userId // Pass userId as the 5th argument corresponding to the 6th placeholder
-      ) as { id: number } | undefined;
-
-    if (result?.id) {
-      return result.id;
-    } else {
-      console.error(
-        '[API] Failed to get ID after saving to cache. The insert might have failed silently or RETURNING id did not work as expected.'
-      );
-      return undefined;
-    }
-  } catch (error) {
-    console.error('[API] Error saving to cache during DB operation:', error);
-    return undefined;
-  }
 };
 
 const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Promise<string> => {
@@ -217,7 +133,7 @@ export const generateExerciseResponse = async (
 
   // --- Cache Count Check ---
   const CACHE_GENERATION_THRESHOLD = 100;
-  const cachedCount = await countCachedExercises(passageLanguage, questionLanguage, level);
+  const cachedCount = countCachedExercises(passageLanguage, questionLanguage, level);
 
   // --- Primary Path: Generate New Exercise ---
   if (isAllowed && cachedCount < CACHE_GENERATION_THRESHOLD) {
@@ -323,7 +239,7 @@ Ensure the entire output is a single, valid JSON object string without any surro
       }
       // --- End Direct User ID Lookup ---
 
-      const quizId = await saveExerciseToCache(
+      const quizId = saveExerciseToCache(
         passageLanguage,
         questionLanguage,
         level,
@@ -369,7 +285,7 @@ Ensure the entire output is a single, valid JSON object string without any surro
 
   // --- Fallback Path: Use Cached Exercise ---
 
-  const cachedExercise: QuizRow | undefined = await getCachedExercise(
+  const cachedExercise: QuizRow | undefined = getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
@@ -414,25 +330,4 @@ Ensure the entire output is a single, valid JSON object string without any surro
     quizId: -1,
     error: 'Could not retrieve or generate a question.',
   };
-};
-
-export const countCachedExercises = async (
-  passageLanguage: string,
-  questionLanguage: string,
-  level: string
-): Promise<number> => {
-  try {
-    const stmt = db.prepare<[string, string, string]>(
-      `SELECT COUNT(*) as count
-       FROM quiz
-       WHERE language = ? AND question_language = ? AND level = ?`
-    );
-    const result = stmt.get(passageLanguage, questionLanguage, level) as
-      | { count: number }
-      | undefined;
-    return result?.count ?? 0;
-  } catch (error) {
-    console.error('[API] Error counting cached exercises:', error);
-    return 0; // Return 0 on error to avoid blocking generation if counting fails
-  }
 };
