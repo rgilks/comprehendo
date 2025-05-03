@@ -50,12 +50,7 @@
     "tryAgain": "Erneut versuchen",
     "passage": "Text",
     "question": "Frage",
-    "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D"
-    },
+    "options": {},
     "submit": "Einreichen",
     "correct": "Richtig!",
     "incorrect": "Falsch",
@@ -79,7 +74,6 @@
     "progressUpdateError": "Fehler beim Aktualisieren des Fortschritts",
     "yourProgress": "Dein Fortschritt",
     "currentStreak": "Aktuelle Serie",
-    "startStreak": "Antworte richtig, um eine Serie zu starten",
     "keepGoing": "Mach weiter! Beantworte mehr Fragen richtig",
     "almostLevelUp": "Noch eine richtige Antwort bis zum Levelaufstieg!",
     "correctAnswer": "Richtige Antwort",
@@ -108,8 +102,6 @@
   },
   "admin": {
     "title": "Verwaltung",
-    "users": "Benutzer",
-    "settings": "Einstellungen",
     "logout": "Abmelden"
   },
   "common": {

@@ -50,12 +50,7 @@
     "tryAgain": "Try Again",
     "passage": "Passage",
     "question": "Question",
-    "options": {
-      "a": "Option A",
-      "b": "Option B",
-      "c": "Option C",
-      "d": "Option D"
-    },
+    "options": {},
     "submit": "Submit",
     "correct": "Correct!",
     "incorrect": "Incorrect",
@@ -79,7 +74,6 @@
     "progressUpdateError": "Failed to update progress",
     "yourProgress": "Your Progress",
     "currentStreak": "Current Streak",
-    "startStreak": "",
     "keepGoing": "Keep going! Answer more questions correctly",
     "almostLevelUp": "One more correct answer to level up!",
     "correctAnswer": "Correct Answer",
@@ -109,8 +103,6 @@
   },
   "admin": {
     "title": "Admin",
-    "users": "Users",
-    "settings": "Settings",
     "logout": "Logout"
   },
   "common": {

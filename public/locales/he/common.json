@@ -48,16 +48,10 @@
     "loading": "טוען...",
     "error": "אירעה שגיאה",
     "tryAgain": "נסה שנית",
-    "passage": "טקסט",
+    "passage": "קטע",
     "question": "שאלה",
-    "options": {
-      "a": "אפשרות א'",
-      "b": "אפשרות ב'",
-      "c": "אפשרות ג'",
-      "d": "אפשרות ד'"
-    },
-    "submit": "שלח תשובה",
-    "correct": "תשובה נכונה!",
+    "submit": "שלח",
+    "correct": "נכון!",
     "incorrect": "תשובה לא נכונה",
     "explanation": "הסבר",
     "next": "הבא",
@@ -79,9 +73,8 @@
     "progressUpdateError": "עדכון ההתקדמות נכשל",
     "yourProgress": "ההתקדמות שלך",
     "currentStreak": "רצף נוכחי",
-    "startStreak": "ענה נכון כדי להתחיל רצף",
-    "keepGoing": "המשך כך! ענה נכון על עוד שאלות",
-    "almostLevelUp": "עוד תשובה נכונה אחת לעליית רמה!",
+    "keepGoing": "המשיכו! ענו נכון על עוד שאלות",
+    "almostLevelUp": "תשובה נכונה אחת נוספת לעליית רמה!",
     "correctAnswer": "תשובה נכונה",
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "רחף מעל מילים או לחץ עליהן לתרגום. הזיכויים מוגבלים.",
@@ -107,10 +100,8 @@
     }
   },
   "admin": {
-    "title": "ניהול",
-    "users": "משתמשים",
-    "settings": "הגדרות",
-    "logout": "התנתקות"
+    "title": "מנהל",
+    "logout": "התנתק"
   },
   "common": {
     "language": "שפה",

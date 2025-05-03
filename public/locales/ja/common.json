@@ -50,12 +50,7 @@
     "tryAgain": "再試行",
     "passage": "文章",
     "question": "質問",
-    "options": {
-      "a": "選択肢A",
-      "b": "選択肢B",
-      "c": "選択肢C",
-      "d": "選択肢D"
-    },
+    "options": {},
     "submit": "送信",
     "correct": "正解！",
     "incorrect": "不正解",
@@ -78,10 +73,9 @@
     "correctStreak": "連続正解数",
     "progressUpdateError": "進捗の更新に失敗しました",
     "yourProgress": "あなたの進捗",
-    "currentStreak": "現在の連続正解",
-    "startStreak": "連続正解を開始するには正しく回答してください",
-    "keepGoing": "続けてください！より多くの質問に正しく答えてください",
-    "almostLevelUp": "レベルアップまであと1問正解！",
+    "currentStreak": "現在の連続正解数",
+    "keepGoing": "続けて！もっと正解しましょう",
+    "almostLevelUp": "あと1問正解でレベルアップ！",
     "correctAnswer": "正解",
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "単語にカーソルを合わせるかクリックすると翻訳します。クレジットは制限されています。",
@@ -107,9 +101,7 @@
     }
   },
   "admin": {
-    "title": "管理",
-    "users": "ユーザー",
-    "settings": "設定",
+    "title": "管理者",
     "logout": "ログアウト"
   },
   "common": {

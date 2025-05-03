@@ -48,15 +48,10 @@
     "loading": "लोड हो रहा है...",
     "error": "एक त्रुटि हुई",
     "tryAgain": "पुनः प्रयास करें",
-    "passage": "गद्यांश",
+    "passage": "अनुच्छेद",
     "question": "प्रश्न",
-    "options": {
-      "a": "विकल्प ए",
-      "b": "विकल्प बी",
-      "c": "विकल्प सी",
-      "d": "विकल्प डी"
-    },
-    "submit": "सबमिट करें",
+    "options": {},
+    "submit": "प्रस्तुत करें",
     "correct": "सही!",
     "incorrect": "गलत",
     "explanation": "स्पष्टीकरण",
@@ -78,11 +73,10 @@
     "correctStreak": "सही उत्तरों का क्रम",
     "progressUpdateError": "प्रगति अद्यतन विफल",
     "yourProgress": "आपकी प्रगति",
-    "currentStreak": "वर्तमान क्रम",
-    "startStreak": "क्रम शुरू करने के लिए सही उत्तर दें",
+    "currentStreak": "वर्तमान स्ट्रीक",
     "keepGoing": "जारी रखें! अधिक प्रश्नों का सही उत्तर दें",
     "almostLevelUp": "स्तर बढ़ाने के लिए एक और सही उत्तर!",
-    "correctAnswer": "सही जवाब",
+    "correctAnswer": "सही उत्तर",
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "अनुवाद के लिए शब्दों पर होवर करें या क्लिक करें। क्रेडिट सीमित हैं।",
     "relevantText": "प्रासंगिक पाठ",
@@ -90,7 +84,7 @@
   },
   "languages": {
     "learning": {
-      "en": "अंग्रेज़ी",
+      "en": "अंग्रे़ी",
       "fil": "फिलिपिनो",
       "fr": "फ़्रेंच",
       "de": "जर्मन",
@@ -108,8 +102,6 @@
   },
   "admin": {
     "title": "एडमिन",
-    "users": "उपयोगकर्ता",
-    "settings": "सेटिंग्स",
     "logout": "लॉग आउट"
   },
   "common": {

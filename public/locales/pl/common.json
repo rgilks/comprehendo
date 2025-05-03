@@ -50,12 +50,7 @@
     "tryAgain": "Spróbuj ponownie",
     "passage": "Fragment",
     "question": "Pytanie",
-    "options": {
-      "a": "Opcja A",
-      "b": "Opcja B",
-      "c": "Opcja C",
-      "d": "Opcja D"
-    },
+    "options": {},
     "submit": "Prześlij",
     "correct": "Prawidłowo!",
     "incorrect": "Nieprawidłowo",
@@ -77,12 +72,11 @@
     "streakCompleted": "Seria ukończona! Awans!",
     "correctStreak": "Seria poprawnych odpowiedzi",
     "progressUpdateError": "Nie udało się zaktualizować postępów",
-    "yourProgress": "Twój postęp",
-    "currentStreak": "Bieżąca seria",
-    "startStreak": "",
+    "yourProgress": "Twoje Postępy",
+    "currentStreak": "Aktualna Seria",
     "keepGoing": "Kontynuuj! Odpowiedz poprawnie na więcej pytań",
     "almostLevelUp": "Jeszcze jedna poprawna odpowiedź do awansu!",
-    "correctAnswer": "Odpowiedź prawidłowa",
+    "correctAnswer": "Poprawna Odpowiedź",
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "Najedź kursorem lub kliknij słowa, aby je przetłumaczyć. Kredyty są ograniczone.",
     "relevantText": "Tekst powiązany",
@@ -107,9 +101,7 @@
     }
   },
   "admin": {
-    "title": "Panel administratora",
-    "users": "Użytkownicy",
-    "settings": "Ustawienia",
+    "title": "Admin",
     "logout": "Wyloguj"
   },
   "common": {

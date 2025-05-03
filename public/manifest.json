@@ -4,8 +4,8 @@
   "description": "Improve your language skills with AI-powered reading comprehension exercises",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0a0f1e",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

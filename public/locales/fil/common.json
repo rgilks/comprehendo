@@ -48,14 +48,9 @@
     "loading": "Naglo-load...",
     "error": "Nagkaroon ng error",
     "tryAgain": "Subukang Muli",
-    "passage": "Talata",
+    "passage": "Sipi",
     "question": "Tanong",
-    "options": {
-      "a": "Opsyon A",
-      "b": "Opsyon B",
-      "c": "Opsyon C",
-      "d": "Opsyon D"
-    },
+    "options": {},
     "submit": "Ipasa",
     "correct": "Tama!",
     "incorrect": "Mali",
@@ -77,11 +72,10 @@
     "streakCompleted": "Nakumpleto ang streak! Umakyat sa antas!",
     "correctStreak": "Streak ng mga tamang sagot",
     "progressUpdateError": "Nabigong i-update ang pag-unlad",
-    "yourProgress": "Ang Iyong Pag-unlad",
-    "currentStreak": "Kasalukuyang Streak",
-    "startStreak": "",
-    "keepGoing": "Ituloy mo lang! Sagutin pa ang mga tanong nang tama",
-    "almostLevelUp": "Isang tamang sagot na lang para umakyat sa antas!",
+    "yourProgress": "Iyong Progreso",
+    "currentStreak": "Kasalukuyang Sunod-sunod",
+    "keepGoing": "Magpatuloy! Sagutin pa ng tama ang mga tanong",
+    "almostLevelUp": "Isa pang tamang sagot para umangat ng antas!",
     "correctAnswer": "Tamang Sagot",
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "Mag-hover o mag-click sa mga salita para sa pagsasalin. Limitado ang mga kredito.",
@@ -108,9 +102,7 @@
   },
   "admin": {
     "title": "Admin",
-    "users": "Mga User",
-    "settings": "Mga Setting",
-    "logout": "Mag-logout"
+    "logout": "Mag-log out"
   },
   "common": {
     "language": "Wika",

@@ -48,14 +48,9 @@
     "loading": "Cargando...",
     "error": "Ha ocurrido un error",
     "tryAgain": "Intentar de nuevo",
-    "passage": "Texto",
+    "passage": "Pasaje",
     "question": "Pregunta",
-    "options": {
-      "a": "Opción A",
-      "b": "Opción B",
-      "c": "Opción C",
-      "d": "Opción D"
-    },
+    "options": {},
     "submit": "Enviar",
     "correct": "¡Correcto!",
     "incorrect": "Incorrecto",
@@ -79,7 +74,6 @@
     "progressUpdateError": "Error al actualizar el progreso",
     "yourProgress": "Tu Progreso",
     "currentStreak": "Racha Actual",
-    "startStreak": "Responde correctamente para iniciar una racha",
     "keepGoing": "¡Sigue así! Responde más preguntas correctamente",
     "almostLevelUp": "¡Una respuesta correcta más para subir de nivel!",
     "correctAnswer": "Respuesta Correcta",
@@ -107,9 +101,7 @@
     }
   },
   "admin": {
-    "title": "Administración",
-    "users": "Usuarios",
-    "settings": "Configuración",
+    "title": "Admin",
     "logout": "Cerrar sesión"
   },
   "common": {

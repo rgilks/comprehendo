@@ -48,14 +48,9 @@
     "loading": "로딩 중...",
     "error": "오류가 발생했습니다",
     "tryAgain": "다시 시도",
-    "passage": "지문",
+    "passage": "본문",
     "question": "질문",
-    "options": {
-      "a": "선택지 A",
-      "b": "선택지 B",
-      "c": "선택지 C",
-      "d": "선택지 D"
-    },
+    "options": {},
     "submit": "제출",
     "correct": "정답!",
     "incorrect": "오답",
@@ -79,9 +74,8 @@
     "progressUpdateError": "진행 상황 업데이트 실패",
     "yourProgress": "나의 진행 상황",
     "currentStreak": "현재 연속 정답",
-    "startStreak": "연속 정답 기록 시작하기",
-    "keepGoing": "계속 진행하세요! 더 많은 문제를 맞춰보세요",
-    "almostLevelUp": "레벨 업까지 정답 하나 남았습니다!",
+    "keepGoing": "계속하세요! 더 많은 문제를 맞히세요",
+    "almostLevelUp": "정답 하나만 더 맞히면 레벨업!",
     "correctAnswer": "정답",
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "번역하려면 단어 위에 마우스를 올리거나 클릭하세요. 크레딧은 제한되어 있습니다.",
@@ -107,9 +101,7 @@
     }
   },
   "admin": {
-    "title": "관리",
-    "users": "사용자",
-    "settings": "설정",
+    "title": "관리자",
     "logout": "로그아웃"
   },
   "common": {
