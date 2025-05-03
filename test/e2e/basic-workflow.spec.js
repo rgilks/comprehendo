@@ -48,6 +48,19 @@ test.describe('Basic Workflow Test', () => {
     ).toHaveValue('es', { timeout: 1000 });
   });
 
+  test('should display the correct default CEFR level', async ({ page }) => {
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+
+    const levelDisplay = page.locator('[data-testid="level-display"]');
+    await expect(levelDisplay, 'CEFR level display should be visible').toBeVisible({
+      timeout: 3000,
+    });
+
+    await expect(levelDisplay, 'CEFR level display should show default level').toContainText('A1', {
+      timeout: 1000,
+    });
+  });
+
   test('should show avatar after mock GitHub sign-in', async ({ page }) => {
     await page.route('**/api/auth/session', async (route) => {
       const mockSession = {

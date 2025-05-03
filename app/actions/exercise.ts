@@ -43,12 +43,15 @@ class AIResponseProcessingError extends Error {
   }
 }
 
-function ensureError(error: unknown, defaultMessage: string = 'An unknown error occurred'): Error {
+const ensureError = (
+  error: unknown,
+  defaultMessage: string = 'An unknown error occurred'
+): Error => {
   if (error instanceof Error) {
     return error;
   }
   return new Error(`${defaultMessage}: ${String(error)}`);
-}
+};
 
 export const checkRateLimit = async (ip: string): Promise<boolean> => {
   try {
@@ -192,7 +195,7 @@ export const saveExerciseToCache = async (
   }
 };
 
-async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<string> {
+const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Promise<string> => {
   console.log('[API] Calling Google AI API...');
   const genAI: GoogleGenAI = getGoogleAIClient();
 
@@ -245,7 +248,7 @@ async function callGoogleAI(prompt: string, modelConfig: ModelConfig): Promise<s
     const wrappedError = ensureError(error, 'Failed to generate content using Google AI');
     throw wrappedError;
   }
-}
+};
 
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
@@ -481,7 +484,6 @@ Ensure the entire output is a single, valid JSON object string without any surro
   };
 };
 
-// Function to count existing cached exercises
 export const countCachedExercises = async (
   passageLanguage: string,
   questionLanguage: string,

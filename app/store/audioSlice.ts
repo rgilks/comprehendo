@@ -242,7 +242,7 @@ export const createAudioSlice: StateCreator<
     }
 
     // Generate a unique key for the cache
-    const cacheKey = `${cleanedWord}-${sourceLang}-${targetLang}`;
+    const cacheKey = `${sourceLang}:${targetLang}:${cleanedWord.toLowerCase()}`;
     const cachedTranslation = get().translationCache.get(cacheKey);
 
     // Return cached result if it exists
@@ -256,11 +256,11 @@ export const createAudioSlice: StateCreator<
       // Store the successful translation in the cache
       if (translation) {
         set((state) => {
-          state.translationCache.set(cacheKey, translation);
+          state.translationCache.set(cacheKey, translation.translation);
         });
       }
 
-      return translation;
+      return translation ? translation.translation : null;
     } catch (error: unknown) {
       console.error('Error calling translateWordWithGoogle action:', error);
       get().setError('Translation service failed.');

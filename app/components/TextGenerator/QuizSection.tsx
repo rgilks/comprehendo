@@ -21,6 +21,7 @@ const QuizSection = () => {
     feedbackCorrectAnswer,
     feedbackCorrectExplanation,
     feedbackChosenIncorrectExplanation,
+    generatedPassageLanguage,
   } = useTextGeneratorStore();
 
   const questionLanguage = contextQuestionLanguage;
@@ -42,13 +43,13 @@ const QuizSection = () => {
       <div className="mt-6 space-y-4" data-testid="quiz-section">
         <h3
           className="text-lg font-semibold text-white"
-          data-testid="quiz-question"
+          data-testid="question-text"
           dir={getTextDirection(questionLanguage)}
         >
           {quizData.question}
         </h3>
         <div className="space-y-2" data-testid="quiz-options">
-          {Object.entries(quizData.options).map(([key, value]) => (
+          {Object.entries(quizData.options).map(([key, value], index) => (
             <button
               key={key}
               onClick={handleAsyncClick(key)}
@@ -64,7 +65,7 @@ const QuizSection = () => {
                     ? 'bg-blue-900/50 border-blue-700 text-blue-100'
                     : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
               }`}
-              data-testid={`quiz-option-${key}`}
+              data-testid={`answer-option-${index}`}
             >
               {value}
               {isAnswered &&
@@ -85,21 +86,53 @@ const QuizSection = () => {
           ))}
         </div>
 
-        {isAnswered && showExplanation && feedbackCorrectExplanation && (
+        {/* Main Feedback Area */}
+        {isAnswered && showExplanation && (
           <div
             className="mt-6 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow"
-            data-testid="correct-explanation-section"
+            data-testid="feedback-explanation"
           >
             <h4 className="text-lg font-semibold mb-3 text-blue-300">
               {t('practice.explanation')}
             </h4>
-            <div
-              className="p-2 rounded bg-green-900/30 ring-1 ring-green-600/50 text-green-200"
-              data-testid="correct-explanation-text"
-              dir={getTextDirection(questionLanguage)}
-            >
-              {feedbackCorrectExplanation}
-            </div>
+
+            {/* Correct Explanation Specific Text */}
+            {feedbackCorrectExplanation && (
+              <div
+                className="p-2 rounded bg-green-900/30 ring-1 ring-green-600/50 text-green-200 mb-4"
+                data-testid="correct-explanation-text"
+                dir={getTextDirection(questionLanguage)}
+              >
+                {feedbackCorrectExplanation}
+              </div>
+            )}
+
+            {/* Placeholder for Relevant Text - needs actual implementation & data */}
+            {feedbackIsCorrect &&
+              feedbackCorrectAnswer &&
+              quizData.options[feedbackCorrectAnswer as keyof typeof quizData.options] && (
+                <div
+                  className="p-2 rounded bg-blue-900/30 ring-1 ring-blue-600/50 text-blue-200 mb-4"
+                  data-testid="relevant-text"
+                >
+                  <strong>{t('practice.relevantText')}:</strong>{' '}
+                  <span dir={getTextDirection(generatedPassageLanguage || 'en')}>
+                    {/* Displaying correct answer option as placeholder */}
+                    {quizData.options[feedbackCorrectAnswer as keyof typeof quizData.options]}
+                  </span>
+                </div>
+              )}
+
+            {/* Placeholder for Next Button - needs actual implementation */}
+            {feedbackIsCorrect && (
+              <button
+                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                data-testid="next-exercise-button"
+                // onClick={handleGenerateNewExercise} // Needs corresponding action
+              >
+                {t('practice.nextExercise')}
+              </button>
+            )}
           </div>
         )}
       </div>

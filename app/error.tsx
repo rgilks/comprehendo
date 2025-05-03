@@ -2,35 +2,31 @@
 
 import { useEffect } from 'react';
 
-export default function Error({
+export const Error = ({
   error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}) => {
   useEffect(() => {
-    console.error('Caught Error:', error);
+    console.error(error);
   }, [error]);
 
   return (
-    <html>
-      <body>
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong!</h2>
-            <p className="text-gray-600 mb-4">
-              We&apos;ve been notified about this error and are working to fix it.
-            </p>
-            <button
-              onClick={reset}
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      </body>
-    </html>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <h2 className="text-2xl font-semibold mb-4">Something went wrong!</h2>
+      <p className="text-lg mb-6 text-center px-4">
+        {error.message || 'An unexpected error occurred.'}
+      </p>
+      <button
+        onClick={reset}
+        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+      >
+        Try again
+      </button>
+    </div>
   );
-}
+};
+
+export default Error;

@@ -1,8 +1,9 @@
-import { type Language, LANGUAGES } from '@/config/languages';
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
+import { Metadata } from 'next';
 import { initServerI18n } from '../i18n';
 import PageClientContent from './PageClientContent';
+import type { Language } from '@/config/languages';
+import { LANGUAGES } from '@/config/languages';
+import { notFound } from 'next/navigation';
 
 export const generateMetadata = (): Metadata => {
   return {
@@ -17,22 +18,22 @@ export const generateStaticParams = () => {
   }));
 };
 
-type PageProps = {
-  params: Promise<{ lang: string }>;
-};
+interface PageProps {
+  params: Promise<{ lang: Language }>;
+}
 
-export default async function Page({ params }: PageProps) {
+const Page = async ({ params }: PageProps) => {
   const resolvedParams = await params;
-  const lang = resolvedParams.lang as Language;
+  const lang = resolvedParams.lang;
 
-  const validLanguages = Object.keys(LANGUAGES);
-  if (!validLanguages.includes(lang)) {
+  if (!LANGUAGES[lang]) {
     notFound();
   }
 
-  const i18nInstance = await initServerI18n(lang, 'common');
-
+  const i18nInstance = await initServerI18n(lang, ['common', 'exercise']);
   const resources = i18nInstance.store.data;
 
   return <PageClientContent initialLanguage={lang} initialI18nStore={resources} />;
-}
+};
+
+export default Page;

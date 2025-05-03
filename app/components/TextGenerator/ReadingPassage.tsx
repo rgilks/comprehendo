@@ -90,7 +90,7 @@ const ReadingPassage = () => {
 
       <div
         className="prose prose-xl prose-invert max-w-none text-gray-300 leading-relaxed"
-        data-testid="passage-content"
+        data-testid="passage-text"
       >
         <div dir={getTextDirection(generatedPassageLanguage)}>
           {renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)}

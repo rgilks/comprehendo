@@ -6,12 +6,11 @@ import nextPlugin from '@next/eslint-plugin-next';
 import reactPlugin from 'eslint-plugin-react';
 import hooksPlugin from 'eslint-plugin-react-hooks';
 import prettierConfig from 'eslint-config-prettier';
-import globals from 'globals'; // Import globals
+import globals from 'globals';
 
-// Helper function to remove a specific global from a globals object
 const removeGlobal = (globalsObj, globalToRemove) => {
   const rest = { ...globalsObj };
-  delete rest[globalToRemove]; // Delete the key directly
+  delete rest[globalToRemove];
   return rest;
 };
 

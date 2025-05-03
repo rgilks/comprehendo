@@ -7,8 +7,10 @@ import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({
-  weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-poppins',
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
 });
 
 export const viewport: Viewport = {
@@ -46,11 +48,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+const RootLayout = async ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   const cookieStore = await cookies();
   const locale = (cookieStore.get('NEXT_LOCALE')?.value || 'en') as Language;
 
@@ -71,4 +73,6 @@ export default async function RootLayout({
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

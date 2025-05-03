@@ -56,7 +56,9 @@ describe('app/[lang]/page.tsx', () => {
   describe('Page Component', () => {
     it('should call notFound for invalid language', async () => {
       const invalidLang = 'xx';
-      const params = Promise.resolve({ lang: invalidLang });
+      const params = Promise.resolve({ lang: invalidLang }) as unknown as Promise<{
+        lang: Language;
+      }>;
 
       await expect(Page({ params })).rejects.toThrow('NEXT_NOT_FOUND');
 
@@ -80,7 +82,7 @@ describe('app/[lang]/page.tsx', () => {
 
       expect(notFound).not.toHaveBeenCalled();
       expect(initServerI18n).toHaveBeenCalledTimes(1);
-      expect(initServerI18n).toHaveBeenCalledWith(validLang, 'common');
+      expect(initServerI18n).toHaveBeenCalledWith(validLang, ['common', 'exercise']);
 
       await waitFor(() => {
         expect(PageClientContent).toHaveBeenCalledTimes(1);
@@ -111,7 +113,7 @@ describe('app/[lang]/page.tsx', () => {
       render(PageComponent);
 
       expect(notFound).not.toHaveBeenCalled();
-      expect(initServerI18n).toHaveBeenCalledWith(validLang, 'common');
+      expect(initServerI18n).toHaveBeenCalledWith(validLang, ['common', 'exercise']);
       await waitFor(() => {
         expect(PageClientContent).toHaveBeenCalledWith(
           {
@@ -135,7 +137,7 @@ describe('app/[lang]/page.tsx', () => {
       await expect(Page({ params })).rejects.toThrow(i18nError);
 
       expect(initServerI18n).toHaveBeenCalledTimes(1);
-      expect(initServerI18n).toHaveBeenCalledWith(validLang, 'common');
+      expect(initServerI18n).toHaveBeenCalledWith(validLang, ['common', 'exercise']);
       expect(notFound).not.toHaveBeenCalled();
       expect(PageClientContent).not.toHaveBeenCalled();
     });

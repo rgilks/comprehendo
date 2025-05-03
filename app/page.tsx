@@ -3,28 +3,8 @@
 import TextGenerator from '@/components/TextGenerator';
 import Link from 'next/link';
 import AuthButton from '@/components/AuthButton';
-import { useLanguage, type Language } from '@/contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
-
-const LanguageSelector = () => {
-  const { language, setLanguage, languages } = useLanguage();
-
-  return (
-    <select
-      value={language}
-      onChange={(e) => {
-        void setLanguage(e.target.value as Language);
-      }}
-      className="absolute top-4 left-4 bg-transparent text-white text-sm border border-gray-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-500 hover:border-gray-500 transition-colors cursor-pointer"
-    >
-      {(Object.keys(languages) as Language[]).map((lang) => (
-        <option key={lang} value={lang} className="bg-gray-800 cursor-pointer">
-          {languages[lang]}
-        </option>
-      ))}
-    </select>
-  );
-};
+import LanguageSelector from '@/components/LanguageSelector';
 
 const HomeContent = () => {
   const { t } = useTranslation('common');
@@ -71,6 +51,8 @@ const HomeContent = () => {
   );
 };
 
-export default function Home() {
+const Home = () => {
   return <HomeContent />;
-}
+};
+
+export default Home;
