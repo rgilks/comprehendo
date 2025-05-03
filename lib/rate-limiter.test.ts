@@ -15,19 +15,16 @@ const MAX_REQUESTS_PER_HOUR = 100;
 
 describe('checkRateLimit', () => {
   beforeEach(() => {
-    // Reset the manual mock before each test
-    mockDb.prepare.mockClear().mockReturnThis(); // Ensure chaining is reset
-    mockDb.get.mockClear();
+    mockDb.prepare.mockClear().mockReturnThis();
+    mockDb.get.mockClear().mockReturnValue(undefined);
     mockDb.run.mockClear();
-    // Reset any mock return values if necessary for specific tests
-    mockDb.get.mockReturnValue(undefined); // Default to IP not found
-
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T12:00:00.000Z'));
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    mockDb.prepare.mockImplementation(vi.fn().mockReturnThis()); // Reset any specific mock implementation for prepare
   });
 
   it('should allow the first request from an IP and create a record', () => {
@@ -130,16 +127,23 @@ describe('checkRateLimit', () => {
   it('should return false (fail closed) if the database insert operation fails', () => {
     const ip = '192.168.1.6';
     const dbError = new Error('Insert failed');
+    const specificPrepareMock = vi.fn().mockImplementation(() => {
+      throw dbError;
+    });
 
     mockDb.prepare.mockImplementation((sql: string) => {
       if (sql.startsWith('INSERT')) {
-        return {
-          run: vi.fn().mockImplementation(() => {
-            throw dbError;
-          }),
-        };
+        return { run: specificPrepareMock };
       }
-      return { get: mockDb.get, run: mockDb.run };
+      // Important: Return an object with the *original* mock functions for other SQL commands
+      // to ensure other parts of the mock remain functional if needed within the same test.
+      // Use mockReturnThis() for chaining if the actual prepare returns `this`.
+      return {
+        get: mockDb.get,
+        run: mockDb.run,
+        // If prepare itself is chainable:
+        // prepare: mockDb.prepare
+      };
     });
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -149,26 +153,32 @@ describe('checkRateLimit', () => {
     expect(mockDb.prepare).toHaveBeenCalledWith(
       'INSERT INTO rate_limits (ip_address, request_count, window_start_time) VALUES (?, 1, ?)'
     );
+    // Expect the specific mock for run (via prepare) to have been called
+    expect(specificPrepareMock).toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith('[RateLimiter] Error checking rate limit:', dbError);
 
     errorSpy.mockRestore();
-    mockDb.prepare.mockImplementation(vi.fn().mockReturnThis());
+    // Resetting prepare implementation is now handled in afterEach
   });
 
   it('should return false (fail closed) if the database update operation fails', () => {
     const ip = '192.168.1.7';
     const startTime = new Date('2024-01-01T12:00:00.000Z').toISOString();
     const dbError = new Error('Update failed');
+    const specificPrepareMock = vi.fn().mockImplementation(() => {
+      throw dbError;
+    });
+
     mockDb.get.mockReturnValue({ request_count: 5, window_start_time: startTime });
     mockDb.prepare.mockImplementation((sql: string) => {
       if (sql.startsWith('UPDATE')) {
-        return {
-          run: vi.fn().mockImplementation(() => {
-            throw dbError;
-          }),
-        };
+        return { run: specificPrepareMock };
       }
-      return { get: mockDb.get, run: mockDb.run };
+      // Maintain consistency as in the previous test
+      return {
+        get: mockDb.get,
+        run: mockDb.run,
+      };
     });
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -179,9 +189,10 @@ describe('checkRateLimit', () => {
     expect(mockDb.prepare).toHaveBeenCalledWith(
       'UPDATE rate_limits SET request_count = request_count + 1 WHERE ip_address = ?'
     );
+    expect(specificPrepareMock).toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith('[RateLimiter] Error checking rate limit:', dbError);
 
     errorSpy.mockRestore();
-    mockDb.prepare.mockImplementation(vi.fn().mockReturnThis());
+    // Resetting prepare implementation is now handled in afterEach
   });
 });
