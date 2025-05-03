@@ -141,6 +141,8 @@ Comprehendo implements strategies to manage AI API costs:
       - `NEXTAUTH_URL=http://localhost:3000` (for local dev)
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
       - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
+      - `RATE_LIMIT_MAX_REQUESTS_PER_HOUR`: (Optional, default 100) Max exercise generation requests per IP per hour.
+      - `RATE_LIMIT_WINDOW_MS`: (Optional, default 3600000) The window for rate limiting in milliseconds (1 hour).
     - Ensure at least one AI provider and one Auth provider (if desired) are configured.
 
 4.  **Run Dev Server:**
@@ -167,6 +169,7 @@ Continuous Deployment is set up via GitHub Actions (`.github/workflows/fly.yml`)
     - Import secrets: `fly secrets import --app <your-app-name> < .env.local`
     - Verify/set individual secrets if needed: `fly secrets set KEY=VALUE --app <your-app-name>`
     - **Ensure `ADMIN_EMAILS` is set for production admin access.**
+    - **Ensure `RATE_LIMIT_MAX_REQUESTS_PER_HOUR` and `RATE_LIMIT_WINDOW_MS` are set appropriately for production.**
 5.  **Get Fly Token:** `fly auth token` (Copy the token)
 6.  **Add GitHub Secret:**
     - Repo > Settings > Secrets and variables > Actions > "New repository secret".
