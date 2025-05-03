@@ -1,8 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
-import { getGoogleAIClient } from '@/lib/modelConfig';
+import { getActiveModel, getGoogleAIClient } from '@/lib/modelConfig';
 import type { Language } from '@/config/languages';
 import type { CEFRLevel } from '@/config/language-guidance';
 import type { ModelConfig } from '@/lib/modelConfig';
+import { QuizDataSchema, type QuizData } from '@/lib/domain/schemas';
 
 // Define interfaces for structured prompt parameters and AI response
 // (Could potentially reuse/refine QuizDataSchema here if appropriate)
@@ -27,6 +28,66 @@ export class AIResponseProcessingError extends Error {
     this.name = 'AIResponseProcessingError';
   }
 }
+
+// Helper function for AI generation and validation
+export const generateAndValidateExercise = async ({
+  topic,
+  passageLanguage,
+  questionLanguage,
+  passageLangName,
+  questionLangName,
+  level,
+  grammarGuidance,
+  vocabularyGuidance,
+}: ExerciseGenerationParams): Promise<QuizData> => {
+  const activeModel = getActiveModel();
+
+  const prompt = generateExercisePrompt({
+    topic,
+    passageLanguage,
+    questionLanguage,
+    passageLangName,
+    questionLangName,
+    level,
+    grammarGuidance,
+    vocabularyGuidance,
+  });
+
+  const cleanedAiResponseContent = await callGoogleAI(prompt, activeModel);
+
+  let parsedAiContent: unknown;
+  try {
+    parsedAiContent = JSON.parse(cleanedAiResponseContent);
+  } catch (parseError: unknown) {
+    console.error(
+      '[AI:generateAndValidateExercise] Failed to parse AI response JSON:',
+      parseError,
+      '\nCleaned Response:\n',
+      cleanedAiResponseContent
+    );
+    const errorToCapture = parseError instanceof Error ? parseError : new Error(String(parseError));
+    throw new AIResponseProcessingError(
+      `Failed to parse AI JSON response. Error: ${errorToCapture.message}`,
+      errorToCapture // Pass original error
+    );
+  }
+
+  const validationResult = QuizDataSchema.safeParse(parsedAiContent);
+  if (!validationResult.success) {
+    console.error(
+      '[AI:generateAndValidateExercise] AI response failed Zod validation:',
+      JSON.stringify(validationResult.error.format(), null, 2)
+    );
+    console.error(
+      '[AI:generateAndValidateExercise] Failing AI Response Content:',
+      cleanedAiResponseContent
+    );
+    throw new AIResponseProcessingError(
+      `AI response failed validation. Errors: ${JSON.stringify(validationResult.error.format())}`
+    );
+  }
+  return validationResult.data;
+};
 
 export const generateExercisePrompt = (params: ExerciseGenerationParams): string => {
   const {
@@ -56,7 +117,6 @@ Ensure the entire output is a single, valid JSON object string without any surro
   return prompt;
 };
 
-// Move the callGoogleAI function here
 export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Promise<string> => {
   console.log('[AI Generator] Calling Google AI API...');
   const genAI: GoogleGenAI = getGoogleAIClient();

@@ -1,4 +1,5 @@
 import db from '@/lib/db';
+import { QuizDataSchema, type PartialQuizData } from '@/lib/domain/schemas';
 
 export interface QuizRow {
   id: number;
@@ -109,4 +110,62 @@ export const countCachedExercises = (
     console.error('[Cache] Error counting cached exercises:', error);
     return 0;
   }
+};
+
+// Helper function to get and validate a cached exercise
+export const getValidatedExerciseFromCache = (
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  userId: number | null
+): { quizData: PartialQuizData; quizId: number } | undefined => {
+  const cachedExercise: QuizRow | undefined = getCachedExercise(
+    passageLanguage,
+    questionLanguage,
+    level,
+    userId
+  );
+
+  if (cachedExercise) {
+    try {
+      const parsedCachedContent: unknown = JSON.parse(cachedExercise.content);
+      const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
+
+      if (!validatedCachedData.success) {
+        console.error(
+          '[Cache:getValidated] Invalid data found in cache for ID',
+          cachedExercise.id,
+          ':',
+          validatedCachedData.error.format()
+        );
+        // If cache data is invalid, treat it as a cache miss
+        return undefined;
+      } else {
+        // Type is inferred correctly after successful validation
+        const fullData = validatedCachedData.data;
+        const partialData: PartialQuizData = {
+          paragraph: fullData.paragraph,
+          question: fullData.question,
+          options: fullData.options,
+          topic: fullData.topic,
+        };
+        return {
+          quizData: partialData,
+          quizId: cachedExercise.id,
+        };
+      }
+    } catch (error) {
+      console.error(
+        '[Cache:getValidated] Error processing cached exercise ID',
+        cachedExercise.id,
+        ':',
+        error
+      );
+      // If processing fails, treat it as a cache miss
+      return undefined;
+    }
+  }
+
+  // No cached exercise found
+  return undefined;
 };
