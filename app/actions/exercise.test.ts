@@ -12,7 +12,9 @@ import { z } from 'zod';
 // Remove unused imports
 // import { z } from 'zod';
 // import { ValidatedAiDataSchema as RealValidatedAiDataSchema } from '@/lib/domain/schemas';
-import { LanguageSchema as RealLanguageSchema } from '@/lib/domain/language'; // Keep this import for reference if needed, but don't use in mock
+// import { type User } from 'next-auth';
+// Keep this import for reference if needed, but don't use in mock
+// import { LanguageSchema as RealLanguageSchema } from '@/lib/domain/language';
 
 // --- Mocks ---
 const { getServerSession } = await import('next-auth');
@@ -53,11 +55,12 @@ vi.mock('@/config/languages', () => ({
   Language: {} as any,
 }));
 
-vi.mock('@/config/language-guidance', () => ({
-  getGrammarGuidance: vi.fn(() => 'mock grammar guidance'),
-  getVocabularyGuidance: vi.fn(() => 'mock vocabulary guidance'),
-  CEFRLevel: {} as any,
-}));
+// REMOVE THIS MOCK - Prefer mocking domain path
+// vi.mock('@/config/language-guidance', () => ({
+//   getGrammarGuidance: vi.fn(() => 'mock grammar guidance'),
+//   getVocabularyGuidance: vi.fn(() => 'mock vocabulary guidance'),
+//   CEFRLevel: {} as any,
+// }));
 
 vi.mock('@/config/topics', () => ({
   getRandomTopicForLevel: vi.fn(() => 'mock topic'),
@@ -101,10 +104,18 @@ vi.mock('@/lib/domain/language', () => ({
   }, // Let's try omitting it first, hoping the original is resolved by dependent modules
 }));
 
-vi.mock('@/lib/domain/language-guidance', () => ({
-  getGrammarGuidance: vi.fn().mockReturnValue('mock grammar guidance'),
-  getVocabularyGuidance: vi.fn().mockReturnValue('mock vocabulary guidance'),
-}));
+vi.mock('@/lib/domain/language-guidance', async (importOriginal) => {
+  // Move import inside factory
+  const { z } = await import('zod');
+  const actual = await importOriginal<typeof import('@/lib/domain/language-guidance')>();
+  return {
+    ...actual, // Keep original exports unless specifically mocked
+    getGrammarGuidance: vi.fn().mockReturnValue('mock grammar guidance'),
+    getVocabularyGuidance: vi.fn().mockReturnValue('mock vocabulary guidance'),
+    // Use the imported z here
+    CEFRLevelSchema: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
+  };
+});
 
 // --- Test Suite ---
 describe('generateExerciseResponse', () => {
