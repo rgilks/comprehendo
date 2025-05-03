@@ -1,12 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page, type Browser } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env['BASE_URL'] || 'http://localhost:3000';
+// Default to English for base target URL if not specified otherwise
 const TARGET_URL = `${BASE_URL}/en`;
 
 test.describe('Basic Workflow Test', () => {
-  test('should allow changing UI language', async ({ page }) => {
-    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+  test('should allow changing UI language', async ({ page }: { page: Page }) => {
+    await page.goto(TARGET_URL);
 
+    // Wait for the language dropdown button specifically
     const languageDropdownButton = page.locator('#language-select-button');
     await expect(languageDropdownButton, 'Language dropdown button should be visible').toBeVisible({
       timeout: 5000,
@@ -14,7 +16,7 @@ test.describe('Basic Workflow Test', () => {
 
     await languageDropdownButton.click();
 
-    const spanishLangOption = page.locator('div[role="menu"] button:has-text("Español")');
+    const spanishLangOption = page.getByRole('menuitem', { name: 'Español' });
     await expect(
       spanishLangOption,
       'Spanish language option should be visible in dropdown'
@@ -22,22 +24,28 @@ test.describe('Basic Workflow Test', () => {
 
     await spanishLangOption.click();
 
-    const expectedSpanishUrl = `${BASE_URL}/es`;
-    await page.waitForURL(expectedSpanishUrl, { waitUntil: 'networkidle' });
-
+    // Wait for the button text to change, indicating navigation/language update is complete
     const generateButton = page.locator('[data-testid="generate-button"]');
-    await expect(generateButton, 'Generate button should have Spanish text').toHaveText(
+    await expect(
+      generateButton,
+      'Generate button should have Spanish text after language change'
+    ).toHaveText(
       'Genera un nuevo texto',
-      { timeout: 2000 }
+      { timeout: 3000 } // Increased timeout slightly for potential hydration/update delay
     );
+
+    // Optional: Check URL as a secondary confirmation
+    const expectedSpanishUrl = `${BASE_URL}/es`;
+    await expect(page, 'URL should update to Spanish language code').toHaveURL(expectedSpanishUrl);
   });
 
-  test('should allow changing passage (learning) language', async ({ page }) => {
-    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+  test('should allow changing passage (learning) language', async ({ page }: { page: Page }) => {
+    await page.goto(TARGET_URL);
 
     const passageLangSelect = page.locator('[data-testid="language-select"]');
+    // Wait for the element itself first
     await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible({
-      timeout: 2000,
+      timeout: 3000,
     });
 
     await passageLangSelect.selectOption({ value: 'es' });
@@ -48,8 +56,8 @@ test.describe('Basic Workflow Test', () => {
     ).toHaveValue('es', { timeout: 1000 });
   });
 
-  test('should display the correct default CEFR level', async ({ page }) => {
-    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+  test('should display the correct default CEFR level', async ({ page }: { page: Page }) => {
+    await page.goto(TARGET_URL);
 
     const levelDisplay = page.locator('[data-testid="level-display"]');
     await expect(levelDisplay, 'CEFR level display should be visible').toBeVisible({
@@ -61,7 +69,8 @@ test.describe('Basic Workflow Test', () => {
     });
   });
 
-  test('should show avatar after mock GitHub sign-in', async ({ page }) => {
+  test('should show avatar after mock GitHub sign-in', async ({ page }: { page: Page }) => {
+    // Mock the session API response
     await page.route('**/api/auth/session', async (route) => {
       const mockSession = {
         user: {
@@ -78,9 +87,10 @@ test.describe('Basic Workflow Test', () => {
       });
     });
 
-    await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
+    await page.goto(TARGET_URL);
 
-    const avatarImage = page.locator('img[alt="Mock User"]');
+    // Use getByAltText for better semantics if possible, or keep current selector
+    const avatarImage = page.getByAltText('Mock User');
 
     await expect(avatarImage, 'Avatar image should be visible after mock login').toBeVisible({
       timeout: 5000,
@@ -93,20 +103,26 @@ test.describe('Basic Workflow Test', () => {
     ).toHaveAttribute('src', new RegExp(expectedEncodedUrlPart));
   });
 
-  test('should allow admin user to access admin page', async ({ browser }) => {
+  test('should allow admin user to access admin page', async ({
+    browser,
+  }: {
+    browser: Browser;
+  }) => {
     const context = await browser.newContext({
       storageState: 'test/e2e/auth/admin.storageState.json',
     });
     const page = await context.newPage();
 
     const adminUrl = `${BASE_URL}/admin`;
-    await page.goto(adminUrl, { waitUntil: 'networkidle' });
+    await page.goto(adminUrl);
 
-    const adminHeading = page.locator('h1:has-text("Comprehendo admin")');
+    // Wait for the heading specific to the admin page
+    const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
     await expect(adminHeading, 'Admin page heading should be visible').toBeVisible({
       timeout: 3000,
     });
 
+    // Check that common elements from the non-admin page are NOT visible as an extra check
     const unauthorizedMessage = page.locator(
       'text=/Unauthorized|You do not have admin permissions./i'
     );
@@ -118,18 +134,38 @@ test.describe('Basic Workflow Test', () => {
     await context.close();
   });
 
-  test('should prevent non-admin user from accessing admin page', async ({ browser }) => {
+  test('should prevent non-admin user from accessing admin page', async ({
+    browser,
+  }: {
+    browser: Browser;
+  }) => {
     const context = await browser.newContext({
       storageState: 'test/e2e/auth/nonAdmin.storageState.json',
     });
     const page = await context.newPage();
 
     const adminUrl = `${BASE_URL}/admin`;
-    await page.goto(adminUrl, { waitUntil: 'networkidle' });
+    await page.goto(adminUrl);
 
-    await expect(page, 'User should be redirected from /admin').toHaveURL(TARGET_URL, {
-      timeout: 5000,
+    // Instead of just checking URL, wait for an element on the page we expect to be redirected TO.
+    // Using the language dropdown button as an example element from the main page.
+    const languageDropdownButton = page.locator('#language-select-button');
+    await expect(
+      languageDropdownButton,
+      'Should be redirected to main page (language button visible)'
+    ).toBeVisible({ timeout: 5000 });
+
+    // Optionally, still check the URL if desired
+    await expect(page, 'URL should be the main target URL after redirect').toHaveURL(TARGET_URL, {
+      timeout: 1000,
     });
+
+    // Check that the admin heading is NOT visible
+    const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
+    await expect(
+      adminHeading,
+      'Admin heading should not be visible for non-admin'
+    ).not.toBeVisible();
 
     await context.close();
   });
