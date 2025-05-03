@@ -1,12 +1,7 @@
 'use server';
 
-// Define the TranslationResult type directly
-export type TranslationResult = {
-  translation: string;
-  romanization?: string;
-};
+import { TranslationResult } from '@/lib/domain/translation';
 
-// Basic interface for the Google Translate API request payload
 interface GoogleTranslatePayload {
   q: string | string[];
   target: string;
@@ -14,7 +9,6 @@ interface GoogleTranslatePayload {
   format?: 'text' | 'html';
 }
 
-// Basic interface for the Google Translate API response
 interface GoogleTranslateResponse {
   data?: {
     translations?: Array<{
@@ -48,7 +42,6 @@ export const translateWordWithGoogle = async (
 
   if (!googleApiKey) {
     console.error('Google Translate API key is not configured.');
-    // Avoid throwing error directly to client, just return null
     return null;
   }
 
@@ -88,7 +81,7 @@ export const translateWordWithGoogle = async (
     if (translatedText) {
       const result: TranslationResult = {
         translation: translatedText,
-        romanization: '', // Assuming romanization is not provided in the response
+        romanization: '',
       };
       return result;
     } else {
