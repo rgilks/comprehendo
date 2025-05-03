@@ -6,7 +6,13 @@ import { headers } from 'next/headers';
 import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
-import { GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
+import {
+  GenerateExerciseResultSchema,
+  type GenerateExerciseResult,
+  type PartialQuizData,
+  // type ValidatedAiData, // Temporarily commented out due to build error TS6133
+  ValidatedAiDataSchema,
+} from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import {
@@ -25,22 +31,34 @@ const DEFAULT_EMPTY_QUIZ_DATA: PartialQuizData = {
   paragraph: '',
   question: '',
   options: { A: '', B: '', C: '', D: '' },
+  language: null,
+  topic: null,
 };
 
-// Define the expected structure of validated AI data locally
-type ValidatedAiData = {
-  paragraph: string;
-  question: string;
-  options: { A: string; B: string; C: string; D: string };
-  topic?: string | null; // Reverted: topic is now guaranteed to be string or null
-  // Add other fields returned by generateAndValidateExercise if necessary
-};
+const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+const languageKeys = Object.keys(LANGUAGES) as Language[];
 
-type ValidatedParams = {
-  passageLanguage: Language;
-  questionLanguage: Language;
-  cefrLevel: CEFRLevel;
-};
+// --- Zod Schema for Input Validation ---
+const ExerciseRequestParamsSchema = z.object({
+  passageLanguage: z
+    .string()
+    .refine((val): val is Language => languageKeys.includes(val as Language), {
+      message: 'Invalid passage language',
+    }),
+  questionLanguage: z
+    .string()
+    .refine((val): val is Language => languageKeys.includes(val as Language), {
+      message: 'Invalid question language',
+    }),
+  cefrLevel: z
+    .string()
+    .refine((val): val is CEFRLevel => validCefrLevels.includes(val as CEFRLevel), {
+      message: 'Invalid CEFR level',
+    }),
+});
+
+// Exporting the inferred type for frontend usage if needed
+export type ExerciseRequestParams = z.infer<typeof ExerciseRequestParamsSchema>;
 
 // --- Helper Functions ---
 
@@ -51,55 +69,21 @@ const createErrorResponse = (error: string): GenerateExerciseResult => ({
   cached: false,
 });
 
-const validateParams = (
-  params: ExerciseRequestParams
-): ValidatedParams | GenerateExerciseResult => {
-  const { passageLanguage, questionLanguage, cefrLevel: level } = params;
-
-  const passageLangStr = String(passageLanguage);
-  const questionLangStr = String(questionLanguage);
-  const levelStr = String(level);
-
-  if (!(passageLangStr in LANGUAGES)) {
-    const errorMsg = `Invalid passage language: ${passageLangStr}`;
-    console.error(`[API] ${errorMsg}`);
-    return createErrorResponse(errorMsg);
-  }
-
-  if (!(questionLangStr in LANGUAGES)) {
-    const errorMsg = `Invalid question language: ${questionLangStr}`;
-    console.error(`[API] ${errorMsg}`);
-    return createErrorResponse(errorMsg);
-  }
-
-  const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-  if (!validCefrLevels.includes(levelStr as CEFRLevel)) {
-    const errorMsg = `Invalid CEFR level: ${levelStr}`;
-    console.error(`[API] ${errorMsg}`);
-    return createErrorResponse(errorMsg);
-  }
-
-  return {
-    passageLanguage: passageLangStr as Language,
-    questionLanguage: questionLangStr as Language,
-    cefrLevel: levelStr as CEFRLevel,
-  };
-};
-
 const tryGenerateAndCacheExercise = async (
-  params: ValidatedParams,
+  params: ExerciseRequestParams,
   userId: number | null
 ): Promise<GenerateExerciseResult> => {
   try {
     const topicResult = getRandomTopicForLevel(params.cefrLevel);
-    const topic = typeof topicResult === 'string' ? topicResult : String(topicResult);
+    const topic = typeof topicResult === 'string' ? topicResult : null;
+    const topicForAI = typeof topicResult === 'string' ? topicResult : 'General';
     const grammarGuidance: string = getGrammarGuidance(params.cefrLevel);
     const vocabularyGuidance: string = getVocabularyGuidance(params.cefrLevel);
     const passageLangName: string = LANGUAGES[params.passageLanguage];
     const questionLangName: string = LANGUAGES[params.questionLanguage];
 
-    const validatedAiData = (await generateAndValidateExercise({
-      topic,
+    const aiData = await generateAndValidateExercise({
+      topic: topicForAI,
       passageLanguage: params.passageLanguage,
       questionLanguage: params.questionLanguage,
       passageLangName,
@@ -107,7 +91,23 @@ const tryGenerateAndCacheExercise = async (
       level: params.cefrLevel,
       grammarGuidance,
       vocabularyGuidance,
-    })) as ValidatedAiData;
+    });
+
+    const validatedAiParseResult = ValidatedAiDataSchema.safeParse(aiData);
+
+    if (!validatedAiParseResult.success) {
+      console.error(
+        '[API] AI response failed validation:',
+        validatedAiParseResult.error.errors,
+        'Original Data:',
+        aiData
+      );
+      return createErrorResponse('Failed to validate AI response structure.');
+    }
+
+    const validatedAiData = validatedAiParseResult.data;
+
+    validatedAiData.topic = topic;
 
     const contentToCache = JSON.stringify(validatedAiData);
     const quizId = saveExerciseToCache(
@@ -123,6 +123,7 @@ const tryGenerateAndCacheExercise = async (
       question: validatedAiData.question,
       options: validatedAiData.options,
       topic: validatedAiData.topic,
+      language: params.passageLanguage,
     };
 
     if (quizId === undefined) {
@@ -178,7 +179,7 @@ const tryGenerateAndCacheExercise = async (
 };
 
 const tryGetCachedExercise = (
-  params: ValidatedParams,
+  params: ExerciseRequestParams,
   userId: number | null
 ): GenerateExerciseResult | null => {
   const validatedCacheResult = getValidatedExerciseFromCache(
@@ -189,45 +190,50 @@ const tryGetCachedExercise = (
   );
 
   if (validatedCacheResult) {
-    return {
+    const parsedResult = GenerateExerciseResultSchema.safeParse({
       ...validatedCacheResult,
       cached: true,
-    };
+    });
+    if (parsedResult.success) {
+      return parsedResult.data;
+    } else {
+      console.error(
+        '[API] Cached data failed validation:',
+        parsedResult.error.errors,
+        'Original Data:',
+        validatedCacheResult
+      );
+      return null;
+    }
   }
   return null;
 };
 
 // --- Main Action ---
 
-const _exerciseRequestBodySchema = z.object({
-  passageLanguage: z.string(),
-  questionLanguage: z.string(),
-  cefrLevel: z.string(),
-});
-
-export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
-
 export const generateExerciseResponse = async (
-  requestParams: ExerciseRequestParams
+  requestParams: unknown
 ): Promise<GenerateExerciseResult> => {
   const headersList = await headers();
   const ip = headersList.get('x-forwarded-for') || 'unknown';
   const session: Session | null = await getServerSession(authOptions);
-  const userId = getDbUserIdFromSession(session); // Get user ID once (is number | null)
+  const userId = getDbUserIdFromSession(session);
 
-  // --- Parameter Validation ---
-  const validationResult = validateParams(requestParams);
-  if ('error' in validationResult) {
-    return validationResult; // Return error response if validation fails
+  const validationResult = ExerciseRequestParamsSchema.safeParse(requestParams);
+
+  if (!validationResult.success) {
+    const errorMsg = `Invalid request parameters: ${validationResult.error.errors
+      .map((e) => `${e.path.join('.')}: ${e.message}`)
+      .join(', ')}`;
+    console.error(`[API] ${errorMsg}`, validationResult.error);
+    return createErrorResponse(errorMsg);
   }
-  // Use type assertion as compiler fails to narrow correctly
-  const validParams = validationResult as ValidatedParams;
 
-  // --- Rate Limit Check ---
+  const validParams = validationResult.data;
+
   const isAllowed = checkRateLimit(ip);
   if (!isAllowed) {
     console.warn(`[API] Rate limit exceeded for IP: ${ip}. Attempting cache fallback.`);
-    // Use validParams now
     const cachedResult = tryGetCachedExercise(validParams, userId);
     if (cachedResult) {
       return cachedResult;
@@ -238,7 +244,6 @@ export const generateExerciseResponse = async (
     return createErrorResponse('Rate limit exceeded and no cached question available.');
   }
 
-  // --- Cache Count Check & Generation Logic ---
   const cachedCount = countCachedExercises(
     validParams.passageLanguage,
     validParams.questionLanguage,
@@ -246,11 +251,8 @@ export const generateExerciseResponse = async (
   );
 
   if (cachedCount < CACHE_GENERATION_THRESHOLD) {
-    // Attempt to generate a new exercise
     const generationResult = await tryGenerateAndCacheExercise(validParams, userId);
 
-    // If generation succeeded OR if it failed ONLY during the save step,
-    // return the result (which includes the generated data and specific save error).
     if (
       generationResult.quizId !== -1 ||
       generationResult.error === 'Failed to save exercise to cache.'
@@ -258,18 +260,14 @@ export const generateExerciseResponse = async (
       return generationResult;
     }
 
-    // If generation failed for other reasons (AI error, validation, etc.),
-    // log it (already done in tryGenerateAndCacheExercise) and proceed to check cache as a fallback.
     console.warn('[API] Generation failed, attempting cache fallback.');
   }
 
-  // --- Fallback Path: Use Cached Exercise ---
   const cachedResult = tryGetCachedExercise(validParams, userId);
   if (cachedResult) {
     return cachedResult;
   }
 
-  // --- Final Fallback: No Question Available ---
   console.error(
     `[API] Exhausted options: Failed to generate and no suitable cache found for lang=${validParams.passageLanguage}, level=${validParams.cefrLevel}, user=${userId ?? 'anonymous'}.`
   );

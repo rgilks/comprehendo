@@ -54,3 +54,12 @@ export const SubmitAnswerResultSchema = z.object({
 });
 
 export type SubmitAnswerResult = z.infer<typeof SubmitAnswerResultSchema>;
+
+// Represents the structure of validated data returned by the AI generation process
+export const ValidatedAiDataSchema = z.object({
+  paragraph: z.string(),
+  question: z.string(),
+  options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
+  topic: z.string().optional().nullable(), // Assuming topic remains optional/nullable here
+});
+export type ValidatedAiData = z.infer<typeof ValidatedAiDataSchema>;

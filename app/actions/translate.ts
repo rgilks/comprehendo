@@ -1,6 +1,10 @@
 'use server';
 
-import { z } from 'zod';
+// Define the TranslationResult type directly
+export type TranslationResult = {
+  translation: string;
+  romanization?: string;
+};
 
 // Basic interface for the Google Translate API request payload
 interface GoogleTranslatePayload {
@@ -28,13 +32,6 @@ interface GoogleTranslateResponse {
     }>;
   };
 }
-
-const TranslationResultSchema = z.object({
-  translation: z.string(),
-  romanization: z.string().optional(), // Romanization might not always be present
-});
-
-export type TranslationResult = z.infer<typeof TranslationResultSchema>;
 
 export const translateWordWithGoogle = async (
   word: string,
