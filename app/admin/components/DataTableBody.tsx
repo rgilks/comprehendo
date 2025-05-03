@@ -2,7 +2,7 @@ import React from 'react';
 import { renderTableCellValue } from '@/lib/utils/rendering';
 
 interface DataTableBodyProps<T extends Record<string, unknown>> {
-  headers: string[];
+  headers: (keyof T)[];
   data: T[];
   isLoading: boolean;
   minBodyHeight: number;
@@ -36,10 +36,10 @@ export const DataTableBody = <T extends Record<string, unknown>>({
             {headers.length > 0 ? (
               headers.map((key) => (
                 <th
-                  key={key}
+                  key={key as string}
                   className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold"
                 >
-                  {key}
+                  {key as string}
                 </th>
               ))
             ) : (
@@ -59,9 +59,9 @@ export const DataTableBody = <T extends Record<string, unknown>>({
                   onRowClick(row);
                 }}
               >
-                {headers.map((header, colIndex) => (
+                {headers.map((header, _colIndex) => (
                   <td
-                    key={colIndex}
+                    key={`${getRowKey(row, rowIndex)}-${header as string}`} // Ensure unique key
                     className="py-1 px-2 sm:py-2 sm:px-4 border-b text-gray-900 text-sm whitespace-nowrap"
                   >
                     {renderTableCellValue(row[header])}

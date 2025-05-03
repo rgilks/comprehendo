@@ -56,8 +56,8 @@ export const DataTable = <T extends Record<string, unknown>>({
       />
 
       {!error && (
-        <DataTableBody
-          headers={headers as string[]}
+        <DataTableBody<T>
+          headers={headers}
           data={data}
           isLoading={isLoading}
           minBodyHeight={minBodyHeight}
