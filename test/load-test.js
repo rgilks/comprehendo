@@ -2,16 +2,36 @@ import { chromium } from 'playwright';
 import { performance } from 'perf_hooks';
 import fs from 'fs';
 import path from 'path';
-import { check, group, sleep } from 'k6';
-import http from 'k6/http';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const SCREENSHOT_DIR = path.join(process.cwd(), 'screenshots');
+const NUM_CONCURRENT_USERS = parseInt(process.env.NUM_CONCURRENT_USERS || '3', 10);
+const TOTAL_CYCLES = parseInt(process.env.TOTAL_CYCLES || '20', 10);
+
+// Validate environment variable inputs
+if (isNaN(NUM_CONCURRENT_USERS) || NUM_CONCURRENT_USERS <= 0) {
+  console.error('Error: NUM_CONCURRENT_USERS must be a positive integer.');
+  process.exit(1);
+}
+if (isNaN(TOTAL_CYCLES) || TOTAL_CYCLES <= 0) {
+  console.error('Error: TOTAL_CYCLES must be a positive integer.');
+  process.exit(1);
+}
 
 process.on('SIGINT', async () => {
   console.log('\nGracefully shutting down...');
   process.exit(0);
 });
+
+// Constants for runTest
+const GENERATE_BUTTON_SELECTOR = '[data-testid="generate-button"]:not([disabled])';
+const QUIZ_SECTION_SELECTOR = '[data-testid="quiz-section"]';
+const ERROR_DISPLAY_SELECTOR = '[data-testid="error-display"] p';
+const QUIZ_QUESTION_SELECTOR = '[data-testid="quiz-question"]';
+const QUIZ_OPTION_A_SELECTOR = '[data-testid="quiz-option-A"]';
+const DEFAULT_WAIT_TIMEOUT = 30000; // 30 seconds
+const SHORT_WAIT_TIMEOUT = 5000; // 5 seconds
+const INTERACTION_TIMEOUT = 1000; // 1 second
 
 const runTest = async (page, cycleIndex, userId) => {
   const startTime = performance.now();
@@ -24,50 +44,51 @@ const runTest = async (page, cycleIndex, userId) => {
     log('Ready for interaction.');
 
     log('Clicking generate button...');
-    const generateButton = await page.waitForSelector(
-      '[data-testid="generate-button"]:not([disabled])',
-      { timeout: 30000 }
-    );
+    const generateButton = await page.waitForSelector(GENERATE_BUTTON_SELECTOR, {
+      timeout: DEFAULT_WAIT_TIMEOUT,
+    });
     await generateButton.click();
     log('Generate button clicked.');
 
     log('Waiting for quiz section OR error message...');
-    const quizSelector = '[data-testid="quiz-section"]';
-    const errorSelector = '[data-testid="error-display"] p';
 
     try {
       const result = await Promise.race([
-        page.waitForSelector(quizSelector, { timeout: 30000 }).then(() => 'quiz'),
-        page.waitForSelector(errorSelector, { timeout: 30000 }).then(() => 'error'),
+        page
+          .waitForSelector(QUIZ_SECTION_SELECTOR, { timeout: DEFAULT_WAIT_TIMEOUT })
+          .then(() => 'quiz'),
+        page
+          .waitForSelector(ERROR_DISPLAY_SELECTOR, { timeout: DEFAULT_WAIT_TIMEOUT })
+          .then(() => 'error'),
       ]);
 
       if (result === 'quiz') {
         log('Quiz section loaded.');
-        const questionElement = await page.waitForSelector('[data-testid="quiz-question"]', {
-          timeout: 1000,
+        const questionElement = await page.waitForSelector(QUIZ_QUESTION_SELECTOR, {
+          timeout: INTERACTION_TIMEOUT,
         });
-        await page.waitForSelector('[data-testid="quiz-option-A"]', { timeout: 1000 });
+        await page.waitForSelector(QUIZ_OPTION_A_SELECTOR, { timeout: INTERACTION_TIMEOUT });
 
         const actualQuestionText = await questionElement.textContent();
         log(`Quiz question loaded: "${actualQuestionText?.substring(0, 50)}..."`);
 
         log('Clicking option A...');
-        await page.click('[data-testid="quiz-option-A"]', { timeout: 5000, force: true });
+        await page.click(QUIZ_OPTION_A_SELECTOR, { timeout: SHORT_WAIT_TIMEOUT, force: true });
         log('Option A clicked.');
 
         log('Waiting for answer processing (generate button enabled)...');
-        await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
-          timeout: 30000,
+        await page.waitForSelector(GENERATE_BUTTON_SELECTOR, {
+          timeout: DEFAULT_WAIT_TIMEOUT,
         });
         log('Answer processed and ready for next generation click.');
       } else if (result === 'error') {
-        const errorElement = await page.$(errorSelector);
+        const errorElement = await page.$(ERROR_DISPLAY_SELECTOR);
         const errorText = errorElement ? await errorElement.textContent() : 'Unknown error';
         log(`Error message detected: "${errorText}". This is expected for anonymous cache misses.`);
         log('Waiting for generate button to potentially re-enable after error...');
         try {
-          await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
-            timeout: 5000,
+          await page.waitForSelector(GENERATE_BUTTON_SELECTOR, {
+            timeout: SHORT_WAIT_TIMEOUT,
           });
           log('Generate button re-enabled after error.');
         } catch /* (enableError) */ {
@@ -103,8 +124,8 @@ const runTest = async (page, cycleIndex, userId) => {
 };
 
 const main = async () => {
-  const numConcurrentUsers = 3;
-  const totalCycles = 20;
+  const numConcurrentUsers = NUM_CONCURRENT_USERS;
+  const totalCycles = TOTAL_CYCLES;
 
   if (totalCycles < numConcurrentUsers) {
     console.error('Error: totalCycles must be >= numConcurrentUsers');
@@ -149,8 +170,8 @@ const main = async () => {
 
         sessionLog(`Performing initial navigation to ${BASE_URL}/en...`);
         await page.goto(`${BASE_URL}/en`, { waitUntil: 'networkidle' });
-        await page.waitForSelector('[data-testid="generate-button"]:not([disabled])', {
-          timeout: 30000,
+        await page.waitForSelector(GENERATE_BUTTON_SELECTOR, {
+          timeout: DEFAULT_WAIT_TIMEOUT,
         });
         sessionLog('Initial navigation and hydration complete.');
 
@@ -250,6 +271,7 @@ const main = async () => {
     process.exit(anyFailures ? 1 : 0);
   } catch (error) {
     console.error('[Main] Fatal error during test execution:', error);
+    process.exit(1);
   } finally {
     if (globalBrowser) {
       console.log(`[${new Date().toISOString()}] [Main] Closing global browser...`);
@@ -263,10 +285,3 @@ main().catch((error) => {
   console.error('Unhandled error in main:', error);
   process.exit(1);
 });
-
-group('Load Landing Page', () => {
-  const res = http.get(process.env.BASE_URL || 'http://localhost:3000/');
-  check(res, { 'status is 200': (r) => r.status === 200 });
-});
-
-sleep(1);

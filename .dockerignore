@@ -20,3 +20,8 @@ screenshots/
 *.tsbuildinfo
 .swc/
 .husky/
+coverage/
+.env.example
+.github/
+.next-validation/
+docs/
