@@ -86,7 +86,6 @@ const AdminPage = () => {
             {selectedRowData ? (
               <RowDetailView
                 rowData={selectedRowData}
-                onBack={handleBackFromDetail}
                 tableName={selectedTable}
                 onClose={handleBackFromDetail}
               />

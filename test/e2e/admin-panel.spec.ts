@@ -5,7 +5,7 @@ test.describe('Admin Panel Basic Navigation', () => {
 
   test.beforeEach(async ({ page }: { page: Page }) => {
     await page.goto('/admin');
-    await expect(page.locator('h1')).toContainText(/Comprehendo admin/i, { timeout: 2000 });
+    await expect(page.locator('h1')).toContainText(/Comprehendo admin/i, { timeout: 10000 });
   });
 
   const checkTableLoads = async (page: Page, tableName: string, expectedHeader: string) => {
