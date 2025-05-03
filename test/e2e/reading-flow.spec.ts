@@ -24,53 +24,59 @@ test.describe('Core Reading Comprehension Flow', () => {
       const typedMockData = JSON.parse(JSON.stringify(mockApiResponse)) as typeof mockApiResponse;
       await route.fulfill({ json: typedMockData });
     });
-    await page.goto('/en', { waitUntil: 'networkidle' });
+    await page.goto('/en');
     await expect(page.locator('[data-testid="text-generator-container"]')).toBeVisible({
       timeout: 10000,
     });
   });
 
   test.skip('should display passage, question, options, and handle answers', async ({ page }) => {
-    const readingPassageContainer = page.locator('[data-testid="reading-passage"]');
+    const textGeneratorContainer = page.locator('[data-testid="text-generator-container"]');
+    const readingPassageContainer = textGeneratorContainer.locator(
+      '[data-testid="reading-passage"]'
+    );
     const passageLocator = readingPassageContainer.locator('[data-testid="passage-text"]');
+    const questionLocator = textGeneratorContainer.locator('[data-testid="question-text"]');
+    const feedbackLocator = textGeneratorContainer.locator('[data-testid="feedback-explanation"]');
+    const relevantTextLocator = textGeneratorContainer.locator('[data-testid="relevant-text"]');
+    const nextButtonLocator = textGeneratorContainer.locator(
+      '[data-testid="next-exercise-button"]'
+    );
+    const getOptionLocator = (index: number) =>
+      textGeneratorContainer.locator(`[data-testid="answer-option-${index}"]`);
+
     await expect(passageLocator).toHaveText(mockApiResponse.passage, {
       timeout: 5000,
       useInnerText: true,
     });
-
-    const questionLocator = page.locator('[data-testid="question-text"]');
     await expect(questionLocator).toContainText(mockApiResponse.question);
 
     for (let i = 0; i < mockApiResponse.options.length; i++) {
-      const optionLocator = page.locator(`[data-testid="answer-option-${i}"]`);
+      const optionLocator = getOptionLocator(i);
       const optionText = mockApiResponse.options[i];
       await expect(optionLocator).toContainText(optionText);
       await expect(optionLocator).toBeEnabled();
     }
 
-    const incorrectOptionLocator = page.locator('[data-testid="answer-option-0"]');
+    const incorrectIndex = mockApiResponse.options.findIndex(
+      (_, i) => i !== mockApiResponse.correctAnswerIndex
+    );
+    const incorrectOptionLocator = getOptionLocator(incorrectIndex);
     await incorrectOptionLocator.click();
 
-    const feedbackLocator = page.locator('[data-testid="feedback-explanation"]');
     await expect(feedbackLocator).toBeVisible();
-    const incorrectExplanation = mockApiResponse.explanation.incorrect[0];
+    const incorrectExplanation = mockApiResponse.explanation.incorrect[incorrectIndex];
     await expect(feedbackLocator).toContainText(incorrectExplanation);
-    await expect(page.locator('[data-testid="relevant-text"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="next-exercise-button"]')).not.toBeVisible();
+    await expect(relevantTextLocator).not.toBeVisible();
+    await expect(nextButtonLocator).not.toBeVisible();
 
-    // await expect(incorrectOptionLocator).toBeDisabled();
-    // await expect(page.locator('[data-testid="answer-option-1"]')).toBeDisabled();
-
-    const correctOptionLocator = page.locator('[data-testid="answer-option-1"]');
+    const correctOptionLocator = getOptionLocator(mockApiResponse.correctAnswerIndex);
     await correctOptionLocator.click();
 
     await expect(feedbackLocator).toBeVisible();
     await expect(feedbackLocator).toContainText(mockApiResponse.explanation.correct);
-    const relevantTextLocator = page.locator('[data-testid="relevant-text"]');
     await expect(relevantTextLocator).toBeVisible();
     await expect(relevantTextLocator).toContainText(mockApiResponse.relevantText);
-
-    const nextButtonLocator = page.locator('[data-testid="next-exercise-button"]');
     await expect(nextButtonLocator).toBeVisible();
     await expect(nextButtonLocator).toBeEnabled();
   });
