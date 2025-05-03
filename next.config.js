@@ -16,7 +16,7 @@ const nextConfig = withPWA({
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   distDir: process.env.NEXT_PREVIEW_BUILD === 'true' ? '.next-validation' : '.next',
-  async headers() {
+  headers: async () => {
     return [
       {
         source: '/:path*',
@@ -46,7 +46,7 @@ const nextConfig = withPWA({
       },
     ];
   },
-  async rewrites() {
+  rewrites: async () => {
     return [
       {
         source: '/:lang/icons/:path*',

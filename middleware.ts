@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 const locales = [
@@ -21,33 +22,36 @@ const locales = [
 ];
 const defaultLocale = 'en';
 
-const middleware = async (req: import('next/server').NextRequest) => {
-  const userAgent = req.headers.get('user-agent') || 'unknown';
+const botUserAgents = [
+  'SentryUptimeBot',
+  'UptimeRobot',
+  'Pingdom',
+  'Site24x7',
+  'BetterUptime',
+  'StatusCake',
+  'AhrefsBot',
+  'SemrushBot',
+  'MJ12bot',
+  'DotBot',
+  'PetalBot',
+  'Bytespider',
+];
 
-  // --- Bot Filtering ---
-  const botUserAgents = [
-    'SentryUptimeBot',
-    'UptimeRobot',
-    'Pingdom',
-    'Site24x7',
-    'BetterUptime',
-    'StatusCake',
-    'AhrefsBot',
-    'SemrushBot',
-    'MJ12bot',
-    'DotBot',
-    'PetalBot',
-    'Bytespider',
-  ];
+const isBotRequest = (userAgent: string | null): boolean => {
+  if (!userAgent) return false;
+  return botUserAgents.some((botSubstring) => userAgent.includes(botSubstring));
+};
 
-  if (botUserAgents.some((botSubstring) => userAgent.includes(botSubstring))) {
-    console.log(`[Middleware] Blocking bot: ${userAgent}. Returning 200 OK.`);
+const handleBotFiltering = (req: NextRequest): NextResponse | null => {
+  const userAgent = req.headers.get('user-agent');
+  if (isBotRequest(userAgent)) {
+    console.log(`[Middleware] Blocking bot: ${userAgent || 'unknown'}. Returning 200 OK.`);
     return new NextResponse(null, { status: 200 });
   }
-  // --- End Bot Filtering ---
+  return null;
+};
 
-  const token = await getToken({ req });
-  const isAdmin = token?.isAdmin === true;
+const handleLocaleRedirect = (req: NextRequest): NextResponse | null => {
   const pathname = req.nextUrl.pathname;
   const isAdminRoute = pathname.startsWith('/admin');
 
@@ -61,25 +65,45 @@ const middleware = async (req: import('next/server').NextRequest) => {
     url.pathname = `/${locale}${pathname}`;
     return NextResponse.redirect(url);
   }
+  return null;
+};
+
+const handleAdminRoute = (req: NextRequest, isAdmin: boolean): NextResponse | null => {
+  const pathname = req.nextUrl.pathname;
+  const isAdminRoute = pathname.startsWith('/admin');
+
+  if (isAdminRoute && !isAdmin) {
+    console.log(`[Middleware] Redirecting non-admin from /admin to /`);
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = `/${defaultLocale}`;
+    return NextResponse.redirect(redirectUrl);
+  }
+  return null;
+};
+
+const middleware = async (req: NextRequest) => {
+  const botResponse = handleBotFiltering(req);
+  if (botResponse) return botResponse;
+
+  const localeRedirectResponse = handleLocaleRedirect(req);
+  if (localeRedirectResponse) return localeRedirectResponse;
+
+  const token = await getToken({ req });
+  const isAdmin = token?.isAdmin === true;
+
+  const adminRouteResponse = handleAdminRoute(req, isAdmin);
+  if (adminRouteResponse) return adminRouteResponse;
 
   try {
-    // Enhanced Logging
     const ip = req.headers.get('fly-client-ip') || req.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    const pathname = req.nextUrl.pathname;
     console.log(
       `[Middleware] Request: ${req.method} ${pathname} - IP: ${ip} - User-Agent: ${userAgent}`
     );
-
-    // Original Logging
-    // console.log(`[Middleware] Path: ${pathname}`);
     console.log(`[Middleware] isAdmin check result: ${isAdmin}`);
-
-    if (isAdminRoute && !isAdmin) {
-      console.log(`[Middleware] Redirecting non-admin from /admin to /`);
-      const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = `/${defaultLocale}`;
-      return NextResponse.redirect(redirectUrl);
-    }
     console.log(`[Middleware] Allowing access to ${pathname}`);
+
     return NextResponse.next();
   } catch {
     return new NextResponse('Internal Server Error', { status: 500 });

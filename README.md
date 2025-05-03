@@ -50,8 +50,8 @@ Comprehendo is an AI-powered language learning application designed to help user
 
 ## Technology Stack
 
-- **Next.js**: Latest version using App Router (`package.json` likely has exact version)
-- **React**: Latest major version (`package.json` likely has exact version)
+- **Next.js**: ^15.x (`package.json` has exact version)
+- **React**: ^19.x (`package.json` has exact version)
 - **Tailwind CSS**: Utility-first CSS framework
 - **TypeScript**: Strong typing for code quality
 - **next-auth**: Authentication (GitHub, Google, Discord)
@@ -84,9 +84,9 @@ Comprehendo implements strategies to manage AI API costs:
   - Uses a fixed-window counter based on IP address, stored in the `rate_limits` SQLite table.
   - Default limit: **100 requests per hour** per IP to the exercise generation endpoint (`POST /api/exercise`).
   - Applies to all users (anonymous and logged-in).
-  - Implemented in `app/actions/exercise.ts` via the `checkRateLimit` function.
+  - Implemented in `app/actions/exercise.ts` via the `checkRateLimit` function (which uses logic from `lib/rate-limiter.ts`).
   - Exceeding the limit logs blocks the request.
-  - Adjust `MAX_REQUESTS_PER_HOUR` in `app/actions/exercise.ts`.
+  - Adjust `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts`.
 - **Database Caching**:
   - Successful AI-generated exercises (passage, question, choices, explanation) are stored in the `quiz` SQLite table.
   - Before calling the AI, the system checks for a suitable cached exercise based on language, level, and user interaction history (via `question_feedback` table) using the `getCachedExercise` function in `app/actions/exercise.ts`.
@@ -232,7 +232,7 @@ npm run nuke
 - **Unit/Integration**: Jest and React Testing Library (`npm test`).
 - **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
 - **Git Hooks**: Husky manages Git hooks defined in `.husky/`:
-  - **Pre-commit (`.husky/pre-commit`)**: Runs `npm run check` (includes formatting, linting, type checks, unit tests, and e2e tests).
+  - **Pre-commit (`.husky/pre-commit`)**: Runs `npm run check` (includes formatting, linting, type checks, unit tests, and e2e tests). _Note: This includes E2E tests and might take some time._
   - **Pre-push (`.husky/pre-push`)**: Runs `npm run preview-build` to ensure the application builds successfully before pushing.
 
 ## Production Considerations
@@ -248,7 +248,7 @@ npm run nuke
 - **Languages**: Extend `LANGUAGES` in `app/config/languages.ts`.
 - **Styling**: Modify Tailwind classes in components (`app/components`).
 - **AI Prompts**: Adjust prompts in `app/actions/exercise.ts`.
-- **Rate Limits**: Modify `MAX_REQUESTS_PER_HOUR` in `app/actions/exercise.ts`.
+- **Rate Limits**: Modify `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts`.
 - **Cache Behavior**: Modify database queries in `app/actions/exercise.ts`.
 - **Auth Providers**: Add/remove providers in `lib/authOptions.ts` and update environment variables.
 
@@ -288,10 +288,11 @@ npm run nuke
 ├── test/                     # Test configurations and utilities
 │   └── e2e/                  # Playwright E2E tests & auth state
 ├── .env.example              # Example environment variables
-├── next.config.mjs           # Next.js configuration (check file extension)
+├── next.config.js            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
-├── jest.config.js            # Jest configuration
+├── jest.config.js            # Jest configuration (Note: Vitest is used, see vitest.config.ts)
+├── vitest.config.ts          # Vitest configuration
 ├── playwright.config.ts      # Playwright configuration
 ├── Dockerfile / fly.toml     # Deployment configuration
 ├── package.json              # Project dependencies and scripts
@@ -300,7 +301,7 @@ npm run nuke
 
 ## Contributing
 
-Contributions welcome!
+Contributions welcome! Please ensure `npm run check` passes before submitting a PR.
 
 1.  Fork the repository.
 2.  Create branch: `git checkout -b feature/your-feature`.
@@ -452,12 +453,12 @@ CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (u
 ## Troubleshooting
 
 - **Database Connection:** Ensure `data/` dir exists locally. On Fly, check volume mount (`fly.toml`) and status (`fly status`).
-- **Auth Errors:** Verify `.env.local` / Fly secrets (`AUTH_SECRET`, provider IDs/secrets, `NEXTAUTH_URL`). Ensure OAuth callback URLs match exactly in provider settings (e.g., `http://localhost:3000/api/auth/callback/github` or `https://<app>.fly.dev/api/auth/callback/github`).
-- **API Key Errors:** Check AI provider keys in env/secrets. Ensure billing is enabled if required by the provider.
-- **Rate Limit Errors:** Wait for the hour window to reset. Check `rate_limits` table via SQLite or Admin Panel if needed. Consider increasing `MAX_REQUESTS_PER_HOUR` if appropriate.
-- **Admin Access Denied:** Confirm logged-in user's email is EXACTLY in `ADMIN_EMAILS` (case-sensitive, no extra spaces). Check Fly secrets value.
-- **Deployment Issues:** Examine GitHub Actions logs and `fly logs --app <your-app-name>`.
-- **PWA Issues:** Check `next.config.mjs` PWA settings and browser dev tools (Application -> Service Workers/Manifest).
+- **Auth Errors:** Verify `.env.local` / Fly secrets (`AUTH_SECRET`, provider IDs/secrets, `NEXTAUTH_URL`). Ensure OAuth callback URLs match exactly in provider settings (e.g., `http://localhost:3000/api/auth/callback/github` or `https://<your-app-name>.fly.dev/api/auth/callback/github`). Check the `next-auth` documentation for provider-specific setup.
+- **API Key Errors:** Check AI provider keys in env/secrets. Ensure billing is enabled if required by the provider (e.g., Google Cloud Platform for Translate API).
+- **Rate Limit Errors:** Wait for the hour window to reset. Check `rate_limits` table via SQLite or Admin Panel if needed. Consider increasing `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts` if appropriate.
+- **Admin Access Denied:** Confirm logged-in user's email is EXACTLY in `ADMIN_EMAILS` (case-sensitive, no extra spaces). Check Fly secrets value. Ensure you've logged in with the correct account.
+- **Deployment Issues:** Examine GitHub Actions logs (`Actions` tab on GitHub) and `fly logs --app <your-app-name>`. Check `fly status` for volume and machine health.
+- **PWA Issues:** Check `next.config.js` PWA settings and browser dev tools (Application -> Service Workers/Manifest).
 
 ## License
 
