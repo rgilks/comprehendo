@@ -44,7 +44,6 @@ export const DataTable = <T extends Record<string, unknown>>({
         </p>
       )}
 
-      {/* Pagination and Refresh Controls */}
       <DataTableControls
         currentPage={currentPage}
         totalPages={totalPages}
@@ -56,7 +55,6 @@ export const DataTable = <T extends Record<string, unknown>>({
         onNextPage={onNextPage}
       />
 
-      {/* Table */}
       {!error && (
         <DataTableBody
           headers={headers as string[]}

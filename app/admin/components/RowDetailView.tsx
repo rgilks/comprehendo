@@ -28,6 +28,10 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({
       return value ? 'True' : 'False';
     }
 
+    if (typeof value === 'number') {
+      return String(value);
+    }
+
     if (typeof value === 'string' && (key === 'created_at' || key === 'updated_at')) {
       try {
         const date = new Date(value);
