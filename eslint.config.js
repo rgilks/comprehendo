@@ -15,34 +15,32 @@ const removeGlobal = (globalsObj, globalToRemove) => {
 };
 
 export default tseslint.config(
-  // 1. Global ignores and base rules for all files
   {
     ignores: [
       '.next/**',
       '.next-validation/**',
       'node_modules/**',
       'dist/**',
-      'public/**', // Ignore public dir (service workers, etc.)
-      'playwright-report/**', // Ignore playwright report dir
-      'test-results/**', // Ignore test results dir
-      '**/*.config.cjs', // Ignore .cjs config files for now
+      'public/**',
+      'playwright-report/**',
+      'test-results/**',
+      '**/*.config.cjs',
     ],
   },
   eslint.configs.recommended,
 
-  // 2. TypeScript specific configurations (Type-Aware)
   {
     files: ['**/*.ts', '**/*.tsx'],
     extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
       parserOptions: {
-        project: true, // Automatically find tsconfig.json
+        project: true,
         tsconfigRootDir: import.meta.dirname,
       },
       globals: {
-        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '), // Remove potential bad one
-        ...globals.node, // Add Node globals if needed in TS files
-        AudioWorkletGlobalScope: 'readonly', // Add correct one
+        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '),
+        ...globals.node,
+        AudioWorkletGlobalScope: 'readonly',
       },
     },
     rules: {
@@ -69,26 +67,24 @@ export default tseslint.config(
       ],
       '@typescript-eslint/no-unsafe-return': 'warn',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
-      '@typescript-eslint/no-empty-object-type': 'warn', // Downgrade to warn or fix the type
+      '@typescript-eslint/no-empty-object-type': 'warn',
     },
   },
 
-  // 3. JavaScript specific configurations (NO Type-Aware Rules)
   {
-    files: ['**/*.js', '**/*.mjs'], // Removed .cjs, handled by ignores for now
+    files: ['**/*.js', '**/*.mjs'],
     languageOptions: {
       globals: {
-        ...globals.node, // Add Node.js globals
-        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '), // Remove potential bad one
-        AudioWorkletGlobalScope: 'readonly', // Add correct one
+        ...globals.node,
+        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '),
+        AudioWorkletGlobalScope: 'readonly',
       },
     },
     rules: {
-      'no-undef': 'error', // Keep checking for undefined vars
+      'no-undef': 'error',
     },
   },
 
-  // 4. Next.js / React specific configurations (Applies to JS/TS/JSX/TSX)
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
@@ -98,18 +94,18 @@ export default tseslint.config(
     },
     languageOptions: {
       globals: {
-        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '), // Remove potential bad one
-        AudioWorkletGlobalScope: 'readonly', // Add correct one
+        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '),
+        AudioWorkletGlobalScope: 'readonly',
       },
     },
     rules: {
       ...reactPlugin.configs.recommended.rules,
       ...hooksPlugin.configs.recommended.rules,
-      '@next/next/no-html-link-for-pages': 'warn', // Or 'error' based on original config
-      '@next/next/no-sync-scripts': 'warn', // Or 'error' based on original config
+      '@next/next/no-html-link-for-pages': 'warn',
+      '@next/next/no-sync-scripts': 'warn',
       'react-hooks/exhaustive-deps': 'error',
       'react/no-unescaped-entities': 'error',
-      'react/react-in-jsx-scope': 'off', // Next.js handles this automatically
+      'react/react-in-jsx-scope': 'off',
     },
     settings: {
       react: {
@@ -118,13 +114,11 @@ export default tseslint.config(
     },
   },
 
-  // 5. Overrides (Apply after main configs)
-  // Test files override
   {
     files: ['**/__tests__/**/*.ts?(x)', '**/*.test.ts?(x)', '**/playwright.config.js'],
     languageOptions: {
       globals: {
-        ...globals.node, // Ensure Node globals for config files
+        ...globals.node,
       },
     },
     rules: {
@@ -137,9 +131,9 @@ export default tseslint.config(
       '@typescript-eslint/await-thenable': 'off',
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
-      'no-undef': 'off', // Allow undefined vars in tests/configs
-      'no-unused-vars': 'off', // Allow unused vars in tests/configs
-      '@typescript-eslint/no-unused-vars': 'off', // Allow unused TS vars in tests/configs
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
 
