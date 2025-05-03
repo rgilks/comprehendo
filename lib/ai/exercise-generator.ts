@@ -86,7 +86,15 @@ export const generateAndValidateExercise = async ({
       `AI response failed validation. Errors: ${JSON.stringify(validationResult.error.format())}`
     );
   }
-  return validationResult.data;
+
+  // Ensure topic is string or null, not undefined, after successful validation
+  const validatedData = validationResult.data;
+  if (validatedData.topic === undefined) {
+    validatedData.topic = null;
+  }
+
+  // Assert the final type after transformation
+  return validatedData;
 };
 
 export const generateExercisePrompt = (params: ExerciseGenerationParams): string => {

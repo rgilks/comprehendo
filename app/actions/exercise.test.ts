@@ -239,16 +239,20 @@ describe('generateExerciseResponse', () => {
   test('should return error if generation fails (AI call error)', async () => {
     const aiError = new Error('AI Failed');
     vi.mocked(generateAndValidateExercise).mockRejectedValue(aiError);
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
 
     const result = await generateExerciseResponse(defaultParams);
 
-    expect(result).toEqual({
-      error: 'An unexpected error occurred during exercise generation: AI Failed',
-      quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
-      quizId: -1,
-      cached: false,
+    expect(result.error).toBe('Could not retrieve or generate a question.');
+    expect(result.quizData).toEqual({
+      paragraph: '',
+      question: '',
+      options: { A: '', B: '', C: '', D: '' },
     });
+    expect(result.quizId).toBe(-1);
+    expect(result.cached).toBe(false);
     expect(saveExerciseToCache).not.toHaveBeenCalled();
+    expect(getValidatedExerciseFromCache).toHaveBeenCalled();
   });
 
   test('should return error if generation fails (JSON parsing)', async () => {
@@ -256,13 +260,15 @@ describe('generateExerciseResponse', () => {
       'Failed to parse AI JSON response. Error: Some parse error'
     );
     vi.mocked(generateAndValidateExercise).mockRejectedValue(parseError);
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
 
     const result = await generateExerciseResponse(defaultParams);
 
-    expect(result.error).toMatch(/Failed to parse AI JSON response/);
+    expect(result.error).toBe('Could not retrieve or generate a question.');
     expect(result.quizId).toBe(-1);
     expect(result.cached).toBe(false);
     expect(saveExerciseToCache).not.toHaveBeenCalled();
+    expect(getValidatedExerciseFromCache).toHaveBeenCalled();
   });
 
   test('should return error if generation fails (Zod validation)', async () => {
@@ -270,31 +276,38 @@ describe('generateExerciseResponse', () => {
       'AI response failed validation. Errors: Some validation error'
     );
     vi.mocked(generateAndValidateExercise).mockRejectedValue(validationError);
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
 
     const result = await generateExerciseResponse(defaultParams);
 
-    expect(result.error).toMatch(/AI response failed validation/);
+    expect(result.error).toBe('Could not retrieve or generate a question.');
     expect(result.quizId).toBe(-1);
     expect(result.cached).toBe(false);
     expect(saveExerciseToCache).not.toHaveBeenCalled();
+    expect(getValidatedExerciseFromCache).toHaveBeenCalled();
   });
 
   test('should return specific error if AI response processing fails', async () => {
     const processingError = new AIResponseProcessingError('Specific processing issue');
     vi.mocked(generateAndValidateExercise).mockRejectedValue(processingError);
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
 
     const result = await generateExerciseResponse(defaultParams);
 
-    expect(result).toEqual({
-      error: 'Specific processing issue',
-      quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
-      quizId: -1,
-      cached: false,
+    expect(result.error).toBe('Could not retrieve or generate a question.');
+    expect(result.quizData).toEqual({
+      paragraph: '',
+      question: '',
+      options: { A: '', B: '', C: '', D: '' },
     });
+    expect(result.quizId).toBe(-1);
+    expect(result.cached).toBe(false);
+    expect(getValidatedExerciseFromCache).toHaveBeenCalled();
   });
 
   test('should return error if cache save fails', async () => {
     vi.mocked(saveExerciseToCache).mockReturnValue(undefined);
+    vi.mocked(generateAndValidateExercise).mockResolvedValue(expectedFullAiDataObject);
 
     const result = await generateExerciseResponse(defaultParams);
 
@@ -306,6 +319,7 @@ describe('generateExerciseResponse', () => {
       error: 'Failed to save exercise to cache.',
       cached: false,
     });
+    expect(getValidatedExerciseFromCache).not.toHaveBeenCalled();
   });
 
   test('should return error if cache fetch succeeds but data is invalid', async () => {
@@ -315,8 +329,9 @@ describe('generateExerciseResponse', () => {
     const result = await generateExerciseResponse(defaultParams);
 
     expect(getValidatedExerciseFromCache).toHaveBeenCalled();
-    expect(result.error).toBe('Could not retrieve or generate a question.');
+    expect(result.error).toBe('Rate limit exceeded and no cached question available.');
     expect(result.quizId).toBe(-1);
+    expect(result.cached).toBe(false);
   });
 
   test('should return final error if rate limited and cache miss', async () => {
@@ -326,8 +341,9 @@ describe('generateExerciseResponse', () => {
     const result = await generateExerciseResponse(defaultParams);
 
     expect(getValidatedExerciseFromCache).toHaveBeenCalled();
-    expect(result.error).toBe('Could not retrieve or generate a question.');
+    expect(result.error).toBe('Rate limit exceeded and no cached question available.');
     expect(result.quizId).toBe(-1);
+    expect(result.cached).toBe(false);
   });
 
   test('should return validation error for invalid CEFR level', async () => {
@@ -338,27 +354,30 @@ describe('generateExerciseResponse', () => {
       quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } },
       quizId: -1,
       error: 'Invalid CEFR level: Z9',
+      cached: false,
     });
     expect(checkRateLimit).not.toHaveBeenCalled();
   });
 
   test('should use session.user.dbId for cache lookup if available', async () => {
     vi.mocked(checkRateLimit).mockReturnValue(false);
+    const dbUserId = 789;
     const mockSessionWithDbId: Session = {
-      user: { id: 'prov-456', provider: 'google', dbId: 789 },
+      user: { id: 'prov-456', provider: 'google', dbId: dbUserId },
       expires: 'never',
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSessionWithDbId);
+    vi.mocked(getDbUserIdFromSession).mockReturnValue(dbUserId);
     vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
 
     await generateExerciseResponse(defaultParams);
 
-    expect(getDbUserIdFromSession).not.toHaveBeenCalled();
+    expect(getDbUserIdFromSession).toHaveBeenCalledWith(mockSessionWithDbId);
     expect(getValidatedExerciseFromCache).toHaveBeenCalledWith(
       defaultParams.passageLanguage,
       defaultParams.questionLanguage,
       defaultParams.cefrLevel,
-      789
+      dbUserId
     );
   });
 

@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
+import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
 import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
@@ -27,6 +27,178 @@ const DEFAULT_EMPTY_QUIZ_DATA: PartialQuizData = {
   options: { A: '', B: '', C: '', D: '' },
 };
 
+// Define the expected structure of validated AI data locally
+type ValidatedAiData = {
+  paragraph: string;
+  question: string;
+  options: { A: string; B: string; C: string; D: string };
+  topic?: string | null; // Reverted: topic is now guaranteed to be string or null
+  // Add other fields returned by generateAndValidateExercise if necessary
+};
+
+type ValidatedParams = {
+  passageLanguage: Language;
+  questionLanguage: Language;
+  cefrLevel: CEFRLevel;
+};
+
+// --- Helper Functions ---
+
+const createErrorResponse = (error: string): GenerateExerciseResult => ({
+  quizData: DEFAULT_EMPTY_QUIZ_DATA,
+  quizId: -1,
+  error,
+  cached: false,
+});
+
+const validateParams = (
+  params: ExerciseRequestParams
+): ValidatedParams | GenerateExerciseResult => {
+  const { passageLanguage, questionLanguage, cefrLevel: level } = params;
+
+  const passageLangStr = String(passageLanguage);
+  const questionLangStr = String(questionLanguage);
+  const levelStr = String(level);
+
+  if (!(passageLangStr in LANGUAGES)) {
+    const errorMsg = `Invalid passage language: ${passageLangStr}`;
+    console.error(`[API] ${errorMsg}`);
+    return createErrorResponse(errorMsg);
+  }
+
+  if (!(questionLangStr in LANGUAGES)) {
+    const errorMsg = `Invalid question language: ${questionLangStr}`;
+    console.error(`[API] ${errorMsg}`);
+    return createErrorResponse(errorMsg);
+  }
+
+  const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  if (!validCefrLevels.includes(levelStr as CEFRLevel)) {
+    const errorMsg = `Invalid CEFR level: ${levelStr}`;
+    console.error(`[API] ${errorMsg}`);
+    return createErrorResponse(errorMsg);
+  }
+
+  return {
+    passageLanguage: passageLangStr as Language,
+    questionLanguage: questionLangStr as Language,
+    cefrLevel: levelStr as CEFRLevel,
+  };
+};
+
+const tryGenerateAndCacheExercise = async (
+  params: ValidatedParams,
+  userId: number | null
+): Promise<GenerateExerciseResult> => {
+  try {
+    const topicResult = getRandomTopicForLevel(params.cefrLevel);
+    const topic = typeof topicResult === 'string' ? topicResult : String(topicResult);
+    const grammarGuidance: string = getGrammarGuidance(params.cefrLevel);
+    const vocabularyGuidance: string = getVocabularyGuidance(params.cefrLevel);
+    const passageLangName: string = LANGUAGES[params.passageLanguage];
+    const questionLangName: string = LANGUAGES[params.questionLanguage];
+
+    const validatedAiData = (await generateAndValidateExercise({
+      topic,
+      passageLanguage: params.passageLanguage,
+      questionLanguage: params.questionLanguage,
+      passageLangName,
+      questionLangName,
+      level: params.cefrLevel,
+      grammarGuidance,
+      vocabularyGuidance,
+    })) as ValidatedAiData;
+
+    const contentToCache = JSON.stringify(validatedAiData);
+    const quizId = saveExerciseToCache(
+      params.passageLanguage,
+      params.questionLanguage,
+      params.cefrLevel,
+      contentToCache,
+      userId
+    );
+
+    const partialData: PartialQuizData = {
+      paragraph: validatedAiData.paragraph,
+      question: validatedAiData.question,
+      options: validatedAiData.options,
+      topic: validatedAiData.topic,
+    };
+
+    if (quizId === undefined) {
+      console.error('[API] Failed to save generated exercise to cache.');
+      return {
+        quizData: partialData,
+        quizId: -1,
+        error: 'Failed to save exercise to cache.',
+        cached: false,
+      };
+    }
+
+    return {
+      quizData: partialData,
+      quizId: quizId,
+      cached: false,
+    };
+  } catch (error: unknown) {
+    let errorMessage = 'An unknown error occurred during exercise generation';
+    let originalErrorStack: string | undefined = undefined;
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      originalErrorStack = error.stack;
+      console.error(
+        '[API] Error during AI generation/processing:',
+        errorMessage,
+        originalErrorStack
+      );
+
+      if (error instanceof AIResponseProcessingError && error.originalError) {
+        if (error.originalError instanceof Error) {
+          console.error(
+            '[API] Original AI Error:',
+            error.originalError.message,
+            error.originalError.stack
+          );
+        } else {
+          console.error('[API] Original AI Error (non-Error object):', error.originalError);
+        }
+      }
+    } else {
+      console.error('[API] Error during AI generation/processing (non-Error object):', error);
+    }
+
+    const finalErrorMessage =
+      error instanceof AIResponseProcessingError
+        ? errorMessage
+        : `An unexpected error occurred during exercise generation: ${errorMessage}`;
+
+    return createErrorResponse(finalErrorMessage);
+  }
+};
+
+const tryGetCachedExercise = (
+  params: ValidatedParams,
+  userId: number | null
+): GenerateExerciseResult | null => {
+  const validatedCacheResult = getValidatedExerciseFromCache(
+    params.passageLanguage,
+    params.questionLanguage,
+    params.cefrLevel,
+    userId
+  );
+
+  if (validatedCacheResult) {
+    return {
+      ...validatedCacheResult,
+      cached: true,
+    };
+  }
+  return null;
+};
+
+// --- Main Action ---
+
 const _exerciseRequestBodySchema = z.object({
   passageLanguage: z.string(),
   questionLanguage: z.string(),
@@ -36,196 +208,70 @@ const _exerciseRequestBodySchema = z.object({
 export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
 
 export const generateExerciseResponse = async (
-  params: ExerciseRequestParams
+  requestParams: ExerciseRequestParams
 ): Promise<GenerateExerciseResult> => {
   const headersList = await headers();
   const ip = headersList.get('x-forwarded-for') || 'unknown';
-  const session = await getServerSession(authOptions);
-
-  const { passageLanguage, questionLanguage, cefrLevel: level } = params;
-
-  const passageLanguageStr = String(passageLanguage);
-  const questionLanguageStr = String(questionLanguage);
-  const levelStr = String(level);
+  const session: Session | null = await getServerSession(authOptions);
+  const userId = getDbUserIdFromSession(session); // Get user ID once (is number | null)
 
   // --- Parameter Validation ---
-  if (!(passageLanguageStr in LANGUAGES)) {
-    console.error(`[API] Invalid passage language received: ${passageLanguageStr}`);
-    return {
-      quizData: DEFAULT_EMPTY_QUIZ_DATA,
-      quizId: -1,
-      error: `Invalid passage language: ${passageLanguageStr}`,
-    };
+  const validationResult = validateParams(requestParams);
+  if ('error' in validationResult) {
+    return validationResult; // Return error response if validation fails
   }
-
-  if (!(questionLanguageStr in LANGUAGES)) {
-    console.error(`[API] Invalid question language received: ${questionLanguageStr}`);
-    return {
-      quizData: DEFAULT_EMPTY_QUIZ_DATA,
-      quizId: -1,
-      error: `Invalid question language: ${questionLanguageStr}`,
-    };
-  }
-
-  const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-  if (!validCefrLevels.includes(levelStr as CEFRLevel)) {
-    console.error(`[API] Invalid CEFR level received: ${levelStr}`);
-    return {
-      quizData: DEFAULT_EMPTY_QUIZ_DATA,
-      quizId: -1,
-      error: `Invalid CEFR level: ${levelStr}`,
-    };
-  }
-  const cefrLevelTyped = levelStr as CEFRLevel;
+  // Use type assertion as compiler fails to narrow correctly
+  const validParams = validationResult as ValidatedParams;
 
   // --- Rate Limit Check ---
   const isAllowed = checkRateLimit(ip);
-
   if (!isAllowed) {
-    console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
-    // If rate limited, immediately try to fall back to cache
+    console.warn(`[API] Rate limit exceeded for IP: ${ip}. Attempting cache fallback.`);
+    // Use validParams now
+    const cachedResult = tryGetCachedExercise(validParams, userId);
+    if (cachedResult) {
+      return cachedResult;
+    }
+    console.error(
+      `[API] Rate limited and no suitable cache found for lang=${validParams.passageLanguage}, level=${validParams.cefrLevel}, user=${userId ?? 'anonymous'}.`
+    );
+    return createErrorResponse('Rate limit exceeded and no cached question available.');
   }
 
-  // --- Cache Count Check ---
-  const cachedCount = countCachedExercises(passageLanguage, questionLanguage, level);
+  // --- Cache Count Check & Generation Logic ---
+  const cachedCount = countCachedExercises(
+    validParams.passageLanguage,
+    validParams.questionLanguage,
+    validParams.cefrLevel
+  );
 
-  // --- Primary Path: Generate New Exercise ---
+  if (cachedCount < CACHE_GENERATION_THRESHOLD) {
+    // Attempt to generate a new exercise
+    const generationResult = await tryGenerateAndCacheExercise(validParams, userId);
 
-  if (isAllowed && cachedCount < CACHE_GENERATION_THRESHOLD) {
-    try {
-      const topicResult = getRandomTopicForLevel(cefrLevelTyped);
-      const topic = typeof topicResult === 'string' ? topicResult : String(topicResult);
-      const grammarGuidance: string = getGrammarGuidance(cefrLevelTyped);
-      const vocabularyGuidance: string = getVocabularyGuidance(cefrLevelTyped);
-      const passageLangName: string = LANGUAGES[passageLanguageStr as Language];
-      const questionLangName: string = LANGUAGES[questionLanguageStr as Language];
-
-      // Generate the exercise using the helper function
-      const validatedAiData = await generateAndValidateExercise({
-        topic,
-        passageLanguage: passageLanguageStr as Language,
-        questionLanguage: questionLanguageStr as Language,
-        passageLangName,
-        questionLangName,
-        level: cefrLevelTyped,
-        grammarGuidance,
-        vocabularyGuidance,
-      });
-
-      // Prepare the content to be saved (original cleaned string)
-      // Note: We need the string form to save to cache. We re-parse if we fetch from cache.
-      // This assumes _generateAndValidateExercise successfully parsed it, so JSON.stringify should work.
-      const contentToCache = JSON.stringify(validatedAiData);
-
-      // --- Direct User ID Lookup before saving ---
-      const finalUserId = getDbUserIdFromSession(session);
-      // --- End Direct User ID Lookup ---
-
-      const quizId = saveExerciseToCache(
-        passageLanguage,
-        questionLanguage,
-        level,
-        contentToCache, // Save the stringified validated data
-        finalUserId // Use the directly looked-up ID
-      );
-
-      if (quizId === undefined) {
-        console.error('[API] Failed to save generated exercise to cache.');
-        // Proceed without cache ID, but log error
-        const partialData: PartialQuizData = {
-          paragraph: validatedAiData.paragraph,
-          question: validatedAiData.question,
-          options: validatedAiData.options,
-          topic: validatedAiData.topic,
-        };
-        return {
-          quizData: partialData,
-          quizId: -1, // Indicate error or non-cache state
-          error: 'Failed to save exercise to cache.',
-          cached: false,
-        };
-      }
-
-      const partialData: PartialQuizData = {
-        paragraph: validatedAiData.paragraph,
-        question: validatedAiData.question,
-        options: validatedAiData.options,
-        topic: validatedAiData.topic,
-      };
-
-      return {
-        quizData: partialData,
-        quizId: quizId,
-        cached: false, // Mark as newly generated
-      };
-    } catch (error: unknown) {
-      let errorMessage = 'An unknown error occurred during exercise generation';
-      let originalErrorStack: string | undefined = undefined;
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        originalErrorStack = error.stack;
-        console.error(
-          '[API] Error during AI generation/processing:',
-          errorMessage,
-          originalErrorStack
-        );
-
-        // Specific handling for AIResponseProcessingError
-        if (error instanceof AIResponseProcessingError && error.originalError) {
-          if (error.originalError instanceof Error) {
-            console.error(
-              '[API] Original AI Error:',
-              error.originalError.message,
-              error.originalError.stack
-            );
-          } else {
-            console.error('[API] Original AI Error (non-Error object):', error.originalError);
-          }
-        }
-      } else {
-        console.error('[API] Error during AI generation/processing (non-Error object):', error);
-      }
-
-      // Determine final error message
-      const finalErrorMessage =
-        error instanceof AIResponseProcessingError
-          ? errorMessage // Use the message from AIResponseProcessingError
-          : `An unexpected error occurred during exercise generation: ${errorMessage}`;
-
-      // Return error conforming to expected structure
-      return {
-        error: finalErrorMessage,
-        quizData: DEFAULT_EMPTY_QUIZ_DATA,
-        quizId: -1,
-        cached: false,
-      };
+    // If generation succeeded OR if it failed ONLY during the save step,
+    // return the result (which includes the generated data and specific save error).
+    if (
+      generationResult.quizId !== -1 ||
+      generationResult.error === 'Failed to save exercise to cache.'
+    ) {
+      return generationResult;
     }
+
+    // If generation failed for other reasons (AI error, validation, etc.),
+    // log it (already done in tryGenerateAndCacheExercise) and proceed to check cache as a fallback.
+    console.warn('[API] Generation failed, attempting cache fallback.');
   }
 
   // --- Fallback Path: Use Cached Exercise ---
-  const userIdForCacheLookup = session?.user.dbId || getDbUserIdFromSession(session);
-  const validatedCacheResult = getValidatedExerciseFromCache(
-    passageLanguage,
-    questionLanguage,
-    level,
-    userIdForCacheLookup
-  );
-
-  if (validatedCacheResult) {
-    return {
-      ...validatedCacheResult, // Contains quizData and quizId
-      cached: true,
-    };
+  const cachedResult = tryGetCachedExercise(validParams, userId);
+  if (cachedResult) {
+    return cachedResult;
   }
 
   // --- Final Fallback: No Question Available ---
   console.error(
-    `[API] Exhausted options: Failed to generate and no suitable cache found for lang=${passageLanguage}, level=${level}, user=${session?.user.dbId ?? 'anonymous'}.`
+    `[API] Exhausted options: Failed to generate and no suitable cache found for lang=${validParams.passageLanguage}, level=${validParams.cefrLevel}, user=${userId ?? 'anonymous'}.`
   );
-  return {
-    quizData: DEFAULT_EMPTY_QUIZ_DATA,
-    quizId: -1,
-    error: 'Could not retrieve or generate a question.',
-  };
+  return createErrorResponse('Could not retrieve or generate a question.');
 };
