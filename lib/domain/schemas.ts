@@ -88,6 +88,14 @@ export const ExerciseContentSchema = z.object({
   paragraph: z.string(),
   question: z.string(),
   options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  topic: z.string().optional().nullable(), // Assuming topic remains optional/nullable here
+  correctAnswer: z.string(),
+  allExplanations: z.object({
+    A: z.string(),
+    B: z.string(),
+    C: z.string(),
+    D: z.string(),
+  }),
+  relevantText: z.string(),
+  topic: z.string().optional().nullable(),
 });
 export type ExerciseContent = z.infer<typeof ExerciseContentSchema>; // Renamed type alias

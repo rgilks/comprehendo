@@ -109,6 +109,9 @@ describe('generateExerciseResponse', () => {
     question: 'Mock question?',
     options: { A: 'Opt A', B: 'Opt B', C: 'Opt C', D: 'Opt D' },
     topic: 'mock topic', // Use the topic returned by the mock getRandomTopicForLevel
+    correctAnswer: 'A',
+    allExplanations: { A: 'Expl A', B: 'Expl B', C: 'Expl C', D: 'Expl D' },
+    relevantText: 'Mock relevant text',
   };
 
   // This represents the data structure *before* Zod validation in the action
