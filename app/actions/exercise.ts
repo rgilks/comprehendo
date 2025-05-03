@@ -10,7 +10,6 @@ import {
   GenerateExerciseResultSchema,
   type GenerateExerciseResult,
   type PartialQuizData,
-  // type ValidatedAiData, // Temporarily commented out due to build error TS6133
   ValidatedAiDataSchema,
 } from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
@@ -109,36 +108,35 @@ const tryGenerateAndCacheExercise = async (
 
     validatedAiData.topic = topic;
 
-    const contentToCache = JSON.stringify(validatedAiData);
-    const quizId = saveExerciseToCache(
-      params.passageLanguage,
-      params.questionLanguage,
-      params.cefrLevel,
-      contentToCache,
-      userId
-    );
-
-    const partialData: PartialQuizData = {
+    const partialQuizData: PartialQuizData = {
       paragraph: validatedAiData.paragraph,
       question: validatedAiData.question,
       options: validatedAiData.options,
-      topic: validatedAiData.topic,
+      topic: validatedAiData.topic ?? null,
       language: params.passageLanguage,
     };
 
-    if (quizId === undefined) {
-      console.error('[API] Failed to save generated exercise to cache.');
-      return {
-        quizData: partialData,
-        quizId: -1,
-        error: 'Failed to save exercise to cache.',
-        cached: false,
-      };
+    let quizId: number | undefined;
+    try {
+      quizId = saveExerciseToCache(
+        params.passageLanguage,
+        params.questionLanguage,
+        params.cefrLevel,
+        JSON.stringify(validatedAiData),
+        userId
+      );
+      if (quizId === undefined) {
+        throw new Error('Cache save returned undefined ID');
+      }
+    } catch (error: unknown) {
+      console.error('[API:tryGenerate] Failed to save exercise to cache:', error);
+      return createErrorResponse('Failed to save generated exercise to cache.');
     }
 
     return {
-      quizData: partialData,
-      quizId: quizId,
+      quizData: partialQuizData,
+      quizId,
+      error: null,
       cached: false,
     };
   } catch (error: unknown) {
