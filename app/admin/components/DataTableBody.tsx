@@ -16,14 +16,12 @@ export const DataTableBody = <T extends Record<string, unknown>>({
   minBodyHeight,
   onRowClick,
 }: DataTableBodyProps<T>) => {
-  const getRowKey = (row: T, index: number): string | number => {
-    // Prefer using a unique ID if available
+  const getRowKey = (row: T, index: number): string => {
     const id = row['id'];
     if (id && (typeof id === 'string' || typeof id === 'number')) {
-      return id;
+      return String(id);
     }
-    // Fallback to index if no id is present
-    return index;
+    return `index-${index}`;
   };
 
   return (
@@ -33,17 +31,20 @@ export const DataTableBody = <T extends Record<string, unknown>>({
       <table className="min-w-full bg-white border border-gray-300">
         <thead>
           <tr className="bg-gray-100">
-            {headers.length > 0 ? (
-              headers.map((key) => (
-                <th
-                  key={key as string}
-                  className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold"
-                >
-                  {key as string}
-                </th>
-              ))
-            ) : (
-              <th className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold">
+            {headers.map((key) => (
+              <th
+                key={key as string}
+                scope="col"
+                className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold"
+              >
+                {key as string}
+              </th>
+            ))}
+            {headers.length === 0 && (
+              <th
+                scope="col"
+                className="py-1 px-2 sm:py-2 sm:px-4 border-b text-left text-gray-900 font-semibold"
+              >
                 &nbsp;
               </th>
             )}
@@ -51,24 +52,27 @@ export const DataTableBody = <T extends Record<string, unknown>>({
         </thead>
         <tbody style={{ minHeight: `${minBodyHeight}px` }}>
           {!isLoading && data.length > 0 ? (
-            data.map((row, rowIndex) => (
-              <tr
-                key={getRowKey(row, rowIndex)} // Use unique ID or index as key
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => {
-                  onRowClick(row);
-                }}
-              >
-                {headers.map((header, _colIndex) => (
-                  <td
-                    key={`${getRowKey(row, rowIndex)}-${header as string}`} // Ensure unique key
-                    className="py-1 px-2 sm:py-2 sm:px-4 border-b text-gray-900 text-sm whitespace-nowrap"
-                  >
-                    {renderTableCellValue(row[header])}
-                  </td>
-                ))}
-              </tr>
-            ))
+            data.map((row, rowIndex) => {
+              const rowKey = getRowKey(row, rowIndex);
+              return (
+                <tr
+                  key={rowKey}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    onRowClick(row);
+                  }}
+                >
+                  {headers.map((header) => (
+                    <td
+                      key={`${rowKey}-${header as string}`}
+                      className="py-1 px-2 sm:py-2 sm:px-4 border-b text-gray-900 text-sm whitespace-nowrap"
+                    >
+                      {renderTableCellValue(row[header])}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td
