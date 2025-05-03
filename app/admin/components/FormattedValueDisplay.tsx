@@ -5,10 +5,16 @@ interface FormattedValueDisplayProps {
   value: unknown;
 }
 
-export const FormattedValueDisplay: React.FC<FormattedValueDisplayProps> = ({
-  valueKey: key,
-  value,
-}) => {
+const JsonObjectDisplay = ({ data }: { data: unknown }) => (
+  <pre
+    data-testid="json-object-display"
+    className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words"
+  >
+    {JSON.stringify(data, null, 2)}
+  </pre>
+);
+
+export const FormattedValueDisplay = ({ valueKey: key, value }: FormattedValueDisplayProps) => {
   if (value === null || value === undefined) {
     return <span className="text-gray-500 italic">NULL</span>;
   }
@@ -30,8 +36,8 @@ export const FormattedValueDisplay: React.FC<FormattedValueDisplayProps> = ({
           timeStyle: 'medium',
         });
       }
-    } catch {
-      // Intentionally empty
+    } catch (error) {
+      console.warn(`Failed to parse date string '${value}' for key '${key}':`, error);
     }
   }
 
@@ -43,26 +49,18 @@ export const FormattedValueDisplay: React.FC<FormattedValueDisplayProps> = ({
     ) {
       try {
         const parsedJson = JSON.parse(trimmedValue) as Record<string, unknown>;
-        return (
-          <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
-            {JSON.stringify(parsedJson, null, 2)}
-          </pre>
-        );
-      } catch {
-        // Intentionally empty
+        return <JsonObjectDisplay data={parsedJson} />;
+      } catch (error) {
+        console.warn(`Failed to parse JSON string '${value}' for key '${key}':`, error);
       }
     }
     return value;
   }
 
   if (typeof value === 'object') {
-    return (
-      <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    );
+    return <JsonObjectDisplay data={value} />;
   }
 
   // Fallback for other types
-  return '[Unsupported Value]';
+  return '[Unsupported Type]';
 };
