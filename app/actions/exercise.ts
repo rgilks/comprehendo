@@ -4,13 +4,12 @@ import { z } from 'zod';
 import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { headers } from 'next/headers';
-import { getActiveModel, getGoogleAIClient, ModelConfig } from '@/lib/modelConfig';
+import { getActiveModel } from '@/lib/modelConfig';
 import { LANGUAGES, type Language } from '@/config/languages';
 import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
-import { GoogleGenAI, GenerationConfig } from '@google/genai';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import {
   getCachedExercise,
@@ -18,6 +17,11 @@ import {
   countCachedExercises,
   type QuizRow,
 } from '@/lib/exercise-cache';
+import {
+  generateExercisePrompt,
+  callGoogleAI,
+  AIResponseProcessingError,
+} from '@/lib/ai/exercise-generator';
 
 const _exerciseRequestBodySchema = z.object({
   passageLanguage: z.string(),
@@ -26,78 +30,6 @@ const _exerciseRequestBodySchema = z.object({
 });
 
 export type ExerciseRequestParams = z.infer<typeof _exerciseRequestBodySchema>;
-
-class AIResponseProcessingError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AIResponseProcessingError';
-  }
-}
-
-const ensureError = (
-  error: unknown,
-  defaultMessage: string = 'An unknown error occurred'
-): Error => {
-  if (error instanceof Error) {
-    return error;
-  }
-  return new Error(`${defaultMessage}: ${String(error)}`);
-};
-
-const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Promise<string> => {
-  console.log('[API] Calling Google AI API...');
-  const genAI: GoogleGenAI = getGoogleAIClient();
-
-  // Define generation config
-  const generationConfig: GenerationConfig = {
-    maxOutputTokens: modelConfig.maxTokens,
-    temperature: 0.7,
-    topP: 0.9,
-    topK: 40,
-    frequencyPenalty: 0.3,
-    presencePenalty: 0.2,
-    candidateCount: 1,
-    responseMimeType: 'application/json',
-  };
-
-  try {
-    // Construct the request object according to @google/genai structure
-    const request = {
-      model: modelConfig.name,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }], // Pass prompt inside contents array
-      generationConfig: generationConfig, // Pass generationConfig directly
-    };
-
-    // Log the request structure for debugging
-    // console.log('[API] Google AI request object:', JSON.stringify(request, null, 2));
-
-    const result = await genAI.models.generateContent(request);
-
-    // Log full Google AI result for deeper debugging
-    console.log('[API] Google AI full result:', JSON.stringify(result, null, 2)); // Stringify for better logging
-
-    // Access text directly from the result object as per @google/genai examples
-    const text = result.text; // Access text directly
-
-    if (!text) {
-      console.error(
-        '[API] Failed to extract text from Google AI response:',
-        JSON.stringify(result, null, 2) // Stringify for better logging
-      );
-      throw new AIResponseProcessingError(
-        'No content received from Google AI or failed to extract text.'
-      );
-    }
-
-    console.log('[API] Received response from Google AI.');
-    return text;
-  } catch (error: unknown) {
-    console.error('[API] Google AI API raw error:', String(error));
-    console.error('[API] Error details:', error); // Log the full error object
-    const wrappedError = ensureError(error, 'Failed to generate content using Google AI');
-    throw wrappedError;
-  }
-};
 
 export const generateExerciseResponse = async (
   params: ExerciseRequestParams
@@ -147,48 +79,33 @@ export const generateExerciseResponse = async (
 
       const activeModel = getActiveModel();
 
-      const prompt = `Generate a reading comprehension exercise based on the following parameters:\n- Topic: ${String(topic)}\n- Passage Language: ${passageLangName} (${passageLanguageStr})\n- Question Language: ${questionLangName} (${questionLanguageStr})\n- CEFR Level: ${levelStr}\n- Grammar Guidance: ${grammarGuidance}\n- Vocabulary Guidance: ${vocabularyGuidance}\n\nInstructions:\n1. Create a short paragraph (3-6 sentences) in ${passageLanguageStr} suitable for a ${levelStr} learner, focusing on the topic "${String(topic)}".\n2. Write ONE multiple-choice question in ${questionLanguageStr}. The question should target ONE of the following comprehension skills based on the paragraph: (a) main idea, (b) specific detail, (c) inference (requiring understanding information implied but not explicitly stated), OR (d) vocabulary in context (asking the meaning of a word/phrase as used in the paragraph).\n3. Provide four answer options (A, B, C, D) in ${questionLanguageStr}. Only one option should be correct.\n4. Create plausible distractors (incorrect options B, C, D): These should relate to the topic but be clearly contradicted, unsupported by the paragraph, or represent common misinterpretations based *only* on the text. Avoid options that are completely unrelated or rely on outside knowledge. **Ensure distractors are incorrect specifically because they contradict or are unsupported by the provided paragraph.**\n5. **CRITICAL REQUIREMENT:** The question **must be impossible** to answer correctly *without* reading and understanding the provided paragraph. The answer **must depend solely** on the specific details or implications within the text. Avoid any questions solvable by general knowledge or common sense.\n6. Identify the correct answer key (A, B, C, or D).\n7. Provide **concise explanations** (in ${questionLanguageStr}) for **ALL options (A, B, C, D)**. For the correct answer, explain why it's right. For incorrect answers, explain specifically why they are wrong according to the text. Each explanation MUST explicitly reference the specific part of the paragraph that supports or contradicts the option.\n8. Extract the specific sentence or phrase from the original paragraph (in ${passageLanguageStr}) that provides the primary evidence for the correct answer ("relevantText").\n\nOutput Format: Respond ONLY with a valid JSON object containing the following keys:\n- "paragraph": (string) The generated paragraph in ${passageLanguageStr}.\n- "topic": (string) The topic used: "${String(topic)}".\n- "question": (string) The multiple-choice question in ${questionLanguageStr}.\n- "options": (object) An object with keys "A", "B", "C", "D", where each value is an answer option string in ${questionLanguageStr}.\n- "correctAnswer": (string) The key ("A", "B", "C", or "D") of the correct answer.\n- "allExplanations": (object) An object with keys "A", "B", "C", "D", where each value is the concise explanation string in ${questionLanguageStr} for that option, explicitly referencing the text.\n- "relevantText": (string) The sentence or phrase from the paragraph in ${passageLanguageStr} that supports the correct answer.\n\nExample JSON structure:\n{
-  "paragraph": "...",
-  "topic": "...",
-  "question": "...",
-  "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-  "correctAnswer": "B",
-  "allExplanations": { "A": "Explanation A referencing text...", "B": "Explanation B referencing text...", "C": "Explanation C referencing text...", "D": "Explanation D referencing text..." },
-  "relevantText": "..."
-}
+      // Generate the prompt using the new function
+      const prompt = generateExercisePrompt({
+        topic: topic,
+        passageLanguage: passageLanguageStr as Language,
+        questionLanguage: questionLanguageStr as Language,
+        passageLangName: passageLangName,
+        questionLangName: questionLangName,
+        level: cefrLevelTyped,
+        grammarGuidance: grammarGuidance,
+        vocabularyGuidance: vocabularyGuidance,
+      });
 
-Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
-`;
-
-      const aiResponseContent = await callGoogleAI(prompt, activeModel);
-
-      // Log the raw AI response content
-      console.log('[API] Raw AI response content:', aiResponseContent);
-
-      if (!aiResponseContent) {
-        throw new AIResponseProcessingError('Received empty response from AI model.');
-      }
-
-      // Clean the response content: remove potential markdown fences
-      const cleanedAiResponseContent = aiResponseContent
-        .trim()
-        .replace(/^```json\n/, '')
-        .replace(/\n```$/, '');
+      // Call the AI using the new function (which includes cleaning)
+      const cleanedAiResponseContent = await callGoogleAI(prompt, activeModel);
 
       let parsedAiContent: unknown;
       try {
-        // Parse the cleaned content
         parsedAiContent = JSON.parse(cleanedAiResponseContent);
       } catch (parseError: unknown) {
         console.error(
           '[API] Failed to parse AI response JSON:',
           parseError,
           '\nCleaned Response:\n',
-          cleanedAiResponseContent,
-          '\nRaw Response:\n',
-          aiResponseContent
+          cleanedAiResponseContent
         );
-        const errorToCapture = ensureError(parseError, 'Failed to parse AI response JSON');
+        const errorToCapture =
+          parseError instanceof Error ? parseError : new Error(String(parseError));
         throw new AIResponseProcessingError(
           `Failed to parse AI JSON response. Error: ${errorToCapture.message}`
         );
@@ -200,7 +117,7 @@ Ensure the entire output is a single, valid JSON object string without any surro
           '[API] AI response failed Zod validation:',
           JSON.stringify(validationResult.error.format(), null, 2)
         );
-        console.error('[API] Failing AI Response Content:', aiResponseContent);
+        console.error('[API] Failing AI Response Content:', cleanedAiResponseContent);
         throw new AIResponseProcessingError(
           `AI response failed validation. Errors: ${JSON.stringify(
             validationResult.error.format()
@@ -277,9 +194,47 @@ Ensure the entire output is a single, valid JSON object string without any surro
         cached: false, // Mark as newly generated
       };
     } catch (error: unknown) {
-      console.error('[API] Error during AI Generation Path:', error);
-      // If AI generation fails, fall through to try the cache as a last resort
-      console.warn('[API] AI Generation failed, falling back to cache check.');
+      let errorMessage = 'An unknown error occurred during exercise generation';
+      let originalErrorStack: string | undefined = undefined;
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        originalErrorStack = error.stack;
+        console.error(
+          '[API] Error during AI generation/processing:',
+          errorMessage,
+          originalErrorStack
+        );
+
+        // Specific handling for AIResponseProcessingError
+        if (error instanceof AIResponseProcessingError && error.originalError) {
+          if (error.originalError instanceof Error) {
+            console.error(
+              '[API] Original AI Error:',
+              error.originalError.message,
+              error.originalError.stack
+            );
+          } else {
+            console.error('[API] Original AI Error (non-Error object):', error.originalError);
+          }
+        }
+      } else {
+        console.error('[API] Error during AI generation/processing (non-Error object):', error);
+      }
+
+      // Determine final error message
+      const finalErrorMessage =
+        error instanceof AIResponseProcessingError
+          ? errorMessage // Use the message from AIResponseProcessingError
+          : `An unexpected error occurred during exercise generation: ${errorMessage}`;
+
+      // Return error conforming to expected structure
+      return {
+        error: finalErrorMessage,
+        quizData: { paragraph: '', question: '', options: { A: '', B: '', C: '', D: '' } }, // Default object
+        quizId: -1, // Placeholder ID
+        cached: false,
+      };
     }
   }
 
