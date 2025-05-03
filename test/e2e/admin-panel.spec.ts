@@ -8,7 +8,7 @@ test.describe('Admin Panel Basic Navigation', () => {
     await expect(page.locator('h1')).toContainText(/Comprehendo admin/i, { timeout: 2000 });
   });
 
-  async function checkTableLoads(page: Page, tableName: string, expectedHeader: string) {
+  const checkTableLoads = async (page: Page, tableName: string, expectedHeader: string) => {
     await page.getByRole('button', { name: new RegExp(tableName, 'i') }).click();
 
     const firstRowLocator = page.locator('table tbody tr').first();
@@ -22,7 +22,7 @@ test.describe('Admin Panel Basic Navigation', () => {
       headerLocator,
       `Header '${expectedHeader}' should be visible in ${tableName} table`
     ).toBeVisible({ timeout: 1000 });
-  }
+  };
 
   test('should display the users table with Email header', async ({ page }) => {
     await checkTableLoads(page, 'users', 'Email');

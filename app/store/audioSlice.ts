@@ -273,7 +273,6 @@ export const createAudioSlice: StateCreator<
     const speechLang = SPEECH_LANGUAGES[lang];
     const baseLangCode = speechLang.split('-')[0];
 
-    // Helper function to get platform info
     const getPlatformInfo = () => {
       const ua = navigator.userAgent;
       const nav = navigator as Navigator & { userAgentData?: { platform: string } };
@@ -315,9 +314,7 @@ export const createAudioSlice: StateCreator<
     const processedVoices = voices.map(
       (voice): { uri: string; displayName: string; originalLang: string } => {
         let displayName = voice.name;
-        // Note: isWindows is now derived from the helper function above
 
-        // Simplify Windows voice names
         if (isWindows && displayName.startsWith('Microsoft ')) {
           const match = displayName.match(/^Microsoft\s+([^\s]+)\s+-/);
           if (match && match[1]) {

@@ -13,7 +13,7 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-async function runTest(page, cycleIndex, userId) {
+const runTest = async (page, cycleIndex, userId) => {
   const startTime = performance.now();
   const log = (message) =>
     console.log(
@@ -100,9 +100,9 @@ async function runTest(page, cycleIndex, userId) {
     }
     return -1;
   }
-}
+};
 
-async function main() {
+const main = async () => {
   const numConcurrentUsers = 3;
   const totalCycles = 20;
 
@@ -257,7 +257,7 @@ async function main() {
       console.log(`[${new Date().toISOString()}] [Main] Global browser closed.`);
     }
   }
-}
+};
 
 main().catch((error) => {
   console.error('Unhandled error in main:', error);

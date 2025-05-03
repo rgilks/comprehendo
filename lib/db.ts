@@ -12,7 +12,7 @@ let db: Database.Database | null = null;
 let dbProxyInstance: Database.Database | null = null;
 let isInitialized = false;
 
-function initializeDatabase(): Database.Database {
+const initializeDatabase = (): Database.Database => {
   if (db && dbProxyInstance && isInitialized) {
     return dbProxyInstance;
   }
@@ -115,7 +115,7 @@ function initializeDatabase(): Database.Database {
     }
     throw error;
   }
-}
+};
 
 const initializedDbInstance = initializeDatabase();
 export default initializedDbInstance;

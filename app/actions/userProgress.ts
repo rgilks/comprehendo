@@ -54,11 +54,11 @@ export interface ProgressResponse {
   feedback?: FeedbackType;
 }
 
-function calculateAndUpdateProgress(
+const calculateAndUpdateProgress = (
   userId: number,
   language: string,
   isCorrect: boolean
-): { currentLevel: string; currentStreak: number; leveledUp: boolean; dbError?: string } {
+): { currentLevel: string; currentStreak: number; leveledUp: boolean; dbError?: string } => {
   const normalizedLanguage = language.toLowerCase().slice(0, 2);
 
   try {
@@ -120,7 +120,7 @@ function calculateAndUpdateProgress(
       dbError: `A database error occurred: ${message}`,
     };
   }
-}
+};
 
 export const updateProgress = async (params: UpdateProgressParams): Promise<ProgressResponse> => {
   const session = await getServerSession(authOptions);

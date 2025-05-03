@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/solid';
 import { useSession } from 'next-auth/react';
 
-export default function AdminPage() {
+const AdminPage = () => {
   const { data: session, status } = useSession();
   const [tableNames, setTableNames] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
@@ -415,4 +415,6 @@ export default function AdminPage() {
       </div>
     </div>
   );
-}
+};
+
+export default AdminPage;
