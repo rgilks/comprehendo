@@ -2,10 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { getGoogleAIClient } from '@/lib/ai/client';
 import type { QuizData } from '@/lib/domain/schemas';
 import { QuizDataSchema } from '@/lib/domain/schemas';
-import {
-  generateExercisePrompt,
-  type ExerciseGenerationParams,
-} from '@/lib/ai/prompts/exercise-prompt';
+import { generateExercisePrompt } from '@/lib/ai/prompts/exercise-prompt';
+import { ExerciseGenerationParamsSchema, type ExerciseGenerationParams } from '@/lib/domain/ai';
 
 // Export the error class
 export class AIResponseProcessingError extends Error {
@@ -19,16 +17,24 @@ export class AIResponseProcessingError extends Error {
 }
 
 // Helper function for AI generation and validation
-export const generateAndValidateExercise = async ({
-  topic,
-  passageLanguage,
-  questionLanguage,
-  passageLangName,
-  questionLangName,
-  level,
-  grammarGuidance,
-  vocabularyGuidance,
-}: ExerciseGenerationParams): Promise<QuizData> => {
+export const generateAndValidateExercise = async (
+  params: ExerciseGenerationParams
+): Promise<QuizData> => {
+  // Validate input params using the schema
+  const validatedParams = ExerciseGenerationParamsSchema.parse(params);
+
+  // Destructure from the validated parameters
+  const {
+    topic,
+    passageLanguage,
+    questionLanguage,
+    passageLangName,
+    questionLangName,
+    level,
+    grammarGuidance,
+    vocabularyGuidance,
+  } = validatedParams;
+
   const prompt = generateExercisePrompt({
     topic,
     passageLanguage,

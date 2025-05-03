@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getProgress } from '@/app/actions/userProgress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
-import type { CEFRLevel } from '@/config/language-guidance';
+import type { CEFRLevel } from '@/lib/domain/language-guidance';
 
 const GetProgressResultSchema = z.object({
   streak: z.number().optional().nullable(),

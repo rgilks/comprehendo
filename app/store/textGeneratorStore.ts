@@ -9,8 +9,10 @@ import { type AudioSlice, createAudioSlice } from './audioSlice';
 import { type ProgressSlice, createProgressSlice } from './progressSlice';
 import { type QuizData } from '@/lib/domain/schemas';
 
-export { type Language } from '@/contexts/LanguageContext';
-export { type CEFRLevel } from '@/config/language-guidance';
+export type { CEFRLevel } from '@/lib/domain/language-guidance';
+export { CEFRLevelSchema } from '@/lib/domain/language-guidance';
+export type { Language } from '@/lib/domain/language';
+export { LanguageSchema } from '@/lib/domain/language';
 
 export type { QuizData };
 

@@ -2,8 +2,8 @@
 
 import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
-import { LANGUAGES } from '@/config/languages';
-import { getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
+import { LANGUAGES } from '@/lib/domain/language';
+import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import {
   GenerateExerciseResultSchema,

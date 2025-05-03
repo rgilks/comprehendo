@@ -1,16 +1,4 @@
-import type { Language } from '@/config/languages';
-import type { CEFRLevel } from '@/config/language-guidance';
-
-export interface ExerciseGenerationParams {
-  topic: string;
-  passageLanguage: Language;
-  questionLanguage: Language;
-  passageLangName: string;
-  questionLangName: string;
-  level: CEFRLevel;
-  grammarGuidance: string;
-  vocabularyGuidance: string;
-}
+import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 
 export const generateExercisePrompt = (params: ExerciseGenerationParams): string => {
   const {

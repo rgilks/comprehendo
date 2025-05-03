@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { generateExercisePrompt } from './exercise-prompt';
 import type { ExerciseGenerationParams } from './exercise-prompt';
-import type { Language } from '@/config/languages';
-import type { CEFRLevel } from '@/config/language-guidance';
+import type { Language } from '@/lib/domain/language';
+import type { CEFRLevel } from '@/lib/domain/language-guidance';
 
 const samplePromptParams: ExerciseGenerationParams = {
   topic: 'Daily Routines',

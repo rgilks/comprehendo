@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import { type LearningLanguage } from '@/config/languages';
-import { type CEFRLevel } from '@/config/language-guidance';
+import { type LearningLanguage } from '@/lib/domain/language';
+import { type CEFRLevel } from '@/lib/domain/language-guidance';
 import type { Language, TextGeneratorState } from './textGeneratorStore';
 
 export interface SettingsSlice {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import Page, { generateMetadata, generateStaticParams } from './page';
-import { LANGUAGES, Language } from '@/config/languages';
+import { LANGUAGES, type Language } from '@/lib/domain/language';
 import { notFound } from 'next/navigation';
 import { initServerI18n } from '../i18n';
 import PageClientContent from './PageClientContent';

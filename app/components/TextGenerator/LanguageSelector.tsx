@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { GlobeAltIcon, BookOpenIcon } from '@heroicons/react/24/solid';
-import { LEARNING_LANGUAGES, type LearningLanguage } from '@/config/languages';
+import { LEARNING_LANGUAGES, type LearningLanguage } from '@/lib/domain/language';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
 

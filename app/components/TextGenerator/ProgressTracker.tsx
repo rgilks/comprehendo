@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useSession } from 'next-auth/react';
-import type { CEFRLevel } from '@/config/language-guidance';
+import type { CEFRLevel } from '@/lib/domain/language-guidance';
 
 const ProgressTracker = () => {
   const { t } = useTranslation('common');

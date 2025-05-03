@@ -215,7 +215,7 @@ export const createAudioSlice: StateCreator<
     utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
       const logPayload = {
         event,
-        text: text.substring(0, 100) + '...',
+        text: text ? text.substring(0, 100) + '...' : '[Text not available]',
         voiceURI: utterance.voice?.voiceURI,
         lang: utterance.lang,
       };
@@ -325,7 +325,7 @@ export const createAudioSlice: StateCreator<
         // Simplify iOS voice names
         else if (isIOS) {
           // Try removing everything from the first space and opening parenthesis onwards
-          const parenIndex = displayName.indexOf(' (');
+          const parenIndex = typeof displayName === 'string' ? displayName.indexOf(' (') : -1;
           if (parenIndex !== -1) {
             displayName = displayName.substring(0, parenIndex);
           }
