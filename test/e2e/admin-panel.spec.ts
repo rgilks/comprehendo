@@ -31,8 +31,8 @@ test.describe('Admin Panel Basic Navigation', () => {
     });
   };
 
-  test('should display the users table with Email header', async ({ page }) => {
-    await checkTableLoads(page, 'users', 'Email');
+  test('should display the users table with email header', async ({ page }) => {
+    await checkTableLoads(page, 'users', 'email');
   });
 
   test('should display the quiz table with Language header', async ({ page }) => {
