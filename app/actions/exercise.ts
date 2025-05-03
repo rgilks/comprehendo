@@ -11,13 +11,7 @@ import { getRandomTopicForLevel } from '@/config/topics';
 import { QuizDataSchema, GenerateExerciseResult, type PartialQuizData } from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
 import { GoogleGenAI, GenerationConfig } from '@google/genai';
-const MAX_REQUESTS_PER_HOUR = 100;
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000;
-
-interface RateLimitRow {
-  request_count: number;
-  window_start_time: string; // ISO 8601 string from SQLite TIMESTAMP
-}
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 interface QuizRow {
   id: number;
@@ -51,67 +45,6 @@ const ensureError = (
     return error;
   }
   return new Error(`${defaultMessage}: ${String(error)}`);
-};
-
-export const checkRateLimit = async (ip: string): Promise<boolean> => {
-  try {
-    const now = Date.now();
-    const nowISO = new Date(now).toISOString();
-
-    console.log(`[API] Checking rate limit for IP: ${ip}`);
-    console.log(`[API Perf] Rate Limit - SELECT Start: ${Date.now()}`);
-
-    const rateLimitRow = db
-      .prepare('SELECT request_count, window_start_time FROM rate_limits WHERE ip_address = ?')
-      .get(ip) as RateLimitRow | undefined;
-
-    console.log(`[API Perf] Rate Limit - SELECT End: ${Date.now()}`);
-
-    if (rateLimitRow) {
-      const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
-      const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
-
-      if (isWithinWindow) {
-        if (rateLimitRow.request_count >= MAX_REQUESTS_PER_HOUR) {
-          console.log(
-            `[API] Rate limit exceeded for IP: ${ip}. Count: ${rateLimitRow.request_count}, Window Start: ${rateLimitRow.window_start_time}`
-          );
-          return false;
-        } else {
-          console.log(`[API Perf] Rate Limit - UPDATE Start: ${Date.now()}`);
-          db.prepare(
-            'UPDATE rate_limits SET request_count = request_count + 1 WHERE ip_address = ?'
-          ).run(ip);
-          console.log(`[API Perf] Rate Limit - UPDATE End: ${Date.now()}`);
-          console.log(
-            `[API] Rate limit incremented for IP: ${ip}. New Count: ${
-              rateLimitRow.request_count + 1
-            }`
-          );
-          return true;
-        }
-      } else {
-        console.log(`[API] Rate limit window expired for IP: ${ip}. Resetting.`);
-        console.log(`[API Perf] Rate Limit - RESET Start: ${Date.now()}`);
-        db.prepare(
-          'UPDATE rate_limits SET request_count = 1, window_start_time = ? WHERE ip_address = ?'
-        ).run(nowISO, ip);
-        console.log(`[API Perf] Rate Limit - RESET End: ${Date.now()}`);
-        return true;
-      }
-    } else {
-      console.log(`[API] No rate limit record found for IP: ${ip}. Creating new record.`);
-      console.log(`[API Perf] Rate Limit - INSERT Start: ${Date.now()}`);
-      db.prepare(
-        'INSERT INTO rate_limits (ip_address, request_count, window_start_time) VALUES (?, 1, ?)'
-      ).run(ip, nowISO);
-      console.log(`[API Perf] Rate Limit - INSERT End: ${Date.now()}`);
-      return true;
-    }
-  } catch (error) {
-    console.error('[API] Error checking rate limit:', error);
-    return false;
-  }
 };
 
 export const getCachedExercise = async (
@@ -276,8 +209,8 @@ export const generateExerciseResponse = async (
   const cefrLevelTyped = levelStr as CEFRLevel;
 
   // --- Rate Limit Check ---
-  const isRateLimited = !(await checkRateLimit(ip));
-  if (isRateLimited) {
+  const isAllowed = checkRateLimit(ip);
+  if (!isAllowed) {
     console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
     // If rate limited, immediately try to fall back to cache
   }
@@ -285,10 +218,9 @@ export const generateExerciseResponse = async (
   // --- Cache Count Check ---
   const CACHE_GENERATION_THRESHOLD = 100;
   const cachedCount = await countCachedExercises(passageLanguage, questionLanguage, level);
-  const shouldPreferCache = isRateLimited || cachedCount >= CACHE_GENERATION_THRESHOLD;
 
   // --- Primary Path: Generate New Exercise ---
-  if (!shouldPreferCache) {
+  if (isAllowed && cachedCount < CACHE_GENERATION_THRESHOLD) {
     try {
       const topicResult = getRandomTopicForLevel(cefrLevelTyped);
       const topic = typeof topicResult === 'string' ? topicResult : String(topicResult);
