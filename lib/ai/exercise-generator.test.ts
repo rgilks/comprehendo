@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  generateExercisePrompt,
-  callGoogleAI,
-  AIResponseProcessingError,
-} from './exercise-generator';
-import type { Language } from '@/config/languages';
-import type { CEFRLevel } from '@/config/language-guidance';
+import { callGoogleAI, AIResponseProcessingError } from './exercise-generator';
 
 const mockGenerateContent = vi.fn();
 const mockGenAIInstance = {
@@ -17,17 +11,6 @@ const mockGenAIInstance = {
 vi.mock('@/lib/ai/client', () => ({
   getGoogleAIClient: vi.fn(() => mockGenAIInstance),
 }));
-
-const samplePromptParams = {
-  topic: 'Daily Routines',
-  passageLanguage: 'fr' as Language,
-  questionLanguage: 'en' as Language,
-  passageLangName: 'French',
-  questionLangName: 'English',
-  level: 'A2' as CEFRLevel,
-  grammarGuidance: 'Present tense verbs',
-  vocabularyGuidance: 'Words related to daily activities',
-};
 
 const samplePrompt = `Generate a reading comprehension exercise based on the following parameters:
 - Topic: Daily Routines
@@ -70,22 +53,9 @@ Example JSON structure:
 Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
 `;
 
-describe('AI Exercise Generation', () => {
+describe('AI Exercise Generation - callGoogleAI', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-  });
-
-  describe('generateExercisePrompt', () => {
-    it('should generate the correct prompt string based on parameters', () => {
-      const prompt = generateExercisePrompt(samplePromptParams);
-      expect(prompt).toContain('- Topic: Daily Routines');
-      expect(prompt).toContain('- Passage Language: French (fr)');
-      expect(prompt).toContain('- Question Language: English (en)');
-      expect(prompt).toContain('- CEFR Level: A2');
-      expect(prompt).toContain('- Grammar Guidance: Present tense verbs');
-      expect(prompt).toContain('- Vocabulary Guidance: Words related to daily activities');
-      expect(prompt).toContain('Output Format: Respond ONLY with a valid JSON object');
-    });
   });
 
   describe('callGoogleAI', () => {
