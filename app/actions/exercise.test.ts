@@ -1,11 +1,12 @@
 import { describe, test, expect, vi } from 'vitest';
-import { generateExerciseResponse, type ExerciseRequestParams } from './exercise';
+import { generateExerciseResponse } from './exercise';
+import { type ExerciseRequestParams, ExerciseContentSchema } from '@/lib/domain/schemas';
 import { AIResponseProcessingError } from '@/lib/ai/exercise-generator';
 // import type { QuizRow } from '@/lib/exercise-cache'; // Removed unused import
 import type { Session } from 'next-auth';
 import type { GenerateExerciseResult } from '@/lib/domain/schemas'; // Import the type
 // Directly import the schema to spy on it
-import { ValidatedAiDataSchema } from '@/lib/domain/schemas';
+// import { ValidatedAiDataSchema } from '@/lib/domain/schemas';
 // Re-add zod import
 import { z } from 'zod';
 // Remove unused imports
@@ -146,7 +147,7 @@ describe('generateExerciseResponse', () => {
 
     // Spy on the imported schema's safeParse method
     // Default to success, returning the validated data shape
-    vi.spyOn(ValidatedAiDataSchema, 'safeParse').mockReturnValue({
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
       success: true,
       data: mockValidatedAiData,
     });
@@ -380,7 +381,7 @@ describe('generateExerciseResponse', () => {
     const invalidAiData = { ...mockRawAiResponse, paragraph: undefined }; // Missing required field
     vi.mocked(generateAndValidateExercise).mockResolvedValue(invalidAiData as any);
     // Override the spy for this specific test to return failure
-    vi.spyOn(ValidatedAiDataSchema, 'safeParse').mockReturnValue({
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
       success: false,
       error: new z.ZodError([]), // Provide a basic ZodError
     });
@@ -390,7 +391,7 @@ describe('generateExerciseResponse', () => {
     expect(result.error).toBe('Could not retrieve or generate a question.');
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
-    expect(ValidatedAiDataSchema.safeParse).toHaveBeenCalledWith(invalidAiData);
+    expect(ExerciseContentSchema.safeParse).toHaveBeenCalledWith(invalidAiData);
     expect(saveExerciseToCache).not.toHaveBeenCalled();
   });
 });

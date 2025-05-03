@@ -1,16 +1,17 @@
 'use server';
 
-import { z } from 'zod';
 import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
-import { LANGUAGES, type Language } from '@/config/languages';
-import { CEFRLevel, getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
+import { LANGUAGES } from '@/config/languages';
+import { getGrammarGuidance, getVocabularyGuidance } from '@/config/language-guidance';
 import { getRandomTopicForLevel } from '@/config/topics';
 import {
   GenerateExerciseResultSchema,
   type GenerateExerciseResult,
   type PartialQuizData,
-  ValidatedAiDataSchema,
+  ExerciseRequestParamsSchema,
+  type ExerciseRequestParams,
+  ExerciseContentSchema,
 } from '@/lib/domain/schemas';
 import { authOptions } from '@/lib/authOptions';
 import { checkRateLimit } from '@/lib/rate-limiter';
@@ -33,31 +34,6 @@ const DEFAULT_EMPTY_QUIZ_DATA: PartialQuizData = {
   language: null,
   topic: null,
 };
-
-const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-const languageKeys = Object.keys(LANGUAGES) as Language[];
-
-// --- Zod Schema for Input Validation ---
-const ExerciseRequestParamsSchema = z.object({
-  passageLanguage: z
-    .string()
-    .refine((val): val is Language => languageKeys.includes(val as Language), {
-      message: 'Invalid passage language',
-    }),
-  questionLanguage: z
-    .string()
-    .refine((val): val is Language => languageKeys.includes(val as Language), {
-      message: 'Invalid question language',
-    }),
-  cefrLevel: z
-    .string()
-    .refine((val): val is CEFRLevel => validCefrLevels.includes(val as CEFRLevel), {
-      message: 'Invalid CEFR level',
-    }),
-});
-
-// Exporting the inferred type for frontend usage if needed
-export type ExerciseRequestParams = z.infer<typeof ExerciseRequestParamsSchema>;
 
 // --- Helper Functions ---
 
@@ -92,27 +68,27 @@ const tryGenerateAndCacheExercise = async (
       vocabularyGuidance,
     });
 
-    const validatedAiParseResult = ValidatedAiDataSchema.safeParse(aiData);
+    const exerciseContentParseResult = ExerciseContentSchema.safeParse(aiData);
 
-    if (!validatedAiParseResult.success) {
+    if (!exerciseContentParseResult.success) {
       console.error(
         '[API] AI response failed validation:',
-        validatedAiParseResult.error.errors,
+        exerciseContentParseResult.error.errors,
         'Original Data:',
         aiData
       );
       return createErrorResponse('Failed to validate AI response structure.');
     }
 
-    const validatedAiData = validatedAiParseResult.data;
+    const validatedExerciseContent = exerciseContentParseResult.data;
 
-    validatedAiData.topic = topic;
+    validatedExerciseContent.topic = topic;
 
     const partialQuizData: PartialQuizData = {
-      paragraph: validatedAiData.paragraph,
-      question: validatedAiData.question,
-      options: validatedAiData.options,
-      topic: validatedAiData.topic ?? null,
+      paragraph: validatedExerciseContent.paragraph,
+      question: validatedExerciseContent.question,
+      options: validatedExerciseContent.options,
+      topic: validatedExerciseContent.topic ?? null,
       language: params.passageLanguage,
     };
 
@@ -122,7 +98,7 @@ const tryGenerateAndCacheExercise = async (
         params.passageLanguage,
         params.questionLanguage,
         params.cefrLevel,
-        JSON.stringify(validatedAiData),
+        JSON.stringify(validatedExerciseContent),
         userId
       );
       if (quizId === undefined) {
