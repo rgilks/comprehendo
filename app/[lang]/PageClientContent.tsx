@@ -5,24 +5,30 @@ import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
 import HomeContent from './HomeContent';
 import { Suspense, useEffect } from 'react';
 import i18n from '../i18n.client';
-import { type Resource } from 'i18next';
+import { type Resource, type i18n as I18nInstanceType } from 'i18next';
 
 interface PageClientContentProps {
   initialLanguage: Language;
   initialI18nStore: Resource;
 }
 
-const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientContentProps) => {
-  const { t } = useTranslation();
-  Object.keys(initialI18nStore).forEach((lang) => {
-    if (lang === initialLanguage) {
-      Object.keys(initialI18nStore[lang]).forEach((ns) => {
-        if (!i18n.hasResourceBundle(lang, ns)) {
-          i18n.addResourceBundle(lang, ns, initialI18nStore[lang][ns], true, true);
-        }
-      });
+const loadInitialResources = (
+  instance: I18nInstanceType,
+  language: Language,
+  resources: Resource
+) => {
+  const languageResources = resources[language];
+  Object.keys(languageResources).forEach((ns) => {
+    if (!instance.hasResourceBundle(language, ns)) {
+      instance.addResourceBundle(language, ns, languageResources[ns], true, true);
     }
   });
+};
+
+const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientContentProps) => {
+  const { t } = useTranslation();
+
+  loadInitialResources(i18n, initialLanguage, initialI18nStore);
 
   useEffect(() => {
     if (i18n.language !== initialLanguage) {

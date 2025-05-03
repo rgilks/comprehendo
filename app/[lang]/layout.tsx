@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: 'An AI-powered language learning tool',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
-}
+const RootLayout = ({ children }: { children: React.ReactNode }) => (
+  <html>
+    <body>{children}</body>
+  </html>
+);
+
+export default RootLayout;
