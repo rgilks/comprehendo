@@ -1,11 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
-import { ACTIVE_MODEL_CONFIG, getGoogleAIClient, type ModelConfig } from '@/lib/ai/client';
+import { getGoogleAIClient } from '@/lib/ai/client';
 import type { Language } from '@/config/languages';
 import type { CEFRLevel } from '@/config/language-guidance';
 import { QuizDataSchema, type QuizData } from '@/lib/domain/schemas';
 
-// Define interfaces for structured prompt parameters and AI response
-// (Could potentially reuse/refine QuizDataSchema here if appropriate)
 export interface ExerciseGenerationParams {
   topic: string;
   passageLanguage: Language;
@@ -39,8 +37,6 @@ export const generateAndValidateExercise = async ({
   grammarGuidance,
   vocabularyGuidance,
 }: ExerciseGenerationParams): Promise<QuizData> => {
-  const activeModel = ACTIVE_MODEL_CONFIG;
-
   const prompt = generateExercisePrompt({
     topic,
     passageLanguage,
@@ -52,7 +48,7 @@ export const generateAndValidateExercise = async ({
     vocabularyGuidance,
   });
 
-  const cleanedAiResponseContent = await callGoogleAI(prompt, activeModel);
+  const cleanedAiResponseContent = await callGoogleAI(prompt);
 
   let parsedAiContent: unknown;
   try {
@@ -124,12 +120,11 @@ Ensure the entire output is a single, valid JSON object string without any surro
   return prompt;
 };
 
-export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Promise<string> => {
-  console.log('[AI Generator] Calling Google AI API...');
+export const callGoogleAI = async (prompt: string): Promise<string> => {
   const genAI: GoogleGenAI = getGoogleAIClient();
 
   const generationConfig = {
-    maxOutputTokens: modelConfig.maxTokens,
+    maxOutputTokens: 500,
     temperature: 0.7,
     topP: 0.9,
     topK: 40,
@@ -141,16 +136,12 @@ export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Pr
 
   try {
     const request = {
-      model: modelConfig.name,
+      model: 'gemini-2.5-flash-preview-04-17',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: generationConfig,
     };
 
-    console.log('[AI Generator] Google AI full request:', JSON.stringify(request, null, 2)); // Log full request for context
-
     const result = await genAI.models.generateContent(request);
-
-    console.log('[AI Generator] Google AI full result:', JSON.stringify(result, null, 2));
 
     const text: string | undefined = result.text;
 
@@ -164,7 +155,6 @@ export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Pr
       );
     }
 
-    console.log('[AI Generator] Received response from Google AI.');
     // Clean up markdown fences (```json ... ```)
     const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
     const match = text.match(jsonRegex);
@@ -185,7 +175,6 @@ export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Pr
         );
       }
     }
-    console.log('[AI Generator] Cleaned AI response:', potentialJson);
     return potentialJson;
   } catch (error: unknown) {
     // Use instanceof Error for type checking

@@ -4,13 +4,9 @@ import {
   callGoogleAI,
   AIResponseProcessingError,
 } from './exercise-generator';
-import type { ModelConfig, ModelName } from '@/lib/ai/client';
 import type { Language } from '@/config/languages';
 import type { CEFRLevel } from '@/config/language-guidance';
 
-// --- Mocks ---
-
-// Mock the AI client and its methods
 const mockGenerateContent = vi.fn();
 const mockGenAIInstance = {
   models: {
@@ -18,23 +14,9 @@ const mockGenAIInstance = {
   },
 };
 
-// Mock the function that provides the client
 vi.mock('@/lib/ai/client', () => ({
   getGoogleAIClient: vi.fn(() => mockGenAIInstance),
-  ACTIVE_MODEL_CONFIG: {
-    name: 'gemini-1.5-flash-latest' as ModelName,
-    maxTokens: 8000,
-  },
 }));
-
-// --- Test Setup ---
-
-const sampleModelConfig: ModelConfig = {
-  name: 'gemini-1.5-flash-latest' as ModelName,
-  maxTokens: 8192,
-  provider: 'google',
-  displayName: 'Gemini Flash Test',
-};
 
 const samplePromptParams = {
   topic: 'Daily Routines',
@@ -113,13 +95,13 @@ describe('AI Exercise Generation', () => {
       const rawText = `\`\`\`json\n${mockApiResponseText}\n\`\`\``;
       mockGenerateContent.mockResolvedValue({ text: rawText });
 
-      const result = await callGoogleAI(samplePrompt, sampleModelConfig);
+      const result = await callGoogleAI(samplePrompt);
 
       expect(mockGenerateContent).toHaveBeenCalledWith({
-        model: sampleModelConfig.name,
+        model: 'gemini-2.5-flash-preview-04-17',
         contents: [{ role: 'user', parts: [{ text: samplePrompt }] }],
         generationConfig: expect.objectContaining({
-          maxOutputTokens: sampleModelConfig.maxTokens,
+          maxOutputTokens: 500,
           responseMimeType: 'application/json',
         }),
       });
@@ -130,56 +112,46 @@ describe('AI Exercise Generation', () => {
       mockGenerateContent.mockResolvedValueOnce({
         text: `\`\`\`json\n${mockApiResponseText}\`\`\``,
       });
-      const result1 = await callGoogleAI(samplePrompt, sampleModelConfig);
+      const result1 = await callGoogleAI(samplePrompt);
       expect(result1).toBe(mockApiResponseText);
 
       mockGenerateContent.mockResolvedValueOnce({
         text: `\`\`\`json${mockApiResponseText}\n\`\`\``,
       });
-      const result2 = await callGoogleAI(samplePrompt, sampleModelConfig);
+      const result2 = await callGoogleAI(samplePrompt);
       expect(result2).toBe(mockApiResponseText);
 
       mockGenerateContent.mockResolvedValueOnce({
         text: `\`\`\`json\n${mockApiResponseText}\n\`\`\``,
       });
-      const result3 = await callGoogleAI(samplePrompt, sampleModelConfig);
+      const result3 = await callGoogleAI(samplePrompt);
       expect(result3).toBe(mockApiResponseText);
 
       mockGenerateContent.mockResolvedValueOnce({ text: `\`\`\`json${mockApiResponseText}\`\`\`` });
-      const result4 = await callGoogleAI(samplePrompt, sampleModelConfig);
+      const result4 = await callGoogleAI(samplePrompt);
       expect(result4).toBe(mockApiResponseText);
     });
 
     it('should throw AIResponseProcessingError if AI response has no text', async () => {
       mockGenerateContent.mockResolvedValue({ text: null });
 
-      await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        AIResponseProcessingError
-      );
+      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(AIResponseProcessingError);
     });
 
     it('should throw specific AIResponseProcessingError for safety issues', async () => {
       const safetyError = new Error('Blocked due to SAFETY');
       mockGenerateContent.mockRejectedValue(safetyError);
 
-      await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        AIResponseProcessingError
-      );
-      await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        /Safety setting blocked response:/
-      );
+      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(AIResponseProcessingError);
+      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(/Safety setting blocked response:/);
     });
 
     it('should throw AIResponseProcessingError for generic API errors', async () => {
       const genericError = new Error('API connection failed');
       mockGenerateContent.mockRejectedValue(genericError);
 
-      await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        AIResponseProcessingError
-      );
-      await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        /AI generation failed:/
-      );
+      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(AIResponseProcessingError);
+      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(/AI generation failed:/);
     });
   });
 });
