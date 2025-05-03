@@ -55,7 +55,7 @@ describe('Admin actions security', () => {
     process.env = originalEnv;
   });
 
-  describe('isAdmin function', () => {
+  describe('getTableNames authorization', () => {
     it('should return false if user is not logged in', async () => {
       (getServerSession as Mock).mockResolvedValue(null);
       const result = await getTableNames();
