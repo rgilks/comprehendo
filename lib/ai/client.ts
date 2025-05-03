@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { z } from 'zod';
 
+// Type definitions related to the AI model configuration
 export type ModelProvider = 'google';
 export type ModelName =
   | 'gemini-2.0-flash-lite'
@@ -14,42 +14,13 @@ export interface ModelConfig {
   maxTokens: number;
 }
 
-export const MODELS: Record<ModelName, ModelConfig> = {
-  'gemini-2.0-flash-lite': {
-    provider: 'google',
-    name: 'gemini-2.0-flash-lite',
-    displayName: 'Gemini 2.0 Flash-Lite',
-    maxTokens: 500,
-  },
-  'gemini-2.0-flash': {
-    provider: 'google',
-    name: 'gemini-2.0-flash',
-    displayName: 'Gemini 2.0 Flash',
-    maxTokens: 500,
-  },
-  'gemini-2.5-flash-preview-04-17': {
-    provider: 'google',
-    name: 'gemini-2.5-flash-preview-04-17',
-    displayName: 'Gemini 2.5 Flash',
-    maxTokens: 500,
-  },
+// Define the active model configuration directly
+export const ACTIVE_MODEL_CONFIG: ModelConfig = {
+  provider: 'google',
+  name: 'gemini-2.5-flash-preview-04-17',
+  displayName: 'Gemini 2.5 Flash',
+  maxTokens: 500, // Default max tokens, adjust if needed
 };
-
-export const LanguageLevels = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
-
-const envSchema = z.object({
-  GOOGLE_AI_API_KEY: z.string().optional(),
-  OPENROUTER_API_KEY: z.string().optional(),
-});
-
-const envVars = envSchema.safeParse(process.env);
-
-if (!envVars.success) {
-  console.error(
-    '❌ Invalid environment variables:',
-    JSON.stringify(envVars.error.format(), null, 4)
-  );
-}
 
 // --- Lazy Client Initialization ---
 let genAIClient: GoogleGenAI | null = null;
@@ -73,6 +44,7 @@ export const getGoogleAIClient = (): GoogleGenAI => {
 
   console.log('[GoogleAI Client] Initializing GoogleGenAI client...');
   try {
+    // Note: Consider adding safety settings or other configurations here if needed
     genAIClient = new GoogleGenAI({ apiKey });
     return genAIClient;
   } catch (error) {
@@ -80,8 +52,4 @@ export const getGoogleAIClient = (): GoogleGenAI => {
     // Re-throw the error to indicate failure
     throw error;
   }
-};
-
-export const getActiveModel = (): ModelConfig => {
-  return MODELS['gemini-2.5-flash-preview-04-17'];
 };

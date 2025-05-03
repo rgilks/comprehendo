@@ -1,8 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
-import { getActiveModel, getGoogleAIClient } from '@/lib/modelConfig';
+import { ACTIVE_MODEL_CONFIG, getGoogleAIClient, type ModelConfig } from '@/lib/ai/client';
 import type { Language } from '@/config/languages';
 import type { CEFRLevel } from '@/config/language-guidance';
-import type { ModelConfig } from '@/lib/modelConfig';
 import { QuizDataSchema, type QuizData } from '@/lib/domain/schemas';
 
 // Define interfaces for structured prompt parameters and AI response
@@ -40,7 +39,7 @@ export const generateAndValidateExercise = async ({
   grammarGuidance,
   vocabularyGuidance,
 }: ExerciseGenerationParams): Promise<QuizData> => {
-  const activeModel = getActiveModel();
+  const activeModel = ACTIVE_MODEL_CONFIG;
 
   const prompt = generateExercisePrompt({
     topic,

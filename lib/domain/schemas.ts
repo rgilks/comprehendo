@@ -99,3 +99,5 @@ export const ExerciseContentSchema = z.object({
   topic: z.string().optional().nullable(),
 });
 export type ExerciseContent = z.infer<typeof ExerciseContentSchema>; // Renamed type alias
+
+export const LanguageLevels = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);

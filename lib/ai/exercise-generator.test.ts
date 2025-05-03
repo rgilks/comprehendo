@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   generateExercisePrompt,
   callGoogleAI,
-  AIResponseProcessingError, // Import error for checking
+  AIResponseProcessingError,
 } from './exercise-generator';
-import type { ModelConfig, ModelName } from '@/lib/modelConfig'; // Import types
-import type { Language } from '@/config/languages'; // Import type
-import type { CEFRLevel } from '@/config/language-guidance'; // Import type
+import type { ModelConfig, ModelName } from '@/lib/ai/client';
+import type { Language } from '@/config/languages';
+import type { CEFRLevel } from '@/config/language-guidance';
 
 // --- Mocks ---
 
@@ -19,21 +19,21 @@ const mockGenAIInstance = {
 };
 
 // Mock the function that provides the client
-vi.mock('@/lib/modelConfig', () => ({
+vi.mock('@/lib/ai/client', () => ({
   getGoogleAIClient: vi.fn(() => mockGenAIInstance),
-  // Use a valid ModelName for the mock model
-  getActiveModel: vi.fn(() => ({ name: 'gemini-1.5-flash-latest' as ModelName, maxTokens: 8000 })),
+  ACTIVE_MODEL_CONFIG: {
+    name: 'gemini-1.5-flash-latest' as ModelName,
+    maxTokens: 8000,
+  },
 }));
 
 // --- Test Setup ---
 
 const sampleModelConfig: ModelConfig = {
-  // Use a valid ModelName
   name: 'gemini-1.5-flash-latest' as ModelName,
   maxTokens: 8192,
-  // Add missing properties
-  provider: 'google', // Example provider
-  displayName: 'Gemini Flash Test', // Example display name
+  provider: 'google',
+  displayName: 'Gemini Flash Test',
 };
 
 const samplePromptParams = {
@@ -90,15 +90,12 @@ Ensure the entire output is a single, valid JSON object string without any surro
 
 describe('AI Exercise Generation', () => {
   beforeEach(() => {
-    vi.resetAllMocks(); // Reset mocks for each test
-    // Re-mock getGoogleAIClient for each test if necessary, though mocking the module might suffice
-    // getGoogleAIClient.mockReturnValue(mockGenAIInstance);
+    vi.resetAllMocks();
   });
 
   describe('generateExercisePrompt', () => {
     it('should generate the correct prompt string based on parameters', () => {
       const prompt = generateExercisePrompt(samplePromptParams);
-      // Basic check: does it contain key elements? A full string match is brittle.
       expect(prompt).toContain('- Topic: Daily Routines');
       expect(prompt).toContain('- Passage Language: French (fr)');
       expect(prompt).toContain('- Question Language: English (en)');
@@ -106,7 +103,6 @@ describe('AI Exercise Generation', () => {
       expect(prompt).toContain('- Grammar Guidance: Present tense verbs');
       expect(prompt).toContain('- Vocabulary Guidance: Words related to daily activities');
       expect(prompt).toContain('Output Format: Respond ONLY with a valid JSON object');
-      // For more robustness, could use snapshots or more detailedtoContain checks
     });
   });
 
@@ -114,7 +110,6 @@ describe('AI Exercise Generation', () => {
     const mockApiResponseText = '{ "paragraph": "Bonjour.", "question": "Hello?" }';
 
     it('should call the AI API and return cleaned JSON content on success', async () => {
-      // Simulate response wrapped in markdown fences
       const rawText = `\`\`\`json\n${mockApiResponseText}\n\`\`\``;
       mockGenerateContent.mockResolvedValue({ text: rawText });
 
@@ -124,7 +119,6 @@ describe('AI Exercise Generation', () => {
         model: sampleModelConfig.name,
         contents: [{ role: 'user', parts: [{ text: samplePrompt }] }],
         generationConfig: expect.objectContaining({
-          // Check key config details
           maxOutputTokens: sampleModelConfig.maxTokens,
           responseMimeType: 'application/json',
         }),
@@ -133,44 +127,35 @@ describe('AI Exercise Generation', () => {
     });
 
     it('should correctly clean JSON content with optional newlines around fences', async () => {
-      // Case 1: Newline after opening fence
       mockGenerateContent.mockResolvedValueOnce({
         text: `\`\`\`json\n${mockApiResponseText}\`\`\``,
       });
       const result1 = await callGoogleAI(samplePrompt, sampleModelConfig);
       expect(result1).toBe(mockApiResponseText);
 
-      // Case 2: Newline before closing fence
       mockGenerateContent.mockResolvedValueOnce({
         text: `\`\`\`json${mockApiResponseText}\n\`\`\``,
       });
       const result2 = await callGoogleAI(samplePrompt, sampleModelConfig);
       expect(result2).toBe(mockApiResponseText);
 
-      // Case 3: Both newlines
       mockGenerateContent.mockResolvedValueOnce({
         text: `\`\`\`json\n${mockApiResponseText}\n\`\`\``,
       });
       const result3 = await callGoogleAI(samplePrompt, sampleModelConfig);
       expect(result3).toBe(mockApiResponseText);
 
-      // Case 4: No newlines (already tested in first success case, but good to be explicit)
       mockGenerateContent.mockResolvedValueOnce({ text: `\`\`\`json${mockApiResponseText}\`\`\`` });
       const result4 = await callGoogleAI(samplePrompt, sampleModelConfig);
       expect(result4).toBe(mockApiResponseText);
     });
 
     it('should throw AIResponseProcessingError if AI response has no text', async () => {
-      mockGenerateContent.mockResolvedValue({ text: null }); // Simulate missing text
+      mockGenerateContent.mockResolvedValue({ text: null });
 
-      // Assert that the specific error TYPE is thrown, not the exact message
       await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
         AIResponseProcessingError
       );
-      // Keep the message check commented out for now, as it was causing issues
-      // await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-      //   'No content received from Google AI or failed to extract text.'
-      // );
     });
 
     it('should throw specific AIResponseProcessingError for safety issues', async () => {
@@ -181,7 +166,7 @@ describe('AI Exercise Generation', () => {
         AIResponseProcessingError
       );
       await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        /Safety setting blocked response:/ // Check for specific message prefix
+        /Safety setting blocked response:/
       );
     });
 
@@ -193,7 +178,7 @@ describe('AI Exercise Generation', () => {
         AIResponseProcessingError
       );
       await expect(callGoogleAI(samplePrompt, sampleModelConfig)).rejects.toThrow(
-        /AI generation failed:/ // Check for generic failure prefix
+        /AI generation failed:/
       );
     });
   });
