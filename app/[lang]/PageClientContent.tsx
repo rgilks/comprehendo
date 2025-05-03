@@ -18,11 +18,16 @@ const loadInitialResources = (
   resources: Resource
 ) => {
   const languageResources = resources[language];
-  Object.keys(languageResources).forEach((ns) => {
-    if (!instance.hasResourceBundle(language, ns)) {
-      instance.addResourceBundle(language, ns, languageResources[ns], true, true);
-    }
-  });
+  if (languageResources) {
+    Object.keys(languageResources).forEach((ns) => {
+      if (!instance.hasResourceBundle(language, ns)) {
+        const namespaceResources = languageResources[ns];
+        if (namespaceResources) {
+          instance.addResourceBundle(language, ns, namespaceResources, true, true);
+        }
+      }
+    });
+  }
 };
 
 const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientContentProps) => {

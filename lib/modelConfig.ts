@@ -61,7 +61,7 @@ export const getGoogleAIClient = (): GoogleGenAI => {
   }
 
   // Read API key from environment at runtime
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = process.env['GOOGLE_AI_API_KEY'];
 
   if (!apiKey) {
     const errorMsg =

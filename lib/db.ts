@@ -6,7 +6,7 @@ const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(proce
 const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
 const isBuildPhase =
-  process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
+  process.env.NODE_ENV === 'production' && process.env['NEXT_PHASE'] === 'phase-production-build';
 
 let db: Database.Database | null = null;
 let dbProxyInstance: Database.Database | null = null;

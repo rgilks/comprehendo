@@ -174,12 +174,14 @@ const AdminPage = () => {
           value.match(/^.*?({\[\\s\\S]*?}).*?$/) || value.match(/^.*?(\\[[\\s\\S]*?\\]).*?$/);
         const potentialJson = jsonMatch ? jsonMatch[1] : value;
         try {
-          const parsedJson = JSON.parse(potentialJson) as Record<string, unknown>;
-          return (
-            <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
-              {JSON.stringify(parsedJson, null, 2)}
-            </pre>
-          );
+          if (typeof potentialJson === 'string') {
+            const parsedJson = JSON.parse(potentialJson) as Record<string, unknown>;
+            return (
+              <pre className="bg-gray-100 p-2 rounded overflow-auto text-sm whitespace-pre-wrap break-words">
+                {JSON.stringify(parsedJson, null, 2)}
+              </pre>
+            );
+          }
         } catch (e) {
           console.info('Info: Could not parse potential JSON:', potentialJson, e);
         }
@@ -343,7 +345,7 @@ const AdminPage = () => {
                         <table className="min-w-full bg-white border border-gray-300">
                           <thead>
                             <tr className="bg-gray-100">
-                              {tableData.length > 0 ? (
+                              {tableData.length > 0 && tableData[0] ? (
                                 Object.keys(tableData[0]).map((key) => (
                                   <th
                                     key={key}
@@ -393,10 +395,12 @@ const AdminPage = () => {
                               : !error && (
                                   <tr>
                                     <td
+                                      className="border-t border-gray-200 px-6 py-4 text-center"
                                       colSpan={
-                                        tableData.length > 0 ? Object.keys(tableData[0]).length : 1
+                                        tableData.length > 0 && tableData[0]
+                                          ? Object.keys(tableData[0]).length
+                                          : 1
                                       }
-                                      className="py-4 px-4 text-center text-gray-500"
                                     >
                                       {isLoadingData ? '' : 'No data found in this table.'}
                                     </td>

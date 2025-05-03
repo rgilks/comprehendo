@@ -35,17 +35,32 @@ const TranslatableWord = memo(
       if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
         setIsLoading(true);
         try {
-          const sourceLang = SPEECH_LANGUAGES[fromLang].split('-')[0];
-          const targetLang = SPEECH_LANGUAGES[toLang].split('-')[0];
-          const result = await getTranslation(word, sourceLang, targetLang);
+          const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
+          const toLangSpeechCode = SPEECH_LANGUAGES[toLang];
 
-          if (result) {
-            setTranslation(result);
-            if (hoverProgressionPhase === 'credits') {
-              decrementHoverCredit();
+          if (fromLangSpeechCode && toLangSpeechCode) {
+            const sourceLang = fromLangSpeechCode.split('-')[0];
+            const targetLang = toLangSpeechCode.split('-')[0];
+
+            if (sourceLang && targetLang) {
+              const result = await getTranslation(word, sourceLang, targetLang);
+
+              if (result) {
+                setTranslation(result);
+                if (hoverProgressionPhase === 'credits') {
+                  decrementHoverCredit();
+                }
+              } else {
+                console.log('Translation fetch returned no result.');
+              }
+            } else {
+              console.error('Error splitting language codes', {
+                fromLangSpeechCode,
+                toLangSpeechCode,
+              });
             }
           } else {
-            console.log('Translation fetch returned no result.');
+            console.error('Could not find speech codes for languages', { fromLang, toLang });
           }
         } catch (error) {
           console.error('Error fetching translation:', error);

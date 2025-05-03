@@ -87,7 +87,7 @@ describe('Admin actions security', () => {
     });
 
     it('should handle empty ADMIN_EMAILS environment variable', async () => {
-      process.env.ADMIN_EMAILS = '';
+      process.env['ADMIN_EMAILS'] = '';
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Admin User', email: 'admin@example.com' },
       });

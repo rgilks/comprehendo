@@ -98,14 +98,14 @@ const AudioControls = () => {
                 <ChevronDownIcon className="w-4 h-4" />
               </div>
             </div>
-          ) : (
+          ) : availableVoices[0] ? (
             <div
               className="flex items-center bg-gray-700 border border-gray-600 text-white py-2 px-3 rounded text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]"
               title={availableVoices[0].displayName}
             >
               {availableVoices[0].displayName}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

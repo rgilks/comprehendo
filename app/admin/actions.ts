@@ -11,7 +11,7 @@ const isAdmin = async (): Promise<boolean> => {
     return false;
   }
 
-  const adminEmails = (process.env.ADMIN_EMAILS || '')
+  const adminEmails = (process.env['ADMIN_EMAILS'] || '')
     .split(',')
     .map((email) => email.trim())
     .filter((email) => email);

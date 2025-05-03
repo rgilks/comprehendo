@@ -90,10 +90,13 @@ const calculateAndUpdateProgress = (
       correct_streak += 1;
       if (correct_streak >= 5) {
         const currentLevelIndex = CEFR_LEVELS.indexOf(current_cefr_level);
-        if (currentLevelIndex < CEFR_LEVELS.length - 1) {
-          current_cefr_level = CEFR_LEVELS[currentLevelIndex + 1];
-          correct_streak = 0;
-          leveledUp = true;
+        if (currentLevelIndex !== -1 && currentLevelIndex < CEFR_LEVELS.length - 1) {
+          const nextLevel = CEFR_LEVELS[currentLevelIndex + 1];
+          if (nextLevel) {
+            current_cefr_level = nextLevel;
+            correct_streak = 0;
+            leveledUp = true;
+          }
         } else {
           correct_streak = 0;
         }

@@ -304,7 +304,8 @@ export const createAudioSlice: StateCreator<
       voices = voices.filter((voice) => voice.lang === speechLang);
     } else {
       voices = voices.filter(
-        (voice) => voice.lang.startsWith(baseLangCode + '-') || voice.lang === baseLangCode
+        (voice) =>
+          baseLangCode && (voice.lang.startsWith(baseLangCode + '-') || voice.lang === baseLangCode)
       );
     }
 
@@ -350,7 +351,9 @@ export const createAudioSlice: StateCreator<
       );
 
       if (!currentSelectedVoiceAvailable) {
-        state.selectedVoiceURI = finalUniqueVoices.length > 0 ? finalUniqueVoices[0].uri : null;
+        // Ensure the first voice exists before accessing its URI
+        const firstVoice = finalUniqueVoices[0];
+        state.selectedVoiceURI = firstVoice ? firstVoice.uri : null;
       }
     });
   },
