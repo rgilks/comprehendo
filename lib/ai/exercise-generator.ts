@@ -135,8 +135,16 @@ export const callGoogleAI = async (prompt: string): Promise<string> => {
   };
 
   try {
+    // Use environment variable for model name, with a fallback
+    const modelName = process.env['GOOGLE_AI_GENERATION_MODEL'] ?? 'gemini-2.5-flash-preview-04-17';
+    if (!process.env['GOOGLE_AI_GENERATION_MODEL']) {
+      console.warn(
+        `[AI] GOOGLE_AI_GENERATION_MODEL environment variable not set. Using default: ${modelName}`
+      );
+    }
+
     const request = {
-      model: 'gemini-2.5-flash-preview-04-17',
+      model: modelName,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: generationConfig,
     };

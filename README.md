@@ -134,11 +134,12 @@ Comprehendo implements strategies to manage AI API costs:
     - Copy `.env.example` to `.env.local`: `cp .env.example .env.local`
     - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
       - `GOOGLE_AI_API_KEY` (optional, if using Google AI)
+      - `GOOGLE_AI_GENERATION_MODEL`: (Optional) The specific Google AI model to use for exercise generation (e.g., `gemini-2.5-flash-preview-04-17`). Defaults to a recommended flash model if not set.
       - `GITHUB_ID`, `GITHUB_SECRET` (optional, if enabling GitHub login)
       - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
       - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (optional, if enabling Discord login)
       - `AUTH_SECRET`: Generate with `openssl rand -base64 32`
-      - `NEXTAUTH_URL=http://localhost:3000` (for local dev)
+      - `NEXTAUTH_URL`: The canonical URL of your deployment (e.g., `http://localhost:3000` for local development).
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
       - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
       - `RATE_LIMIT_MAX_REQUESTS_PER_HOUR`: (Optional, default 100) Max exercise generation requests per IP per hour.
