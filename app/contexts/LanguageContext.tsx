@@ -4,7 +4,12 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import i18n from '../i18n.client';
 
-import { type Language, LANGUAGES, SPEECH_LANGUAGES, getTextDirection } from '../config/languages';
+import {
+  type Language,
+  LANGUAGES,
+  SPEECH_LANGUAGES,
+  getTextDirection,
+} from '@/lib/domain/language';
 
 // Define the languages specifically available for the UI based on locale files
 const SUPPORTED_UI_LANG_CODES: Language[] = [

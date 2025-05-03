@@ -63,7 +63,7 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
 };
 
 // Define languages available for learning content
-const excludedLearningLanguages = ['zh', 'ja', 'ko'] as const;
+const excludedLearningLanguages = ['zh', 'ja', 'ko'];
 export const LearningLanguageSchema = LanguageSchema.refine(
   (lang) => !excludedLearningLanguages.includes(lang),
   { message: 'Language not available for learning content' }

@@ -12,6 +12,7 @@ import { z } from 'zod';
 // Remove unused imports
 // import { z } from 'zod';
 // import { ValidatedAiDataSchema as RealValidatedAiDataSchema } from '@/lib/domain/schemas';
+import { LanguageSchema as RealLanguageSchema } from '@/lib/domain/language'; // Keep this import for reference if needed, but don't use in mock
 
 // --- Mocks ---
 const { getServerSession } = await import('next-auth');
@@ -86,6 +87,23 @@ vi.mock('@/lib/ai/exercise-generator', async (importOriginal) => {
 
 vi.mock('@/lib/authUtils', () => ({
   getDbUserIdFromSession: vi.fn(() => null),
+}));
+
+vi.mock('@/lib/domain/language', () => ({
+  LANGUAGES: { en: 'English', es: 'Spanish' }, // Mock only needed languages
+  // LanguageSchema: RealLanguageSchema, // REMOVED - Avoid using real implementation in mock factory
+  // Provide a minimal stand-in if absolutely necessary, otherwise let the original be used by dependent modules
+  LanguageSchema: {
+    // Minimal mock if needed, e.g., for basic type checks, but might be better to omit
+    // parse: vi.fn((x) => x), // Example: pass-through parse
+    // _def: {}, // Example placeholder
+    // options: ['en', 'es'] // Example placeholder
+  }, // Let's try omitting it first, hoping the original is resolved by dependent modules
+}));
+
+vi.mock('@/lib/domain/language-guidance', () => ({
+  getGrammarGuidance: vi.fn().mockReturnValue('mock grammar guidance'),
+  getVocabularyGuidance: vi.fn().mockReturnValue('mock vocabulary guidance'),
 }));
 
 // --- Test Suite ---

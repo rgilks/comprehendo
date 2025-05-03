@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateExercisePrompt } from './exercise-prompt';
-import type { ExerciseGenerationParams } from './exercise-prompt';
+import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 import type { Language } from '@/lib/domain/language';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
 
