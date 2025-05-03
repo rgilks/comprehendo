@@ -2,8 +2,7 @@ import { initReactI18next } from 'react-i18next';
 import i18next from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 
-// Add void to handle the promise initialization
-void i18next
+i18next
   .use(initReactI18next)
   .use(
     resourcesToBackend(
@@ -19,6 +18,9 @@ void i18next
     interpolation: {
       escapeValue: false,
     },
+  })
+  .catch((error: unknown) => {
+    console.error('i18next initialization failed:', error);
   });
 
 export default i18next;
