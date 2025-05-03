@@ -47,7 +47,7 @@ export const translateWordWithGoogle = async (
     return null;
   }
 
-  const googleApiKey = process.env.GOOGLE_API_KEY;
+  const googleApiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
 
   if (!googleApiKey) {
     console.error('Google Translate API key is not configured.');
