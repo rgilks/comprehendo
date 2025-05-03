@@ -57,6 +57,8 @@ const AdminPage = () => {
     setSelectedRowData(rowData);
   }, []);
 
+  const tableHeaders = tableData.length > 0 ? Object.keys(tableData[0]) : [];
+
   return (
     <div className="container mx-auto p-4">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -86,6 +88,7 @@ const AdminPage = () => {
                 rowData={selectedRowData}
                 onBack={handleBackFromDetail}
                 tableName={selectedTable}
+                onClose={handleBackFromDetail}
               />
             ) : (
               <>
@@ -100,6 +103,7 @@ const AdminPage = () => {
                 {selectedTable && (
                   <DataTable
                     tableName={selectedTable}
+                    headers={tableHeaders}
                     data={tableData}
                     totalRows={totalRows}
                     currentPage={currentPage}

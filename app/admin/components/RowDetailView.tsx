@@ -10,9 +10,21 @@ interface RowDetailViewProps {
   rowData: Record<string, unknown>;
   onBack: () => void;
   tableName: string | null;
+  onDelete?: () => void;
+  onUpdate?: (row: Record<string, unknown>) => void;
+  isDeleting?: boolean;
+  onClose: () => void;
 }
 
-export const RowDetailView: React.FC<RowDetailViewProps> = ({ rowData, onBack, tableName }) => {
+export const RowDetailView: React.FC<RowDetailViewProps> = ({
+  rowData,
+  onBack,
+  tableName,
+  onDelete,
+  onUpdate,
+  isDeleting,
+  onClose,
+}) => {
   const renderValue = (key: string, value: unknown) => {
     if (value === null || value === undefined) {
       return <span className="text-gray-500 italic">NULL</span>;
@@ -31,7 +43,7 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({ rowData, onBack, t
             timeStyle: 'medium',
           });
         }
-      } catch (_e) {
+      } catch {
         // Intentionally empty
       }
     }
@@ -49,7 +61,7 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({ rowData, onBack, t
               {JSON.stringify(parsedJson, null, 2)}
             </pre>
           );
-        } catch (_e) {
+        } catch {
           // Intentionally empty
         }
       }
@@ -66,6 +78,12 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({ rowData, onBack, t
 
     // Fallback for other types
     return '[Unsupported Value]';
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete();
+    }
   };
 
   return (
@@ -89,6 +107,47 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({ rowData, onBack, t
             </div>
           ))}
         </dl>
+      </div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto relative">
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl"
+          >
+            &times;
+          </button>
+          <h2 className="text-xl font-semibold p-4 border-b">Row Details</h2>
+          <div className="p-4">
+            <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
+              {JSON.stringify(rowData, null, 2)}
+            </pre>
+          </div>
+          <div className="p-4 border-t flex justify-end space-x-2">
+            {onDelete && (
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            )}
+            {onUpdate && (
+              <button
+                onClick={() => { onUpdate(rowData); }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Update
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

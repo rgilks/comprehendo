@@ -1,22 +1,22 @@
 import React from 'react';
 import { renderTableCellValue } from '@/lib/utils/rendering';
 
-interface DataTableBodyProps {
+interface DataTableBodyProps<T extends Record<string, unknown>> {
   headers: string[];
-  data: Record<string, unknown>[];
+  data: T[];
   isLoading: boolean;
   minBodyHeight: number;
-  onRowClick: (rowData: Record<string, unknown>) => void;
+  onRowClick: (rowData: T) => void;
 }
 
-export const DataTableBody: React.FC<DataTableBodyProps> = ({
+export const DataTableBody = <T extends Record<string, unknown>>({
   headers,
   data,
   isLoading,
   minBodyHeight,
   onRowClick,
-}) => {
-  const getRowKey = (row: Record<string, unknown>, index: number): string | number => {
+}: DataTableBodyProps<T>) => {
+  const getRowKey = (row: T, index: number): string | number => {
     // Prefer using a unique ID if available
     const id = row['id'];
     if (id && (typeof id === 'string' || typeof id === 'number')) {

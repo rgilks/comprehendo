@@ -18,7 +18,7 @@ export const renderTableCellValue = (value: unknown): React.ReactNode => {
     try {
       const stringified = JSON.stringify(value);
       return stringified.length > 100 ? `${stringified.substring(0, 100)}...` : stringified;
-    } catch (_e) {
+    } catch {
       return '[Object]'; // Handle potential stringification errors
     }
   }

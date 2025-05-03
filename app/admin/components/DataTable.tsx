@@ -2,23 +2,25 @@ import React from 'react';
 import { DataTableControls } from './DataTableControls';
 import { DataTableBody } from './DataTableBody';
 
-interface DataTableProps {
+interface DataTableProps<T extends Record<string, unknown>> {
   tableName: string;
-  data: Record<string, unknown>[];
+  headers: (keyof T)[];
+  data: T[];
   totalRows: number;
   currentPage: number;
   rowsPerPage: number;
   totalPages: number;
   isLoading: boolean;
   error: string | null;
-  onRowClick: (rowData: Record<string, unknown>) => void;
+  onRowClick: (rowData: T) => void;
   onRefresh: () => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
 }
 
-export const DataTable: React.FC<DataTableProps> = ({
+export const DataTable = <T extends Record<string, unknown>>({
   tableName,
+  headers,
   data,
   totalRows,
   currentPage,
@@ -30,13 +32,12 @@ export const DataTable: React.FC<DataTableProps> = ({
   onRefresh,
   onPreviousPage,
   onNextPage,
-}) => {
+}: DataTableProps<T>) => {
   const estimatedRowHeight = 41; // Adjust as needed
   const minBodyHeight = rowsPerPage * estimatedRowHeight;
-  const headers = data.length > 0 ? Object.keys(data[0]) : [];
 
   return (
-    <div className="min-h-[340px]">
+    <div>
       {error && (
         <p className="text-red-500 mb-4">
           Error loading data for {tableName}: {error}
@@ -58,7 +59,7 @@ export const DataTable: React.FC<DataTableProps> = ({
       {/* Table */}
       {!error && (
         <DataTableBody
-          headers={headers}
+          headers={headers as string[]}
           data={data}
           isLoading={isLoading}
           minBodyHeight={minBodyHeight}
