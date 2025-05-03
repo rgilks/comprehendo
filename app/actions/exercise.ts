@@ -58,6 +58,7 @@ export const generateExerciseResponse = async (
 
   // --- Rate Limit Check ---
   const isAllowed = checkRateLimit(ip);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/await-thenable
   if (!isAllowed) {
     console.warn(`[API] Rate limit exceeded for IP: ${ip}`);
     // If rate limited, immediately try to fall back to cache
@@ -68,6 +69,7 @@ export const generateExerciseResponse = async (
   const cachedCount = countCachedExercises(passageLanguage, questionLanguage, level);
 
   // --- Primary Path: Generate New Exercise ---
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/await-thenable
   if (isAllowed && cachedCount < CACHE_GENERATION_THRESHOLD) {
     try {
       const topicResult = getRandomTopicForLevel(cefrLevelTyped);

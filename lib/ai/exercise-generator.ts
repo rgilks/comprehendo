@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { getGoogleAIClient } from '@/lib/modelConfig';
 import type { Language } from '@/config/languages';
 import type { CEFRLevel } from '@/config/language-guidance';
@@ -59,7 +59,7 @@ Ensure the entire output is a single, valid JSON object string without any surro
 // Move the callGoogleAI function here
 export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Promise<string> => {
   console.log('[AI Generator] Calling Google AI API...');
-  const genAI: GoogleGenerativeAI = getGoogleAIClient();
+  const genAI: GoogleGenAI = getGoogleAIClient();
 
   const generationConfig = {
     maxOutputTokens: modelConfig.maxTokens,
@@ -85,9 +85,9 @@ export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Pr
 
     console.log('[AI Generator] Google AI full result:', JSON.stringify(result, null, 2));
 
-    const text: string | null = result.text;
+    const text: string | undefined = result.text;
 
-    if (text === null) {
+    if (text === undefined) {
       console.error(
         '[AI Generator] Failed to extract text from Google AI response:',
         JSON.stringify(result, null, 2)
@@ -118,7 +118,7 @@ export const callGoogleAI = async (prompt: string, modelConfig: ModelConfig): Pr
         );
       }
     }
-    // We have potential JSON, return it (validation happens upstream)
+    console.log('[AI Generator] Cleaned AI response:', potentialJson);
     return potentialJson;
   } catch (error: unknown) {
     // Use instanceof Error for type checking
