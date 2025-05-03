@@ -103,10 +103,13 @@ export default tseslint.config(
       },
     },
     rules: {
+      ...reactPlugin.configs.recommended.rules,
+      ...hooksPlugin.configs.recommended.rules,
       '@next/next/no-html-link-for-pages': 'warn', // Or 'error' based on original config
       '@next/next/no-sync-scripts': 'warn', // Or 'error' based on original config
       'react-hooks/exhaustive-deps': 'error',
       'react/no-unescaped-entities': 'error',
+      'react/react-in-jsx-scope': 'off', // Next.js handles this automatically
     },
     settings: {
       react: {
@@ -139,7 +142,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off', // Allow unused TS vars in tests/configs
     },
   },
-  // Actions override
+
   {
     files: ['app/actions/**/*.ts'],
     rules: {
@@ -147,7 +150,6 @@ export default tseslint.config(
     },
   },
 
-  // 6. Prettier config (Must be LAST)
   {
     rules: prettierConfig.rules,
   }
