@@ -73,7 +73,9 @@ describe('useRenderParagraphWithWordHover', () => {
       <TestComponent paragraph="A B C" params={{ currentWordIndex: 1, isSpeakingPassage: false }} />
     );
     const words = getAllByTestId('translatable-word');
-    words.forEach((w) => { expect(w).toHaveAttribute('data-current', 'false'); });
+    words.forEach((w) => {
+      expect(w).toHaveAttribute('data-current', 'false');
+    });
   });
 
   it('highlights relevant words in the range', () => {
