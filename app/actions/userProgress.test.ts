@@ -134,7 +134,7 @@ describe('User Progress Server Actions', () => {
       expect(vi.mocked(db.prepare)).toHaveBeenCalledWith('SELECT content FROM quiz WHERE id = ?');
       // Check the call on the specific statement
       expect(mockStatement.get).toHaveBeenCalledWith(MOCK_QUIZ_ID);
-      expect(result.error).toBe(`Quiz with ID ${MOCK_QUIZ_ID} not found.`);
+      expect(result.error).toBe(`Quiz with ID ${MOCK_QUIZ_ID} not found or has invalid structure.`);
     });
 
     it('should return Quiz data unavailable if quiz content parsing fails', async () => {

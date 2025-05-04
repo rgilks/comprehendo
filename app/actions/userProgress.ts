@@ -6,6 +6,8 @@ import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
 import { calculateAndUpdateProgress } from '../../lib/userProgressUtils';
 import { getAuthenticatedUserId } from './authUtils';
 
+const DEFAULT_CEFR_LEVEL = 'A1';
+
 const updateProgressSchema = z.object({
   isCorrect: z.boolean(),
   language: z.string().min(2).max(5),
@@ -47,20 +49,31 @@ export interface ProgressResponse {
   feedback?: FeedbackType;
 }
 
+// Schema for parsing the row from the quiz table
+const QuizContentSchema = z.object({
+  content: z.string(),
+});
+
+// Schema for parsing the row from the user_language_progress table
+const UserProgressSchema = z.object({
+  cefr_level: z.string(),
+  correct_streak: z.number().int(),
+});
+
 // Helper function to fetch and parse quiz data
 const getParsedQuizData = (
   quizId: number
 ): { data: z.infer<typeof QuizDataSchema> | null; error?: string } => {
   try {
-    const quizRecord = db.prepare('SELECT content FROM quiz WHERE id = ?').get(quizId) as
-      | { content: string }
-      | undefined;
+    const quizRecord = db.prepare('SELECT content FROM quiz WHERE id = ?').get(quizId);
 
-    if (!quizRecord) {
-      return { data: null, error: `Quiz with ID ${quizId} not found.` };
+    const parsedRecord = QuizContentSchema.safeParse(quizRecord);
+    if (!parsedRecord.success) {
+      // Quiz not found or record is malformed
+      return { data: null, error: `Quiz with ID ${quizId} not found or has invalid structure.` };
     }
 
-    const parsedContent = QuizDataSchema.safeParse(JSON.parse(quizRecord.content));
+    const parsedContent = QuizDataSchema.safeParse(JSON.parse(parsedRecord.data.content));
 
     if (!parsedContent.success) {
       console.error(
@@ -139,7 +152,7 @@ const generateFeedback = (
 export const updateProgress = async (params: UpdateProgressParams): Promise<ProgressResponse> => {
   const userId = await getAuthenticatedUserId();
   if (userId === null) {
-    return { currentLevel: 'A1', currentStreak: 0, error: 'Unauthorized' };
+    return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Unauthorized' };
   }
 
   const parsedBody = updateProgressSchema.safeParse(params);
@@ -149,7 +162,7 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
       `[updateProgress] Invalid parameters for user ${userId}:`,
       parsedBody.error.flatten()
     );
-    return { currentLevel: 'A1', currentStreak: 0, error: 'Invalid parameters' }; // Generic client message
+    return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Invalid parameters' }; // Generic client message
   }
 
   const { isCorrect, language } = parsedBody.data;
@@ -166,6 +179,32 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
   return response;
 };
 
+// Helper function to update user progress and modify the response payload
+const updateUserProgressAndGetResponse = (
+  userId: number,
+  language: string,
+  isCorrect: boolean,
+  responsePayload: ProgressResponse
+): ProgressResponse => {
+  const progressUpdate = calculateAndUpdateProgress(userId, language, isCorrect);
+
+  // Update payload with actual progress
+  responsePayload.currentLevel = progressUpdate.currentLevel;
+  responsePayload.currentStreak = progressUpdate.currentStreak;
+  responsePayload.leveledUp = progressUpdate.leveledUp;
+
+  // Conditionally add the error property if it exists from progressUpdate
+  if (progressUpdate.error) {
+    console.error(
+      `[SubmitAnswer/updateHelper] Progress update failed for user ${userId}: ${progressUpdate.error}`
+    );
+    // Overwrite potential existing error or add new one
+    responsePayload.error = progressUpdate.error;
+  }
+
+  return responsePayload;
+};
+
 export const submitAnswer = async (
   params: z.infer<typeof submitAnswerSchema>
 ): Promise<ProgressResponse> => {
@@ -178,7 +217,7 @@ export const submitAnswer = async (
       parsedBody.error.flatten()
     );
     return {
-      currentLevel: 'A1',
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: 'Invalid request parameters.', // Generic message
     };
@@ -188,7 +227,7 @@ export const submitAnswer = async (
 
   if (typeof id !== 'number') {
     return {
-      currentLevel: 'A1',
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: 'Missing or invalid quiz ID.', // Generic message
     };
@@ -198,7 +237,7 @@ export const submitAnswer = async (
   if (quizError || !fullQuizData) {
     // getParsedQuizData already logs the specific error
     return {
-      currentLevel: 'A1',
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: quizError || `Quiz data unavailable.`, // Use error from helper or generic message
     };
@@ -208,8 +247,8 @@ export const submitAnswer = async (
   const { isCorrect, feedbackData } = generateFeedback(id, fullQuizData, ans);
 
   // Initialize response with defaults and feedback
-  const responsePayload: ProgressResponse = {
-    currentLevel: requestCefrLevel || 'A1', // Default for anonymous or if progress update fails
+  let responsePayload: ProgressResponse = {
+    currentLevel: requestCefrLevel || DEFAULT_CEFR_LEVEL, // Default for anonymous or if progress update fails
     currentStreak: 0,
     leveledUp: false,
     feedback: feedbackData,
@@ -217,20 +256,7 @@ export const submitAnswer = async (
 
   // Attempt to update progress only for authenticated users
   if (userId !== null) {
-    const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
-
-    responsePayload.currentLevel = progressUpdate.currentLevel;
-    responsePayload.currentStreak = progressUpdate.currentStreak;
-    responsePayload.leveledUp = progressUpdate.leveledUp;
-
-    // Conditionally add the error property if it exists from progressUpdate
-    if (progressUpdate.error) {
-      console.error(
-        `[SubmitAnswer] Progress update failed for user ${userId}: ${progressUpdate.error}`
-      );
-      responsePayload.error = progressUpdate.error;
-    }
-    // Note: feedback is already set earlier
+    responsePayload = updateUserProgressAndGetResponse(userId, learn, isCorrect, responsePayload);
   } else {
     // Anonymous user defaults are set during initialization
   }
@@ -242,7 +268,7 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
   const userId = await getAuthenticatedUserId();
   if (userId === null) {
     return {
-      currentLevel: 'A1',
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: 'Unauthorized: User not logged in.',
     };
@@ -255,7 +281,7 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
       parsedParams.error.flatten()
     );
     return {
-      currentLevel: 'A1',
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: 'Invalid parameters provided.',
     };
@@ -264,25 +290,26 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
   const normalizedLanguage = parsedParams.data.language.toLowerCase().slice(0, 2);
 
   try {
-    const userProgress = db
+    const progressRecord = db
       .prepare(
         'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       )
-      .get(userId, normalizedLanguage) as
-      | { cefr_level: string; correct_streak: number }
-      | undefined;
+      .get(userId, normalizedLanguage);
 
-    if (!userProgress) {
-      // Not an error, just no progress yet
+    const parsedProgress = UserProgressSchema.safeParse(progressRecord);
+
+    if (!parsedProgress.success) {
+      // Either no record exists, or the record is malformed. Treat as no progress.
+      // Log if malformed? For now, assume it's just no record.
       return {
-        currentLevel: 'A1',
+        currentLevel: DEFAULT_CEFR_LEVEL,
         currentStreak: 0,
       };
     }
 
     return {
-      currentLevel: userProgress.cefr_level,
-      currentStreak: userProgress.correct_streak,
+      currentLevel: parsedProgress.data.cefr_level,
+      currentStreak: parsedProgress.data.correct_streak,
     };
   } catch (dbError) {
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
@@ -290,7 +317,7 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
       `[GetProgress] Database error for user ${userId}, language ${normalizedLanguage}: ${message}`
     );
     return {
-      currentLevel: 'A1',
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: `Failed to retrieve progress due to a database error.`, // Generic message
     };
