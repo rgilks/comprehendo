@@ -32,10 +32,13 @@ export const createLanguageSlice: StateCreator<
   language: 'en',
   languages: UI_LANGUAGES,
   setLanguage: async (lang, router, pathname) => {
+    let prevLang: Language | undefined;
     set((state) => {
+      prevLang = state.language;
       if (state.language === lang) return;
       state.language = lang;
     });
+    if (prevLang === lang) return;
     try {
       await i18n.changeLanguage(lang);
     } catch (e) {
