@@ -658,3 +658,160 @@ describe('additional branch coverage for generateExerciseResponse', () => {
     safeParseSpy.mockRestore();
   });
 });
+
+describe('additional edge cases', () => {
+  test('should handle AI generator returning null', async () => {
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockResolvedValue(null as any);
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
+      success: false,
+      error: new z.ZodError([
+        {
+          code: 'invalid_type',
+          expected: 'object',
+          received: 'null',
+          path: [],
+          message: 'Required',
+        },
+      ]),
+    });
+    const result = await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(result.error).toBe('Failed to validate AI response structure.');
+    expect(result.quizData).toEqual({
+      paragraph: '',
+      question: '',
+      options: { A: '', B: '', C: '', D: '' },
+      language: null,
+      topic: null,
+    });
+    expect(result.quizId).toBe(-1);
+  });
+
+  test('should handle large input values', async () => {
+    const largeParagraph = 'A'.repeat(10000);
+    const largeQuestion = 'Q'.repeat(5000);
+    const largeOptions = {
+      A: 'A'.repeat(1000),
+      B: 'B'.repeat(1000),
+      C: 'C'.repeat(1000),
+      D: 'D'.repeat(1000),
+    };
+    const largeAiData = {
+      paragraph: largeParagraph,
+      question: largeQuestion,
+      options: largeOptions,
+      topic: 'large',
+      correctAnswer: 'A',
+      allExplanations: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      relevantText: 'T',
+    };
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockResolvedValue(largeAiData);
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
+      success: true,
+      data: largeAiData,
+    });
+    vi.mocked(exerciseCache.saveExerciseToCache).mockReturnValue(999);
+    const result = await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(result.quizData.paragraph.length).toBe(10000);
+    expect(result.quizData.question.length).toBe(5000);
+    expect(result.quizData.options.A.length).toBe(1000);
+    expect(result.quizId).toBe(999);
+  });
+
+  test('should always return all option letters', async () => {
+    const aiData = {
+      paragraph: 'P',
+      question: 'Q',
+      options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      topic: 't',
+      correctAnswer: 'A',
+      allExplanations: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      relevantText: 'T',
+    };
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockResolvedValue(aiData);
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({ success: true, data: aiData });
+    vi.mocked(exerciseCache.saveExerciseToCache).mockReturnValue(1001);
+    const result = await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(Object.keys(result.quizData.options)).toEqual(['A', 'B', 'C', 'D']);
+  });
+
+  test('should handle malformed session object', async () => {
+    vi.mocked(getServerSession).mockResolvedValue({} as any);
+    vi.mocked(authUtils.getDbUserIdFromSession).mockReturnValue(null);
+    const aiData = {
+      paragraph: 'P',
+      question: 'Q',
+      options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      topic: 't',
+      correctAnswer: 'A',
+      allExplanations: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      relevantText: 'T',
+    };
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockResolvedValue(aiData);
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({ success: true, data: aiData });
+    vi.mocked(exerciseCache.saveExerciseToCache).mockReturnValue(1002);
+    const result = await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(result.quizId).toBe(1002);
+  });
+
+  test('should separate cache for different users', async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { email: 'a@b.com' },
+      expires: '1',
+    } as any);
+    vi.mocked(authUtils.getDbUserIdFromSession).mockReturnValue(1);
+    vi.mocked(exerciseCache.saveExerciseToCache).mockReturnValue(2001);
+    const aiData = {
+      paragraph: 'P',
+      question: 'Q',
+      options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      topic: 't',
+      correctAnswer: 'A',
+      allExplanations: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      relevantText: 'T',
+    };
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockResolvedValue(aiData);
+    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({ success: true, data: aiData });
+    await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    vi.mocked(authUtils.getDbUserIdFromSession).mockReturnValue(2);
+    vi.mocked(exerciseCache.saveExerciseToCache).mockReturnValue(2002);
+    await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(exerciseCache.saveExerciseToCache).toHaveBeenCalledWith(
+      'en',
+      'es',
+      'B1',
+      expect.any(String),
+      1
+    );
+    expect(exerciseCache.saveExerciseToCache).toHaveBeenCalledWith(
+      'en',
+      'es',
+      'B1',
+      expect.any(String),
+      2
+    );
+  });
+});
