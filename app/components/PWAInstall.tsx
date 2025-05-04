@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: string }>;
-}
+import { BeforeInstallPromptEvent } from '../../types/pwa';
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
@@ -19,16 +15,24 @@ const PWAInstall = () => {
       return;
     }
 
-    window.addEventListener('beforeinstallprompt', (e) => {
+    const beforeInstallHandler = (e: Event) => {
       e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
       setShowInstallButton(true);
-    });
+    };
 
-    window.addEventListener('appinstalled', () => {
+    const appInstalledHandler = () => {
       setShowInstallButton(false);
       deferredPrompt = null;
-    });
+    };
+
+    window.addEventListener('beforeinstallprompt', beforeInstallHandler);
+    window.addEventListener('appinstalled', appInstalledHandler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', beforeInstallHandler);
+      window.removeEventListener('appinstalled', appInstalledHandler);
+    };
   }, []);
 
   const handleInstallClick = async () => {
