@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { generateExerciseResponse } from './exercise';
+import { generateExerciseResponse, tryGetCachedExercise } from './exercise';
 import {
   type ExerciseRequestParams,
   ExerciseContentSchema,
@@ -7,7 +7,7 @@ import {
 } from '@/lib/domain/schemas';
 import { AIResponseProcessingError } from '@/lib/ai/exercise-generator';
 import type { Session } from 'next-auth';
-import type { GenerateExerciseResult } from '@/lib/domain/schemas'; // Import the type
+import type { GenerateExerciseResult } from '@/lib/domain/schemas';
 import { z } from 'zod';
 
 const { getServerSession } = await import('next-auth');
@@ -91,7 +91,6 @@ vi.mock('@/lib/domain/language-guidance', async (importOriginal) => {
   };
 });
 
-// --- Test Suite ---
 describe('generateExerciseResponse', () => {
   const checkRateLimit = rateLimiter.checkRateLimit;
   const countCachedExercises = exerciseCache.countCachedExercises;
@@ -111,14 +110,13 @@ describe('generateExerciseResponse', () => {
     question: 'Mock question?',
     options: { A: 'Opt A', B: 'Opt B', C: 'Opt C', D: 'Opt D' },
     topic: 'mock topic',
-    correctAnswer: 'A', // Required by internal schema, but not returned to client
-    allExplanations: { A: 'Expl A', B: 'Expl B', C: 'Expl C', D: 'Expl D' }, // Required by internal schema
-    relevantText: 'Mock relevant text', // Required by internal schema
+    correctAnswer: 'A',
+    allExplanations: { A: 'Expl A', B: 'Expl B', C: 'Expl C', D: 'Expl D' },
+    relevantText: 'Mock relevant text',
   };
 
   const mockRawAiResponse = {
     ...mockValidatedAiData,
-    // Add fields potentially returned by AI but removed by ExerciseContentSchema
     someOtherAiField: 'foo',
   };
 
@@ -151,12 +149,10 @@ describe('generateExerciseResponse', () => {
 
     vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
       success: true,
-      data: mockValidatedAiData, // Use the internally validated shape
+      data: mockValidatedAiData,
     });
 
-    // Also spy on GenerateExerciseResultSchema for cache validation test
     vi.spyOn(GenerateExerciseResultSchema, 'safeParse').mockImplementation((data) => {
-      // Basic pass-through mock for most tests
       if (typeof data === 'object' && data !== null && 'quizData' in data) {
         return { success: true, data: data as GenerateExerciseResult };
       }
@@ -298,19 +294,16 @@ describe('generateExerciseResponse', () => {
 
   test('should attempt generation if cache count is high but cache lookup fails', async () => {
     vi.mocked(countCachedExercises).mockReturnValue(1000);
-    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined); // First cache attempt fails
-    // Ensure generation mocks are set up for the fallback attempt
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
     vi.mocked(generateAndValidateExercise).mockResolvedValue(mockRawAiResponse);
     vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
       success: true,
       data: mockValidatedAiData,
     });
-    vi.mocked(saveExerciseToCache).mockReturnValue(123); // Mock successful save
+    vi.mocked(saveExerciseToCache).mockReturnValue(123);
 
-    // Modify the main function logic to actually attempt generation in this case
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the *generated* result now, not cached
     expect(result.error).toBeNull();
     expect(result.quizId).toBe(123);
     expect(result.cached).toBe(false);
@@ -318,9 +311,9 @@ describe('generateExerciseResponse', () => {
 
     expect(checkRateLimit).toHaveBeenCalled();
     expect(countCachedExercises).toHaveBeenCalled();
-    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1); // Called once initially
-    expect(generateAndValidateExercise).toHaveBeenCalledTimes(1); // Should be called now
-    expect(saveExerciseToCache).toHaveBeenCalledTimes(1); // Should be called now
+    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1);
+    expect(generateAndValidateExercise).toHaveBeenCalledTimes(1);
+    expect(saveExerciseToCache).toHaveBeenCalledTimes(1);
   });
 
   test('should return error if generation fails (AI call error) and no cache fallback', async () => {
@@ -331,12 +324,11 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the specific error returned by the generation logic
     expect(result.error).toBe('An unexpected error occurred during exercise generation: AI Failed');
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
-    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1); // Called for fallback
+    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1);
   });
 
   test('should return error if generation fails (JSON parsing) and no cache fallback', async () => {
@@ -349,12 +341,11 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the specific error returned by the generation logic
     expect(result.error).toBe('Failed to parse AI JSON response. Error: Some parse error');
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
-    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1); // Called for fallback
+    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1);
   });
 
   test('should return error if generation fails with non-Error object', async () => {
@@ -363,14 +354,13 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the specific error returned by the generation logic
     expect(result.error).toBe(
       'An unexpected error occurred during exercise generation: An unknown error occurred during exercise generation'
     );
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
-    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1); // Called for fallback
+    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1);
   });
 
   test('should return validation error for invalid input params', async () => {
@@ -398,12 +388,11 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the specific error returned by the generation logic
     expect(result.error).toBe('Specific processing issue');
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
-    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1); // Called for fallback
+    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1);
   });
 
   test('should return specific error if cache save fails', async () => {
@@ -512,14 +501,13 @@ describe('generateExerciseResponse', () => {
       error: null,
       cached: true,
     };
-    vi.mocked(countCachedExercises).mockReturnValue(1000); // High cache count
-    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(invalidCachedData as any); // Mock returning invalid data
+    vi.mocked(countCachedExercises).mockReturnValue(1000);
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(invalidCachedData as any);
     vi.spyOn(GenerateExerciseResultSchema, 'safeParse').mockReturnValue({
-      success: false, // Mock validation failure for the cached data
+      success: false,
       error: new z.ZodError([]),
     });
 
-    // Mock the generation fallback
     vi.mocked(generateAndValidateExercise).mockResolvedValue(mockRawAiResponse);
     vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
       success: true,
@@ -532,7 +520,6 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the *generated* result because the cache was invalid and generation succeeded
     expect(result.error).toBeNull();
     expect(result.quizId).toBe(125);
     expect(result.cached).toBe(false);
@@ -547,7 +534,6 @@ describe('generateExerciseResponse', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '[API] Cache count high, but cache lookup failed. Attempting generation.'
     );
-    // Expect generation TO have been called
     expect(generateAndValidateExercise).toHaveBeenCalledTimes(1);
     expect(saveExerciseToCache).toHaveBeenCalledTimes(1);
 
@@ -556,8 +542,8 @@ describe('generateExerciseResponse', () => {
   });
 
   test('should log warning and attempt cache when generation fails (but not save error)', async () => {
-    vi.mocked(countCachedExercises).mockReturnValue(0); // Low cache count
-    vi.mocked(generateAndValidateExercise).mockRejectedValue(new Error('Gen Failed')); // Generation fails
+    vi.mocked(countCachedExercises).mockReturnValue(0);
+    vi.mocked(generateAndValidateExercise).mockRejectedValue(new Error('Gen Failed'));
     const cachedResult: GenerateExerciseResult = {
       quizData: {
         paragraph: 'Fallback',
@@ -570,7 +556,7 @@ describe('generateExerciseResponse', () => {
       error: null,
       cached: true,
     };
-    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(cachedResult); // Cache fallback succeeds
+    vi.mocked(getValidatedExerciseFromCache).mockReturnValue(cachedResult);
     vi.spyOn(GenerateExerciseResultSchema, 'safeParse').mockReturnValue({
       success: true,
       data: cachedResult,
@@ -580,20 +566,95 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    // Expect the cached result
     expect(result.error).toBeNull();
     expect(result.quizId).toBe(998);
     expect(result.cached).toBe(true);
     expect(result.quizData).toEqual(cachedResult.quizData);
 
     expect(generateAndValidateExercise).toHaveBeenCalled();
-    // Check for the updated warning message
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '[API] Generation failed (low cache), attempting cache fallback.'
     );
-    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1); // Called for fallback
+    expect(getValidatedExerciseFromCache).toHaveBeenCalledTimes(1);
     expect(saveExerciseToCache).not.toHaveBeenCalled();
 
     consoleWarnSpy.mockRestore();
+  });
+});
+
+describe('additional branch coverage for generateExerciseResponse', () => {
+  test('should log originalError stack if AIResponseProcessingError.originalError is Error', async () => {
+    const { AIResponseProcessingError } = await import('@/lib/ai/exercise-generator');
+    const originalError = new Error('Original stack error');
+    const error = new AIResponseProcessingError('AI error', originalError);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(rateLimiter.checkRateLimit).mockReturnValue(true);
+    vi.mocked(exerciseCache.countCachedExercises).mockReturnValue(0);
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockRejectedValue(error);
+    vi.mocked(exerciseCache.getValidatedExerciseFromCache).mockReturnValue(undefined);
+    await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(spy).toHaveBeenCalledWith(
+      '[API] Original AI Error:',
+      originalError.message,
+      originalError.stack
+    );
+    spy.mockRestore();
+  });
+
+  test('should log originalError as non-Error object if AIResponseProcessingError.originalError is not Error', async () => {
+    const { AIResponseProcessingError } = await import('@/lib/ai/exercise-generator');
+    const originalError = { foo: 'bar' };
+    const error = new AIResponseProcessingError('AI error', originalError);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(rateLimiter.checkRateLimit).mockReturnValue(true);
+    vi.mocked(exerciseCache.countCachedExercises).mockReturnValue(0);
+    vi.mocked(aiGenerator.generateAndValidateExercise).mockRejectedValue(error);
+    vi.mocked(exerciseCache.getValidatedExerciseFromCache).mockReturnValue(undefined);
+    await generateExerciseResponse({
+      passageLanguage: 'en',
+      questionLanguage: 'es',
+      cefrLevel: 'B1',
+    });
+    expect(spy).toHaveBeenCalledWith('[API] Original AI Error (non-Error object):', originalError);
+    spy.mockRestore();
+  });
+
+  test('should log and return null if cached data fails schema validation in tryGetCachedExercise', async () => {
+    const invalidCachedData = {
+      quizData: {
+        paragraph: 'Cached para',
+        question: 'Q',
+        options: {},
+        topic: 't',
+        language: 'en',
+      },
+      quizId: 999,
+      error: null,
+      cached: true,
+    };
+    vi.mocked(exerciseCache.getValidatedExerciseFromCache).mockReturnValue(
+      invalidCachedData as any
+    );
+    const safeParseSpy = vi
+      .spyOn(GenerateExerciseResultSchema, 'safeParse')
+      .mockReturnValue({ success: false, error: new z.ZodError([]) });
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await tryGetCachedExercise(
+      { passageLanguage: 'en', questionLanguage: 'es', cefrLevel: 'B1' },
+      null
+    );
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledWith(
+      '[API] Cached data failed validation:',
+      expect.any(Array),
+      'Original Data:',
+      invalidCachedData
+    );
+    spy.mockRestore();
+    safeParseSpy.mockRestore();
   });
 });
