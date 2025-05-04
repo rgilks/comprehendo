@@ -104,4 +104,27 @@ describe('ReadingPassage', () => {
     const { container } = render(<ReadingPassage />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('highlights relevant words when relevantTextRange is set', () => {
+    mockedStore.mockReturnValue({
+      quizData: {
+        paragraph: 'Hello world.',
+        question: 'What is this?',
+        options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+        topic: 'Test',
+        language: 'en',
+      },
+      showQuestionSection: true,
+      currentWordIndex: 0,
+      isSpeakingPassage: false,
+      relevantTextRange: { start: 6, end: 11 },
+      generatedPassageLanguage: 'en',
+      hoverProgressionPhase: 'credits',
+      hoverCreditsAvailable: 3,
+    } as any);
+    render(<ReadingPassage />);
+    const highlights = screen.getAllByTestId('feedback-highlight');
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0]).toHaveTextContent('world');
+  });
 });

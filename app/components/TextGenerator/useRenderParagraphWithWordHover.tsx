@@ -34,8 +34,8 @@ const useRenderParagraphWithWordHover = ({
 
         const isRelevant =
           relevantTextRange !== null &&
-          segmentStart >= relevantTextRange.start &&
-          segmentEnd <= relevantTextRange.end;
+          segmentEnd > relevantTextRange.start &&
+          segmentStart < relevantTextRange.end;
 
         return (
           <TranslatableWord
