@@ -1,24 +1,14 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { createUISlice, UISlice } from './uiSlice';
-import type { StateCreator } from 'zustand';
-
-interface MockTextGeneratorState extends UISlice {}
-
-const createMockUISlice: StateCreator<
-  MockTextGeneratorState,
-  [['zustand/immer', never]],
-  [],
-  UISlice
-> = (...args: [any, any, any?]) => createUISlice(...args);
 
 describe('uiSlice', () => {
   let store: ReturnType<typeof setupStore>;
 
   const setupStore = () =>
-    create<MockTextGeneratorState>()(
+    create<UISlice>()(
       immer((...args: [any, any, any?]) => ({
-        ...createMockUISlice(...args),
+        ...createUISlice(...args),
       }))
     );
 
