@@ -39,10 +39,6 @@ const TextGeneratorContainer = () => {
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
   }, [status, fetchUserProgress, contextLanguage]);
 
-  useEffect(() => {
-    useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
-  }, [contextLanguage]);
-
   return (
     <div
       className="max-w-4xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 relative"
