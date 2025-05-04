@@ -1,11 +1,4 @@
-type TopicCategory = {
-  name: string;
-  topics: string[];
-};
-
-type CEFRTopics = {
-  [key: string]: TopicCategory[];
-};
+import { CEFRTopics } from './schemas';
 
 export const topicsByLevel: CEFRTopics = {
   A1: [
@@ -203,17 +196,12 @@ export const topicsByLevel: CEFRTopics = {
 };
 
 export const getTopicsForLevel = (level: string): string[] => {
-  const levelTopics = topicsByLevel[level];
-  return levelTopics.flatMap((category) => category.topics);
+  return topicsByLevel[level].flatMap((category) => category.topics);
 };
 
 export const getRandomTopicForLevel = (level: string): string => {
   const topics = getTopicsForLevel(level);
-
-  if (topics.length === 0) {
-    return 'General knowledge';
-  }
-
+  if (topics.length === 0) return 'General knowledge';
   const randomIndex = Math.floor(Math.random() * topics.length);
   return topics[randomIndex];
 };

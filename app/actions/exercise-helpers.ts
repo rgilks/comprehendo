@@ -1,6 +1,6 @@
 import { LANGUAGES } from '@/lib/domain/language';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
-import { getRandomTopicForLevel } from '@/config/topics';
+import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import {
   GenerateExerciseResultSchema,
   type GenerateExerciseResult,

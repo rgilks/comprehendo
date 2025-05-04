@@ -50,7 +50,7 @@ vi.mock('@/config/languages', () => ({
   Language: {} as any,
 }));
 
-vi.mock('@/config/topics', () => ({
+vi.mock('@/lib/domain/topics', () => ({
   getRandomTopicForLevel: vi.fn(() => 'mock topic'),
 }));
 

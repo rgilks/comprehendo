@@ -107,3 +107,13 @@ export const VoiceInfoSchema = z.object({
 });
 
 export type VoiceInfo = z.infer<typeof VoiceInfoSchema>;
+
+export const TopicCategorySchema = z.object({
+  name: z.string(),
+  topics: z.array(z.string()),
+});
+
+export const CEFRTopicsSchema = z.record(z.string(), z.array(TopicCategorySchema));
+
+export type TopicCategory = z.infer<typeof TopicCategorySchema>;
+export type CEFRTopics = z.infer<typeof CEFRTopicsSchema>;

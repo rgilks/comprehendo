@@ -34,7 +34,7 @@ vi.mock('@/lib/domain/language-guidance', () => ({
   getGrammarGuidance: vi.fn(() => 'grammar'),
   getVocabularyGuidance: vi.fn(() => 'vocab'),
 }));
-vi.mock('@/config/topics', () => ({ getRandomTopicForLevel: vi.fn(() => 'topic') }));
+vi.mock('@/lib/domain/topics', () => ({ getRandomTopicForLevel: vi.fn(() => 'topic') }));
 vi.mock('@/lib/exercise-cache', () => ({
   saveExerciseToCache: vi.fn(() => 123),
   getValidatedExerciseFromCache: vi.fn(() => undefined),
