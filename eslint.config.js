@@ -65,7 +65,7 @@ export default tseslint.config(
         'warn',
         { allowNumber: true, allowBoolean: true },
       ],
-      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',
     },
