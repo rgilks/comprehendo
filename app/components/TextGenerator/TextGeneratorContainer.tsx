@@ -29,7 +29,12 @@ const TextGeneratorContainer = () => {
     if (typeof window !== 'undefined') {
       const isSpeechSupported =
         'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
-      useTextGeneratorStore.setState({ isSpeechSupported });
+      const store: Partial<ReturnType<typeof useTextGeneratorStore.getState>> =
+        useTextGeneratorStore.getState();
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (store && typeof store._setIsSpeechSupported === 'function') {
+        store._setIsSpeechSupported(isSpeechSupported);
+      }
     }
 
     if (status === 'authenticated') {

@@ -37,11 +37,4 @@ export const useTextGeneratorStore = create<TextGeneratorState>()(
   }))
 );
 
-if (typeof window !== 'undefined') {
-  const isSpeechSupported =
-    'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
-  useTextGeneratorStore.getState()._setIsSpeechSupported(isSpeechSupported);
-  console.log('Speech Synthesis Supported:', isSpeechSupported);
-}
-
 export default useTextGeneratorStore;
