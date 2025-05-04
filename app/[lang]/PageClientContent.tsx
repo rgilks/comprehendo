@@ -1,7 +1,7 @@
 'use client';
 
 import { I18nextProvider, useTranslation } from 'react-i18next';
-import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
+import { type Language } from '@/contexts/LanguageContext';
 import HomeContent from './HomeContent';
 import { Suspense, useEffect } from 'react';
 import i18n from '../i18n.client';
@@ -39,11 +39,9 @@ const PageClientContent = ({ initialLanguage, initialI18nStore }: PageClientCont
 
   return (
     <I18nextProvider i18n={i18n}>
-      <LanguageProvider initialLanguage={initialLanguage}>
-        <Suspense fallback={<div>{t('loadingTranslations')}</div>}>
-          <HomeContent />
-        </Suspense>
-      </LanguageProvider>
+      <Suspense fallback={<div>{t('loadingTranslations')}</div>}>
+        <HomeContent />
+      </Suspense>
     </I18nextProvider>
   );
 };

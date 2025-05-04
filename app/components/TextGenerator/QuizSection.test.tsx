@@ -1,9 +1,15 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import QuizSection from './QuizSection';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
+vi.mock('react-i18next', async (importOriginal) => {
+  const original = await importOriginal<typeof import('react-i18next')>();
+  return {
+    ...original,
+    useTranslation: () => ({ t: (key: string) => key }),
+    I18nextProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    initReactI18next: { type: '3rdParty', init: () => {} },
+  };
+});
 vi.mock('@/contexts/LanguageContext', () => ({
   useLanguage: () => ({ language: 'en' }),
   getTextDirection: () => 'ltr',

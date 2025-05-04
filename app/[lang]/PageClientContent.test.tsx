@@ -5,7 +5,6 @@ import { type i18n as I18nInstanceType } from 'i18next';
 import { type ComponentType } from 'react';
 
 // Define mocks first
-const MockLanguageProvider = vi.fn(({ children }) => <>{children}</>);
 const mockT = vi.fn((key) => key);
 const mockChangeLanguage = vi.fn().mockResolvedValue(undefined as never);
 const mockHasResourceBundle = vi.fn<(lng: string, ns: string) => boolean>();
@@ -20,7 +19,7 @@ const mockI18n = {
 
 // Use vi.doMock (not hoisted)
 vi.doMock('@/contexts/LanguageContext', () => ({
-  LanguageProvider: MockLanguageProvider,
+  LanguageProvider: () => <></>,
 }));
 vi.doMock('./HomeContent', () => ({
   default: () => <div data-testid="home-content">HomeContent</div>,
@@ -70,14 +69,6 @@ describe('PageClientContent', () => {
       <PageClientContent initialLanguage={initialLanguage} initialI18nStore={initialI18nStore} />
     );
     expect(screen.getByTestId('home-content')).toBeInTheDocument();
-  });
-
-  it('should initialize LanguageProvider with initialLanguage', () => {
-    render(<PageClientContent initialLanguage="fr" initialI18nStore={initialI18nStore} />);
-    expect(MockLanguageProvider).toHaveBeenCalledWith(
-      expect.objectContaining({ initialLanguage: 'fr' }),
-      undefined
-    );
   });
 
   it('should load initial i18n resources for the initial language', () => {

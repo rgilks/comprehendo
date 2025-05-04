@@ -7,6 +7,7 @@ import { type SettingsSlice, createSettingsSlice } from './settingsSlice';
 import { type QuizSlice, createQuizSlice } from './quizSlice';
 import { type AudioSlice, createAudioSlice } from './audioSlice';
 import { type ProgressSlice, createProgressSlice } from './progressSlice';
+import { type LanguageSlice, createLanguageSlice } from './languageSlice';
 import { type QuizData } from '@/lib/domain/schemas';
 
 export type { CEFRLevel } from '@/lib/domain/language-guidance';
@@ -16,7 +17,12 @@ export { LanguageSchema } from '@/lib/domain/language';
 
 export type { QuizData };
 
-export type TextGeneratorState = UISlice & SettingsSlice & QuizSlice & AudioSlice & ProgressSlice;
+export type TextGeneratorState = UISlice &
+  SettingsSlice &
+  QuizSlice &
+  AudioSlice &
+  ProgressSlice &
+  LanguageSlice;
 
 enableMapSet();
 
@@ -27,6 +33,7 @@ export const useTextGeneratorStore = create<TextGeneratorState>()(
     ...createQuizSlice(...args),
     ...createAudioSlice(...args),
     ...createProgressSlice(...args),
+    ...createLanguageSlice(...args),
   }))
 );
 

@@ -3,7 +3,7 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
 import PWAInstall from '@/components/PWAInstall';
-import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
+import { type Language } from '@/contexts/LanguageContext';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({
@@ -65,10 +65,8 @@ const RootLayout = async ({
       </head>
       <body className={poppins.className}>
         <AuthProvider>
-          <LanguageProvider initialLanguage={locale}>
-            {children}
-            <PWAInstall />
-          </LanguageProvider>
+          {children}
+          <PWAInstall />
         </AuthProvider>
       </body>
     </html>
