@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { getTextDirection } from '@/lib/domain/language';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import AudioControls from './AudioControls';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/hooks/useLanguage';
 import useRenderParagraphWithWordHover from './useRenderParagraphWithWordHover';
 
 const ReadingPassage = () => {

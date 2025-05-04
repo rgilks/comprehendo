@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { useSession } from 'next-auth/react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/hooks/useLanguage';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import TextGeneratorContainer from './TextGeneratorContainer';
 
 vi.mock('next-auth/react');
-vi.mock('@/contexts/LanguageContext');
+vi.mock('@/hooks/useLanguage');
 vi.mock('@/store/textGeneratorStore');
 vi.mock('./LanguageSelector', () => ({ default: () => <div>LanguageSelector</div> }));
 vi.mock('./LoginPrompt', () => ({ default: () => <div>LoginPrompt</div> }));

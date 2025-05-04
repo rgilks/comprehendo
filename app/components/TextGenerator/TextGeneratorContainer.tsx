@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useLanguage } from '@/hooks/useLanguage';
 import { useSession } from 'next-auth/react';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import LanguageSelector from './LanguageSelector';

@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
+import { type Language, SPEECH_LANGUAGES } from '@/hooks/useLanguage';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { translateWordWithGoogle } from '../actions/translate';
 import type { VoiceInfo } from '@/lib/domain/schemas';

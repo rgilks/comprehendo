@@ -35,7 +35,7 @@
       "@/config/*": ["app/config/*"],
       "@/utils/*": ["app/utils/*"],
       "@/lib/*": ["lib/*"],
-      "@/hooks/*": ["hooks/*"],
+      "@/hooks/*": ["app/hooks/*"],
       "@/types/*": ["types/*"]
     },
     "sourceMap": true,

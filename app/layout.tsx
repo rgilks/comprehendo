@@ -3,7 +3,7 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
 import PWAInstall from '@/components/PWAInstall';
-import { type Language } from '@/contexts/LanguageContext';
+import { type Language } from '@/hooks/useLanguage';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({

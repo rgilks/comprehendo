@@ -10,7 +10,7 @@ vi.mock('react-i18next', async (importOriginal) => {
     initReactI18next: { type: '3rdParty', init: () => {} },
   };
 });
-vi.mock('@/contexts/LanguageContext', () => ({
+vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({ language: 'en' }),
   getTextDirection: () => 'ltr',
 }));

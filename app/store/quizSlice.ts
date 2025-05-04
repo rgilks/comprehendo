@@ -3,7 +3,7 @@ import { submitAnswer, submitQuestionFeedback } from '@/app/actions/userProgress
 import { generateExerciseResponse } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
-import {} from '@/contexts/LanguageContext';
+import {} from '@/hooks/useLanguage';
 import {
   PartialQuizData,
   GenerateExerciseResultSchema,

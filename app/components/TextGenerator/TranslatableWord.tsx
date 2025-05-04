@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, memo } from 'react';
-import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
+import { type Language, SPEECH_LANGUAGES } from '@/hooks/useLanguage';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 
 interface TranslatableWordProps {

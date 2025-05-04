@@ -2,9 +2,8 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getTextDirection } from '@/contexts/LanguageContext';
+import { getTextDirection, useLanguage } from '@/hooks/useLanguage';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import type { QuizData } from '@/lib/domain/schemas';
 import type { Language } from '@/lib/domain/language';

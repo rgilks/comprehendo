@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
-import { type Language } from '@/contexts/LanguageContext';
+import { type Language } from '@/hooks/useLanguage';
 import { type i18n as I18nInstanceType } from 'i18next';
 import { type ComponentType } from 'react';
 
@@ -18,7 +18,7 @@ const mockI18n = {
 } as unknown as I18nInstanceType;
 
 // Use vi.doMock (not hoisted)
-vi.doMock('@/contexts/LanguageContext', () => ({
+vi.doMock('@/hooks/useLanguage', () => ({
   LanguageProvider: () => <></>,
 }));
 vi.doMock('./HomeContent', () => ({

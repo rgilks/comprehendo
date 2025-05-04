@@ -1,4 +1,4 @@
-vi.mock('@/contexts/LanguageContext', () => ({
+vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: () => ({
     language: 'en',
     setLanguage: vi.fn(),

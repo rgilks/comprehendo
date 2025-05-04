@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import ReadingPassage from './ReadingPassage';
-import * as LanguageContext from '@/contexts/LanguageContext';
+import * as LanguageContext from '@/hooks/useLanguage';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import React from 'react';
 
