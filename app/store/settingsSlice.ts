@@ -2,8 +2,10 @@ import type { StateCreator } from 'zustand';
 import { type LearningLanguage } from '@/lib/domain/language';
 import { type CEFRLevel } from '@/lib/domain/language-guidance';
 import type { Language, TextGeneratorState } from './textGeneratorStore';
+import type { BaseSlice } from './baseSlice';
+import { createBaseSlice } from './baseSlice';
 
-export interface SettingsSlice {
+export interface SettingsSlice extends BaseSlice {
   passageLanguage: LearningLanguage;
   generatedPassageLanguage: LearningLanguage | null;
   generatedQuestionLanguage: Language | null;
@@ -20,6 +22,7 @@ export const createSettingsSlice: StateCreator<
   [],
   SettingsSlice
 > = (set, get) => ({
+  ...createBaseSlice(set),
   passageLanguage: 'en',
   generatedPassageLanguage: null,
   generatedQuestionLanguage: null,

@@ -9,6 +9,8 @@ import {
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,
 } from '@/lib/domain/schemas';
+import type { BaseSlice } from './baseSlice';
+import { createBaseSlice } from './baseSlice';
 
 interface NextQuizInfo {
   quizData: PartialQuizData;
@@ -17,7 +19,7 @@ interface NextQuizInfo {
 
 export type HoverProgressionPhase = 'initial' | 'credits';
 
-export interface QuizSlice {
+export interface QuizSlice extends BaseSlice {
   quizData: PartialQuizData | null;
   currentQuizId: number | null;
   selectedAnswer: string | null;
@@ -67,6 +69,7 @@ export const createQuizSlice: StateCreator<
   [],
   QuizSlice
 > = (set, get) => ({
+  ...createBaseSlice(set),
   quizData: null,
   currentQuizId: null,
   selectedAnswer: null,

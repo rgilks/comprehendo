@@ -4,6 +4,8 @@ import { getProgress } from '@/app/actions/userProgress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
+import type { BaseSlice } from './baseSlice';
+import { createBaseSlice } from './baseSlice';
 
 const GetProgressResultSchema = z.object({
   streak: z.number().optional().nullable(),
@@ -11,7 +13,7 @@ const GetProgressResultSchema = z.object({
   error: z.string().optional().nullable(),
 });
 
-export interface ProgressSlice {
+export interface ProgressSlice extends BaseSlice {
   isProgressLoading: boolean;
   userStreak: number | null;
   fetchUserProgress: () => Promise<void>;
@@ -23,6 +25,7 @@ export const createProgressSlice: StateCreator<
   [],
   ProgressSlice
 > = (set, get) => ({
+  ...createBaseSlice(set),
   isProgressLoading: false,
   userStreak: null,
 
