@@ -12,12 +12,6 @@ const RateLimitRowSchema = z.object({
   window_start_time: z.string(), // ISO 8601 string
 });
 
-/**
- * Checks and updates the rate limit for a given IP address.
- *
- * @param ip - The IP address to check the rate limit for.
- * @returns True if the request is allowed, false if rate limited.
- */
 export const checkRateLimit = (ip: string): boolean => {
   try {
     const now = Date.now();

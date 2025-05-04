@@ -1,13 +1,6 @@
 import db from '@/lib/db';
 import type { Session } from 'next-auth';
 
-/**
- * Retrieves the database user ID based on the provider ID and provider from the session.
- * Performs a direct database lookup.
- *
- * @param session The NextAuth session object.
- * @returns The user's database ID, or null if not found or an error occurs.
- */
 export const getDbUserIdFromSession = (session: Session | null): number | null => {
   if (session?.user.id && session.user.provider) {
     try {
