@@ -2,34 +2,7 @@ import { createInstance, type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next/initReactI18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 import { type Language } from '@/lib/domain/language';
-
-const i18nConfig = {
-  lng: 'en',
-  fallbackLng: 'en',
-  supportedLngs: [
-    'zh', // Chinese
-    'en', // English
-    'fil', // Filipino
-    'fr', // French
-    'de', // German
-    'el', // Greek
-    'he', // Hebrew
-    'hi', // Hindi
-    'it', // Italian
-    'ja', // Japanese
-    'ko', // Korean
-    'pl', // Polish
-    'pt', // Portuguese
-    'ru', // Russian
-    'es', // Spanish
-    'th', // Thai
-  ],
-  ns: ['common'],
-  defaultNS: 'common',
-  interpolation: {
-    escapeValue: false,
-  },
-};
+import { i18nConfig } from '@/lib/domain/i18nConfig';
 
 export const initServerI18n = async (
   language: Language,
@@ -53,5 +26,3 @@ export const initServerI18n = async (
     });
   return i18nInstance;
 };
-
-export { i18nConfig };
