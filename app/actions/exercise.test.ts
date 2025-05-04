@@ -1,5 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { generateExerciseResponse, tryGetCachedExercise } from './exercise';
+import { generateExerciseResponse } from './exercise';
+import { tryGetCachedExercise } from './exercise-helpers';
 import {
   type ExerciseRequestParams,
   ExerciseContentSchema,
