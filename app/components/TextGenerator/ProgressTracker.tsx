@@ -18,7 +18,7 @@ const ProgressBar = ({ cefrLevel, userStreak }: { cefrLevel: CEFRLevel; userStre
   <div className="relative py-6" data-testid="progress-bar">
     <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-700/50 rounded-full transform -translate-y-1/2"></div>
     <div className="relative flex justify-between items-center">
-      {CEFR_LEVELS.map((level, idx, levels) => (
+      {CEFR_LEVELS.map((level: CEFRLevel, idx: number) => (
         <React.Fragment key={level}>
           <div className="relative z-20">
             <div
@@ -36,7 +36,7 @@ const ProgressBar = ({ cefrLevel, userStreak }: { cefrLevel: CEFRLevel; userStre
               {level}
             </div>
           </div>
-          {idx < levels.length - 1 && (
+          {idx < CEFR_LEVELS.length - 1 && (
             <div className="flex-1 flex justify-evenly items-center z-10 mx-0 md:mx-1">
               {Array.from({ length: 4 }, (_, dotIdx) => {
                 if (CEFR_LEVEL_INDICES[cefrLevel] > CEFR_LEVEL_INDICES[level]) {
