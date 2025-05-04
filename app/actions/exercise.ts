@@ -224,26 +224,70 @@ export const generateExerciseResponse = async (
     validParams.cefrLevel
   );
 
+  // Scenario 1: Cache count is low - prioritize generation
   if (cachedCount < CACHE_GENERATION_THRESHOLD) {
     const generationResult = await tryGenerateAndCacheExercise(validParams, userId);
 
+    // Return generation result if successful or specific known errors occurred
     if (
       generationResult.quizId !== -1 ||
-      generationResult.error === 'Failed to save exercise to cache.'
+      generationResult.error === 'Failed to save generated exercise to cache.' ||
+      generationResult.error === 'Failed to validate AI response structure.'
     ) {
       return generationResult;
     }
 
-    console.warn('[API] Generation failed, attempting cache fallback.');
+    // If generation failed for other reasons, log and proceed to cache fallback
+    console.warn('[API] Generation failed (low cache), attempting cache fallback.');
+    const cachedResult = tryGetCachedExercise(validParams, userId);
+    if (cachedResult) {
+      return cachedResult;
+    }
+    // If fallback also fails, return the original generation error
+    console.error(
+      '[API] Generation failed (low cache) and cache fallback failed.',
+      generationResult.error
+    );
+    // Return the specific error from the generation attempt
+    return generationResult;
+  } else {
+    // Scenario 2: Cache count is high - prioritize cache
+    const cachedResult = tryGetCachedExercise(validParams, userId);
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    // If cache lookup failed (or returned invalid data), attempt generation as a fallback
+    console.warn('[API] Cache count high, but cache lookup failed. Attempting generation.');
+    const generationResult = await tryGenerateAndCacheExercise(validParams, userId);
+
+    // If generation succeeded or failed with a known non-critical error, return it.
+    if (
+      generationResult.quizId !== -1 ||
+      generationResult.error === 'Failed to save generated exercise to cache.' ||
+      generationResult.error === 'Failed to validate AI response structure.'
+    ) {
+      return generationResult;
+    }
+
+    // If generation also fails after cache miss, return the generation error.
+    console.error(
+      '[API] High cache count, cache lookup failed, and generation fallback failed.',
+      generationResult.error
+    );
+    return generationResult; // Return the specific generation error
   }
 
-  const cachedResult = tryGetCachedExercise(validParams, userId);
-  if (cachedResult) {
-    return cachedResult;
-  }
+  // This part should theoretically be unreachable now, but kept as a safeguard
+  /*
+    const cachedResult = tryGetCachedExercise(validParams, userId);
+    if (cachedResult) {
+      return cachedResult;
+    }
+  */
 
-  console.error(
+  /* console.error(
     `[API] Exhausted options: Failed to generate and no suitable cache found for lang=${validParams.passageLanguage}, level=${validParams.cefrLevel}, user=${userId ?? 'anonymous'}.`
   );
-  return createErrorResponse('Could not retrieve or generate a question.');
+  return createErrorResponse('Could not retrieve or generate a question.'); */
 };

@@ -65,11 +65,6 @@ describe('Auth Utility Functions', () => {
       mockGetServerSession.mockRejectedValue(error);
       await expect(getAuthenticatedUserId()).rejects.toThrow('Session fetch failed');
       expect(mockGetServerSession).toHaveBeenCalledTimes(1);
-      // Depending on desired behavior, you might want it to return null instead of throwing
-      // If so, adjust the implementation and test accordingly:
-      // const userId = await getAuthenticatedUserId();
-      // expect(userId).toBeNull();
-      // console.error would likely be called in the actual function
     });
   });
 
@@ -112,9 +107,6 @@ describe('Auth Utility Functions', () => {
       mockGetServerSession.mockRejectedValue(error);
       await expect(getAuthenticatedSessionUser()).rejects.toThrow('Session fetch failed');
       expect(mockGetServerSession).toHaveBeenCalledTimes(1);
-      // As above, consider if returning null and logging is preferred over throwing
-      // const sessionUser = await getAuthenticatedSessionUser();
-      // expect(sessionUser).toBeNull();
     });
   });
 });
