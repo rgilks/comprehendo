@@ -80,3 +80,13 @@ export const getVocabularyGuidance = (level: CEFRLevel): string => {
 export const getGrammarGuidance = (level: CEFRLevel): string => {
   return grammarGuidance[level];
 };
+
+export const CEFR_LEVELS: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+export const CEFR_LEVEL_INDICES: Record<CEFRLevel, number> = {
+  A1: 0,
+  A2: 1,
+  B1: 2,
+  B2: 3,
+  C1: 4,
+  C2: 5,
+};
