@@ -1,17 +1,10 @@
 'use server';
 
-import { getServerSession } from 'next-auth/next';
-import type { Session } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
 import db from '@/lib/db';
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
-
-interface SessionUser extends NonNullable<Session['user']> {
-  dbId?: number;
-}
-
-const CEFR_LEVELS: ReadonlyArray<string> = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+import { calculateAndUpdateProgress } from '../../lib/userProgressUtils';
+import { getAuthenticatedUserId } from './authUtils';
 
 const updateProgressSchema = z.object({
   isCorrect: z.boolean(),
@@ -54,176 +47,57 @@ export interface ProgressResponse {
   feedback?: FeedbackType;
 }
 
-const calculateAndUpdateProgress = (
-  userId: number,
-  language: string,
-  isCorrect: boolean
-): { currentLevel: string; currentStreak: number; leveledUp: boolean; dbError?: string } => {
-  const normalizedLanguage = language.toLowerCase().slice(0, 2);
-
+// Helper function to fetch and parse quiz data
+const getParsedQuizData = (
+  quizId: number
+): { data: z.infer<typeof QuizDataSchema> | null; error?: string } => {
   try {
-    const userProgress = db
-      .prepare(
-        'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
-      )
-      .get(userId, normalizedLanguage) as
-      | { cefr_level: string; correct_streak: number }
-      | undefined;
-
-    let current_cefr_level: string;
-    let correct_streak: number;
-
-    if (!userProgress) {
-      db.prepare('INSERT INTO user_language_progress (user_id, language_code) VALUES (?, ?)').run(
-        userId,
-        normalizedLanguage
-      );
-      current_cefr_level = 'A1';
-      correct_streak = 0;
-    } else {
-      current_cefr_level = userProgress.cefr_level;
-      correct_streak = userProgress.correct_streak;
-    }
-
-    let leveledUp = false;
-    if (isCorrect) {
-      correct_streak += 1;
-      if (correct_streak >= 5) {
-        const currentLevelIndex = CEFR_LEVELS.indexOf(current_cefr_level);
-        if (currentLevelIndex !== -1 && currentLevelIndex < CEFR_LEVELS.length - 1) {
-          const nextLevel = CEFR_LEVELS[currentLevelIndex + 1];
-          if (nextLevel) {
-            current_cefr_level = nextLevel;
-            correct_streak = 0;
-            leveledUp = true;
-          }
-        } else {
-          correct_streak = 0;
-        }
-      }
-    } else {
-      correct_streak = 0;
-    }
-
-    db.prepare(
-      'UPDATE user_language_progress SET cefr_level = ?, correct_streak = ?, last_practiced = CURRENT_TIMESTAMP WHERE user_id = ? AND language_code = ?'
-    ).run(current_cefr_level, correct_streak, userId, normalizedLanguage);
-
-    return {
-      currentLevel: current_cefr_level,
-      currentStreak: correct_streak,
-      leveledUp: leveledUp,
-    };
-  } catch (dbError) {
-    const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
-    return {
-      currentLevel: 'A1',
-      currentStreak: 0,
-      leveledUp: false,
-      dbError: `A database error occurred: ${message}`,
-    };
-  }
-};
-
-export const updateProgress = async (params: UpdateProgressParams): Promise<ProgressResponse> => {
-  const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as SessionUser | undefined;
-
-  if (!session || !sessionUser?.dbId) {
-    return { currentLevel: 'A1', currentStreak: 0, error: 'Unauthorized' };
-  }
-
-  const userId = sessionUser.dbId;
-  const parsedBody = updateProgressSchema.safeParse(params);
-
-  if (!parsedBody.success) {
-    return { currentLevel: 'A1', currentStreak: 0, error: 'Invalid parameters' };
-  }
-
-  const { isCorrect, language } = parsedBody.data;
-
-  const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
-
-  const response: ProgressResponse = {
-    currentLevel: progressResult.currentLevel,
-    currentStreak: progressResult.currentStreak,
-    leveledUp: progressResult.leveledUp,
-  };
-
-  if (progressResult.dbError) {
-    response.error = progressResult.dbError;
-  }
-
-  return response;
-};
-
-export const submitAnswer = async (
-  params: z.infer<typeof submitAnswerSchema>
-): Promise<ProgressResponse> => {
-  const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as SessionUser | undefined;
-  const userId = sessionUser?.dbId;
-
-  const parsedBody = submitAnswerSchema.safeParse(params);
-  if (!parsedBody.success) {
-    const errorDetails = JSON.stringify(parsedBody.error.flatten().fieldErrors);
-    return {
-      currentLevel: 'A1',
-      currentStreak: 0,
-      error: `Invalid request parameters: ${errorDetails}`,
-    };
-  }
-
-  const { ans, id, learn, cefrLevel: requestCefrLevel } = parsedBody.data;
-
-  if (typeof id !== 'number') {
-    return {
-      currentLevel: 'A1',
-      currentStreak: 0,
-      error: 'Missing or invalid quiz ID in request.',
-    };
-  }
-
-  let isCorrect = false;
-  let feedbackData: FeedbackType = undefined;
-
-  try {
-    const quizRecord = db.prepare('SELECT content FROM quiz WHERE id = ?').get(id) as
+    const quizRecord = db.prepare('SELECT content FROM quiz WHERE id = ?').get(quizId) as
       | { content: string }
       | undefined;
 
     if (!quizRecord) {
-      return {
-        currentLevel: 'A1',
-        currentStreak: 0,
-        error: `Quiz with ID ${id} not found.`,
-      };
+      return { data: null, error: `Quiz with ID ${quizId} not found.` };
     }
 
     const parsedContent = QuizDataSchema.safeParse(JSON.parse(quizRecord.content));
 
     if (!parsedContent.success) {
       console.error(
-        `[SubmitAnswer] Failed to parse quiz content (ID: ${id}) using QuizDataSchema: ${JSON.stringify(parsedContent.error.flatten())}`
+        `[getParsedQuizData] Failed to parse quiz content (ID: ${quizId}) using QuizDataSchema: ${JSON.stringify(parsedContent.error.flatten())}`
       );
-      return {
-        currentLevel: 'A1',
-        currentStreak: 0,
-        error: `Failed to parse content for quiz ID ${id}.`,
-      };
+      return { data: null, error: `Failed to parse content for quiz ID ${quizId}.` };
     }
+    return { data: parsedContent.data };
+  } catch (error: unknown) {
+    console.error(`[getParsedQuizData] Error processing quiz ID ${quizId}:`, error);
+    return {
+      data: null,
+      error: `Error retrieving quiz data for ${quizId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
+};
 
-    const fullQuizData = parsedContent.data;
+// Helper function to generate feedback based on answer and quiz data
+const generateFeedback = (
+  quizId: number,
+  fullQuizData: z.infer<typeof QuizDataSchema>,
+  userAnswer: string | undefined
+): { isCorrect: boolean; feedbackData: FeedbackType } => {
+  let isCorrect = false;
+  let feedbackData: FeedbackType = undefined;
+
+  try {
     const correctAnswerKey = fullQuizData.correctAnswer as keyof typeof fullQuizData.options | null;
     const allExplanations = fullQuizData.allExplanations;
 
     if (
-      typeof ans === 'string' &&
-      ans in fullQuizData.options &&
+      typeof userAnswer === 'string' &&
+      userAnswer in fullQuizData.options &&
       correctAnswerKey &&
       allExplanations
     ) {
-      const chosenAnswerKey = ans as keyof typeof fullQuizData.options;
+      const chosenAnswerKey = userAnswer as keyof typeof fullQuizData.options;
       isCorrect = chosenAnswerKey === correctAnswerKey;
 
       const correctExplanation = allExplanations[correctAnswerKey];
@@ -243,71 +117,130 @@ export const submitAnswer = async (
           relevantText: relevantText,
         };
       } else {
-        // Handle case where essential feedback parts are missing from the parsed data
         console.warn(
-          `[SubmitAnswer] Missing correctExplanation or relevantText for quiz ID ${id}.`
+          `[generateFeedback] Missing correctExplanation or relevantText for quiz ID ${quizId}.`
         );
-        feedbackData = undefined;
       }
     } else {
-      // Handle cases where answer is invalid, or essential data is missing
       if (!correctAnswerKey)
-        console.warn(`[SubmitAnswer] Missing correctAnswerKey for quiz ID ${id}.`);
+        console.warn(`[generateFeedback] Missing correctAnswerKey for quiz ID ${quizId}.`);
       if (!allExplanations)
-        console.warn(`[SubmitAnswer] Missing allExplanations for quiz ID ${id}.`);
-      feedbackData = undefined;
+        console.warn(`[generateFeedback] Missing allExplanations for quiz ID ${quizId}.`);
     }
   } catch (error: unknown) {
-    console.error(`[SubmitAnswer] Error processing quiz ID ${id}:`, error);
+    // Log error, but return default values to avoid crashing the whole process
+    console.error(`[generateFeedback] Error processing feedback for quiz ID ${quizId}:`, error);
+    // isCorrect remains false, feedbackData remains undefined
+  }
+
+  return { isCorrect, feedbackData };
+};
+
+export const updateProgress = async (params: UpdateProgressParams): Promise<ProgressResponse> => {
+  const userId = await getAuthenticatedUserId();
+  if (userId === null) {
+    return { currentLevel: 'A1', currentStreak: 0, error: 'Unauthorized' };
+  }
+
+  const parsedBody = updateProgressSchema.safeParse(params);
+  if (!parsedBody.success) {
+    // Log detailed error server-side
+    console.error(
+      `[updateProgress] Invalid parameters for user ${userId}:`,
+      parsedBody.error.flatten()
+    );
+    return { currentLevel: 'A1', currentStreak: 0, error: 'Invalid parameters' }; // Generic client message
+  }
+
+  const { isCorrect, language } = parsedBody.data;
+  const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
+
+  // Conditionally construct the response object to handle exactOptionalPropertyTypes
+  const response: ProgressResponse = {
+    currentLevel: progressResult.currentLevel,
+    currentStreak: progressResult.currentStreak,
+    leveledUp: progressResult.leveledUp,
+    ...(progressResult.error && { error: progressResult.error }), // Add error only if it exists
+  };
+
+  return response;
+};
+
+export const submitAnswer = async (
+  params: z.infer<typeof submitAnswerSchema>
+): Promise<ProgressResponse> => {
+  const userId = await getAuthenticatedUserId(); // userId can be null for anonymous users
+
+  const parsedBody = submitAnswerSchema.safeParse(params);
+  if (!parsedBody.success) {
+    console.error(
+      `[submitAnswer] Invalid request parameters (userId: ${userId ?? 'anonymous'}):`,
+      parsedBody.error.flatten()
+    );
     return {
       currentLevel: 'A1',
       currentStreak: 0,
-      error: `Error processing answer for quiz ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: 'Invalid request parameters.', // Generic message
     };
   }
 
+  const { ans, id, learn, cefrLevel: requestCefrLevel } = parsedBody.data;
+
+  if (typeof id !== 'number') {
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: 'Missing or invalid quiz ID.', // Generic message
+    };
+  }
+
+  const { data: fullQuizData, error: quizError } = getParsedQuizData(id);
+  if (quizError || !fullQuizData) {
+    // getParsedQuizData already logs the specific error
+    return {
+      currentLevel: 'A1',
+      currentStreak: 0,
+      error: quizError || `Quiz data unavailable.`, // Use error from helper or generic message
+    };
+  }
+
+  // generateFeedback logs its own errors internally
+  const { isCorrect, feedbackData } = generateFeedback(id, fullQuizData, ans);
+
+  // Initialize response with defaults and feedback
   const responsePayload: ProgressResponse = {
-    currentLevel: 'A1',
+    currentLevel: requestCefrLevel || 'A1', // Default for anonymous or if progress update fails
     currentStreak: 0,
     leveledUp: false,
     feedback: feedbackData,
   };
 
-  if (userId) {
-    try {
-      const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
+  // Attempt to update progress only for authenticated users
+  if (userId !== null) {
+    const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
 
-      responsePayload.currentLevel = progressUpdate.currentLevel;
-      responsePayload.currentStreak = progressUpdate.currentStreak;
-      responsePayload.leveledUp = progressUpdate.leveledUp;
-      if (progressUpdate.dbError) {
-        console.error(
-          `[SubmitAnswer] DB Error during progress update for user ${userId}: ${progressUpdate.dbError}`
-        );
-      }
-    } catch (dbError) {
+    responsePayload.currentLevel = progressUpdate.currentLevel;
+    responsePayload.currentStreak = progressUpdate.currentStreak;
+    responsePayload.leveledUp = progressUpdate.leveledUp;
+
+    // Conditionally add the error property if it exists from progressUpdate
+    if (progressUpdate.error) {
       console.error(
-        `[SubmitAnswer] Database error during progress update for user ${userId}:`,
-        dbError
+        `[SubmitAnswer] Progress update failed for user ${userId}: ${progressUpdate.error}`
       );
-      responsePayload.error =
-        (responsePayload.error ? responsePayload.error + '; ' : '') +
-        'Failed to update user progress.';
+      responsePayload.error = progressUpdate.error;
     }
+    // Note: feedback is already set earlier
   } else {
-    responsePayload.currentLevel = requestCefrLevel || 'A1';
-    responsePayload.currentStreak = 0;
-    responsePayload.leveledUp = false;
+    // Anonymous user defaults are set during initialization
   }
 
   return responsePayload;
 };
 
 export const getProgress = async (params: GetProgressParams): Promise<ProgressResponse> => {
-  const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as SessionUser | undefined;
-
-  if (!session || !sessionUser?.dbId) {
+  const userId = await getAuthenticatedUserId();
+  if (userId === null) {
     return {
       currentLevel: 'A1',
       currentStreak: 0,
@@ -315,10 +248,12 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
     };
   }
 
-  const userId = sessionUser.dbId;
   const parsedParams = getProgressSchema.safeParse(params);
-
   if (!parsedParams.success) {
+    console.error(
+      `[getProgress] Invalid parameters for user ${userId}:`,
+      parsedParams.error.flatten()
+    );
     return {
       currentLevel: 'A1',
       currentStreak: 0,
@@ -338,6 +273,7 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
       | undefined;
 
     if (!userProgress) {
+      // Not an error, just no progress yet
       return {
         currentLevel: 'A1',
         currentStreak: 0,
@@ -349,15 +285,14 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
       currentStreak: userProgress.correct_streak,
     };
   } catch (dbError) {
-    console.error(
-      `[GetProgress] Database error for user ${userId}, language ${normalizedLanguage}:`,
-      dbError
-    );
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
+    console.error(
+      `[GetProgress] Database error for user ${userId}, language ${normalizedLanguage}: ${message}`
+    );
     return {
       currentLevel: 'A1',
       currentStreak: 0,
-      error: `Failed to get progress: ${message}`,
+      error: `Failed to retrieve progress due to a database error.`, // Generic message
     };
   }
 };
@@ -371,55 +306,37 @@ export interface SubmitFeedbackResponse {
 export const submitQuestionFeedback = async (
   params: SubmitFeedbackParams
 ): Promise<SubmitFeedbackResponse> => {
-  const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as SessionUser | undefined;
-
-  if (!session || !sessionUser?.dbId) {
+  const userId = await getAuthenticatedUserId();
+  if (userId === null) {
     return { success: false, error: 'Unauthorized' };
   }
-  const userId = sessionUser.dbId;
 
   const parsedBody = submitFeedbackSchema.safeParse(params);
-
   if (!parsedBody.success) {
-    console.error('[SubmitFeedback] Invalid parameters:', parsedBody.error);
+    console.error(
+      `[SubmitFeedback] Invalid parameters for user ${userId}:`,
+      parsedBody.error.flatten()
+    );
     return { success: false, error: 'Invalid parameters' };
   }
 
   const { quizId, is_good, userAnswer, isCorrect } = parsedBody.data;
 
-  let feedbackSuccess = false;
-  let feedbackError: string | undefined = undefined;
   try {
     const quizExists = db.prepare('SELECT id FROM quiz WHERE id = ?').get(quizId);
     if (!quizExists) {
-      feedbackError = `Quiz with ID ${quizId} not found.`;
-    } else {
-      db.prepare(
-        'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
-      ).run(
-        quizId,
-        userId,
-        is_good,
-        userAnswer,
-        isCorrect === undefined ? null : isCorrect ? 1 : 0
-      );
-      feedbackSuccess = true;
+      // Log specific error, return generic one
+      console.error(`[SubmitFeedback] Quiz ID ${quizId} not found for user ${userId}.`);
+      return { success: false, error: `Quiz not found.` };
     }
+
+    db.prepare(
+      'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
+    ).run(quizId, userId, is_good, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
+    return { success: true }; // Return success
   } catch (dbError) {
-    console.error('[SubmitFeedback] Database error saving feedback:', dbError);
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
-    feedbackError = `Database error saving feedback: ${message}`;
-    feedbackSuccess = false;
+    console.error(`[SubmitFeedback] Database error for user ${userId}, quiz ${quizId}: ${message}`);
+    return { success: false, error: `Database error saving feedback.` }; // Generic message
   }
-
-  const response: SubmitFeedbackResponse = {
-    success: feedbackSuccess,
-  };
-
-  if (feedbackError) {
-    response.error = feedbackError;
-  }
-
-  return response;
 };
