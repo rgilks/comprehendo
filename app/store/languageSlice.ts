@@ -36,7 +36,13 @@ export const createLanguageSlice: StateCreator<
       if (state.language === lang) return;
       state.language = lang;
     });
-    await i18n.changeLanguage(lang);
+    try {
+      await i18n.changeLanguage(lang);
+    } catch (e) {
+      // fallback: reload page if language change fails
+      window.location.reload();
+      return;
+    }
     const segments = pathname.split('/');
     segments[1] = lang;
     const currentSearch = window.location.search;
