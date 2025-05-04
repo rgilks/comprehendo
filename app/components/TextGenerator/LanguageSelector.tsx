@@ -56,7 +56,10 @@ const LanguageSelector = () => {
             <span className="hidden sm:inline">{cefrLevel} - </span>
             {t(`practice.cefr.levels.${cefrLevel}.name`)}
             {isProgressLoading && (
-              <span className="ml-2 text-xs text-gray-400 animate-pulse">
+              <span
+                className="ml-2 text-xs text-gray-400 animate-pulse"
+                data-testid="loading-indicator"
+              >
                 {t('common.loading')}
               </span>
             )}

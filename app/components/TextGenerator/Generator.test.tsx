@@ -108,10 +108,14 @@ describe('Generator', () => {
     mockStore.loading = true;
     mockStore.feedbackSubmitted = false;
     render(<Generator />);
-    screen.getAllByTestId('generate-button').forEach((btn) => { expect(btn).toBeDisabled(); });
+    screen.getAllByTestId('generate-button').forEach((btn) => {
+      expect(btn).toBeDisabled();
+    });
     mockStore.isAnswered = false;
     render(<Generator />);
-    screen.getAllByTestId('generate-button').forEach((btn) => { expect(btn).toBeDisabled(); });
+    screen.getAllByTestId('generate-button').forEach((btn) => {
+      expect(btn).toBeDisabled();
+    });
   });
 
   it('does not show feedback prompt if not authenticated', async () => {
