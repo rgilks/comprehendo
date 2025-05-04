@@ -11,6 +11,7 @@ import {
 import { saveExerciseToCache, getValidatedExerciseFromCache } from '@/lib/exercise-cache';
 import {
   generateAndValidateExercise,
+  type QuizData,
   AIResponseProcessingError,
 } from '@/lib/ai/exercise-generator';
 import { createErrorResponse } from '@/lib/utils/exercise-response';
@@ -28,7 +29,7 @@ export const tryGenerateAndCacheExercise = async (
     const passageLangName: string = LANGUAGES[params.passageLanguage];
     const questionLangName: string = LANGUAGES[params.questionLanguage];
 
-    const aiData = await generateAndValidateExercise({
+    const aiData: QuizData | null = await generateAndValidateExercise({
       topic: topicForAI,
       passageLanguage: params.passageLanguage,
       questionLanguage: params.questionLanguage,
@@ -38,6 +39,21 @@ export const tryGenerateAndCacheExercise = async (
       grammarGuidance,
       vocabularyGuidance,
     });
+
+    if (aiData == null) {
+      return {
+        quizData: {
+          paragraph: '',
+          question: '',
+          options: { A: '', B: '', C: '', D: '' },
+          topic: null,
+          language: null,
+        },
+        quizId: -1,
+        error: 'Failed to validate AI response structure.',
+        cached: false,
+      };
+    }
 
     const exerciseContentParseResult = ExerciseContentSchema.safeParse(aiData);
 

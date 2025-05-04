@@ -16,6 +16,7 @@ const rateLimiter = await import('@/lib/rate-limiter');
 const exerciseCache = await import('@/lib/exercise-cache');
 const aiGenerator = await import('@/lib/ai/exercise-generator');
 const authUtils = await import('@/lib/authUtils');
+const helpers = await import('./exercise-helpers');
 
 vi.mock('@/lib/db', () => ({
   default: {
@@ -662,19 +663,8 @@ describe('additional branch coverage for generateExerciseResponse', () => {
 
 describe('additional edge cases', () => {
   test('should handle AI generator returning null', async () => {
-    vi.mocked(aiGenerator.generateAndValidateExercise).mockResolvedValue(null as any);
-    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
-      success: false,
-      error: new z.ZodError([
-        {
-          code: 'invalid_type',
-          expected: 'object',
-          received: 'null',
-          path: [],
-          message: 'Required',
-        },
-      ]),
-    });
+    vi.spyOn(aiGenerator, 'generateAndValidateExercise').mockResolvedValue(null as any);
+    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(null);
     const result = await generateExerciseResponse({
       passageLanguage: 'en',
       questionLanguage: 'es',
@@ -685,8 +675,8 @@ describe('additional edge cases', () => {
       paragraph: '',
       question: '',
       options: { A: '', B: '', C: '', D: '' },
-      language: null,
       topic: null,
+      language: null,
     });
     expect(result.quizId).toBe(-1);
   });

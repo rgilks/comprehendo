@@ -43,5 +43,9 @@ export const generateExerciseResponse = async (
     validParams.questionLanguage,
     validParams.cefrLevel
   );
-  return getOrGenerateExercise(validParams, userId, cachedCount);
+  const result = await getOrGenerateExercise(validParams, userId, cachedCount);
+  if (result.quizId === -1 && result.error == null) {
+    return { ...result, error: 'Failed to validate AI response structure.' };
+  }
+  return result;
 };

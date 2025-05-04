@@ -10,10 +10,8 @@ const CACHE_GENERATION_THRESHOLD = 100;
 export const validateRequestParams = (requestParams: unknown) =>
   ExerciseRequestParamsSchema.safeParse(requestParams);
 
-const shouldReturn = (result: GenerateExerciseResult) =>
-  result.quizId !== -1 ||
-  result.error === 'Failed to save generated exercise to cache.' ||
-  result.error === 'Failed to validate AI response structure.';
+const isTerminalGenerationError = (result: GenerateExerciseResult) =>
+  result.error === 'Failed to save generated exercise to cache.';
 
 export const getOrGenerateExercise = async (
   validParams: ExerciseRequestParams,
@@ -25,17 +23,20 @@ export const getOrGenerateExercise = async (
 
   if (cachedCount < CACHE_GENERATION_THRESHOLD) {
     const generationResult = await tryGen();
-    if (shouldReturn(generationResult)) return generationResult;
-    console.warn('[API] Generation failed (low cache), attempting cache fallback.');
-    const cachedResult = await tryCache();
-    if (cachedResult) return cachedResult;
+    if (generationResult.quizId !== -1) return generationResult;
+    if (!isTerminalGenerationError(generationResult)) {
+      console.warn('[API] Generation failed (low cache), attempting cache fallback.');
+      const cachedResult = await tryCache();
+      if (cachedResult) return cachedResult;
+    }
     return generationResult;
   } else {
     const cachedResult = await tryCache();
     if (cachedResult) return cachedResult;
     console.warn('[API] Cache count high, but cache lookup failed. Attempting generation.');
     const generationResult = await tryGen();
-    if (shouldReturn(generationResult)) return generationResult;
+    if (generationResult.quizId !== -1 || isTerminalGenerationError(generationResult))
+      return generationResult;
     return generationResult;
   }
 };

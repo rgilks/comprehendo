@@ -19,7 +19,7 @@ export class AIResponseProcessingError extends Error {
 // Helper function for AI generation and validation
 export const generateAndValidateExercise = async (
   params: ExerciseGenerationParams
-): Promise<QuizData> => {
+): Promise<QuizData | null> => {
   // Validate input params using the schema
   const validatedParams = ExerciseGenerationParamsSchema.parse(params);
 
@@ -175,3 +175,5 @@ export const callGoogleAI = async (prompt: string): Promise<string> => {
     throw new AIResponseProcessingError(`AI generation failed: ${errorMessage}`, error); // Pass original error (unknown)
   }
 };
+
+export type { QuizData };
