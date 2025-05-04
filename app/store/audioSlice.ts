@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { type Language, SPEECH_LANGUAGES } from '@/hooks/useLanguage';
+import { type Language, SPEECH_LANGUAGES } from '@/lib/domain/language';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { translateWordWithGoogle } from '../actions/translate';
 import type { VoiceInfo } from '@/lib/domain/schemas';
@@ -300,7 +300,9 @@ export const createAudioSlice: StateCreator<
     } else {
       voices = voices.filter(
         (voice) =>
-          baseLangCode && (voice.lang.startsWith(baseLangCode + '-') || voice.lang === baseLangCode)
+          typeof baseLangCode === 'string' &&
+          baseLangCode &&
+          (voice.lang.startsWith(String(baseLangCode) + '-') || voice.lang === String(baseLangCode))
       );
     }
 

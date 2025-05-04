@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
-import { type Language } from '@/hooks/useLanguage';
+import { type Language } from '@/lib/domain/language';
 import { type i18n as I18nInstanceType } from 'i18next';
 import { type ComponentType } from 'react';
 

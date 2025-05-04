@@ -3,7 +3,7 @@ import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
 import PWAInstall from '@/components/PWAInstall';
-import { type Language } from '@/hooks/useLanguage';
+import { type Language } from '@/lib/domain/language';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({
@@ -60,7 +60,6 @@ const RootLayout = async ({
     <html lang={locale}>
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="icon" href="/icons/icon-192x192.png" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={poppins.className}>

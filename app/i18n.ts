@@ -1,7 +1,7 @@
 import { createInstance, type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next/initReactI18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
-import { type Language } from '@/hooks/useLanguage';
+import { type Language } from '@/lib/domain/language';
 
 const i18nConfig = {
   lng: 'en',

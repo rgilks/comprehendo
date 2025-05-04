@@ -2,7 +2,8 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import useTextGeneratorStore from '../store/textGeneratorStore';
-import { getTextDirection, SPEECH_LANGUAGES, type Language } from '@/lib/domain/language';
+import { getTextDirection, SPEECH_LANGUAGES } from '@/lib/domain/language';
+import type { Language } from '@/lib/domain/language';
 
 export const useLanguage = () => {
   const router = useRouter();
@@ -22,4 +23,4 @@ export const useLanguage = () => {
   };
 };
 
-export { getTextDirection, SPEECH_LANGUAGES, type Language };
+export { getTextDirection, SPEECH_LANGUAGES };
