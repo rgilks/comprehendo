@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
-import ClientPWAWrapper from '@/components/ClientPWAWrapper';
+import PWAInstall from '@/components/PWAInstall';
 import { LanguageProvider, type Language } from '@/contexts/LanguageContext';
 import { cookies } from 'next/headers';
 
@@ -67,7 +67,7 @@ const RootLayout = async ({
         <AuthProvider>
           <LanguageProvider initialLanguage={locale}>
             {children}
-            <ClientPWAWrapper />
+            <PWAInstall />
           </LanguageProvider>
         </AuthProvider>
       </body>
