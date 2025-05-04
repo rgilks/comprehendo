@@ -100,3 +100,10 @@ export const ExerciseContentSchema = z.object({
 export type ExerciseContent = z.infer<typeof ExerciseContentSchema>; // Renamed type alias
 
 export const LanguageLevels = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
+
+export const VoiceInfoSchema = z.object({
+  uri: z.string(),
+  displayName: z.string(),
+});
+
+export type VoiceInfo = z.infer<typeof VoiceInfoSchema>;

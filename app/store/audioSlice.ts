@@ -2,12 +2,7 @@ import type { StateCreator } from 'zustand';
 import { type Language, SPEECH_LANGUAGES } from '@/contexts/LanguageContext';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { translateWordWithGoogle } from '../actions/translate';
-
-// Define the structure for storing voice information
-interface VoiceInfo {
-  uri: string;
-  displayName: string;
-}
+import type { VoiceInfo } from '@/lib/domain/schemas';
 
 export interface AudioSlice {
   isSpeechSupported: boolean;
