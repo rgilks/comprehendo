@@ -3,71 +3,16 @@
 import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
 import { authOptions } from '@/lib/authOptions';
-import { checkRateLimit } from '@/lib/rate-limiter';
 import { getDbUserIdFromSession } from '../../lib/authUtils';
 import { createErrorResponse } from '@/lib/utils/exercise-response';
-import { tryGenerateAndCacheExercise, tryGetCachedExercise } from './exercise-helpers';
-import { ExerciseRequestParamsSchema, type GenerateExerciseResult } from '@/lib/domain/schemas';
+import { tryGetCachedExercise } from './exercise-helpers';
 import { countCachedExercises } from '@/lib/exercise-cache';
-import { z } from 'zod';
-
-const CACHE_GENERATION_THRESHOLD = 100;
+import { validateRequestParams, getOrGenerateExercise } from './exercise-orchestrator';
+import { checkRateLimit } from '@/lib/rate-limiter';
+import type { ZodIssue } from 'zod';
+import type { GenerateExerciseResult } from '@/lib/domain/schemas';
 
 // --- Main Action ---
-
-const validateRequestParams = (requestParams: unknown) => {
-  return ExerciseRequestParamsSchema.safeParse(requestParams);
-};
-
-const handleRateLimit = (ip: string) => {
-  return checkRateLimit(ip);
-};
-
-const getOrGenerateExercise = async (
-  validParams: z.infer<typeof ExerciseRequestParamsSchema>,
-  userId: number | null,
-  cachedCount: number
-): Promise<GenerateExerciseResult> => {
-  if (cachedCount < CACHE_GENERATION_THRESHOLD) {
-    const generationResult = await tryGenerateAndCacheExercise(validParams, userId);
-    if (
-      generationResult.quizId !== -1 ||
-      generationResult.error === 'Failed to save generated exercise to cache.' ||
-      generationResult.error === 'Failed to validate AI response structure.'
-    ) {
-      return generationResult;
-    }
-    console.warn('[API] Generation failed (low cache), attempting cache fallback.');
-    const cachedResult = await tryGetCachedExercise(validParams, userId);
-    if (cachedResult) {
-      return cachedResult;
-    }
-    console.error(
-      '[API] Generation failed (low cache) and cache fallback failed.',
-      generationResult.error
-    );
-    return generationResult;
-  } else {
-    const cachedResult = await tryGetCachedExercise(validParams, userId);
-    if (cachedResult) {
-      return cachedResult;
-    }
-    console.warn('[API] Cache count high, but cache lookup failed. Attempting generation.');
-    const generationResult = await tryGenerateAndCacheExercise(validParams, userId);
-    if (
-      generationResult.quizId !== -1 ||
-      generationResult.error === 'Failed to save generated exercise to cache.' ||
-      generationResult.error === 'Failed to validate AI response structure.'
-    ) {
-      return generationResult;
-    }
-    console.error(
-      '[API] High cache count, cache lookup failed, and generation fallback failed.',
-      generationResult.error
-    );
-    return generationResult;
-  }
-};
 
 export const generateExerciseResponse = async (
   requestParams: unknown
@@ -80,12 +25,12 @@ export const generateExerciseResponse = async (
   const validationResult = validateRequestParams(requestParams);
   if (!validationResult.success) {
     const errorMsg = `Invalid request parameters: ${validationResult.error.errors
-      .map((e) => `${e.path.join('.')}: ${e.message}`)
+      .map((e: ZodIssue) => `${e.path.join('.')}: ${e.message}`)
       .join(', ')}`;
     return createErrorResponse(errorMsg);
   }
   const validParams = validationResult.data;
-  const isAllowed = handleRateLimit(ip);
+  const isAllowed = checkRateLimit(ip);
   if (!isAllowed) {
     const cachedResult = await tryGetCachedExercise(validParams, userId);
     if (cachedResult) {
