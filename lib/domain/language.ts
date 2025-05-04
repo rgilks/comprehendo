@@ -13,7 +13,6 @@ export const LanguageSchema = z.enum([
   'it', // Italian
   'ja', // Japanese
   'ko', // Korean
-  'la', // Latin
   'pl', // Polish
   'pt', // Portuguese
   'ru', // Russian
@@ -34,7 +33,6 @@ export const LANGUAGES: Record<Language, string> = {
   it: 'Italiano',
   ja: '日本語',
   ko: '한국어',
-  la: 'Latin',
   pl: 'Polski',
   pt: 'Português',
   ru: 'Русский',
@@ -54,7 +52,6 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
   it: 'it-IT',
   ja: 'ja-JP',
   ko: 'ko-KR',
-  la: 'la-VA', // Note: Latin speech might not be standardly supported
   pl: 'pl-PL',
   pt: 'pt-PT',
   ru: 'ru-RU',
@@ -88,3 +85,32 @@ export const RTL_LANGUAGES: Language[] = ['he'];
 export const getTextDirection = (language: Language): 'ltr' | 'rtl' => {
   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
 };
+
+// Define the languages specifically available for the UI based on locale files
+export const SUPPORTED_UI_LANG_CODES = [
+  'zh', // Chinese
+  'en', // English
+  'fil', // Filipino
+  'fr', // French
+  'de', // German
+  'el', // Greek
+  'he', // Hebrew
+  'hi', // Hindi
+  'it', // Italian
+  'ja', // Japanese
+  'ko', // Korean
+  'pl', // Polish
+  'pt', // Portuguese
+  'ru', // Russian
+  'es', // Spanish
+  'th', // Thai
+] as const;
+
+export const UILanguageSchema = z.enum(SUPPORTED_UI_LANG_CODES);
+export type UILanguage = z.infer<typeof UILanguageSchema>;
+
+export const UI_LANGUAGES: Record<UILanguage, string> = Object.fromEntries(
+  Object.entries(LANGUAGES).filter(([langCode]) =>
+    SUPPORTED_UI_LANG_CODES.includes(langCode as UILanguage)
+  )
+) as Record<UILanguage, string>;

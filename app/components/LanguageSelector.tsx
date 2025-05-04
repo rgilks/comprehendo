@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import type { Language } from '@/contexts/LanguageContext';
+import type { UILanguage } from '@/lib/domain/language';
 
 const LanguageSelector = () => {
   const { language, setLanguage, languages } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleSelect = (lang: Language) => {
+  const handleSelect = (lang: UILanguage) => {
     void setLanguage(lang);
     setIsOpen(false);
   };
@@ -71,7 +71,7 @@ const LanguageSelector = () => {
             aria-labelledby="menu-button"
           >
             <div className="py-1" role="none">
-              {(Object.keys(languages) as Language[]).map((lang) => (
+              {(Object.keys(languages) as Array<UILanguage>).map((lang: UILanguage) => (
                 <button
                   key={lang}
                   onClick={() => {
