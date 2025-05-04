@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { BookOpenIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
-import { getTextDirection, type Language } from '@/contexts/LanguageContext';
+import { getTextDirection } from '@/lib/domain/language';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import TranslatableWord from './TranslatableWord';
 import AudioControls from './AudioControls';
 import { useLanguage } from '@/contexts/LanguageContext';
+import useRenderParagraphWithWordHover from './useRenderParagraphWithWordHover';
 
 const ReadingPassage = () => {
   const { t } = useTranslation('common');
@@ -25,41 +25,12 @@ const ReadingPassage = () => {
 
   const actualQuestionLanguage = questionLanguage;
 
-  const renderParagraphWithWordHover = useCallback(
-    (paragraph: string, lang: Language) => {
-      const words = paragraph.split(/(\s+)/);
-      let currentPos = 0;
-      return words.map((segment, index) => {
-        const segmentStart = currentPos;
-        const segmentEnd = currentPos + segment.length;
-        currentPos = segmentEnd;
-
-        if (/^\s+$/.test(segment)) {
-          return <span key={index}>{segment}</span>;
-        }
-
-        const wordIndex = words.slice(0, index + 1).filter((s) => !/^\s+$/.test(s)).length - 1;
-        const isCurrent = currentWordIndex === wordIndex && isSpeakingPassage;
-
-        const isRelevant =
-          relevantTextRange !== null &&
-          segmentStart >= relevantTextRange.start &&
-          segmentEnd <= relevantTextRange.end;
-
-        return (
-          <TranslatableWord
-            key={index}
-            word={segment}
-            fromLang={lang}
-            toLang={actualQuestionLanguage}
-            isCurrentWord={isCurrent}
-            isRelevant={isRelevant}
-          />
-        );
-      });
-    },
-    [currentWordIndex, isSpeakingPassage, relevantTextRange, actualQuestionLanguage]
-  );
+  const renderParagraphWithWordHover = useRenderParagraphWithWordHover({
+    currentWordIndex,
+    isSpeakingPassage,
+    relevantTextRange,
+    actualQuestionLanguage,
+  });
 
   if (!quizData || !generatedPassageLanguage) {
     return null;
