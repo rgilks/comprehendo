@@ -54,7 +54,7 @@ export interface QuizSlice extends BaseSlice {
   submitFeedback: (is_good: boolean) => Promise<void>;
   resetQuizState: () => void;
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void;
-  _setNextQuizAvailable: (info: NextQuizInfo | null) => void;
+  setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
 
   useHoverCredit: () => boolean;
@@ -124,7 +124,7 @@ export const createQuizSlice: StateCreator<
     });
   },
 
-  _setNextQuizAvailable: (info) => {
+  setNextQuizAvailable: (info) => {
     set((state) => {
       state.nextQuizAvailable = info;
     });
@@ -233,7 +233,7 @@ export const createQuizSlice: StateCreator<
       }
 
       if (isPrefetch) {
-        get()._setNextQuizAvailable({
+        get().setNextQuizAvailable({
           quizData: quizData,
           quizId: response.quizId,
         });

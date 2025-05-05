@@ -32,8 +32,8 @@ const TextGeneratorContainer = () => {
       const store: Partial<ReturnType<typeof useTextGeneratorStore.getState>> =
         useTextGeneratorStore.getState();
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (store && typeof store._setIsSpeechSupported === 'function') {
-        store._setIsSpeechSupported(isSpeechSupported);
+      if (store && typeof store.setIsSpeechSupported === 'function') {
+        store.setIsSpeechSupported(isSpeechSupported);
       }
     }
 

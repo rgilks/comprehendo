@@ -3,6 +3,7 @@ import { type Language, SPEECH_LANGUAGES } from '@/lib/domain/language';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { translateWordWithGoogle } from '../actions/translate';
 import type { VoiceInfo } from '@/lib/domain/schemas';
+import { filterAndFormatVoices } from '@/lib/utils/speech';
 
 export interface AudioSlice {
   isSpeechSupported: boolean;
@@ -22,8 +23,8 @@ export interface AudioSlice {
   handleStop: () => void;
   getTranslation: (word: string, sourceLang: string, targetLang: string) => Promise<string | null>;
   speakText: (text: string | null, lang: Language) => void;
-  _setIsSpeechSupported: (supported: boolean) => void;
-  _updateAvailableVoices: (lang: Language) => void;
+  setIsSpeechSupported: (supported: boolean) => void;
+  updateAvailableVoices: (lang: Language) => void;
   setSelectedVoiceURI: (uri: string | null) => void;
 }
 
@@ -44,14 +45,14 @@ export const createAudioSlice: StateCreator<
   selectedVoiceURI: null,
   translationCache: new Map<string, string>(),
 
-  _setIsSpeechSupported: (supported) => {
+  setIsSpeechSupported: (supported) => {
     set((state) => {
       state.isSpeechSupported = supported;
       if (supported && typeof window !== 'undefined') {
         window.speechSynthesis.onvoiceschanged = () => {
-          get()._updateAvailableVoices(get().passageLanguage);
+          get().updateAvailableVoices(get().passageLanguage);
         };
-        get()._updateAvailableVoices(get().passageLanguage);
+        get().updateAvailableVoices(get().passageLanguage);
       }
     });
   },
@@ -263,90 +264,14 @@ export const createAudioSlice: StateCreator<
     }
   },
 
-  _updateAvailableVoices: (lang) => {
+  updateAvailableVoices: (lang) => {
     if (!get().isSpeechSupported || typeof window === 'undefined') return;
-    const speechLang = SPEECH_LANGUAGES[lang];
-    const baseLangCode = speechLang.split('-')[0];
-
-    const getPlatformInfo = () => {
-      const ua = navigator.userAgent;
-      const nav = navigator as Navigator & { userAgentData?: { platform: string } };
-      if (typeof nav.userAgentData?.platform === 'string') {
-        const platform = nav.userAgentData.platform.toUpperCase();
-        return {
-          isIOS: platform === 'IOS' || platform === 'IPADOS',
-          isMac: platform === 'MACOS',
-          isWindows: platform === 'WINDOWS',
-          platformString: platform,
-        };
-      }
-      // Fallback using userAgent string parsing
-      const upperUA = ua.toUpperCase();
-      return {
-        isIOS: /IPHONE|IPAD|IPOD/.test(upperUA),
-        isMac: /MACINTOSH|MAC OS X/.test(upperUA),
-        isWindows: /WIN/.test(upperUA),
-        platformString: upperUA, // Less reliable, just use UA for filters if needed
-      };
-    };
-
-    const { isIOS, isMac, isWindows } = getPlatformInfo();
-
-    let voices = window.speechSynthesis.getVoices();
-
-    // Filter voices based on language
-    if (isIOS) {
-      voices = voices.filter((voice) => voice.lang === speechLang);
-    } else {
-      voices = voices.filter(
-        (voice) =>
-          typeof baseLangCode === 'string' &&
-          baseLangCode &&
-          (voice.lang.startsWith(String(baseLangCode) + '-') || voice.lang === String(baseLangCode))
-      );
-    }
-
-    // Filter out macOS default voices with the pattern "Name (Language (Region))"
-    voices = voices.filter((voice) => !isMac || !/\s\(.*\s\(.*\)\)$/.test(voice.name));
-
-    const processedVoices = voices.map(
-      (voice): { uri: string; displayName: string; originalLang: string } => {
-        let displayName = voice.name;
-
-        if (isWindows && displayName.startsWith('Microsoft ')) {
-          const match = displayName.match(/^Microsoft\s+([^\s]+)\s+-/);
-          if (match && match[1]) {
-            displayName = match[1];
-          }
-        }
-        // Simplify iOS voice names
-        else if (isIOS) {
-          // Try removing everything from the first space and opening parenthesis onwards
-          const parenIndex = typeof displayName === 'string' ? displayName.indexOf(' (') : -1;
-          if (parenIndex !== -1) {
-            displayName = displayName.substring(0, parenIndex);
-          }
-        }
-
-        return { uri: voice.voiceURI, displayName, originalLang: voice.lang };
-      }
-    );
-
-    // Deduplication logic: Keep only the first voice for each unique simplified display name
-    const uniqueVoicesMap = new Map<string, { uri: string; displayName: string }>();
-    for (const voice of processedVoices) {
-      if (!uniqueVoicesMap.has(voice.displayName)) {
-        uniqueVoicesMap.set(voice.displayName, { uri: voice.uri, displayName: voice.displayName });
-      }
-    }
-    const finalUniqueVoices = Array.from(uniqueVoicesMap.values());
-
+    const finalUniqueVoices = filterAndFormatVoices(lang);
     set((state) => {
       state.availableVoices = finalUniqueVoices;
       const currentSelectedVoiceAvailable = finalUniqueVoices.some(
         (v) => v.uri === state.selectedVoiceURI
       );
-
       if (!currentSelectedVoiceAvailable) {
         state.selectedVoiceURI = finalUniqueVoices.length > 0 ? finalUniqueVoices[0].uri : null;
       }

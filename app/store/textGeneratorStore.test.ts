@@ -57,7 +57,7 @@ describe('textGeneratorStore', () => {
 
   it('should update Audio slice state', () => {
     act(() => {
-      useTextGeneratorStore.getState()._setIsSpeechSupported(true);
+      useTextGeneratorStore.getState().setIsSpeechSupported(true);
     });
     expect(useTextGeneratorStore.getState().isSpeechSupported).toBe(true);
   });
