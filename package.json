@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:quick": "vitest related --run --passWithNoTests",
-    "nuke": "rm -rf node_modules package-lock.json .next .next-validation",
+    "nuke": "rm -rf node_modules package-lock.json .next .next-validation && npm install",
     "test:e2e": "npx playwright test --reporter=list",
     "init:dev": "npx husky install && npx playwright install"
   },

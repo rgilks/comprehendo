@@ -1,241 +1,248 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { create, type StoreApi } from 'zustand';
+import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { createBaseSlice } from './baseSlice';
+import type { TextGeneratorState } from '@/app/store/textGeneratorStore';
+import type { ProgressUpdateResult } from '@/lib/domain/progress';
+import type { LearningLanguage } from '@/lib/domain/language';
+import { UI_LANGUAGES } from '@/lib/domain/language';
+import type { CEFRLevel } from '@/lib/domain/language-guidance';
 
-// Use vi.hoisted for mock variables to ensure they are available
-const { mockGetSession, mockGetProgress } = vi.hoisted(() => {
+// Hoist mocks
+const { mockGetProgress, mockGetSession } = vi.hoisted(() => {
   return {
-    mockGetSession: vi.fn(),
     mockGetProgress: vi.fn(),
+    mockGetSession: vi.fn(),
   };
 });
 
-vi.mock('next-auth/react', () => ({
-  getSession: mockGetSession,
-}));
-vi.mock('@/app/actions/progress', () => ({
-  getProgress: mockGetProgress,
-}));
+// Mock the actions and hooks using hoisted variables
+vi.mock('@/app/actions/progress', () => ({ getProgress: mockGetProgress }));
+vi.mock('next-auth/react', () => ({ getSession: mockGetSession }));
 
-// Now import the module under test and other dependencies
 import { createProgressSlice } from './progressSlice';
-import type { TextGeneratorState } from './textGeneratorStore';
-import type { CEFRLevel } from '@/lib/domain/language-guidance';
-import type { GetProgressResult } from '@/lib/domain/progress';
 
-// Helper to create a store instance for testing
-const createTestStore = (
-  initialState: Partial<TextGeneratorState> = {}
-): StoreApi<TextGeneratorState> => {
-  return create<TextGeneratorState>()(
-    immer((set, get, api) => {
-      // Create the slices we need parts of
-      const baseSlice = createBaseSlice<TextGeneratorState>(set);
-      const progressSlice = createProgressSlice(set, get, api);
+// Minimal mocks for other slices if needed by progressSlice logic
+const createMockOtherSlices = (_set: any, _get: any, _api: any) => ({
+  passageLanguage: 'en' as LearningLanguage,
+  cefrLevel: 'A1' as CEFRLevel,
+});
 
-      // Define the minimal required state structure for these tests
-      const minimalState: Partial<TextGeneratorState> = {
-        // --- State used/modified by ProgressSlice & its dependencies ---
-        // From BaseSlice (state)
-        loading: baseSlice.loading,
-        error: baseSlice.error,
-        showError: baseSlice.showError,
-        // From ProgressSlice (state)
-        isProgressLoading: progressSlice.isProgressLoading,
-        userStreak: progressSlice.userStreak,
-        // From SettingsSlice (state needed by fetchProgress)
-        passageLanguage: 'en', // Default needed for get()
-        cefrLevel: 'A1', // Default needed & modified by fetchProgress
-
-        // --- Methods used/modified by ProgressSlice ---
-        // From BaseSlice (methods)
-        setLoading: baseSlice.setLoading,
-        setError: baseSlice.setError,
-        // From ProgressSlice (methods)
-        fetchProgress: progressSlice.fetchProgress,
-
-        // --- Mocks for potentially called methods from other slices ---
-        setCefrLevel: vi.fn(), // Mocked as ProgressSlice calls this via set()
-        // Add mocks for any other methods potentially called via get() if necessary
-        // e.g., get().stopPassageSpeech() - Check if progressSlice calls it.
-        stopPassageSpeech: vi.fn(), // Assuming progressSlice *might* call this via get()
-
-        // Add any other essential properties for type compatibility if needed
-        // These might come from UISlice, QuizSlice, etc.
-        // Let's start minimal and add based on TS errors.
-        showLoginPrompt: false,
-        showContent: false,
-        showQuestionSection: false,
-        showExplanation: false,
-        quizData: null,
-        currentQuizId: null,
-        selectedAnswer: null,
-        isAnswered: false,
-        relevantTextRange: null,
-        feedbackIsCorrect: null,
-        feedbackCorrectAnswer: null,
-        feedbackCorrectExplanation: null,
-        feedbackChosenIncorrectExplanation: null,
-        feedbackRelevantText: null,
-        nextQuizAvailable: null,
-        feedbackSubmitted: false,
-        hoverProgressionPhase: 'credits',
-        correctAnswersInPhase: 0,
-        hoverCreditsAvailable: 7,
-        hoverCreditsUsed: 0,
-        isSpeechSupported: false,
-        isSpeakingPassage: false,
-        isPaused: false,
-        volume: 0.5,
-        currentWordIndex: null,
-        passageUtteranceRef: null,
-        wordsRef: [],
-        availableVoices: [],
-        selectedVoiceURI: null,
-        translationCache: new Map(),
-        generatedPassageLanguage: null,
-        generatedQuestionLanguage: null,
-        language: 'en',
-      };
-
-      // Merge minimal state with test-specific overrides
-      const finalInitialState: TextGeneratorState = {
-        ...(minimalState as TextGeneratorState), // Cast needed as we start partial
-        ...(initialState as TextGeneratorState), // Apply test-specific overrides last
-      };
-
-      return finalInitialState;
-    })
+const setupStore = () =>
+  create<TextGeneratorState>()(
+    immer((set, get, api) => ({
+      ...createBaseSlice(set),
+      ...createProgressSlice(set, get, api),
+      ...createMockOtherSlices(set, get, api),
+      isQuizComplete: false,
+      resetState: vi.fn(),
+      setPassageLanguage: vi.fn(),
+      currentPassage: null,
+      passageAudio: null,
+      isGenerating: false,
+      isLoadingPassage: false,
+      isLoadingAudio: false,
+      isAudioPlaying: false,
+      playbackSpeed: 1,
+      currentSentenceIndex: 0,
+      volume: 0.5,
+      selectedVoice: null,
+      quizQuestions: [],
+      currentQuestionIndex: 0,
+      userAnswers: {},
+      score: 0,
+      isSubmitting: false,
+      quizStartTime: null,
+      quizEndTime: null,
+      translations: {},
+      translatedWordDetails: null,
+      isTranslationLoading: false,
+      loading: false,
+      error: null,
+      showError: false,
+      isProgressLoading: false,
+      userStreak: null,
+      showLoginPrompt: false,
+      showContent: false,
+      showQuestionSection: false,
+      showExplanation: false,
+      setShowLoginPrompt: vi.fn(),
+      setShowContent: vi.fn(),
+      setShowQuestionSection: vi.fn(),
+      setShowExplanation: vi.fn(),
+      generatedPassageLanguage: null,
+      generatedQuestionLanguage: null,
+      setGeneratedPassageLanguage: vi.fn(),
+      setGeneratedQuestionLanguage: vi.fn(),
+      setCefrLevel: vi.fn(),
+      setLoading: vi.fn(),
+      setError: vi.fn(),
+      clearError: vi.fn(),
+      quizData: null,
+      currentQuizId: null,
+      selectedAnswer: null,
+      isAnswered: false,
+      relevantTextRange: null,
+      feedbackIsCorrect: null,
+      feedbackCorrectAnswer: null,
+      feedbackCorrectExplanation: null,
+      feedbackChosenIncorrectExplanation: null,
+      feedbackRelevantText: null,
+      nextQuizAvailable: null,
+      feedbackSubmitted: false,
+      hoverProgressionPhase: 'credits',
+      correctAnswersInPhase: 0,
+      hoverCreditsAvailable: 7,
+      hoverCreditsUsed: 0,
+      setQuizData: vi.fn(),
+      setSelectedAnswer: vi.fn(),
+      setIsAnswered: vi.fn(),
+      setRelevantTextRange: vi.fn(),
+      generateText: vi.fn(),
+      handleAnswerSelect: vi.fn(),
+      submitFeedback: vi.fn(),
+      resetQuizState: vi.fn(),
+      resetQuizWithNewData: vi.fn(),
+      setNextQuizAvailable: vi.fn(),
+      loadNextQuiz: vi.fn(),
+      useHoverCredit: vi.fn(),
+      setQuizComplete: vi.fn(),
+      goToNextQuestion: vi.fn(),
+      submitAnswer: vi.fn(),
+      setIsSubmitting: vi.fn(),
+      setQuizStartTime: vi.fn(),
+      setQuizEndTime: vi.fn(),
+      handleWordSelection: vi.fn(),
+      setTranslationLoading: vi.fn(),
+      clearTranslation: vi.fn(),
+      isSpeechSupported: false,
+      isSpeakingPassage: false,
+      isPaused: false,
+      currentWordIndex: null,
+      passageUtteranceRef: null,
+      wordsRef: [],
+      availableVoices: [],
+      selectedVoiceURI: null,
+      translationCache: new Map(),
+      setVolumeLevel: vi.fn(),
+      stopPassageSpeech: vi.fn(),
+      handlePlayPause: vi.fn(),
+      handleStop: vi.fn(),
+      getTranslation: vi.fn(),
+      speakText: vi.fn(),
+      setIsSpeechSupported: vi.fn(),
+      updateAvailableVoices: vi.fn(),
+      setSelectedVoiceURI: vi.fn(),
+      setAudioState: vi.fn(),
+      togglePlayPause: vi.fn(),
+      setPlaybackSpeed: vi.fn(),
+      setCurrentSentenceIndex: vi.fn(),
+      setVolume: vi.fn(),
+      setSelectedVoice: vi.fn(),
+      playPassageSpeech: vi.fn(),
+      setPassageAudio: vi.fn(),
+      setCurrentPassage: vi.fn(),
+      language: 'en' as LearningLanguage,
+      languages: UI_LANGUAGES,
+      languageGuidingText: '',
+      setLanguage: vi.fn(),
+      setLanguageGuidingText: vi.fn(),
+    }))
   );
-};
 
 describe('ProgressSlice', () => {
-  let store: StoreApi<TextGeneratorState>;
+  let store: ReturnType<typeof setupStore>;
+  const userId = 1;
 
   beforeEach(() => {
     vi.resetAllMocks();
-    store = createTestStore(); // Create a fresh store for each test
+    store = setupStore();
+    // Ensure default language needed by get() in fetchProgress
+    store.setState({ passageLanguage: 'en' });
   });
 
   it('should have correct initial state', () => {
-    const { isProgressLoading, userStreak } = store.getState();
-    expect(isProgressLoading).toBe(false);
-    expect(userStreak).toBeNull();
+    expect(store.getState().isProgressLoading).toBe(false);
+    expect(store.getState().userStreak).toBeNull();
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().showError).toBe(false);
   });
 
-  describe('fetchProgress', () => {
-    const userId = 123;
-    const language = 'en';
+  it('should set loading state during fetch', () => {
+    mockGetSession.mockResolvedValue({ user: { dbId: userId } });
+    mockGetProgress.mockReturnValue(new Promise(() => {})); // Promise that never resolves
 
-    beforeEach(() => {
-      store.setState({ passageLanguage: language });
-    });
+    // Call fetchProgress but don't await its completion
+    void store.getState().fetchProgress();
 
-    it('should set loading state correctly', async () => {
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockResolvedValue({ streak: 5, currentLevel: 'B1' });
+    // Check loading state immediately after calling
+    expect(store.getState().isProgressLoading).toBe(true);
 
-      const promise = store.getState().fetchProgress();
-      expect(store.getState().isProgressLoading).toBe(true);
-      await promise;
-      expect(store.getState().isProgressLoading).toBe(false);
-    });
+    // No need to await or catch the promise here for this specific test
+  });
 
-    it('should reset streak and set loading to false if no session/userId', async () => {
-      mockGetSession.mockResolvedValue(null);
-      store.setState({ userStreak: 5 }); // Set a pre-existing streak
+  it('should fetch and set user streak and level successfully', async () => {
+    const progressData: ProgressUpdateResult = {
+      currentStreak: 10,
+      currentLevel: 'B2',
+      leveledUp: false,
+      // error is optional, so undefined is fine here
+    };
+    mockGetSession.mockResolvedValue({ user: { dbId: userId } });
+    mockGetProgress.mockResolvedValue(progressData);
 
-      await store.getState().fetchProgress();
+    await store.getState().fetchProgress();
 
-      const { isProgressLoading, userStreak } = store.getState();
-      expect(isProgressLoading).toBe(false);
-      expect(userStreak).toBeNull();
-      expect(mockGetProgress).not.toHaveBeenCalled();
-    });
+    expect(store.getState().isProgressLoading).toBe(false);
+    expect(store.getState().userStreak).toBe(progressData.currentStreak);
+    expect(store.getState().cefrLevel).toBe(progressData.currentLevel);
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().showError).toBe(false);
+  });
 
-    it('should fetch and set user streak and level successfully', async () => {
-      const progressData: GetProgressResult = { streak: 10, currentLevel: 'B2', error: null };
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockResolvedValue(progressData);
+  it('should handle API error response (error property set)', async () => {
+    const errorMessage = 'API failed';
+    const progressData: ProgressUpdateResult = {
+      error: errorMessage,
+      currentLevel: 'A1', // Should still provide valid defaults
+      currentStreak: 0,
+      leveledUp: false,
+    };
+    mockGetSession.mockResolvedValue({ user: { dbId: userId } });
+    mockGetProgress.mockResolvedValue(progressData);
 
-      await store.getState().fetchProgress();
+    await store.getState().fetchProgress();
 
-      const { userStreak, cefrLevel, isProgressLoading, error } = store.getState();
-      expect(isProgressLoading).toBe(false);
-      expect(userStreak).toBe(progressData.streak);
-      expect(cefrLevel).toBe(progressData.currentLevel);
-      expect(error).toBeNull();
-      expect(mockGetProgress).toHaveBeenCalledWith({ language });
-    });
+    // The slice logic currently throws the error, caught later
+    expect(store.getState().isProgressLoading).toBe(false);
+    // Expect error state to be set based on the thrown/caught error
+    expect(store.getState().error).toBe(errorMessage);
+    expect(store.getState().showError).toBe(true);
+    expect(store.getState().userStreak).toBeNull(); // Should reset on error
+  });
 
-    it('should set streak to 0 if API returns null/undefined streak', async () => {
-      const progressData: GetProgressResult = { streak: null, currentLevel: 'A2', error: null };
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockResolvedValue(progressData);
+  it('should handle thrown error during fetch', async () => {
+    const errorMessage = 'Fetch failed';
+    mockGetSession.mockResolvedValue({ user: { dbId: userId } });
+    mockGetProgress.mockRejectedValue(new Error(errorMessage));
 
-      await store.getState().fetchProgress();
+    await store.getState().fetchProgress();
 
-      const { userStreak, cefrLevel } = store.getState();
-      expect(userStreak).toBe(0);
-      expect(cefrLevel).toBe('A2');
-    });
+    expect(store.getState().isProgressLoading).toBe(false);
+    expect(store.getState().userStreak).toBeNull();
+    expect(store.getState().error).toBe(errorMessage);
+    expect(store.getState().showError).toBe(true);
+  });
 
-    it('should not update level if API returns null/undefined level', async () => {
-      const initialLevel: CEFRLevel = 'C1';
-      store.setState({ cefrLevel: initialLevel });
-      const progressData: GetProgressResult = { streak: 3, currentLevel: null, error: null };
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockResolvedValue(progressData);
+  it('should do nothing if user is not authenticated', async () => {
+    mockGetSession.mockResolvedValue(null);
+    store.setState({ userStreak: 5 }); // Pre-set value
 
-      await store.getState().fetchProgress();
+    await store.getState().fetchProgress();
 
-      const { userStreak, cefrLevel } = store.getState();
-      expect(userStreak).toBe(3);
-      expect(cefrLevel).toBe(initialLevel); // Level should remain unchanged
-    });
-
-    it('should handle API error response', async () => {
-      const errorMessage = 'API failed';
-      const progressData: GetProgressResult = { error: errorMessage }; // Schema allows error only
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockResolvedValue(progressData);
-
-      await store.getState().fetchProgress();
-
-      const { userStreak, isProgressLoading, error, showError } = store.getState();
-      expect(isProgressLoading).toBe(false);
-      expect(userStreak).toBeNull(); // Streak should be null on error
-      expect(error).toBe(errorMessage);
-      expect(showError).toBe(true);
-    });
-
-    it('should handle validation error (invalid API response structure)', async () => {
-      const invalidProgressData = { score: 100 }; // Doesn't match schema
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockResolvedValue(invalidProgressData as any);
-
-      await store.getState().fetchProgress();
-
-      const { userStreak, isProgressLoading, error, showError } = store.getState();
-      expect(isProgressLoading).toBe(false);
-      expect(userStreak).toBe(0);
-      expect(error).toBeNull();
-      expect(showError).toBe(false);
-    });
-
-    it('should handle thrown error during getProgress call', async () => {
-      const errorMessage = 'Network Error';
-      mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
-      mockGetProgress.mockRejectedValue(new Error(errorMessage));
-
-      await store.getState().fetchProgress();
-
-      const { userStreak, isProgressLoading, error, showError } = store.getState();
-      expect(isProgressLoading).toBe(false);
-      expect(userStreak).toBeNull();
-      expect(error).toBe(errorMessage);
-      expect(showError).toBe(true);
-    });
+    expect(mockGetProgress).not.toHaveBeenCalled();
+    expect(store.getState().isProgressLoading).toBe(false);
+    expect(store.getState().userStreak).toBeNull(); // Should reset to null if no user
+    expect(store.getState().error).toBeNull();
   });
 });

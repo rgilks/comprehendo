@@ -73,7 +73,11 @@ describe('User Progress Server Actions', () => {
 
     it('should call calculateAndUpdateProgress and return its result on success', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
-      const mockProgressResult = { currentLevel: 'A2', currentStreak: 1, leveledUp: false };
+      const mockProgressResult = {
+        currentLevel: 'B1' as const,
+        currentStreak: 1,
+        leveledUp: false,
+      };
       vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
 
       const result = await updateProgress(params);
@@ -90,7 +94,7 @@ describe('User Progress Server Actions', () => {
     it('should return error from calculateAndUpdateProgress if it fails', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
       const mockErrorResult = {
-        currentLevel: 'A1',
+        currentLevel: 'A1' as const,
         currentStreak: 0,
         leveledUp: false,
         error: 'DB Error',
@@ -157,7 +161,11 @@ describe('User Progress Server Actions', () => {
         run: vi.fn(),
       };
       vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
-      const mockProgressResult = { currentLevel: 'A2', currentStreak: 1, leveledUp: false };
+      const mockProgressResult = {
+        currentLevel: 'B1' as const,
+        currentStreak: 1,
+        leveledUp: false,
+      };
       vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
 
       const params = { ...baseParams, ans: 'B' };
@@ -185,7 +193,11 @@ describe('User Progress Server Actions', () => {
         run: vi.fn(),
       };
       vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
-      const mockProgressResult = { currentLevel: 'A1', currentStreak: 0, leveledUp: false };
+      const mockProgressResult = {
+        currentLevel: 'A1' as const,
+        currentStreak: 0,
+        leveledUp: false,
+      };
       vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
 
       const params = { ...baseParams, ans: 'A' };
@@ -231,7 +243,7 @@ describe('User Progress Server Actions', () => {
       };
       vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
       const mockErrorResult = {
-        currentLevel: 'A1',
+        currentLevel: 'A1' as const,
         currentStreak: 0,
         leveledUp: false,
         error: 'DB Error on Update',

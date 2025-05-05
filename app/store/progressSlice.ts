@@ -3,7 +3,7 @@ import { getProgress } from '@/app/actions/progress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
-import { GetProgressResultSchema } from '@/lib/domain/progress';
+import { ProgressUpdateResultSchema } from '@/lib/domain/progress';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
 
@@ -42,7 +42,7 @@ export const createProgressSlice: StateCreator<
         const { passageLanguage } = get();
         const rawProgress = await getProgress({ language: passageLanguage });
 
-        const validatedProgress = GetProgressResultSchema.safeParse(rawProgress);
+        const validatedProgress = ProgressUpdateResultSchema.safeParse(rawProgress);
 
         if (!validatedProgress.success) {
           console.error('Zod validation error (getProgress):', validatedProgress.error);
@@ -55,15 +55,15 @@ export const createProgressSlice: StateCreator<
           throw new Error(progress.error);
         }
 
-        finalStreak = progress.streak ?? 0;
+        finalStreak = progress.currentStreak;
         finalLevel = progress.currentLevel;
-
-        if (progress.streak === null || progress.streak === undefined) {
-          console.warn('No progress data found for user/language. Defaulting streak to 0.');
-        }
       } catch (error: unknown) {
         console.error('Error fetching user progress:', String(error));
-        errorMessage = error instanceof Error ? error.message : 'Unknown error fetching progress';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = String(error) || 'Unknown error fetching progress';
+        }
         finalStreak = null;
         finalLevel = undefined;
       }
