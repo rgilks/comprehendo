@@ -106,6 +106,5 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
     refreshData, // Renamed from handleRefresh
     goToPreviousPage, // Renamed from handlePreviousPage
     goToNextPage, // Renamed from handleNextPage
-    setSelectedTable, // Expose setter if needed for direct manipulation (e.g., clearing selection)
   };
 };
