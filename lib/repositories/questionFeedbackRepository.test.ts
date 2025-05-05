@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import db from '@/lib/db'; // Mock this
 import {
-  QuestionFeedbackRepository,
+  createQuestionFeedback, // Import the standalone function
   type QuestionFeedbackInput,
 } from './questionFeedbackRepository';
 
@@ -20,17 +20,14 @@ const mockDb = db as unknown as {
   run: Mock;
 };
 
-let questionFeedbackRepository: QuestionFeedbackRepository;
-
 describe('QuestionFeedbackRepository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    questionFeedbackRepository = new QuestionFeedbackRepository(db);
     // Default mock for successful run
     mockDb.run.mockReset().mockReturnValue({ changes: 1, lastInsertRowid: 50 });
   });
 
-  describe('create', () => {
+  describe('createQuestionFeedback', () => {
     const validInput: QuestionFeedbackInput = {
       quiz_id: 101,
       user_id: 202,
@@ -41,7 +38,7 @@ describe('QuestionFeedbackRepository', () => {
 
     it('should insert feedback with valid data and return lastInsertRowid', () => {
       const expectedRowId = 50;
-      const result = questionFeedbackRepository.create(validInput);
+      const result = createQuestionFeedback(validInput);
 
       expect(result).toBe(expectedRowId);
       expect(mockDb.prepare).toHaveBeenCalledWith(
@@ -64,7 +61,7 @@ describe('QuestionFeedbackRepository', () => {
         // user_answer omitted
         // is_correct omitted
       };
-      questionFeedbackRepository.create(minimalInput);
+      createQuestionFeedback(minimalInput);
 
       expect(mockDb.run).toHaveBeenCalledWith(
         minimalInput.quiz_id,
@@ -83,7 +80,7 @@ describe('QuestionFeedbackRepository', () => {
       } as any;
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => questionFeedbackRepository.create(invalidInput)).toThrow(
+      expect(() => createQuestionFeedback(invalidInput)).toThrow(
         /Invalid feedback data:/ // Check for the specific error message prefix
       );
       expect(mockDb.prepare).not.toHaveBeenCalled();
@@ -101,7 +98,7 @@ describe('QuestionFeedbackRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => questionFeedbackRepository.create(validInput)).toThrow(dbError);
+      expect(() => createQuestionFeedback(validInput)).toThrow(dbError);
       expect(mockDb.prepare).toHaveBeenCalledTimes(1);
       expect(mockDb.run).toHaveBeenCalledTimes(1);
       expect(errorSpy).toHaveBeenCalledWith(

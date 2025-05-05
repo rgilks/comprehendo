@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import db from '@/lib/db'; // Mock this
-import { QuizRepository, type Quiz } from './quizRepository';
+import {
+  type Quiz,
+  findQuizById,
+  createQuiz,
+  findSuitableQuizForUser,
+  saveExercise,
+  countExercises,
+} from './quizRepository';
 
 // Mock the db dependency
 vi.mock('@/lib/db', () => {
@@ -18,8 +25,6 @@ const mockDb = db as unknown as {
   get: Mock;
   run: Mock;
 };
-
-let quizRepository: QuizRepository;
 
 // Sample data for testing
 const mockQuizContent = {
@@ -46,19 +51,18 @@ const expectedParsedQuiz: Quiz = {
   content: mockQuizContent,
 };
 
-describe('QuizRepository', () => {
+describe('QuizRepository Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    quizRepository = new QuizRepository(db);
     // Default mocks
     mockDb.get.mockReset().mockReturnValue(undefined);
     mockDb.run.mockReset().mockReturnValue({ changes: 1, lastInsertRowid: 99 });
   });
 
-  describe('findById', () => {
+  describe('findQuizById', () => {
     it('should return a parsed quiz if found and valid', () => {
       mockDb.get.mockReturnValue(mockDbRow);
-      const result = quizRepository.findById(1);
+      const result = findQuizById(1);
       expect(result).toEqual(expectedParsedQuiz);
       expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM quiz WHERE id = ?');
       expect(mockDb.get).toHaveBeenCalledWith(1);
@@ -66,7 +70,7 @@ describe('QuizRepository', () => {
 
     it('should return null if quiz is not found', () => {
       mockDb.get.mockReturnValue(undefined);
-      const result = quizRepository.findById(2);
+      const result = findQuizById(2);
       expect(result).toBeNull();
     });
 
@@ -74,7 +78,7 @@ describe('QuizRepository', () => {
       const invalidRow = { ...mockDbRow, language: null }; // Invalid structure
       mockDb.get.mockReturnValue(invalidRow);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const result = quizRepository.findById(1);
+      const result = findQuizById(1);
       expect(result).toBeNull();
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Invalid quiz row structure'),
@@ -87,7 +91,7 @@ describe('QuizRepository', () => {
       const rowWithBadJson = { ...mockDbRow, content: "{'invalid json" };
       mockDb.get.mockReturnValue(rowWithBadJson);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const result = quizRepository.findById(1);
+      const result = findQuizById(1);
       expect(result).toBeNull();
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to parse quiz content JSON'),
@@ -102,7 +106,7 @@ describe('QuizRepository', () => {
         throw dbError;
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      expect(() => quizRepository.findById(1)).toThrow(dbError);
+      expect(() => findQuizById(1)).toThrow(dbError);
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Error fetching quiz by ID'),
         dbError
@@ -111,7 +115,7 @@ describe('QuizRepository', () => {
     });
   });
 
-  describe('create', () => {
+  describe('createQuiz', () => {
     it('should insert a new quiz and return the last insert row ID', () => {
       const lang = 'es';
       const level = 'B1';
@@ -119,7 +123,7 @@ describe('QuizRepository', () => {
       const userId = 20;
       const expectedRowId = 99;
 
-      const result = quizRepository.create(lang, level, qLang, mockQuizContent, userId);
+      const result = createQuiz(lang, level, qLang, mockQuizContent, userId);
 
       expect(result).toBe(expectedRowId);
       expect(mockDb.prepare).toHaveBeenCalledWith(
@@ -129,7 +133,7 @@ describe('QuizRepository', () => {
     });
 
     it('should handle null questionLanguage and userId', () => {
-      quizRepository.create('de', 'C1', null, mockQuizContent, null);
+      createQuiz('de', 'C1', null, mockQuizContent, null);
       expect(mockDb.run).toHaveBeenCalledWith(
         'de',
         'C1',
@@ -144,7 +148,7 @@ describe('QuizRepository', () => {
       circularContent.self = circularContent; // Create circular reference
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => quizRepository.create('it', 'A2', 'en', circularContent)).toThrow();
+      expect(() => createQuiz('it', 'A2', 'en', circularContent)).toThrow();
       expect(errorSpy).toHaveBeenCalledWith(
         '[QuizRepository] Error creating quiz:',
         expect.any(Error)
@@ -160,7 +164,7 @@ describe('QuizRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => quizRepository.create('ja', 'B2', 'en', mockQuizContent)).toThrow(dbError);
+      expect(() => createQuiz('ja', 'B2', 'en', mockQuizContent)).toThrow(dbError);
       expect(errorSpy).toHaveBeenCalledWith('[QuizRepository] Error creating quiz:', dbError);
       errorSpy.mockRestore();
     });
@@ -174,7 +178,7 @@ describe('QuizRepository', () => {
 
     it('should query with user exclusion if userId is provided', () => {
       mockDb.get.mockReturnValue(mockDbRow);
-      const result = quizRepository.findSuitableQuizForUser(pLang, qLang, level, userId);
+      const result = findSuitableQuizForUser(pLang, qLang, level, userId);
 
       expect(result).toEqual(expectedParsedQuiz);
       expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('LEFT JOIN'));
@@ -183,7 +187,7 @@ describe('QuizRepository', () => {
 
     it('should query without user exclusion if userId is null', () => {
       mockDb.get.mockReturnValue(mockDbRow);
-      const result = quizRepository.findSuitableQuizForUser(pLang, qLang, level, null);
+      const result = findSuitableQuizForUser(pLang, qLang, level, null);
 
       expect(result).toEqual(expectedParsedQuiz);
       expect(mockDb.prepare).toHaveBeenCalledWith(expect.not.stringContaining('LEFT JOIN'));
@@ -192,7 +196,7 @@ describe('QuizRepository', () => {
 
     it('should return null if no suitable quiz is found', () => {
       mockDb.get.mockReturnValue(undefined);
-      const result = quizRepository.findSuitableQuizForUser(pLang, qLang, level, userId);
+      const result = findSuitableQuizForUser(pLang, qLang, level, userId);
       expect(result).toBeNull();
     });
 
@@ -201,7 +205,7 @@ describe('QuizRepository', () => {
       mockDb.get.mockReturnValue(invalidRow);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = quizRepository.findSuitableQuizForUser(pLang, qLang, level, userId);
+      const result = findSuitableQuizForUser(pLang, qLang, level, userId);
 
       expect(result).toBeNull();
       expect(errorSpy).toHaveBeenCalledWith(
@@ -216,7 +220,7 @@ describe('QuizRepository', () => {
       mockDb.get.mockReturnValue(rowWithBadJson);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = quizRepository.findSuitableQuizForUser(pLang, qLang, level, userId);
+      const result = findSuitableQuizForUser(pLang, qLang, level, userId);
 
       expect(result).toBeNull();
       expect(errorSpy).toHaveBeenCalledWith(
@@ -233,9 +237,7 @@ describe('QuizRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => quizRepository.findSuitableQuizForUser(pLang, qLang, level, userId)).toThrow(
-        dbError
-      );
+      expect(() => findSuitableQuizForUser(pLang, qLang, level, userId)).toThrow(dbError);
       expect(errorSpy).toHaveBeenCalledWith(
         '[QuizRepository] Error finding suitable quiz:',
         dbError
@@ -252,7 +254,7 @@ describe('QuizRepository', () => {
       const userId = 40;
       const expectedRowId = 99;
 
-      const result = quizRepository.saveExercise(lang, qLang, level, mockQuizContentString, userId);
+      const result = saveExercise(lang, qLang, level, mockQuizContentString, userId);
 
       expect(result).toBe(expectedRowId);
       expect(mockDb.prepare).toHaveBeenCalledWith(
@@ -262,7 +264,7 @@ describe('QuizRepository', () => {
     });
 
     it('should handle null questionLanguage and userId', () => {
-      quizRepository.saveExercise('nl', null, 'A1', mockQuizContentString, null);
+      saveExercise('nl', null, 'A1', mockQuizContentString, null);
       expect(mockDb.run).toHaveBeenCalledWith(
         'nl',
         'A1',
@@ -279,9 +281,7 @@ describe('QuizRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() =>
-        quizRepository.saveExercise('zh', 'en', 'B2', mockQuizContentString, 50)
-      ).toThrow(dbError);
+      expect(() => saveExercise('zh', 'en', 'B2', mockQuizContentString, 50)).toThrow(dbError);
       expect(errorSpy).toHaveBeenCalledWith('[QuizRepository] Error saving exercise:', dbError);
       errorSpy.mockRestore();
     });
@@ -296,7 +296,7 @@ describe('QuizRepository', () => {
       const expectedCount = 15;
       mockDb.get.mockReturnValue({ count: expectedCount });
 
-      const result = quizRepository.countExercises(pLang, qLang, level);
+      const result = countExercises(pLang, qLang, level);
 
       expect(result).toBe(expectedCount);
       expect(mockDb.prepare).toHaveBeenCalledWith(
@@ -307,17 +307,17 @@ describe('QuizRepository', () => {
 
     it('should return 0 if no exercises are found', () => {
       mockDb.get.mockReturnValue(undefined);
-      const result = quizRepository.countExercises(pLang, qLang, level);
+      const result = countExercises(pLang, qLang, level);
       expect(result).toBe(0);
     });
 
     it('should return 0 if count is null or undefined', () => {
       mockDb.get.mockReturnValue({ count: null });
-      let result = quizRepository.countExercises(pLang, qLang, level);
+      let result = countExercises(pLang, qLang, level);
       expect(result).toBe(0);
 
       mockDb.get.mockReturnValue({}); // count property missing
-      result = quizRepository.countExercises(pLang, qLang, level);
+      result = countExercises(pLang, qLang, level);
       expect(result).toBe(0);
     });
 
@@ -328,7 +328,7 @@ describe('QuizRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = quizRepository.countExercises(pLang, qLang, level);
+      const result = countExercises(pLang, qLang, level);
 
       expect(result).toBe(0);
       expect(errorSpy).toHaveBeenCalledWith('[QuizRepository] Error counting exercises:', dbError);

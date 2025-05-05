@@ -1,64 +1,48 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-// import db from '@/lib/db'; // Mock this dependency - REMOVED
-import { AdminRepository, type PaginatedTableData } from './adminRepository';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { getAllTableNames, getTableData, type PaginatedTableData } from './adminRepository';
+import db from '../db'; // Import db to be mocked
 
-// Mock the db dependency directly
-// vi.mock('@/lib/db', () => {
-//   const mockDb = {
-//     prepare: vi.fn(),
-//     all: vi.fn(),
-//     get: vi.fn(),
-//     transaction: vi.fn((cb) => cb()), // Mock transaction to just execute the callback
-//   };
-//   // Make prepare chainable for methods like .all() and .get()
-//   mockDb.prepare.mockImplementation(() => mockDb);
-//   return { default: mockDb };
-// });
+// Mock the db dependency
+vi.mock('../db', () => {
+  const mockDb = {
+    prepare: vi.fn(),
+    all: vi.fn(),
+    get: vi.fn(),
+    // Mock transaction to return a function that executes the callback
+    transaction: vi.fn().mockImplementation((cb) => {
+      return (...args: any[]) => cb(...args);
+    }),
+  };
+  // Ensure prepare is chainable
+  mockDb.prepare.mockImplementation(() => mockDb);
+  return { default: mockDb }; // Export as default as the repository uses it
+});
 
-// Create mockDb object directly
-const mockDb = {
-  prepare: vi.fn(),
-  all: vi.fn(),
-  get: vi.fn(),
-  // transaction: vi.fn((cb) => cb()), // Old mock
-  // Mock transaction to return a function that executes the callback, mimicking better-sqlite3
-  transaction: vi.fn().mockImplementation((cb) => {
-    // Return a function that, when called, executes the original callback
-    return (...args: any[]) => cb(...args);
-  }),
+// Cast the imported mock for easier use in tests
+const mockDb = db as unknown as {
+  prepare: Mock;
+  all: Mock;
+  get: Mock;
+  transaction: Mock;
 };
-// Ensure prepare is chainable
-mockDb.prepare.mockImplementation(() => mockDb);
 
-// Cast the mocked db for easier use and type safety - NO LONGER NEEDED AS GLOBAL MOCK
-// const mockDb = db as unknown as {
-//   prepare: Mock;
-//   all: Mock;
-//   get: Mock;
-//   transaction: Mock;
-// };
+// No need for AdminRepository instance anymore
+// let adminRepository: AdminRepository;
 
-let adminRepository: AdminRepository;
-
-describe('AdminRepository', () => {
+describe('Admin Repository Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset mocks before each test
-    mockDb.prepare.mockClear();
+    mockDb.prepare.mockClear().mockImplementation(() => mockDb); // Ensure chaining is reset
     mockDb.all.mockClear();
     mockDb.get.mockClear();
-    mockDb.transaction.mockClear();
-    // Ensure prepare chaining is reset correctly if needed
-    mockDb.prepare.mockImplementation(() => mockDb);
+    mockDb.transaction.mockClear().mockImplementation((cb) => {
+      // Reset transaction mock as well
+      return (...args: any[]) => cb(...args);
+    });
 
-    // Instantiate repository with the directly created mocked DB
-    adminRepository = new AdminRepository(mockDb as any); // Use the local mockDb
-
-    // REMOVED Explicit assignment as we pass the mock directly now
-    // (adminRepository as any).db.prepare = mockDb.prepare;
-    // (adminRepository as any).db.all = mockDb.all;
-    // (adminRepository as any).db.get = mockDb.get;
-    // (adminRepository as any).db.transaction = mockDb.transaction;
+    // No instantiation needed
+    // adminRepository = new AdminRepository(mockDb as any);
   });
 
   describe('getAllTableNames', () => {
@@ -71,7 +55,8 @@ describe('AdminRepository', () => {
       ];
       mockDb.all.mockReturnValue(mockTables);
 
-      const tableNames = adminRepository.getAllTableNames();
+      // Call the standalone function
+      const tableNames = getAllTableNames();
 
       expect(tableNames).toEqual(['users', 'quiz', 'question_feedback']);
       expect(mockDb.prepare).toHaveBeenCalledWith(
@@ -87,7 +72,8 @@ describe('AdminRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const tableNames = adminRepository.getAllTableNames();
+      // Call the standalone function
+      const tableNames = getAllTableNames();
 
       expect(tableNames).toEqual([]);
       expect(errorSpy).toHaveBeenCalledWith(
@@ -103,18 +89,17 @@ describe('AdminRepository', () => {
     const page = 2;
     const limit = 5;
 
-    beforeEach(() => {
-      // Mock getAllTableNames used internally for validation
-      vi.spyOn(adminRepository, 'getAllTableNames').mockReturnValue(['users', 'quiz']);
-    });
-
     it('should fetch paginated data and total row count for a valid table', () => {
       const mockData = [{ id: 6, name: 'User 6' }];
       const mockTotalRows = 15;
-      mockDb.get.mockReturnValue({ totalRows: mockTotalRows });
-      mockDb.all.mockReturnValue(mockData);
+      // Mock the db calls directly
+      mockDb.all // Mock for getAllTableNames call within getTableData
+        .mockReturnValueOnce([{ name: 'users' }, { name: 'quiz' }]);
+      mockDb.get.mockReturnValueOnce({ totalRows: mockTotalRows }); // Mock for count query
+      mockDb.all.mockReturnValueOnce(mockData); // Mock for data query
 
-      const result = adminRepository.getTableData(tableName, page, limit);
+      // Call the standalone function
+      const result = getTableData(tableName, page, limit);
 
       expect(result).toEqual<PaginatedTableData>({
         data: mockData,
@@ -138,11 +123,13 @@ describe('AdminRepository', () => {
     });
 
     it('should use default ROWID ordering for unknown tables', () => {
-      vi.spyOn(adminRepository, 'getAllTableNames').mockReturnValue(['unknown_table']);
+      mockDb.all // Mock for getAllTableNames
+        .mockReturnValueOnce([{ name: 'unknown_table' }]);
       mockDb.get.mockReturnValue({ totalRows: 1 });
       mockDb.all.mockReturnValue([{ col: 'value' }]);
 
-      adminRepository.getTableData('unknown_table', 1, 10);
+      // Call the standalone function
+      getTableData('unknown_table', 1, 10);
 
       expect(mockDb.prepare).toHaveBeenCalledWith(
         `SELECT * FROM "unknown_table" ORDER BY ROWID DESC LIMIT ? OFFSET ?`
@@ -150,10 +137,13 @@ describe('AdminRepository', () => {
     });
 
     it('should use specific ordering for the quiz table', () => {
+      mockDb.all // Mock for getAllTableNames
+        .mockReturnValueOnce([{ name: 'users' }, { name: 'quiz' }]);
       mockDb.get.mockReturnValue({ totalRows: 5 });
       mockDb.all.mockReturnValue([{ id: 1, content: 'test' }]);
 
-      adminRepository.getTableData('quiz', 1, 10);
+      // Call the standalone function
+      getTableData('quiz', 1, 10);
 
       expect(mockDb.prepare).toHaveBeenCalledWith(
         `SELECT * FROM "quiz" ORDER BY created_at DESC LIMIT ? OFFSET ?`
@@ -161,12 +151,13 @@ describe('AdminRepository', () => {
     });
 
     it('should throw an error if the table name is not allowed', () => {
+      mockDb.all // Mock for getAllTableNames
+        .mockReturnValueOnce([{ name: 'users' }, { name: 'quiz' }]);
       const invalidTableName = 'system_internals';
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => adminRepository.getTableData(invalidTableName, page, limit)).toThrow(
-        'Invalid table name'
-      );
+      // Call the standalone function
+      expect(() => getTableData(invalidTableName, page, limit)).toThrow('Invalid table name');
       expect(mockDb.transaction).not.toHaveBeenCalled(); // Transaction shouldn't start
       expect(errorSpy).toHaveBeenCalledWith(
         `[AdminRepository] Attempt to access disallowed table: ${invalidTableName}`
@@ -175,13 +166,19 @@ describe('AdminRepository', () => {
     });
 
     it('should throw an error if the database transaction fails', () => {
+      mockDb.all // Mock for getAllTableNames
+        .mockReturnValueOnce([{ name: 'users' }, { name: 'quiz' }]);
       const dbError = new Error('Transaction failed');
+      // Make the transaction function itself throw the error
       mockDb.transaction.mockImplementationOnce(() => {
-        throw dbError;
+        return () => {
+          throw dbError;
+        }; // Throw when the transaction function is executed
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => adminRepository.getTableData(tableName, page, limit)).toThrow(
+      // Call the standalone function
+      expect(() => getTableData(tableName, page, limit)).toThrow(
         `Failed to fetch table data for ${tableName}: ${dbError.message}`
       );
       expect(errorSpy).toHaveBeenCalledWith(
@@ -192,10 +189,13 @@ describe('AdminRepository', () => {
     });
 
     it('should handle count returning null or undefined', () => {
+      mockDb.all // Mock for getAllTableNames
+        .mockReturnValueOnce([{ name: 'users' }, { name: 'quiz' }]);
       mockDb.get.mockReturnValue(null); // Simulate count failing
       mockDb.all.mockReturnValue([]);
 
-      const result = adminRepository.getTableData(tableName, page, limit);
+      // Call the standalone function
+      const result = getTableData(tableName, page, limit);
 
       expect(result.totalRows).toBe(0);
       expect(result.data).toEqual([]);
