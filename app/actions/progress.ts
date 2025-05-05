@@ -1,10 +1,12 @@
 'use server';
 
-import db from '@/lib/db';
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
 import { calculateAndUpdateProgress } from '../../lib/progressUtils';
 import { getAuthenticatedUserId } from './authUtils';
+import { findQuizById } from '@/lib/repositories/quizRepository';
+import { getProgress as findUserProgress } from '@/lib/repositories/progressRepository';
+import { createFeedback } from '@/lib/repositories/feedbackRepository';
 
 const DEFAULT_CEFR_LEVEL = 'A1';
 
@@ -49,37 +51,26 @@ export interface ProgressResponse {
   feedback?: FeedbackType;
 }
 
-// Schema for parsing the row from the quiz table
-const QuizContentSchema = z.object({
-  content: z.string(),
-});
-
-// Schema for parsing the row from the user_language_progress table
-const ProgressSchema = z.object({
-  cefr_level: z.string(),
-  correct_streak: z.number().int(),
-});
-
-// Helper function to fetch and parse quiz data
 const getParsedQuizData = (
   quizId: number
 ): { data: z.infer<typeof QuizDataSchema> | null; error?: string } => {
   try {
-    const quizRecord = db.prepare('SELECT content FROM quiz WHERE id = ?').get(quizId);
+    const quizRecord = findQuizById(quizId);
 
-    const parsedRecord = QuizContentSchema.safeParse(quizRecord);
-    if (!parsedRecord.success) {
-      // Quiz not found or record is malformed
-      return { data: null, error: `Quiz with ID ${quizId} not found or has invalid structure.` };
+    if (!quizRecord) {
+      return { data: null, error: `Quiz with ID ${quizId} not found.` };
     }
 
-    const parsedContent = QuizDataSchema.safeParse(JSON.parse(parsedRecord.data.content));
+    const parsedContent = QuizDataSchema.safeParse(quizRecord.content);
 
     if (!parsedContent.success) {
       console.error(
         `[getParsedQuizData] Failed to parse quiz content (ID: ${quizId}) using QuizDataSchema: ${JSON.stringify(parsedContent.error.flatten())}`
       );
-      return { data: null, error: `Failed to parse content for quiz ID ${quizId}.` };
+      return {
+        data: null,
+        error: `Failed to parse content for quiz ID ${quizId} against QuizDataSchema.`,
+      };
     }
     return { data: parsedContent.data };
   } catch (error: unknown) {
@@ -103,14 +94,15 @@ const generateFeedback = (
   try {
     const correctAnswerKey = fullQuizData.correctAnswer as keyof typeof fullQuizData.options | null;
     const allExplanations = fullQuizData.allExplanations;
+    const options = fullQuizData.options;
 
     if (
       typeof userAnswer === 'string' &&
-      userAnswer in fullQuizData.options &&
+      userAnswer in options &&
       correctAnswerKey &&
       allExplanations
     ) {
-      const chosenAnswerKey = userAnswer as keyof typeof fullQuizData.options;
+      const chosenAnswerKey = userAnswer as keyof typeof options;
       isCorrect = chosenAnswerKey === correctAnswerKey;
 
       const correctExplanation = allExplanations[correctAnswerKey];
@@ -239,7 +231,7 @@ export const submitAnswer = async (
     return {
       currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
-      error: quizError || `Quiz data unavailable.`, // Use error from helper or generic message
+      error: quizError || `Quiz data unavailable for ID ${id}.`,
     };
   }
 
@@ -291,41 +283,26 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
   let currentLevel = DEFAULT_CEFR_LEVEL;
   let currentStreak = 0;
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (userId !== null) {
-    const languageCode = language.toLowerCase().slice(0, 2);
-    try {
-      const progressRecord = db
-        .prepare(
-          'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
-        )
-        .get(userId, languageCode);
+  const languageCode = language.toLowerCase().slice(0, 2);
+  try {
+    const progressRecord = findUserProgress(userId, languageCode);
 
-      const parsedProgress = ProgressSchema.safeParse(progressRecord);
-      if (parsedProgress.success) {
-        currentLevel = parsedProgress.data.cefr_level;
-        currentStreak = parsedProgress.data.correct_streak;
-      } else {
-        // No record found or record is malformed, use defaults
-        // Log if parsing failed specifically
-        if (progressRecord) {
-          console.warn(
-            `[getProgress] Failed to parse progress record for user ${userId}, lang ${languageCode}:`,
-            parsedProgress.error.flatten()
-          );
-        }
-      }
-    } catch (error: unknown) {
-      console.error(`[getProgress] Database error for user ${userId}, lang ${language}:`, error);
-      // Return defaults but include an error message
-      return {
-        currentLevel: DEFAULT_CEFR_LEVEL,
-        currentStreak: 0,
-        leveledUp: false, // Explicitly set leveledUp
-        error: `Database error fetching progress: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
+    if (progressRecord) {
+      currentLevel = progressRecord.cefr_level;
+      currentStreak = progressRecord.correct_streak;
+    } else {
+      // No record found, use defaults (A1, 0 streak)
     }
-  } // Else, user is not logged in, use defaults (currentLevel = A1, currentStreak = 0)
+  } catch (error: unknown) {
+    console.error(`[getProgress] Repository error for user ${userId}, lang ${language}:`, error);
+    // Return defaults but include an error message
+    return {
+      currentLevel: DEFAULT_CEFR_LEVEL,
+      currentStreak: 0,
+      leveledUp: false, // Explicitly set leveledUp
+      error: `Repository error fetching progress: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
+  }
 
   const response: ProgressResponse = {
     currentLevel: currentLevel,
@@ -362,20 +339,27 @@ export const submitFeedback = async (
   const { quizId, is_good, userAnswer, isCorrect } = parsedBody.data;
 
   try {
-    const quizExists = db.prepare('SELECT id FROM quiz WHERE id = ?').get(quizId);
+    const quizExists = findQuizById(quizId);
     if (!quizExists) {
-      // Log specific error, return generic one
       console.error(`[SubmitFeedback] Quiz ID ${quizId} not found for user ${userId}.`);
       return { success: false, error: `Quiz not found.` };
     }
 
-    db.prepare(
-      'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
-    ).run(quizId, userId, is_good, userAnswer, isCorrect === undefined ? null : isCorrect ? 1 : 0);
-    return { success: true }; // Return success
+    const feedbackData = {
+      quiz_id: quizId,
+      user_id: userId,
+      is_good: is_good === 1,
+      user_answer: userAnswer,
+      is_correct: isCorrect === undefined ? undefined : isCorrect,
+    };
+
+    createFeedback(feedbackData);
+    return { success: true };
   } catch (dbError) {
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
-    console.error(`[SubmitFeedback] Database error for user ${userId}, quiz ${quizId}: ${message}`);
-    return { success: false, error: `Database error saving feedback.` }; // Generic message
+    console.error(
+      `[SubmitFeedback] Repository error for user ${userId}, quiz ${quizId}: ${message}`
+    );
+    return { success: false, error: `Repository error saving feedback.` }; // Generic message
   }
 };
