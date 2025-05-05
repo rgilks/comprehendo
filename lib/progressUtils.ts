@@ -5,7 +5,7 @@ import {
   STREAK_THRESHOLD_FOR_LEVEL_UP,
 } from '@/lib/repositories/userLanguageProgressRepository';
 import { CEFR_LEVELS, ProgressUpdateResult } from '@/lib/domain/progress';
-import { CEFRLevel } from '@/lib/domain/language-guidance';
+import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
 
 // Calculates the next progress state based on the current state and the result of the last interaction.
 // This is a pure function, making it easily testable.
@@ -25,10 +25,10 @@ const calculateNextProgress = (
   if (isCorrect) {
     nextStreak += 1;
     if (nextStreak >= STREAK_THRESHOLD_FOR_LEVEL_UP) {
-      const currentLevelIndex = CEFR_LEVELS.indexOf(currentLevel);
-      if (currentLevelIndex !== -1 && currentLevelIndex < CEFR_LEVELS.length - 1) {
-        const potentialNextLevel = CEFR_LEVELS[currentLevelIndex + 1];
-        nextLevel = potentialNextLevel; // Type assertion still safe due to index check
+      const currentLevelIndex = CEFR_LEVEL_INDICES[currentLevel];
+      if (currentLevelIndex < CEFR_LEVELS.length - 1) {
+        const nextLevelIndex = currentLevelIndex + 1;
+        nextLevel = CEFR_LEVELS[nextLevelIndex];
         nextStreak = 0;
         leveledUp = true;
       } else {
@@ -79,16 +79,12 @@ export const calculateAndUpdateProgress = (
       leveledUp: leveledUp,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    // Assume error is always an instance of Error based on lint rules
+    const message = (error as Error).message; // Cast to Error
     console.error(
       `[calculateAndUpdateProgress] Error for user ${userId}, lang ${languageCode}: ${message}`
     );
-    // Return a result indicating an error occurred
-    return {
-      currentLevel: 'A1', // Sensible default, but the error signals the real issue
-      currentStreak: 0,
-      leveledUp: false,
-      error: `An error occurred during progress update: ${message}`,
-    };
+    // Rethrow the error to be handled by the caller
+    throw error;
   }
 };
