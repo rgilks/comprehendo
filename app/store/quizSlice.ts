@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
 import { submitAnswer, submitFeedback } from '@/app/actions/progress';
-import { generateExerciseResponse } from '@/app/actions/exercise';
+import { generateExerciseResponse, generateInitialExercisePair } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
 import {} from '@/hooks/useLanguage';
@@ -8,6 +8,7 @@ import {
   PartialQuizData,
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,
+  InitialExercisePairResultSchema,
 } from '@/lib/domain/schemas';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
@@ -49,6 +50,7 @@ export interface QuizSlice extends BaseSlice {
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => void;
   setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
+  fetchInitialPair: () => Promise<void>;
 
   useHoverCredit: () => boolean;
 }
@@ -160,7 +162,80 @@ export const createQuizSlice: StateCreator<
     }
   },
 
+  fetchInitialPair: async (): Promise<void> => {
+    set({ loading: true, error: null, showContent: false });
+    get().stopPassageSpeech();
+    get().resetQuizState();
+
+    try {
+      const fetchParams = {
+        passageLanguage: get().passageLanguage,
+        questionLanguage: get().generatedQuestionLanguage,
+        cefrLevel: get().cefrLevel,
+      };
+
+      const rawResult = await generateInitialExercisePair(fetchParams);
+
+      const parseResult = InitialExercisePairResultSchema.safeParse(rawResult);
+
+      if (!parseResult.success) {
+        console.error(
+          '[Store] Zod validation error (fetchInitialPair):',
+          parseResult.error.format()
+        );
+        throw new Error(`Invalid API response structure: ${parseResult.error.message}`);
+      }
+
+      const result = parseResult.data;
+
+      if (result.error || result.quizzes.length !== 2) {
+        throw new Error(result.error || 'Invalid number of quizzes received');
+      }
+
+      const [quizInfo1, quizInfo2] = result.quizzes;
+
+      set((state) => {
+        state.quizData = quizInfo1.quizData;
+        state.currentQuizId = quizInfo1.quizId;
+        state.generatedPassageLanguage = fetchParams.passageLanguage;
+
+        state.selectedAnswer = null;
+        state.isAnswered = false;
+        state.relevantTextRange = null;
+        state.feedbackIsCorrect = null;
+        state.feedbackCorrectAnswer = null;
+        state.feedbackCorrectExplanation = null;
+        state.feedbackChosenIncorrectExplanation = null;
+        state.feedbackRelevantText = null;
+        state.showExplanation = false;
+        state.feedbackSubmitted = false;
+        state.hoverCreditsUsed = 0;
+
+        state.nextQuizAvailable = { quizData: quizInfo2.quizData, quizId: quizInfo2.quizId };
+
+        state.showQuestionSection = true;
+        state.showContent = true;
+        state.loading = false;
+        state.error = null;
+
+        console.log('[Store] Initial exercise pair fetched and processed.');
+      });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error fetching initial pair';
+      console.error('[Store] Error in fetchInitialPair:', e);
+      get().setError(errorMessage);
+      get().setShowContent(false);
+      set({ loading: false, nextQuizAvailable: null });
+    }
+  },
+
   generateText: async (isPrefetch = false): Promise<void> => {
+    if (!isPrefetch && get().nextQuizAvailable) {
+      console.log('[Store] Using pre-fetched quiz for generateText request.');
+      get().loadNextQuiz();
+      return;
+    }
+
     set({ loading: !isPrefetch, error: null });
     if (!isPrefetch) {
       get().stopPassageSpeech();

@@ -152,3 +152,11 @@ export const apiResponseSchema = z.object({
   result: z.string(),
 });
 export type ApiResponse = z.infer<typeof apiResponseSchema>;
+
+// Schema for the result of generating an initial pair of exercises
+export const InitialExercisePairResultSchema = z.object({
+  quizzes: z.array(GenerateExerciseResultSchema).length(2),
+  error: z.string().nullable(),
+});
+
+export type InitialExercisePairResult = z.infer<typeof InitialExercisePairResultSchema>;

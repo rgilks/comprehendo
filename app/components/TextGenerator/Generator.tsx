@@ -14,28 +14,12 @@ const Generator = () => {
     loading,
     quizData,
     isAnswered,
-    generateText,
     feedbackSubmitted,
     submitFeedback,
-    nextQuizAvailable,
     loadNextQuiz,
+    fetchInitialPair,
   } = useTextGeneratorStore();
   const contentContainerRef = useRef<HTMLDivElement>(null);
-
-  const generateTextHandler = useCallback(() => {
-    if (contentContainerRef.current) {
-      contentContainerRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }
-
-    if (nextQuizAvailable) {
-      loadNextQuiz();
-    } else {
-      void generateText();
-    }
-  }, [generateText, nextQuizAvailable, loadNextQuiz]);
 
   const handleFeedbackSubmit = useCallback(
     (is_good: boolean) => {
@@ -99,7 +83,13 @@ const Generator = () => {
 
       {shouldOfferGeneration && (
         <button
-          onClick={generateTextHandler}
+          onClick={() => {
+            if (!quizData) {
+              void fetchInitialPair();
+            } else {
+              loadNextQuiz();
+            }
+          }}
           disabled={loading}
           data-testid="generate-button"
           className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-green-600 hover:from-blue-700 hover:via-indigo-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}

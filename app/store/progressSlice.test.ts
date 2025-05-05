@@ -105,6 +105,7 @@ const setupStore = () =>
       resetQuizWithNewData: vi.fn(),
       setNextQuizAvailable: vi.fn(),
       loadNextQuiz: vi.fn(),
+      fetchInitialPair: vi.fn(),
       useHoverCredit: vi.fn(),
       setQuizComplete: vi.fn(),
       goToNextQuestion: vi.fn(),

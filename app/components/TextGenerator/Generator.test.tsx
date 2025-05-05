@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import Generator from './Generator';
 import React from 'react';
+import type { QuizData } from '@/lib/domain/schemas';
 
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ status: 'authenticated' }),
@@ -11,7 +12,20 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const mockStore = {
+const mockStore: {
+  loading: boolean;
+  quizData: QuizData | null;
+  isAnswered: boolean;
+  generateText: any;
+  feedbackSubmitted: boolean;
+  submitFeedback: any;
+  nextQuizAvailable: boolean;
+  loadNextQuiz: any;
+  resetQuizWithNewData: any;
+  setNextQuizAvailable: any;
+  fetchInitialPair: any;
+  useHoverCredit: any;
+} = {
   loading: false,
   quizData: null,
   isAnswered: false,
@@ -20,6 +34,10 @@ const mockStore = {
   submitFeedback: vi.fn(),
   nextQuizAvailable: false,
   loadNextQuiz: vi.fn(),
+  resetQuizWithNewData: vi.fn(),
+  setNextQuizAvailable: vi.fn(),
+  fetchInitialPair: vi.fn(),
+  useHoverCredit: vi.fn(),
 };
 
 vi.mock('@/store/textGeneratorStore', () => ({
@@ -50,6 +68,10 @@ describe('Generator', () => {
       submitFeedback: vi.fn(),
       nextQuizAvailable: false,
       loadNextQuiz: vi.fn(),
+      resetQuizWithNewData: vi.fn(),
+      setNextQuizAvailable: vi.fn(),
+      fetchInitialPair: vi.fn(),
+      useHoverCredit: vi.fn(),
     });
   });
 
@@ -58,14 +80,20 @@ describe('Generator', () => {
     expect(screen.getByTestId('generate-button')).toBeInTheDocument();
   });
 
-  it('calls generateText when generate button clicked and no nextQuizAvailable', () => {
+  it('calls fetchInitialPair when generate button clicked and quizData is null', () => {
     render(<Generator />);
     fireEvent.click(screen.getByTestId('generate-button'));
-    expect(mockStore.generateText).toHaveBeenCalled();
+    expect(mockStore.fetchInitialPair).toHaveBeenCalled();
   });
 
-  it('calls loadNextQuiz when nextQuizAvailable is true', () => {
-    mockStore.nextQuizAvailable = true;
+  it('calls loadNextQuiz when quizData exists', () => {
+    mockStore.quizData = {
+      paragraph: 'mock paragraph',
+      question: 'mock question?',
+      options: { A: 'a', B: 'b', C: 'c', D: 'd' },
+    };
+    mockStore.isAnswered = true;
+    mockStore.feedbackSubmitted = true;
     render(<Generator />);
     fireEvent.click(screen.getByTestId('generate-button'));
     expect(mockStore.loadNextQuiz).toHaveBeenCalled();

@@ -27,7 +27,7 @@ export const generateAndValidateExercise = async (
   options: ExerciseGenerationOptions
 ): Promise<ExerciseContent> => {
   const prompt = generateExercisePrompt(options);
-  console.log('[AI:generateAndValidateExercise] Generated Prompt:\n', prompt);
+  //  console.log('[AI:generateAndValidateExercise] Generated Prompt:\n', prompt);
 
   let aiResponse: unknown;
   try {
