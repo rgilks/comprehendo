@@ -274,64 +274,95 @@ describe('User Progress Server Actions', () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(null);
       const result = await getProgress(params);
       expect(result.error).toBe('Unauthorized: User not logged in.');
+      expect(result.currentLevel).toBe('A1');
+      expect(result.currentStreak).toBe(0);
+      expect(result).not.toHaveProperty('leveledUp'); // Should not be present on error
       expect(vi.mocked(db.prepare)).not.toHaveBeenCalled();
     });
 
     it('should return Invalid parameters for invalid input', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
-      const invalidParams = { language: 'invalid-lang-code' };
+      const invalidParams = { language: 'e' }; // Invalid lang code
       const result = await getProgress(invalidParams);
       expect(result.error).toBe('Invalid parameters provided.');
+      expect(result.currentLevel).toBe('A1');
+      expect(result.currentStreak).toBe(0);
+      expect(result).not.toHaveProperty('leveledUp');
       expect(vi.mocked(db.prepare)).not.toHaveBeenCalled();
     });
 
-    it('should return progress from DB if found', async () => {
+    it('should fetch and return existing progress for authenticated user', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
-      const mockDbProgress = { cefr_level: 'B1', correct_streak: 3 };
+      const mockDbProgress = { cefr_level: 'B2', correct_streak: 5 };
       const mockStatement = { get: vi.fn().mockReturnValue(mockDbProgress), run: vi.fn() };
-      vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
+      vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any); // Mock the prepare call
 
       const result = await getProgress(params);
 
       expect(vi.mocked(db.prepare)).toHaveBeenCalledWith(
-        expect.stringContaining('user_language_progress')
+        'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       );
-      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language.slice(0, 2));
+      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language);
       expect(result.currentLevel).toBe(mockDbProgress.cefr_level);
       expect(result.currentStreak).toBe(mockDbProgress.correct_streak);
+      expect(result.leveledUp).toBe(false);
       expect(result.error).toBeUndefined();
     });
 
-    it('should return default progress (A1, 0) if no record found in DB', async () => {
+    it('should return default progress if no record exists for authenticated user', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
-      const mockStatement = { get: vi.fn().mockReturnValue(undefined), run: vi.fn() };
+      const mockStatement = { get: vi.fn().mockReturnValue(undefined), run: vi.fn() }; // No record found
       vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
 
       const result = await getProgress(params);
 
-      expect(result.currentLevel).toBe('A1');
-      expect(result.currentStreak).toBe(0);
+      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language);
+      expect(result.currentLevel).toBe('A1'); // Default level
+      expect(result.currentStreak).toBe(0); // Default streak
+      expect(result.leveledUp).toBe(false);
       expect(result.error).toBeUndefined();
-      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language.slice(0, 2));
     });
 
-    it('should return error if DB query fails', async () => {
+    it('should return default progress if db record parsing fails', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
-      const dbError = new Error('DB connection failed');
+      const malformedRecord = { level: 'A1', streak: 3 }; // Incorrect schema
+      const mockStatement = { get: vi.fn().mockReturnValue(malformedRecord), run: vi.fn() };
+      vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); // Spy and suppress output
+
+      const result = await getProgress(params);
+
+      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language);
+      expect(result.currentLevel).toBe('A1');
+      expect(result.currentStreak).toBe(0);
+      expect(result.leveledUp).toBe(false);
+      expect(result.error).toBeUndefined();
+      // Check console.warn was called
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[getProgress] Failed to parse progress record'),
+        expect.anything()
+      );
+      consoleWarnSpy.mockRestore(); // Restore original console.warn
+    });
+
+    it('should return error if database fetch throws', async () => {
+      vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
+      const dbError = new Error('DB Connection Lost');
       const mockStatement = {
         get: vi.fn().mockImplementation(() => {
           throw dbError;
         }),
         run: vi.fn(),
-      };
+      }; // Throw error
       vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any);
 
       const result = await getProgress(params);
 
-      expect(result.error).toBe('Failed to retrieve progress due to a database error.');
+      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language);
       expect(result.currentLevel).toBe('A1');
       expect(result.currentStreak).toBe(0);
-      expect(mockStatement.get).toHaveBeenCalledWith(MOCK_USER_ID, params.language.slice(0, 2));
+      expect(result.leveledUp).toBe(false);
+      expect(result.error).toBe('Database error fetching progress: DB Connection Lost');
     });
   });
 

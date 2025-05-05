@@ -57,7 +57,7 @@ const RootLayout = async ({
   const locale = (cookieStore.get('NEXT_LOCALE')?.value || 'en') as Language;
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />

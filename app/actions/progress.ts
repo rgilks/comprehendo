@@ -287,41 +287,53 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
     };
   }
 
-  const normalizedLanguage = parsedParams.data.language.toLowerCase().slice(0, 2);
+  const { language } = parsedParams.data;
+  let currentLevel = DEFAULT_CEFR_LEVEL;
+  let currentStreak = 0;
 
-  try {
-    const progressRecord = db
-      .prepare(
-        'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
-      )
-      .get(userId, normalizedLanguage);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (userId !== null) {
+    const languageCode = language.toLowerCase().slice(0, 2);
+    try {
+      const progressRecord = db
+        .prepare(
+          'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
+        )
+        .get(userId, languageCode);
 
-    const parsedProgress = ProgressSchema.safeParse(progressRecord);
-
-    if (!parsedProgress.success) {
-      // Either no record exists, or the record is malformed. Treat as no progress.
-      // Log if malformed? For now, assume it's just no record.
+      const parsedProgress = ProgressSchema.safeParse(progressRecord);
+      if (parsedProgress.success) {
+        currentLevel = parsedProgress.data.cefr_level;
+        currentStreak = parsedProgress.data.correct_streak;
+      } else {
+        // No record found or record is malformed, use defaults
+        // Log if parsing failed specifically
+        if (progressRecord) {
+          console.warn(
+            `[getProgress] Failed to parse progress record for user ${userId}, lang ${languageCode}:`,
+            parsedProgress.error.flatten()
+          );
+        }
+      }
+    } catch (error: unknown) {
+      console.error(`[getProgress] Database error for user ${userId}, lang ${language}:`, error);
+      // Return defaults but include an error message
       return {
         currentLevel: DEFAULT_CEFR_LEVEL,
         currentStreak: 0,
+        leveledUp: false, // Explicitly set leveledUp
+        error: `Database error fetching progress: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
+  } // Else, user is not logged in, use defaults (currentLevel = A1, currentStreak = 0)
 
-    return {
-      currentLevel: parsedProgress.data.cefr_level,
-      currentStreak: parsedProgress.data.correct_streak,
-    };
-  } catch (dbError) {
-    const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
-    console.error(
-      `[GetProgress] Database error for user ${userId}, language ${normalizedLanguage}: ${message}`
-    );
-    return {
-      currentLevel: DEFAULT_CEFR_LEVEL,
-      currentStreak: 0,
-      error: `Failed to retrieve progress due to a database error.`, // Generic message
-    };
-  }
+  const response: ProgressResponse = {
+    currentLevel: currentLevel,
+    currentStreak: currentStreak,
+    leveledUp: false, // Explicitly set leveledUp
+  };
+
+  return response;
 };
 
 export interface SubmitFeedbackResponse {
