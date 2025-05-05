@@ -12,6 +12,8 @@ export interface LanguageSlice {
   language: Language;
   setLanguage: (lang: Language, router: unknown, pathname: string) => Promise<void>;
   languages: typeof UI_LANGUAGES;
+  languageGuidingText: string;
+  setLanguageGuidingText: (guidingText: string) => void;
 }
 
 function isRouter(obj: unknown): obj is { push: (path: string) => void } {
@@ -31,6 +33,7 @@ export const createLanguageSlice: StateCreator<
 > = (set) => ({
   language: 'en',
   languages: UI_LANGUAGES,
+  languageGuidingText: '',
   setLanguage: async (lang, router, pathname) => {
     let prevLang: Language | undefined;
     set((state) => {
@@ -41,7 +44,7 @@ export const createLanguageSlice: StateCreator<
     if (prevLang === lang) return;
     try {
       await i18n.changeLanguage(lang);
-    } catch (_e) {
+    } catch {
       // fallback: reload page if language change fails
       window.location.reload();
       return;
@@ -53,6 +56,11 @@ export const createLanguageSlice: StateCreator<
     if (isRouter(router)) {
       router.push(newPath);
     }
+  },
+  setLanguageGuidingText: (guidingText) => {
+    set((state) => {
+      state.languageGuidingText = guidingText;
+    });
   },
 });
 

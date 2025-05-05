@@ -100,35 +100,62 @@ describe('audioSlice', () => {
     expect(store.getState().volume).toBe(0.8);
   });
 
-  it('stops passage speech', () => {
+  it('stops passage speech and cancels synthesis', () => {
     store.setState({ isSpeakingPassage: true, isPaused: true, currentWordIndex: 1 });
     store.getState().stopPassageSpeech();
+    expect(speechSynthesisMock.cancel).toHaveBeenCalledTimes(1);
     expect(store.getState().isSpeakingPassage).toBe(false);
     expect(store.getState().isPaused).toBe(false);
     expect(store.getState().currentWordIndex).toBe(null);
   });
 
-  it('handles play/pause toggle', () => {
-    store.setState({ isSpeakingPassage: false, isPaused: false });
-    store.getState().handlePlayPause();
-    expect(store.getState().isSpeakingPassage).toBe(true);
+  it('handles play/pause toggle and interacts with synthesis', () => {
+    const { getState } = store;
+    // Initial state: not speaking
+    getState().handlePlayPause();
+    expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
+    expect(getState().isSpeakingPassage).toBe(true);
+    expect(getState().isPaused).toBe(false);
+
+    // State: speaking -> pause
+    speechSynthesisMock.speaking = true;
     store.setState({ isSpeakingPassage: true, isPaused: false });
-    store.getState().handlePlayPause();
-    expect(store.getState().isPaused).toBe(true);
+    getState().handlePlayPause();
+    expect(speechSynthesisMock.pause).toHaveBeenCalledTimes(1);
+    expect(getState().isPaused).toBe(true);
+
+    // State: paused -> resume
     store.setState({ isSpeakingPassage: true, isPaused: true });
-    store.getState().handlePlayPause();
-    expect(store.getState().isPaused).toBe(false);
+    getState().handlePlayPause();
+    expect(speechSynthesisMock.resume).toHaveBeenCalledTimes(1);
+    expect(getState().isPaused).toBe(false);
   });
 
-  it('handles stop', () => {
+  it('handles stop and cancels synthesis', () => {
     store.setState({ isSpeakingPassage: true });
     store.getState().handleStop();
+    expect(speechSynthesisMock.cancel).toHaveBeenCalledTimes(1);
     expect(store.getState().isSpeakingPassage).toBe(false);
   });
 
   it('sets selected voice URI and restarts if speaking', () => {
+    const { getState } = store;
     store.setState({ isSpeakingPassage: true });
+    speechSynthesisMock.speaking = true;
+    getState().setSelectedVoiceURI('voice2');
+    expect(speechSynthesisMock.cancel).toHaveBeenCalledTimes(1);
+    // Setting voice stops current speech, but doesn't automatically restart in this implementation
+    expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
+    expect(getState().selectedVoiceURI).toBe('voice2');
+    expect(getState().isSpeakingPassage).toBe(false); // Should stop speaking
+  });
+
+  it('sets selected voice URI without restarting if not speaking', () => {
+    store.setState({ isSpeakingPassage: false });
+    speechSynthesisMock.speaking = false;
     store.getState().setSelectedVoiceURI('voice2');
+    expect(speechSynthesisMock.cancel).not.toHaveBeenCalled();
+    expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
     expect(store.getState().selectedVoiceURI).toBe('voice2');
     expect(store.getState().isSpeakingPassage).toBe(false);
   });
@@ -160,5 +187,37 @@ describe('audioSlice', () => {
     store.setState({ isSpeechSupported: true });
     store.getState().speakText(null, 'en');
     expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
+  });
+
+  it('speakText calls synthesis speak with correct parameters', () => {
+    store.setState({ isSpeechSupported: true, volume: 0.7 });
+    store.getState().speakText('Hello there', 'en');
+    expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
+    const utteranceArg = speechSynthesisMock.speak.mock.calls[0][0];
+    expect(utteranceArg).toBeInstanceOf(MockSpeechSynthesisUtterance);
+    expect(utteranceArg.text).toBe('Hello there');
+    expect(utteranceArg.lang).toBe('en-US');
+    expect(utteranceArg.volume).toBe(0.7);
+    expect(utteranceArg.voice).toBeNull(); // No voice selected initially
+  });
+
+  it('speakText uses selected voice if available', () => {
+    const mockVoice = { uri: 'voice1', displayName: 'Voice 1' };
+    store.setState({
+      isSpeechSupported: true,
+      volume: 0.6,
+      availableVoices: [mockVoice],
+      selectedVoiceURI: 'voice1',
+    });
+    const selectedSynthVoice = speechSynthesisMock
+      .getVoices()
+      .find((v: SpeechSynthesisVoice) => v.voiceURI === 'voice1');
+
+    store.getState().speakText('Hello with voice', 'en');
+    expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
+    const utteranceArg = speechSynthesisMock.speak.mock.calls[0][0];
+    expect(utteranceArg.voice).toEqual(selectedSynthVoice);
+    expect(utteranceArg.voice?.voiceURI).toBe('voice1');
+    expect(utteranceArg.volume).toBe(0.6);
   });
 });

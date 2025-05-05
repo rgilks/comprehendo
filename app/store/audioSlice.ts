@@ -189,10 +189,11 @@ export const createAudioSlice: StateCreator<
   },
 
   speakText: (text, lang) => {
-    const { isSpeechSupported, volume, stopPassageSpeech } = get();
+    const { isSpeechSupported, volume } = get();
     if (!isSpeechSupported || !text) return;
 
-    stopPassageSpeech();
+    // Removed stopPassageSpeech() - let the browser queue or interrupt handle it.
+    // stopPassageSpeech();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = SPEECH_LANGUAGES[lang];
@@ -227,7 +228,8 @@ export const createAudioSlice: StateCreator<
 
   getTranslation: async (word, sourceLang, targetLang): Promise<string | null> => {
     get().setError(null);
-    const cleaningRegex = /[^\p{L}\p{N}\s]/gu;
+    // Keep Unicode letters, numbers, whitespace, apostrophes, and hyphens
+    const cleaningRegex = /[^\p{L}\p{N}\s'-]/gu;
     const cleanedWord = word.replace(cleaningRegex, '');
 
     if (!cleanedWord) {
@@ -283,11 +285,7 @@ export const createAudioSlice: StateCreator<
       state.selectedVoiceURI = uri;
     });
     if (get().isSpeakingPassage) {
-      const { handlePlayPause } = get();
       get().stopPassageSpeech();
-      setTimeout(() => {
-        handlePlayPause();
-      }, 100);
     }
   },
 });
