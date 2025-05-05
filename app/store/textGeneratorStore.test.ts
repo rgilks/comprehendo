@@ -1,6 +1,16 @@
 import { act } from 'react';
 import { useTextGeneratorStore } from './textGeneratorStore';
-import { vi } from 'vitest';
+import { vi, beforeEach } from 'vitest';
+import { getSession } from 'next-auth/react';
+
+// Mock next-auth/react
+vi.mock('next-auth/react', () => ({
+  getSession: vi.fn(),
+}));
+
+// Helper to access the mocked getSession
+// @ts-expect-error - Linter seems confused about vi namespace here
+const mockedGetSession = getSession as vi.Mock;
 
 global.window = Object.create(window);
 Object.defineProperty(window, 'location', {
@@ -19,6 +29,13 @@ global.window.speechSynthesis = {
 } as any;
 
 describe('textGeneratorStore', () => {
+  beforeEach(() => {
+    // Reset mocks before each test
+    vi.clearAllMocks();
+    // Ensure getSession returns null by default for these tests
+    mockedGetSession.mockResolvedValue(null);
+  });
+
   it('should initialize with all slices and their state', () => {
     const state = useTextGeneratorStore.getState();
     expect(state).toHaveProperty('showLoginPrompt');

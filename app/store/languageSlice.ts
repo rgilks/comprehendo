@@ -41,7 +41,7 @@ export const createLanguageSlice: StateCreator<
     if (prevLang === lang) return;
     try {
       await i18n.changeLanguage(lang);
-    } catch (e) {
+    } catch (_e) {
       // fallback: reload page if language change fails
       window.location.reload();
       return;
