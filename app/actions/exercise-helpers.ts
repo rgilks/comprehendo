@@ -14,7 +14,21 @@ import {
   type QuizData,
   AIResponseProcessingError,
 } from '@/lib/ai/exercise-generator';
-import { createErrorResponse } from '@/lib/utils/exercise-response';
+
+export const DEFAULT_EMPTY_QUIZ_DATA: PartialQuizData = {
+  paragraph: '',
+  question: '',
+  options: { A: '', B: '', C: '', D: '' },
+  language: null,
+  topic: null,
+};
+
+export const createErrorResponse = (error: string): GenerateExerciseResult => ({
+  quizData: DEFAULT_EMPTY_QUIZ_DATA,
+  quizId: -1,
+  error,
+  cached: false,
+});
 
 export const tryGenerateAndCacheExercise = async (
   params: ExerciseRequestParams,

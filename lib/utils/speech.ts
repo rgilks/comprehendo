@@ -35,9 +35,7 @@ export const filterAndFormatVoices = (lang: Language): VoiceInfo[] => {
   } else {
     voices = voices.filter(
       (voice) =>
-        typeof baseLangCode === 'string' &&
-        baseLangCode &&
-        (voice.lang.startsWith(String(baseLangCode) + '-') || voice.lang === String(baseLangCode))
+        baseLangCode && (voice.lang.startsWith(baseLangCode + '-') || voice.lang === baseLangCode)
     );
   }
   voices = voices.filter((voice) => !isMac || !/\s\(.*\s\(.*\)\)$/.test(voice.name));
@@ -50,7 +48,7 @@ export const filterAndFormatVoices = (lang: Language): VoiceInfo[] => {
         displayName = match[1];
       }
     } else if (isIOS) {
-      const parenIndex = typeof displayName === 'string' ? displayName.indexOf(' (') : -1;
+      const parenIndex = displayName.indexOf(' (');
       if (parenIndex !== -1) {
         displayName = displayName.substring(0, parenIndex);
       }

@@ -4,8 +4,7 @@ import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
 import { authOptions } from '@/lib/authOptions';
 import { getDbUserIdFromSession } from '../../lib/authUtils';
-import { createErrorResponse } from '@/lib/utils/exercise-response';
-import { tryGetCachedExercise } from './exercise-helpers';
+import { createErrorResponse, tryGetCachedExercise } from './exercise-helpers';
 import { countCachedExercises } from '@/lib/exercise-cache';
 import { validateRequestParams, getOrGenerateExercise } from './exercise-orchestrator';
 import { checkRateLimit } from '@/lib/rate-limiter';
@@ -36,6 +35,7 @@ export const generateExerciseResponse = async (
     if (cachedResult) {
       return cachedResult;
     }
+    console.warn(`Rate limit exceeded for IP ${ip} and no cached question available.`);
     return createErrorResponse('Rate limit exceeded and no cached question available.');
   }
   const cachedCount = countCachedExercises(
@@ -43,9 +43,16 @@ export const generateExerciseResponse = async (
     validParams.questionLanguage,
     validParams.cefrLevel
   );
-  const result = await getOrGenerateExercise(validParams, userId, cachedCount);
-  if (result.quizId === -1 && result.error == null) {
-    return { ...result, error: 'Failed to validate AI response structure.' };
+  try {
+    const result = await getOrGenerateExercise(validParams, userId, cachedCount);
+    if (result.quizId === -1 && result.error == null) {
+      return { ...result, error: 'Failed to validate AI response structure.' };
+    }
+    return result;
+  } catch (error) {
+    console.error('Error generating exercise:', error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error during exercise generation';
+    return createErrorResponse(errorMessage);
   }
-  return result;
 };
