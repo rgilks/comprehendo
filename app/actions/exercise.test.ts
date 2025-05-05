@@ -1,11 +1,12 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { generateExerciseResponse } from './exercise';
+import { generateExerciseResponse, generateInitialExercisePair } from './exercise';
 import {
   type ExerciseRequestParams,
   ExerciseContentSchema,
   GenerateExerciseResultSchema,
   ExerciseContent,
   QuizData,
+  InitialExercisePairResultSchema,
 } from '@/lib/domain/schemas';
 import { AIResponseProcessingError } from '@/lib/ai/exercise-generator';
 import type { Session } from 'next-auth';
@@ -20,6 +21,9 @@ const authUtils = await import('@/lib/authUtils');
 const helpers = await import('./exercise-helpers');
 const { createErrorResponse, DEFAULT_EMPTY_QUIZ_DATA: defaultEmptyQuizData } = helpers;
 const exerciseOrchestrator = await import('./exercise-orchestrator');
+const domainLang = await import('@/lib/domain/language');
+const domainTopics = await import('@/lib/domain/topics');
+const domainLangGuidance = await import('@/lib/domain/language-guidance');
 
 vi.mock('@/lib/db', () => ({
   default: {
@@ -732,5 +736,160 @@ describe('additional edge cases', () => {
     // Optional: Assert saveExerciseToCache if necessary (requires mocking within the orchestrator mock)
     // expect(mockSaveCacheCall).toHaveBeenCalledWith(..., 1);
     // expect(mockSaveCacheCall).toHaveBeenCalledWith(..., 2);
+  });
+});
+
+const mockSession = { user: { id: 'user-id-123' } } as unknown as Session;
+const mockUserId = 1;
+const mockValidParams: ExerciseRequestParams = {
+  passageLanguage: 'en',
+  questionLanguage: 'es',
+  cefrLevel: 'B1',
+};
+const mockValidResult1: GenerateExerciseResult = {
+  quizData: { ...defaultEmptyQuizData, paragraph: 'Quiz 1 Para' },
+  quizId: 101,
+  error: null,
+  cached: false,
+};
+const mockValidResult2: GenerateExerciseResult = {
+  quizData: { ...defaultEmptyQuizData, paragraph: 'Quiz 2 Para' },
+  quizId: 102,
+  error: null,
+  cached: false,
+};
+
+describe('generateInitialExercisePair', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
+    vi.mocked(authUtils.getDbUserIdFromSession).mockReturnValue(mockUserId);
+    vi.mocked(rateLimiter.checkRateLimit).mockReturnValue(true);
+    vi.spyOn(exerciseOrchestrator, 'validateRequestParams').mockReturnValue({
+      success: true,
+      data: mockValidParams,
+    } as any);
+    vi.mocked(domainLang.LANGUAGES).en = 'English';
+    vi.mocked(domainLang.LANGUAGES).es = 'Spanish';
+    vi.mocked(domainTopics.getRandomTopicForLevel).mockReturnValue('Mock Topic');
+    vi.mocked(domainLangGuidance.getGrammarGuidance).mockReturnValue('Mock Grammar');
+    vi.mocked(domainLangGuidance.getVocabularyGuidance).mockReturnValue('Mock Vocab');
+    vi.spyOn(exerciseOrchestrator, 'getOrGenerateExercise')
+      .mockResolvedValueOnce(mockValidResult1)
+      .mockResolvedValueOnce(mockValidResult2);
+  });
+
+  test('should successfully generate a pair of exercises', async () => {
+    const result = await generateInitialExercisePair(mockValidParams);
+
+    expect(InitialExercisePairResultSchema.safeParse(result).success).toBe(true);
+    expect(result.error).toBeNull();
+    expect(result.quizzes).toHaveLength(2);
+    expect(result.quizzes[0]).toEqual(mockValidResult1);
+    expect(result.quizzes[1]).toEqual(mockValidResult2);
+    expect(exerciseOrchestrator.validateRequestParams).toHaveBeenCalledWith(mockValidParams);
+    expect(rateLimiter.checkRateLimit).toHaveBeenCalledTimes(1);
+    expect(exerciseOrchestrator.getOrGenerateExercise).toHaveBeenCalledTimes(2);
+    expect(exerciseOrchestrator.getOrGenerateExercise).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        passageLanguage: 'en',
+        questionLanguage: 'es',
+        level: 'B1',
+        topic: 'Mock Topic', // First call
+      }),
+      mockUserId,
+      0
+    );
+    // Second call should have a different topic
+    expect(domainTopics.getRandomTopicForLevel).toHaveBeenCalledTimes(2);
+    expect(exerciseOrchestrator.getOrGenerateExercise).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        passageLanguage: 'en',
+        questionLanguage: 'es',
+        level: 'B1',
+        topic: 'Mock Topic', // Second call uses the 2nd random topic
+      }),
+      mockUserId,
+      0
+    );
+  });
+
+  test('should return error if rate limit exceeded', async () => {
+    vi.mocked(rateLimiter.checkRateLimit).mockReturnValue(false);
+    const result = await generateInitialExercisePair(mockValidParams);
+    expect(result.error).toBe('Rate limit exceeded.');
+    expect(result.quizzes).toEqual([]);
+    expect(exerciseOrchestrator.getOrGenerateExercise).not.toHaveBeenCalled();
+  });
+
+  test('should return error if validation fails', async () => {
+    vi.spyOn(exerciseOrchestrator, 'validateRequestParams').mockReturnValue({
+      success: false,
+      error: { errors: [{ path: ['cefrLevel'], message: 'Invalid level' }] },
+    } as any);
+    const result = await generateInitialExercisePair({ invalid: 'params' });
+    expect(result.error).toContain('Invalid request parameters: cefrLevel: Invalid level');
+    expect(result.quizzes).toEqual([]);
+    expect(rateLimiter.checkRateLimit).not.toHaveBeenCalled();
+    expect(exerciseOrchestrator.getOrGenerateExercise).not.toHaveBeenCalled();
+  });
+
+  test('should return error if first exercise generation fails', async () => {
+    vi.spyOn(exerciseOrchestrator, 'getOrGenerateExercise')
+      .mockResolvedValueOnce({ ...mockValidResult1, error: 'Gen Error 1', quizId: -1 })
+      .mockResolvedValueOnce(mockValidResult2);
+
+    const result = await generateInitialExercisePair(mockValidParams);
+    expect(result.error).toBe('Failed to generate exercise pair: Gen Error 1');
+    expect(result.quizzes).toEqual([]);
+  });
+
+  test('should return error if second exercise generation fails', async () => {
+    vi.spyOn(exerciseOrchestrator, 'getOrGenerateExercise')
+      .mockResolvedValueOnce(mockValidResult1)
+      .mockResolvedValueOnce({ ...mockValidResult2, error: 'Gen Error 2', quizId: -1 });
+
+    const result = await generateInitialExercisePair(mockValidParams);
+    expect(result.error).toBe('Failed to generate exercise pair: Gen Error 2');
+    expect(result.quizzes).toEqual([]);
+  });
+
+  test('should return error if both exercise generations fail', async () => {
+    vi.spyOn(exerciseOrchestrator, 'getOrGenerateExercise')
+      .mockResolvedValueOnce({ ...mockValidResult1, error: 'Gen Error 1', quizId: -1 })
+      .mockResolvedValueOnce({ ...mockValidResult2, error: 'Gen Error 2', quizId: -1 });
+
+    const result = await generateInitialExercisePair(mockValidParams);
+    expect(result.error).toBe('Failed to generate exercise pair: Gen Error 1; Gen Error 2');
+    expect(result.quizzes).toEqual([]);
+  });
+
+  test('should return error if exercise generation throws', async () => {
+    const error = new Error('Fetch failed');
+    vi.spyOn(exerciseOrchestrator, 'getOrGenerateExercise').mockRejectedValue(error);
+
+    const result = await generateInitialExercisePair(mockValidParams);
+    expect(result.error).toBe('Server error during generation: Fetch failed');
+    expect(result.quizzes).toEqual([]);
+  });
+
+  test('should return error if result validation fails', async () => {
+    const malformedResult = { ...mockValidResult1, quizId: 'not-a-number' }; // Invalid quizId
+    vi.spyOn(exerciseOrchestrator, 'getOrGenerateExercise')
+      .mockResolvedValueOnce(malformedResult as any)
+      .mockResolvedValueOnce(mockValidResult2);
+
+    // Need to spy on safeParse AFTER the mocks are set up for the test
+    const safeParseSpy = vi.spyOn(z.ZodArray.prototype, 'safeParse');
+    safeParseSpy.mockReturnValueOnce({ success: false, error: 'validation error' } as any);
+
+    const result = await generateInitialExercisePair(mockValidParams);
+
+    expect(result.error).toBe('Internal error processing generated results.');
+    expect(result.quizzes).toEqual([]);
+
+    safeParseSpy.mockRestore(); // Clean up the spy
   });
 });

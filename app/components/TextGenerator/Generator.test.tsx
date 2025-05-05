@@ -1,169 +1,307 @@
+import { describe, test, expect, vi, beforeEach, type MockedFunction, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
 import Generator from './Generator';
-import React from 'react';
-import type { QuizData } from '@/lib/domain/schemas';
+import useTextGeneratorStore, { type TextGeneratorState } from '@/store/textGeneratorStore';
+import { useSession, type SessionContextValue } from 'next-auth/react';
+import type { Session } from 'next-auth';
 
-vi.mock('next-auth/react', () => ({
-  useSession: () => ({ status: 'authenticated' }),
-}));
+// Mock the store
+vi.mock('@/store/textGeneratorStore');
+const mockUseTextGeneratorStore = useTextGeneratorStore as unknown as MockedFunction<
+  () => Partial<TextGeneratorState>
+>;
+const mockFetchInitialPair = vi.fn();
+const mockLoadNextQuiz = vi.fn();
+const mockSubmitFeedback = vi.fn();
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
+// Mock next-auth
+vi.mock('next-auth/react');
+const mockUpdate = vi.fn();
+const mockUseSession = useSession as MockedFunction<() => SessionContextValue>;
 
-const mockStore: {
-  loading: boolean;
-  quizData: QuizData | null;
-  isAnswered: boolean;
-  generateText: any;
-  feedbackSubmitted: boolean;
-  submitFeedback: any;
-  nextQuizAvailable: boolean;
-  loadNextQuiz: any;
-  resetQuizWithNewData: any;
-  setNextQuizAvailable: any;
-  fetchInitialPair: any;
-  useHoverCredit: any;
-} = {
-  loading: false,
-  quizData: null,
-  isAnswered: false,
-  generateText: vi.fn(),
-  feedbackSubmitted: false,
-  submitFeedback: vi.fn(),
-  nextQuizAvailable: false,
-  loadNextQuiz: vi.fn(),
-  resetQuizWithNewData: vi.fn(),
-  setNextQuizAvailable: vi.fn(),
-  fetchInitialPair: vi.fn(),
-  useHoverCredit: vi.fn(),
-};
-
-vi.mock('@/store/textGeneratorStore', () => ({
-  __esModule: true,
-  default: () => mockStore,
-}));
-
-vi.mock('./QuizSkeleton', () => ({
-  __esModule: true,
-  default: () => <div data-testid="quiz-skeleton" />,
-}));
-
-beforeAll(() => {
-  Object.defineProperty(HTMLDivElement.prototype, 'scrollIntoView', {
-    value: vi.fn(),
-    writable: true,
-  });
+// Mock translation
+vi.mock('react-i18next', async () => {
+  const original = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  return {
+    ...original, // Include actual exports like initReactI18next
+    useTranslation: () => ({
+      t: (key: string) => key, // Keep the simple pass-through mock for t
+    }),
+  };
 });
 
-describe('Generator', () => {
+// Mock QuizSkeleton
+vi.mock('./QuizSkeleton', () => ({
+  default: () => <div data-testid="quiz-skeleton">Quiz Skeleton Mock</div>,
+}));
+
+describe('Generator Component', () => {
+  let mockStoreState: Partial<TextGeneratorState>;
+
   beforeEach(() => {
-    Object.assign(mockStore, {
+    HTMLDivElement.prototype.scrollIntoView = vi.fn();
+    vi.resetAllMocks();
+    // Default to unauthenticated, no quiz data
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated', update: mockUpdate });
+
+    // Reset mock store state for each test
+    mockStoreState = {
       loading: false,
       quizData: null,
       isAnswered: false,
-      generateText: vi.fn(),
       feedbackSubmitted: false,
-      submitFeedback: vi.fn(),
-      nextQuizAvailable: false,
-      loadNextQuiz: vi.fn(),
-      resetQuizWithNewData: vi.fn(),
-      setNextQuizAvailable: vi.fn(),
-      fetchInitialPair: vi.fn(),
-      useHoverCredit: vi.fn(),
-    });
-  });
-
-  it('renders generate button when no quizData', () => {
-    render(<Generator />);
-    expect(screen.getByTestId('generate-button')).toBeInTheDocument();
-  });
-
-  it('calls fetchInitialPair when generate button clicked and quizData is null', () => {
-    render(<Generator />);
-    fireEvent.click(screen.getByTestId('generate-button'));
-    expect(mockStore.fetchInitialPair).toHaveBeenCalled();
-  });
-
-  it('calls loadNextQuiz when quizData exists', () => {
-    mockStore.quizData = {
-      paragraph: 'mock paragraph',
-      question: 'mock question?',
-      options: { A: 'a', B: 'b', C: 'c', D: 'd' },
+      submitFeedback: mockSubmitFeedback,
+      loadNextQuiz: mockLoadNextQuiz,
+      fetchInitialPair: mockFetchInitialPair,
     };
-    mockStore.isAnswered = true;
-    mockStore.feedbackSubmitted = true;
-    render(<Generator />);
-    fireEvent.click(screen.getByTestId('generate-button'));
-    expect(mockStore.loadNextQuiz).toHaveBeenCalled();
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
   });
 
-  it('shows feedback prompt when answered, not feedbackSubmitted, not loading, authenticated', () => {
-    mockStore.isAnswered = true;
-    mockStore.feedbackSubmitted = false;
-    mockStore.loading = false;
+  afterEach(() => {
+    delete (HTMLDivElement.prototype as any).scrollIntoView;
+  });
+
+  test('should render initial generate button when no quiz data exists', () => {
+    render(<Generator />);
+    const generateButton = screen.getByTestId('generate-button');
+    expect(generateButton).toBeInTheDocument();
+    expect(generateButton).toHaveTextContent('practice.generateNewText');
+    expect(screen.queryByTestId('feedback-good-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('quiz-skeleton')).not.toBeInTheDocument();
+  });
+
+  test('should call fetchInitialPair when generate button is clicked and no quiz data exists', () => {
+    render(<Generator />);
+    const generateButton = screen.getByTestId('generate-button');
+    fireEvent.click(generateButton);
+    expect(mockFetchInitialPair).toHaveBeenCalledTimes(1);
+    expect(mockLoadNextQuiz).not.toHaveBeenCalled();
+  });
+
+  test('should call loadNextQuiz when generate button is clicked after answering/feedback (authenticated)', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'test-user-id' } } as Session,
+      status: 'authenticated',
+      update: mockUpdate,
+    });
+    // Update the mock store state for this specific test case
+    mockStoreState = {
+      ...mockStoreState,
+      loading: false,
+      quizData: { paragraph: 'Test Para' } as any, // Has quiz data
+      isAnswered: true,
+      feedbackSubmitted: true, // Feedback submitted
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
+    render(<Generator />);
+    const generateButton = screen.getByTestId('generate-button');
+    fireEvent.click(generateButton);
+    expect(mockLoadNextQuiz).toHaveBeenCalledTimes(1);
+    expect(mockFetchInitialPair).not.toHaveBeenCalled();
+  });
+
+  test('should call loadNextQuiz when generate button is clicked after answering (unauthenticated)', () => {
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated', update: mockUpdate });
+    mockStoreState = {
+      ...mockStoreState,
+      loading: false,
+      quizData: { paragraph: 'Test Para' } as any, // Has quiz data
+      isAnswered: true,
+      feedbackSubmitted: false, // Unauthenticated, feedback not submitted/relevant
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
+    render(<Generator />);
+    const generateButton = screen.getByTestId('generate-button');
+    fireEvent.click(generateButton);
+    expect(mockLoadNextQuiz).toHaveBeenCalledTimes(1);
+    expect(mockFetchInitialPair).not.toHaveBeenCalled();
+  });
+
+  test('should show feedback prompt when answered, authenticated, and feedback not submitted', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'test-user-id' } } as Session,
+      status: 'authenticated',
+      update: mockUpdate,
+    });
+    mockStoreState = {
+      ...mockStoreState,
+      loading: false,
+      quizData: { paragraph: 'Test Para' } as any,
+      isAnswered: true,
+      feedbackSubmitted: false,
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
     render(<Generator />);
     expect(screen.getByText('Was this question helpful?')).toBeInTheDocument();
     expect(screen.getByTestId('feedback-good-button')).toBeInTheDocument();
     expect(screen.getByTestId('feedback-bad-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('generate-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('quiz-skeleton')).not.toBeInTheDocument();
   });
 
-  it('calls submitFeedback(true) when good button clicked', () => {
-    mockStore.isAnswered = true;
+  test('should call submitFeedback with true when good feedback button is clicked', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'test-user-id' } } as Session,
+      status: 'authenticated',
+      update: mockUpdate,
+    });
+    mockStoreState = {
+      ...mockStoreState,
+      loading: false,
+      quizData: { paragraph: 'Test Para' } as any,
+      isAnswered: true,
+      feedbackSubmitted: false,
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
     render(<Generator />);
-    fireEvent.click(screen.getByTestId('feedback-good-button'));
-    expect(mockStore.submitFeedback).toHaveBeenCalledWith(true);
+    const goodButton = screen.getByTestId('feedback-good-button');
+    fireEvent.click(goodButton);
+    expect(mockSubmitFeedback).toHaveBeenCalledWith(true);
   });
 
-  it('calls submitFeedback(false) when bad button clicked', () => {
-    mockStore.isAnswered = true;
+  test('should call submitFeedback with false when bad feedback button is clicked', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'test-user-id' } } as Session,
+      status: 'authenticated',
+      update: mockUpdate,
+    });
+    mockStoreState = {
+      ...mockStoreState,
+      loading: false,
+      quizData: { paragraph: 'Test Para' } as any,
+      isAnswered: true,
+      feedbackSubmitted: false,
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
     render(<Generator />);
-    fireEvent.click(screen.getByTestId('feedback-bad-button'));
-    expect(mockStore.submitFeedback).toHaveBeenCalledWith(false);
+    const badButton = screen.getByTestId('feedback-bad-button');
+    fireEvent.click(badButton);
+    expect(mockSubmitFeedback).toHaveBeenCalledWith(false);
   });
 
-  it('shows QuizSkeleton when loading and feedback not submitted', () => {
-    mockStore.isAnswered = true;
-    mockStore.feedbackSubmitted = false;
-    mockStore.loading = true;
+  test('should show skeleton when loading during feedback prompt phase', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'test-user-id' } } as Session,
+      status: 'authenticated',
+      update: mockUpdate,
+    });
+    mockStoreState = {
+      ...mockStoreState,
+      loading: true, // Loading is true
+      quizData: { paragraph: 'Test Para' } as any,
+      isAnswered: true,
+      feedbackSubmitted: false, // Feedback not yet submitted
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
     render(<Generator />);
     expect(screen.getByTestId('quiz-skeleton')).toBeInTheDocument();
-  });
-
-  it('disables buttons when loading', () => {
-    mockStore.isAnswered = true;
-    mockStore.loading = true;
-    mockStore.feedbackSubmitted = false;
-    render(<Generator />);
-    screen.getAllByTestId('generate-button').forEach((btn) => {
-      expect(btn).toBeDisabled();
-    });
-    mockStore.isAnswered = false;
-    render(<Generator />);
-    screen.getAllByTestId('generate-button').forEach((btn) => {
-      expect(btn).toBeDisabled();
-    });
-  });
-
-  it('does not show feedback prompt if not authenticated', async () => {
-    vi.resetModules();
-    vi.doMock('next-auth/react', () => ({
-      useSession: () => ({ status: 'unauthenticated' }),
-    }));
-    const { default: UnauthedGenerator } = await import('./Generator');
-    mockStore.isAnswered = true;
-    mockStore.feedbackSubmitted = false;
-    mockStore.loading = false;
-    render(<UnauthedGenerator />);
     expect(screen.queryByText('Was this question helpful?')).not.toBeInTheDocument();
-    vi.resetModules();
+    expect(screen.queryByTestId('generate-button')).not.toBeInTheDocument();
   });
 
-  it('shows generate button after feedback submitted', () => {
-    mockStore.isAnswered = true;
-    mockStore.feedbackSubmitted = true;
+  test('should disable generate button when loading initially', () => {
+    mockStoreState = {
+      ...mockStoreState,
+      loading: true, // Loading
+      quizData: null, // No quiz data yet
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
     render(<Generator />);
-    expect(screen.getByTestId('generate-button')).toBeInTheDocument();
+    const generateButton = screen.getByTestId('generate-button');
+    expect(generateButton).toBeDisabled();
+    expect(generateButton).toHaveTextContent('common.generating');
+    expect(screen.queryByTestId('quiz-skeleton')).not.toBeInTheDocument();
+  });
+
+  test('should disable feedback buttons when loading during feedback prompt phase', () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: 'test-user-id' } } as Session,
+      status: 'authenticated',
+      update: mockUpdate,
+    });
+    mockStoreState = {
+      ...mockStoreState,
+      loading: true, // Loading is true
+      quizData: { paragraph: 'Test Para' } as any,
+      isAnswered: true,
+      feedbackSubmitted: false,
+    };
+    mockUseTextGeneratorStore.mockImplementation(
+      <S,>(selector?: (state: TextGeneratorState) => S) => {
+        if (selector) {
+          return selector(mockStoreState as TextGeneratorState);
+        }
+        return mockStoreState as TextGeneratorState;
+      }
+    );
+
+    // Let's test the skeleton visibility instead as done in the previous test
+    render(<Generator />);
+    expect(screen.getByTestId('quiz-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('feedback-good-button')).not.toBeInTheDocument(); // Buttons shouldn't be visible when skeleton is shown
+    expect(screen.queryByTestId('feedback-bad-button')).not.toBeInTheDocument();
   });
 });

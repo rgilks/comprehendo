@@ -7,8 +7,9 @@ import type { BaseSlice } from './baseSlice';
 import type { UISlice } from './uiSlice';
 import type { SettingsSlice } from './settingsSlice';
 import type { PartialQuizData } from '@/lib/domain/schemas';
-import { generateExerciseResponse } from '@/app/actions/exercise';
+import { generateExerciseResponse, generateInitialExercisePair } from '@/app/actions/exercise';
 import { submitAnswer, submitFeedback } from '@/app/actions/progress';
+import { InitialExercisePairResultSchema } from '@/lib/domain/schemas';
 
 vi.mock('@/app/actions/progress', () => ({
   submitAnswer: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('@/app/actions/progress', () => ({
 }));
 vi.mock('@/app/actions/exercise', () => ({
   generateExerciseResponse: vi.fn(),
+  generateInitialExercisePair: vi.fn(),
 }));
 
 const mockBaseSlice: BaseSlice = {
@@ -764,6 +766,229 @@ describe('quizSlice', () => {
       expect(store.getState().loading).toBe(false);
       expect(store.getState().error).toBe('Failed to submit feedback: Unknown error');
       expect(store.getState().feedbackSubmitted).toBe(false);
+    });
+  });
+
+  describe('fetchInitialPair', () => {
+    beforeEach(() => {
+      store.setState({
+        passageLanguage: 'en',
+        generatedQuestionLanguage: 'es',
+        cefrLevel: 'A1',
+      });
+      vi.mocked(generateInitialExercisePair).mockClear();
+    });
+
+    test('should fetch initial pair, update state, and set loading states', async () => {
+      vi.mocked(generateInitialExercisePair).mockResolvedValue({
+        quizzes: [
+          {
+            quizData: {
+              paragraph: 'Quiz 1 Para',
+              question: 'Quiz 1 Q?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+              language: 'en',
+            },
+            quizId: 1,
+            error: null,
+            cached: false,
+          },
+          {
+            quizData: {
+              paragraph: 'Quiz 2 Para',
+              question: 'Quiz 2 Q?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+              language: 'en',
+            },
+            quizId: 2,
+            error: null,
+            cached: false,
+          },
+        ],
+        error: null,
+      });
+      store.setState({ loading: false, error: 'old error', showContent: false });
+
+      const promise = store.getState().fetchInitialPair();
+
+      expect(store.getState().loading).toBe(true);
+      expect(store.getState().error).toBeNull();
+      expect(store.getState().showContent).toBe(false);
+
+      await promise;
+
+      expect(generateInitialExercisePair).toHaveBeenCalledTimes(1);
+      expect(generateInitialExercisePair).toHaveBeenCalledWith({
+        passageLanguage: 'en',
+        questionLanguage: 'es',
+        cefrLevel: 'A1',
+      });
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBeNull();
+      expect(store.getState().showContent).toBe(true);
+      expect(store.getState().quizData).toEqual({
+        paragraph: 'Quiz 1 Para',
+        question: 'Quiz 1 Q?',
+        options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+        language: 'en',
+      });
+      expect(store.getState().currentQuizId).toBe(1);
+      expect(store.getState().generatedPassageLanguage).toBe('en');
+      expect(store.getState().nextQuizAvailable).toEqual({
+        quizData: {
+          paragraph: 'Quiz 2 Para',
+          question: 'Quiz 2 Q?',
+          options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+          language: 'en',
+        },
+        quizId: 2,
+      });
+      expect(store.getState().isAnswered).toBe(false);
+      expect(store.getState().selectedAnswer).toBeNull();
+      expect(store.getState().feedbackSubmitted).toBe(false);
+    });
+
+    test('should handle API error during fetchInitialPair', async () => {
+      const apiError = 'Network Error';
+      const mockApiResponseWithError = {
+        quizzes: [
+          { quizData: {} as any, quizId: -1, error: null, cached: false },
+          { quizData: {} as any, quizId: -1, error: null, cached: false },
+        ],
+        error: apiError,
+      };
+      vi.mocked(generateInitialExercisePair).mockResolvedValue(mockApiResponseWithError);
+
+      const safeParseSpy = vi.spyOn(InitialExercisePairResultSchema, 'safeParse');
+      safeParseSpy.mockReturnValueOnce({ success: true, data: mockApiResponseWithError } as any);
+
+      store.setState({ loading: false, error: null, showContent: true });
+
+      await store.getState().fetchInitialPair();
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe(apiError);
+      expect(store.getState().showContent).toBe(false);
+      expect(store.getState().quizData).toBeNull();
+      expect(store.getState().currentQuizId).toBeNull();
+      expect(store.getState().nextQuizAvailable).toBeNull();
+
+      safeParseSpy.mockRestore();
+    });
+
+    test('should handle validation error for fetchInitialPair response', async () => {
+      const structurallyValidButSemanticallyIncorrect = {
+        quizzes: [
+          { quizData: {}, quizId: 1, error: null, cached: false },
+          { quizData: {}, quizId: 2, error: null, cached: false },
+        ],
+        error: null,
+      };
+      vi.mocked(generateInitialExercisePair).mockResolvedValue(
+        structurallyValidButSemanticallyIncorrect as any
+      );
+      store.setState({ loading: false, error: null, showContent: true });
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const safeParseSpy = vi.spyOn(InitialExercisePairResultSchema, 'safeParse');
+      const mockValidationError = {
+        success: false,
+        error: {
+          message: 'Mock Zod Error',
+          format: () => 'Formatted Mock Zod Error',
+        },
+      };
+      safeParseSpy.mockReturnValue(mockValidationError as any);
+
+      await store.getState().fetchInitialPair();
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toContain('Invalid API response structure: Mock Zod Error');
+      expect(store.getState().showContent).toBe(false);
+      expect(store.getState().quizData).toBeNull();
+      expect(store.getState().nextQuizAvailable).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      safeParseSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('should handle thrown error during fetchInitialPair', async () => {
+      const thrownError = new Error('Something went wrong');
+      vi.mocked(generateInitialExercisePair).mockRejectedValue(thrownError);
+      store.setState({ loading: false, error: null, showContent: true });
+
+      await store.getState().fetchInitialPair();
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe(thrownError.message);
+      expect(store.getState().showContent).toBe(false);
+      expect(store.getState().quizData).toBeNull();
+      expect(store.getState().nextQuizAvailable).toBeNull();
+    });
+
+    test('should reset quiz state correctly before fetching', async () => {
+      vi.mocked(generateInitialExercisePair).mockResolvedValue({
+        quizzes: [
+          {
+            quizData: {
+              paragraph: 'Quiz 1 Para',
+              question: 'Quiz 1 Q?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+              language: 'en',
+            },
+            quizId: 1,
+            error: null,
+            cached: false,
+          },
+          {
+            quizData: {
+              paragraph: 'Quiz 2 Para',
+              question: 'Quiz 2 Q?',
+              options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+              language: 'en',
+            },
+            quizId: 2,
+            error: null,
+            cached: false,
+          },
+        ],
+        error: null,
+      });
+      store.setState({
+        quizData: { paragraph: 'Old data' } as any,
+        currentQuizId: 99,
+        isAnswered: true,
+        selectedAnswer: 'A',
+        feedbackSubmitted: true,
+        nextQuizAvailable: { quizData: {} as any, quizId: 100 },
+        loading: false,
+        error: null,
+        showContent: true,
+      });
+
+      const resetSpy = vi.spyOn(store.getState(), 'resetQuizState');
+
+      await store.getState().fetchInitialPair();
+
+      expect(resetSpy).toHaveBeenCalled();
+      expect(store.getState().quizData).toEqual({
+        paragraph: 'Quiz 1 Para',
+        question: 'Quiz 1 Q?',
+        options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+        language: 'en',
+      });
+      expect(store.getState().currentQuizId).toBe(1);
+      expect(store.getState().nextQuizAvailable).toEqual({
+        quizData: {
+          paragraph: 'Quiz 2 Para',
+          question: 'Quiz 2 Q?',
+          options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+          language: 'en',
+        },
+        quizId: 2,
+      });
     });
   });
 });
