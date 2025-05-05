@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { callGoogleAI, AIResponseProcessingError } from './google-ai-api';
 import { getGoogleAIClient } from '@/lib/ai/client';
+import type { GoogleGenAI, Models } from '@google/genai';
 
 // Mock the client getter
 vi.mock('@/lib/ai/client', () => ({
@@ -9,10 +10,23 @@ vi.mock('@/lib/ai/client', () => ({
 
 // Mock the GoogleGenAI class and its methods
 const mockGenerateContent = vi.fn();
-const mockGoogleGenAI = {
-  models: {
-    generateContent: mockGenerateContent,
-  },
+
+// Provide a more complete mock for the 'models' property
+const mockModels: Partial<Models> = {
+  generateContent: mockGenerateContent,
+  // Add other required properties as undefined or mocks if needed by TS
+  // These don't need implementations unless the tested code uses them
+  generateContentStream: vi.fn(),
+  generateImages: vi.fn(),
+  countTokens: vi.fn(),
+  embedContent: vi.fn(),
+  // batchEmbedContents: vi.fn(), // Removed as it doesn't exist on Models
+  // Add other optional props if they cause issues, e.g.
+  // getGenerativeModel: vi.fn(),
+};
+
+const mockGoogleGenAI: Partial<GoogleGenAI> = {
+  models: mockModels as Models, // Cast the partial mock to the full type
 };
 
 describe('callGoogleAI', () => {
@@ -22,7 +36,7 @@ describe('callGoogleAI', () => {
     // Reset mocks before each test
     vi.resetAllMocks();
     // Mock implementation for getGoogleAIClient
-    mockedGetGoogleAIClient.mockReturnValue(mockGoogleGenAI);
+    mockedGetGoogleAIClient.mockReturnValue(mockGoogleGenAI as GoogleGenAI);
     // Reset environment variable mock if necessary
     delete process.env['GOOGLE_AI_GENERATION_MODEL'];
   });
@@ -86,12 +100,7 @@ describe('callGoogleAI', () => {
     const mockResponse = { text: undefined }; // Simulate missing text
     mockGenerateContent.mockResolvedValue(mockResponse);
     await expect(callGoogleAI('test prompt')).rejects.toThrow(
-      new AIResponseProcessingError(
-        'AI generation failed: No content received from Google AI or failed to extract text.',
-        new AIResponseProcessingError(
-          'No content received from Google AI or failed to extract text.'
-        )
-      )
+      new AIResponseProcessingError('No content received from Google AI or failed to extract text.')
     );
   });
 
@@ -100,10 +109,7 @@ describe('callGoogleAI', () => {
     mockGenerateContent.mockResolvedValue(mockResponse);
     await expect(callGoogleAI('test prompt')).rejects.toThrow(
       new AIResponseProcessingError(
-        'AI generation failed: AI response received, but failed to extract valid JSON content.',
-        new AIResponseProcessingError(
-          'AI response received, but failed to extract valid JSON content.'
-        )
+        'AI response received, but failed to extract valid JSON content.'
       )
     );
   });
@@ -115,7 +121,7 @@ describe('callGoogleAI', () => {
     await expect(callGoogleAI('test prompt')).rejects.toSatisfy((error: unknown) => {
       expect(error).toBeInstanceOf(AIResponseProcessingError);
       if (error instanceof AIResponseProcessingError) {
-        expect(error.message).toBe('AI generation failed: Failed to parse JSON from AI response.');
+        expect(error.message).toBe('Failed to parse JSON from AI response.');
         expect(error.originalError).toBeInstanceOf(SyntaxError);
         return true;
       }
@@ -154,7 +160,7 @@ describe('callGoogleAI', () => {
     );
   });
 
-  it('should throw AIResponseProcessingError if getGoogleAIClient throws', async () => {
+  it('should throw underlying error if getGoogleAIClient throws', async () => {
     const clientError = new Error('Failed to initialize client');
     mockedGetGoogleAIClient.mockImplementation(() => {
       throw clientError;

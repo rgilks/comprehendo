@@ -1,106 +1,205 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { validateRequestParams, getOrGenerateExercise } from './exercise-orchestrator';
 import * as helpers from './exercise-helpers';
-import type { ExerciseRequestParams } from '@/lib/domain/schemas';
+import { success, failure, type ActionError } from '@/lib/utils/result-types';
+import type {
+  GenerateExerciseResult,
+  ExerciseContent,
+  ExerciseRequestParams,
+} from '@/lib/domain/schemas';
+import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 
-const validParams: ExerciseRequestParams = {
+vi.mock('./exercise-helpers');
+
+const validGenParams: ExerciseGenerationParams = {
   passageLanguage: 'en',
   questionLanguage: 'fr',
-  cefrLevel: 'A2',
+  level: 'A2',
+  topic: 'Mock Topic',
+  passageLangName: 'English',
+  questionLangName: 'French',
+  grammarGuidance: 'Mock Grammar',
+  vocabularyGuidance: 'Mock Vocab',
 };
 
-describe('validateRequestParams', () => {
-  it('validates correct params', () => {
-    const result = validateRequestParams(validParams);
-    expect(result.success).toBe(true);
-  });
+const mockUserId = 1;
 
-  it('invalidates incorrect params', () => {
-    const result = validateRequestParams({ ...validParams, cefrLevel: 'Z9' });
-    expect(result.success).toBe(false);
-  });
-});
+const mockExerciseContent: ExerciseContent = {
+  paragraph: 'Generated Paragraph',
+  question: 'Generated Question',
+  options: { A: 'GenA', B: 'GenB', C: 'GenC', D: 'GenD' },
+  correctAnswer: 'A',
+  allExplanations: { A: 'EA', B: 'EB', C: 'EC', D: 'ED' },
+  relevantText: 'Relevant Text',
+  topic: 'Generated Topic',
+};
+const generatedSuccessData = { content: mockExerciseContent, id: 555 };
+const generatedSuccessResult = success<typeof generatedSuccessData, ActionError>(
+  generatedSuccessData
+);
 
-describe('getOrGenerateExercise', () => {
-  const userId = 1;
-  const quizId = 123;
-  const quizData = {
-    paragraph: 'p',
-    question: 'q',
-    options: { A: 'a', B: 'b', C: 'c', D: 'd' },
-    topic: 't',
+const generationFailError: ActionError = { error: 'Generation Failed' };
+const generatedFailResult = failure<typeof generatedSuccessData, ActionError>(generationFailError);
+
+const cacheFailError: ActionError = {
+  error: 'Exercise generated but failed to save to cache (undefined ID).',
+};
+const cacheFailResult = failure<typeof generatedSuccessData, ActionError>(cacheFailError);
+
+const cachedResult: GenerateExerciseResult = {
+  quizData: {
+    paragraph: 'Cached Para',
+    question: 'Cached Q',
+    options: { A: 'cA', B: 'cB', C: 'cC', D: 'cD' },
+    topic: 'Cached Topic',
     language: 'en',
-  };
-  const successResult = { quizData, quizId, error: null, cached: false };
-  const cacheResult = { quizData, quizId, error: null, cached: true };
-  const failResult = {
-    quizData,
-    quizId: -1,
-    error: 'Failed to validate AI response structure.',
-    cached: false,
-  };
+  },
+  quizId: 999,
+  cached: true,
+  error: null,
+};
 
+describe('Exercise Orchestrator', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.resetAllMocks();
+    vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(null);
+    vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedSuccessResult);
+    vi.mocked(helpers.createErrorResponse).mockImplementation((error, details) => ({
+      quizData: helpers.DEFAULT_EMPTY_QUIZ_DATA,
+      quizId: -1,
+      error: `${error}${details ? `: ${JSON.stringify(details)}` : ''}`,
+      cached: false,
+    }));
   });
 
-  it('returns generated exercise if cache is low and generation succeeds', async () => {
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(successResult);
-    const result = await getOrGenerateExercise(validParams, userId, 10);
-    expect(result).toEqual(successResult);
+  describe('validateRequestParams', () => {
+    it('validates correct params', () => {
+      const result = validateRequestParams(validGenParams);
+      expect(result.success).toBe(true);
+    });
+
+    it('invalidates incorrect params', () => {
+      const result = validateRequestParams({ ...validGenParams, level: 'Z9' });
+      expect(result.success).toBe(false);
+    });
   });
 
-  it('returns cached exercise if cache is low, generation fails, but cache fallback succeeds', async () => {
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(failResult);
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(cacheResult);
-    const result = await getOrGenerateExercise(validParams, userId, 10);
-    expect(result).toEqual(cacheResult);
-  });
+  describe('getOrGenerateExercise', () => {
+    it('returns generated exercise if cache is low and generation succeeds', async () => {
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedSuccessResult);
 
-  it('returns generation result if cache is low, generation and cache fallback both fail', async () => {
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(failResult);
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(null);
-    const result = await getOrGenerateExercise(validParams, userId, 10);
-    expect(result).toEqual(failResult);
-  });
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 10);
 
-  it('returns cached exercise if cache is high and cache lookup succeeds', async () => {
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(cacheResult);
-    const result = await getOrGenerateExercise(validParams, userId, 200);
-    expect(result).toEqual(cacheResult);
-  });
+      expect(result.quizId).toBe(generatedSuccessData.id);
+      expect(result.cached).toBe(false);
+      expect(result.error).toBeNull();
+      expect(result.quizData.paragraph).toBe(mockExerciseContent.paragraph);
+      expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGetCachedExercise).not.toHaveBeenCalled();
+    });
 
-  it('returns generated exercise if cache is high, cache lookup fails, but generation succeeds', async () => {
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(null);
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(successResult);
-    const result = await getOrGenerateExercise(validParams, userId, 200);
-    expect(result).toEqual(successResult);
-  });
+    it('returns cached exercise if cache is low, generation fails (non-terminal), but cache fallback succeeds', async () => {
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedFailResult);
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(cachedResult);
 
-  it('returns generation result if cache is high, cache lookup and generation both fail', async () => {
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(null);
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(failResult);
-    const result = await getOrGenerateExercise(validParams, userId, 200);
-    expect(result).toEqual(failResult);
-  });
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 10);
 
-  it('calls console.warn when generation fails and cache fallback is attempted (low cache)', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(failResult);
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(cacheResult);
-    await getOrGenerateExercise(validParams, userId, 10);
-    expect(warn).toHaveBeenCalledWith(
-      '[API] Generation failed (low cache), attempting cache fallback.'
-    );
-  });
+      expect(result).toEqual(cachedResult);
+      expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
+    });
 
-  it('calls console.warn when cache lookup fails and generation is attempted (high cache)', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(helpers, 'tryGetCachedExercise').mockResolvedValue(null);
-    vi.spyOn(helpers, 'tryGenerateAndCacheExercise').mockResolvedValue(successResult);
-    await getOrGenerateExercise(validParams, userId, 200);
-    expect(warn).toHaveBeenCalledWith(
-      '[API] Cache count high, but cache lookup failed. Attempting generation.'
-    );
+    it('returns generation error if cache is low, generation and cache fallback both fail', async () => {
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedFailResult);
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(null);
+
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 10);
+
+      expect(result.error).toContain(generationFailError.error);
+      expect(result.quizId).toBe(-1);
+      expect(helpers.createErrorResponse).toHaveBeenCalledWith(
+        generationFailError.error,
+        undefined
+      );
+      expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns generation error if cache is low and generation fails (terminal cache error)', async () => {
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(cacheFailResult);
+
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 10);
+
+      expect(result.error).toContain(cacheFailError.error);
+      expect(result.quizId).toBe(-1);
+      expect(helpers.createErrorResponse).toHaveBeenCalledWith(cacheFailError.error, undefined);
+      expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGetCachedExercise).not.toHaveBeenCalled();
+    });
+
+    it('returns cached exercise if cache is high and cache lookup succeeds', async () => {
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(cachedResult);
+
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 200);
+
+      expect(result).toEqual(cachedResult);
+      expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGenerateAndCacheExercise).not.toHaveBeenCalled();
+    });
+
+    it('returns generated exercise if cache is high, cache lookup fails, but generation succeeds', async () => {
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(null);
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedSuccessResult);
+
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 200);
+
+      expect(result.quizId).toBe(generatedSuccessData.id);
+      expect(result.cached).toBe(false);
+      expect(result.error).toBeNull();
+      expect(result.quizData.paragraph).toBe(mockExerciseContent.paragraph);
+      expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns generation error if cache is high, cache lookup and generation both fail', async () => {
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(null);
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedFailResult);
+
+      const result = await getOrGenerateExercise(validGenParams, mockUserId, 200);
+
+      expect(result.error).toContain(generationFailError.error);
+      expect(result.quizId).toBe(-1);
+      expect(helpers.createErrorResponse).toHaveBeenCalledWith(
+        generationFailError.error,
+        undefined
+      );
+      expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
+      expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls console.warn when generation fails and cache fallback is attempted (low cache)', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedFailResult);
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(cachedResult);
+      await getOrGenerateExercise(validGenParams, mockUserId, 10);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('[API] Generation failed (low cache): Generation Failed')
+      );
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining(
+          '[API] Attempting cache fallback after non-terminal generation error.'
+        )
+      );
+    });
+
+    it('calls console.warn when cache lookup fails and generation is attempted (high cache)', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.mocked(helpers.tryGetCachedExercise).mockResolvedValue(null);
+      vi.mocked(helpers.tryGenerateAndCacheExercise).mockResolvedValue(generatedSuccessResult);
+      await getOrGenerateExercise(validGenParams, mockUserId, 200);
+      expect(warn).toHaveBeenCalledWith(
+        '[API] Cache count high, but cache lookup failed. Attempting generation.'
+      );
+    });
   });
 });

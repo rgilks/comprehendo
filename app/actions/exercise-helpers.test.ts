@@ -1,200 +1,215 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { tryGenerateAndCacheExercise, tryGetCachedExercise } from './exercise-helpers';
 import {
-  ExerciseContentSchema,
-  GenerateExerciseResultSchema,
-  type ExerciseRequestParams,
-  type GenerateExerciseResult,
-  type PartialQuizData,
+  tryGenerateAndCacheExercise,
+  tryGetCachedExercise,
+  createErrorResponse,
+  DEFAULT_EMPTY_QUIZ_DATA,
+} from './exercise-helpers';
+import { saveExerciseToCache, getValidatedExerciseFromCache } from '@/lib/exercise-cache';
+import {
+  generateAndValidateExercise,
+  AIResponseProcessingError,
+} from '@/lib/ai/exercise-generator';
+import type { ExerciseGenerationParams } from '@/lib/domain/ai';
+import type {
+  ExerciseContent,
+  ExerciseRequestParams,
+  GenerateExerciseResult,
 } from '@/lib/domain/schemas';
-import { ZodError } from 'zod';
+// Mocks
+vi.mock('@/lib/exercise-cache');
+vi.mock('@/lib/ai/exercise-generator');
 
-const mockParams: ExerciseRequestParams = {
+// Mock data
+const mockParams: ExerciseGenerationParams = {
+  topic: 'Test Topic',
+  passageLanguage: 'en',
+  questionLanguage: 'es',
+  passageLangName: 'English',
+  questionLangName: 'Spanish',
+  level: 'B1',
+  grammarGuidance: 'Past tense',
+  vocabularyGuidance: 'Travel words',
+};
+
+const mockRequestParams: ExerciseRequestParams = {
   passageLanguage: 'en',
   questionLanguage: 'es',
   cefrLevel: 'B1',
 };
-const mockUserId = 42;
-const mockQuizData: PartialQuizData = {
+
+const mockUserId = 123;
+const mockLanguage = 'en';
+
+const mockExerciseContent: ExerciseContent = {
   paragraph: 'p',
   question: 'q',
-  options: { A: 'a', B: 'b', C: 'c', D: 'd' },
-  topic: 't',
-  language: 'en',
-};
-const mockValidatedContent = {
-  ...mockQuizData,
+  options: { A: 'A', B: 'B', C: 'C', D: 'D' },
   correctAnswer: 'A',
-  allExplanations: { A: 'A', B: 'B', C: 'C', D: 'D' },
-  relevantText: 'T',
+  allExplanations: { A: 'EA', B: 'EB', C: 'EC', D: 'ED' },
+  relevantText: 'rt',
+  topic: 'Test Topic',
 };
 
-vi.mock('@/lib/domain/language', () => ({ LANGUAGES: { en: 'English', es: 'Spanish' } }));
-vi.mock('@/lib/domain/language-guidance', () => ({
-  getGrammarGuidance: vi.fn(() => 'grammar'),
-  getVocabularyGuidance: vi.fn(() => 'vocab'),
-}));
-vi.mock('@/lib/domain/topics', () => ({ getRandomTopicForLevel: vi.fn(() => 'topic') }));
-vi.mock('@/lib/exercise-cache', () => ({
-  saveExerciseToCache: vi.fn(() => 123),
-  getValidatedExerciseFromCache: vi.fn(() => undefined),
-}));
-vi.mock('@/lib/ai/exercise-generator', () => ({
-  generateAndValidateExercise: vi.fn(() => mockValidatedContent),
-  AIResponseProcessingError: class extends Error {
-    originalError: unknown;
-    constructor(msg: string, orig: unknown) {
-      super(msg);
-      this.originalError = orig;
-    }
+const mockCacheResult: GenerateExerciseResult = {
+  quizData: {
+    paragraph: 'cached_p',
+    question: 'cached_q',
+    options: { A: 'cA', B: 'cB', C: 'cC', D: 'cD' },
+    topic: 'Cached Topic',
+    language: 'en',
   },
-}));
-vi.mock('@/lib/utils/exercise-response', () => ({
-  createErrorResponse: vi.fn((msg: string) => ({
-    quizData: {
-      paragraph: '',
-      question: '',
-      options: { A: '', B: '', C: '', D: '' },
-      topic: null,
-      language: null,
-    },
-    quizId: -1,
-    error: msg,
-    cached: false,
-  })),
-}));
+  quizId: 999,
+  cached: true,
+  error: null,
+};
 
-describe('tryGenerateAndCacheExercise', () => {
+describe('Exercise Helper Functions', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
-  it('returns valid result on success', async () => {
-    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
-      success: true,
-      data: { ...mockValidatedContent },
+  describe('tryGenerateAndCacheExercise', () => {
+    it('should return success with ExerciseContent and id on successful generation and cache', async () => {
+      vi.mocked(generateAndValidateExercise).mockResolvedValue(mockExerciseContent);
+      vi.mocked(saveExerciseToCache).mockReturnValue(123); // Assume cache save returns ID 123
+
+      const result = await tryGenerateAndCacheExercise(mockParams, mockLanguage, mockUserId);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.content).toEqual(mockExerciseContent);
+        expect(result.data.id).toBe(123);
+      }
+      expect(generateAndValidateExercise).toHaveBeenCalledWith({
+        ...mockParams,
+        language: mockLanguage,
+      });
+      expect(saveExerciseToCache).toHaveBeenCalledWith(
+        mockParams.passageLanguage,
+        mockParams.questionLanguage,
+        mockParams.level,
+        JSON.stringify(mockExerciseContent),
+        mockUserId
+      );
     });
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.quizId).toBe(123);
-    expect(result.error).toBeNull();
-    expect(result.quizData.paragraph).toBe('p');
-  });
 
-  it('returns error if AI returns null', async () => {
-    const { generateAndValidateExercise } = await import('@/lib/ai/exercise-generator');
-    vi.mocked(generateAndValidateExercise).mockResolvedValueOnce(null);
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toBe('Failed to validate AI response structure.');
-    expect(result.quizId).toBe(-1);
-  });
+    it('should return failure if generateAndValidateExercise throws an error', async () => {
+      const aiError = new AIResponseProcessingError('AI failed');
+      vi.mocked(generateAndValidateExercise).mockRejectedValue(aiError);
 
-  it('returns error if schema validation fails', async () => {
-    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
-      success: false,
-      error: new ZodError([]),
+      const result = await tryGenerateAndCacheExercise(mockParams, mockLanguage, mockUserId);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.error).toContain('Error during AI generation/processing: AI failed');
+      }
+      expect(saveExerciseToCache).not.toHaveBeenCalled();
     });
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toBe('Failed to validate AI response structure.');
-  });
 
-  it('returns error if saveExerciseToCache throws', async () => {
-    const { saveExerciseToCache } = await import('@/lib/exercise-cache');
-    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
-      success: true,
-      data: { ...mockValidatedContent },
+    it('should return failure if generateAndValidateExercise throws a non-standard error', async () => {
+      const genericError = new Error('Generic failure');
+      vi.mocked(generateAndValidateExercise).mockRejectedValue(genericError);
+
+      const result = await tryGenerateAndCacheExercise(mockParams, mockLanguage, mockUserId);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.error).toContain(
+          'Error during AI generation/processing: Generic failure'
+        );
+      }
+      expect(saveExerciseToCache).not.toHaveBeenCalled();
     });
-    vi.mocked(saveExerciseToCache).mockImplementationOnce(() => {
-      throw new Error('fail');
+
+    it('should return failure if saveExerciseToCache returns undefined', async () => {
+      vi.mocked(generateAndValidateExercise).mockResolvedValue(mockExerciseContent);
+      vi.mocked(saveExerciseToCache).mockReturnValue(undefined);
+
+      const result = await tryGenerateAndCacheExercise(mockParams, mockLanguage, mockUserId);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.error).toBe(
+          'Exercise generated but failed to save to cache (undefined ID).'
+        );
+      }
     });
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toBe('Failed to save generated exercise to cache.');
-  });
 
-  it('returns error if saveExerciseToCache returns undefined', async () => {
-    const { saveExerciseToCache } = await import('@/lib/exercise-cache');
-    vi.spyOn(ExerciseContentSchema, 'safeParse').mockReturnValue({
-      success: true,
-      data: { ...mockValidatedContent },
+    it('should return failure if saveExerciseToCache throws an error', async () => {
+      const cacheError = new Error('Cache save failed');
+      vi.mocked(generateAndValidateExercise).mockResolvedValue(mockExerciseContent);
+      vi.mocked(saveExerciseToCache).mockImplementation(() => {
+        throw cacheError;
+      });
+
+      const result = await tryGenerateAndCacheExercise(mockParams, mockLanguage, mockUserId);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.error).toBe(
+          'Exercise generated but failed to save to cache. Please try again.'
+        );
+        expect(result.error.details).toBe(cacheError);
+      }
     });
-    vi.mocked(saveExerciseToCache).mockReturnValueOnce(undefined);
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toBe('Failed to save generated exercise to cache.');
   });
 
-  it('handles thrown AIResponseProcessingError with Error originalError', async () => {
-    const { generateAndValidateExercise, AIResponseProcessingError } = await import(
-      '@/lib/ai/exercise-generator'
-    );
-    const orig = new Error('orig');
-    const err = new AIResponseProcessingError('fail', orig);
-    vi.mocked(generateAndValidateExercise).mockRejectedValueOnce(err);
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toMatch(/fail/);
-  });
+  describe('tryGetCachedExercise', () => {
+    it('should return cached exercise if found', async () => {
+      vi.mocked(getValidatedExerciseFromCache).mockReturnValue({
+        quizData: mockCacheResult.quizData,
+        quizId: mockCacheResult.quizId,
+      });
 
-  it('handles thrown AIResponseProcessingError with non-Error originalError', async () => {
-    const { generateAndValidateExercise, AIResponseProcessingError } = await import(
-      '@/lib/ai/exercise-generator'
-    );
-    const err = new AIResponseProcessingError('fail', { foo: 1 });
-    vi.mocked(generateAndValidateExercise).mockRejectedValueOnce(err);
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toMatch(/fail/);
-  });
+      const result = await tryGetCachedExercise(mockRequestParams, mockUserId);
 
-  it('handles thrown non-Error', async () => {
-    const { generateAndValidateExercise } = await import('@/lib/ai/exercise-generator');
-    vi.mocked(generateAndValidateExercise).mockRejectedValueOnce('fail');
-    const result = await tryGenerateAndCacheExercise(mockParams, mockUserId);
-    expect(result.error).toMatch(/unexpected/);
-  });
-});
-
-describe('tryGetCachedExercise', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns null if no cache', async () => {
-    const { getValidatedExerciseFromCache } = await import('@/lib/exercise-cache');
-    vi.mocked(getValidatedExerciseFromCache).mockReturnValueOnce(undefined);
-    const result = await tryGetCachedExercise(mockParams, mockUserId);
-    expect(result).toBeNull();
-  });
-
-  it('returns parsed result if cache is valid', async () => {
-    const { getValidatedExerciseFromCache } = await import('@/lib/exercise-cache');
-    const cache: Omit<GenerateExerciseResult, 'cached'> = {
-      quizData: mockQuizData,
-      quizId: 1,
-      error: null,
-    };
-    vi.mocked(getValidatedExerciseFromCache).mockReturnValueOnce(cache);
-    vi.spyOn(GenerateExerciseResultSchema, 'safeParse').mockReturnValueOnce({
-      success: true,
-      data: { ...cache, cached: true },
+      expect(result).toEqual(mockCacheResult);
+      expect(getValidatedExerciseFromCache).toHaveBeenCalledWith(
+        mockRequestParams.passageLanguage,
+        mockRequestParams.questionLanguage,
+        mockRequestParams.cefrLevel,
+        mockUserId
+      );
     });
-    const result = await tryGetCachedExercise(mockParams, mockUserId);
-    expect(result && result.quizId).toBe(1);
-    expect(result && result.cached).toBe(true);
+
+    it('should return null if no cached exercise is found', async () => {
+      vi.mocked(getValidatedExerciseFromCache).mockReturnValue(undefined);
+
+      const result = await tryGetCachedExercise(mockRequestParams, mockUserId);
+
+      expect(result).toBeNull();
+      expect(getValidatedExerciseFromCache).toHaveBeenCalledWith(
+        mockRequestParams.passageLanguage,
+        mockRequestParams.questionLanguage,
+        mockRequestParams.cefrLevel,
+        mockUserId
+      );
+    });
   });
 
-  it('returns null and logs if cache fails schema', async () => {
-    const { getValidatedExerciseFromCache } = await import('@/lib/exercise-cache');
-    const cache: Omit<GenerateExerciseResult, 'cached'> = {
-      quizData: mockQuizData,
-      quizId: 1,
-      error: null,
-    };
-    vi.mocked(getValidatedExerciseFromCache).mockReturnValueOnce(cache);
-    vi.spyOn(GenerateExerciseResultSchema, 'safeParse').mockReturnValueOnce({
-      success: false,
-      error: new ZodError([]),
+  describe('createErrorResponse', () => {
+    it('should create a standard error response object', () => {
+      const errorMsg = 'Test error';
+      const response = createErrorResponse(errorMsg);
+      expect(response).toEqual({
+        quizData: DEFAULT_EMPTY_QUIZ_DATA,
+        quizId: -1,
+        error: errorMsg,
+        cached: false,
+      });
     });
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const result = await tryGetCachedExercise(mockParams, mockUserId);
-    expect(result).toBeNull();
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+
+    it('should include details if provided', () => {
+      const errorMsg = 'Test error';
+      const details = { code: 500 };
+      const response = createErrorResponse(errorMsg, details);
+      expect(response).toEqual({
+        quizData: DEFAULT_EMPTY_QUIZ_DATA,
+        quizId: -1,
+        error: `${errorMsg}: ${JSON.stringify(details)}`,
+        cached: false,
+      });
+    });
   });
 });
