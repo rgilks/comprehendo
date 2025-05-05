@@ -63,6 +63,7 @@ export const createSettingsSlice: StateCreator<
       state.nextQuizAvailable = null;
     });
 
+    get().updateAvailableVoices(lang);
     void get().fetchUserProgress();
   },
 });

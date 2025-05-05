@@ -29,6 +29,7 @@ const VoiceSelector = ({
   return (
     <div className="relative">
       <select
+        data-testid="voice-select"
         value={selectedVoiceURI || ''}
         onChange={(e) => {
           setSelectedVoiceURI(e.target.value);
