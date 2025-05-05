@@ -28,11 +28,18 @@ const mockDb = db as unknown as {
 
 // Sample data for testing
 const mockQuizContent = {
-  passage: 'Test passage',
-  question: 'Test question?',
-  options: { A: 'Option A', B: 'Option B', C: 'Option C', D: 'Option D' },
-  answer: 'A',
-  explanation: 'Test explanation',
+  paragraph: 'Questo è il testo del paragrafo.',
+  question: 'Qual è la domanda?',
+  options: { A: 'Opzione A', B: 'Opzione B', C: 'Opzione C', D: 'Opzione D' },
+  correctAnswer: 'B',
+  allExplanations: {
+    A: 'Spiegazione A',
+    B: 'Spiegazione B',
+    C: 'Spiegazione C',
+    D: 'Spiegazione D',
+  },
+  topic: 'Test Topic',
+  relevantText: 'Testo rilevante.',
 };
 const mockQuizContentString = JSON.stringify(mockQuizContent);
 

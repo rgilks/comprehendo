@@ -96,6 +96,7 @@ export const tryGenerateAndCacheExercise = async (
         });
       }
       console.log(`[API:tryGenerate] Generated and cached exercise ID: ${exerciseId}`);
+
       return success<{ content: ExerciseContent; id: number }, ActionError>({
         content: generatedExercise,
         id: exerciseId,
