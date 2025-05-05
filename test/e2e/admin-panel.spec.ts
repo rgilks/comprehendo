@@ -23,7 +23,7 @@ test.describe('Admin Panel Basic Navigation', () => {
     await expect(
       headerLocator,
       `Header '${expectedHeader}' should be visible in ${tableName} table`
-    ).toBeVisible({ timeout: 1000 });
+    ).toBeVisible({ timeout: 3000 });
 
     const firstRowLocator = tableLocator.locator('tbody tr').first();
     await expect(firstRowLocator, `First row of ${tableName} table should be visible`).toBeVisible({

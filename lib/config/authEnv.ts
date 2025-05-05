@@ -78,14 +78,14 @@ if (!authEnvVars.success) {
     '❌ Invalid Auth environment variables:',
     JSON.stringify(authEnvVars.error.format(), null, 4)
   );
-  // Throw specifically if AUTH_SECRET is missing, as it's critical
+  // Only throw if AUTH_SECRET is missing AND we are NOT in the build phase
   const authSecretError = authEnvVars.error.errors.find(
     (e) => e.path.length > 0 && e.path[0] === 'AUTH_SECRET'
   );
-  if (authSecretError) {
+  if (authSecretError && process.env['NEXT_PHASE'] !== 'phase-production-build') {
     throw new Error(authSecretError.message);
   }
-  // For other errors, log but allow continuation (might be acceptable if unused providers are missing secrets)
+  // For other errors or during build, log but allow continuation
 }
 
 export const validatedAuthEnv = authEnvVars.success

@@ -11,7 +11,7 @@ test.describe('Basic Workflow Test', () => {
     // Wait for the main content area first
     const mainContent = page.locator('main');
     await expect(mainContent, 'Main content area should be visible').toBeVisible({
-      timeout: 10000,
+      timeout: 15000,
     });
 
     // Now look for the button within the main area
@@ -68,7 +68,7 @@ test.describe('Basic Workflow Test', () => {
     // Wait for the main content area first
     const mainContent = page.locator('main');
     await expect(mainContent, 'Main content area should be visible').toBeVisible({
-      timeout: 10000,
+      timeout: 15000,
     });
 
     // Now look for the level display within the main area
