@@ -6,10 +6,7 @@ import {
   DEFAULT_EMPTY_QUIZ_DATA,
 } from './exercise-helpers';
 import { saveExerciseToCache, getValidatedExerciseFromCache } from '@/lib/exercise-cache';
-import {
-  generateAndValidateExercise,
-  AIResponseProcessingError,
-} from '@/lib/ai/exercise-generator';
+import { generateAndValidateExercise } from '@/lib/ai/exercise-generator';
 import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 import type {
   ExerciseContent,
@@ -95,11 +92,9 @@ describe('Exercise Helper Functions', () => {
     });
 
     it('should return failure if generateAndValidateExercise throws an error', async () => {
-      const aiError = new AIResponseProcessingError('AI failed');
-      vi.mocked(generateAndValidateExercise).mockRejectedValue(aiError);
-
+      const error = new Error('AI failed');
+      vi.mocked(generateAndValidateExercise).mockRejectedValue(error);
       const result = await tryGenerateAndCacheExercise(mockParams, mockLanguage, mockUserId);
-
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.error).toContain('Error during AI generation/processing: AI failed');

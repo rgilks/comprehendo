@@ -100,7 +100,12 @@ describe('callGoogleAI', () => {
     const mockResponse = { text: undefined }; // Simulate missing text
     mockGenerateContent.mockResolvedValue(mockResponse);
     await expect(callGoogleAI('test prompt')).rejects.toThrow(
-      new AIResponseProcessingError('No content received from Google AI or failed to extract text.')
+      new AIResponseProcessingError(
+        'AI generation failed: No content received from Google AI or failed to extract text.',
+        new AIResponseProcessingError(
+          'No content received from Google AI or failed to extract text.'
+        )
+      )
     );
   });
 
@@ -109,24 +114,29 @@ describe('callGoogleAI', () => {
     mockGenerateContent.mockResolvedValue(mockResponse);
     await expect(callGoogleAI('test prompt')).rejects.toThrow(
       new AIResponseProcessingError(
-        'AI response received, but failed to extract valid JSON content.'
+        'AI generation failed: AI response received, but failed to extract valid JSON content.',
+        new AIResponseProcessingError(
+          'AI response received, but failed to extract valid JSON content.'
+        )
       )
     );
   });
 
   it('should throw AIResponseProcessingError if fenced content is not valid JSON', async () => {
-    const mockResponse = { text: '```json\ninvalid json here\n```' };
+    const mockResponse = { text: '```json\n{ bad json \n```' };
     mockGenerateContent.mockResolvedValue(mockResponse);
-    // Expect the outer wrapped error with the SyntaxError as the originalError
-    await expect(callGoogleAI('test prompt')).rejects.toSatisfy((error: unknown) => {
+    try {
+      await callGoogleAI('test prompt');
+      throw new Error('Expected callGoogleAI to throw');
+    } catch (error) {
       expect(error).toBeInstanceOf(AIResponseProcessingError);
       if (error instanceof AIResponseProcessingError) {
-        expect(error.message).toBe('Failed to parse JSON from AI response.');
+        expect(error.message).toBe('AI generation failed: Failed to parse JSON from AI response.');
         expect(error.originalError).toBeInstanceOf(SyntaxError);
-        return true;
+        return;
       }
-      return false;
-    });
+      throw error; // Re-throw if it's not the expected error type
+    }
   });
 
   it('should throw AIResponseProcessingError if generateContent throws a generic error', async () => {
