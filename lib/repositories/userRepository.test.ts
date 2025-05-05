@@ -1,27 +1,27 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { type Account, type User } from 'next-auth';
 import { type AdapterUser } from 'next-auth/adapters';
 import { upsertUserOnSignIn, findUserByProvider } from './userRepository';
-import db from '../db'; // Import the actual db to spy on its methods
+import db from '../db'; // Import the actual db to mock it
 
-// Mock the db dependency structure
-vi.mock('../db', async (importOriginal) => {
-  const actualDb = await importOriginal<typeof import('../db')>();
-  return {
-    ...actualDb,
-    default: {
-      prepare: vi.fn(() => ({
-        // Mock prepare to return an object
-        run: vi.fn(), // with mockable run
-        get: vi.fn(), // and get methods
-      })),
-    },
+// Mock the db dependency
+vi.mock('../db', () => {
+  const mockDb = {
+    prepare: vi.fn(),
+    run: vi.fn(),
+    get: vi.fn(),
   };
+  // Make prepare chainable
+  mockDb.prepare.mockImplementation(() => mockDb);
+  return { default: mockDb };
 });
 
-// Define variables to hold the spy objects for run/get
-let mockRun: ReturnType<typeof vi.fn>;
-let mockGet: ReturnType<typeof vi.fn>;
+// Cast the mocked db for easier use
+const mockDb = db as unknown as {
+  prepare: Mock;
+  get: Mock;
+  run: Mock;
+};
 
 // Mock console methods
 const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -36,18 +36,10 @@ describe('userRepository', () => {
     consoleErrorSpy.mockClear();
     consoleLogSpy.mockClear();
 
-    // Create the mock statement object with mockable run/get methods
-    const mockStatement = {
-      run: vi.fn(),
-      get: vi.fn(),
-    };
-
-    // Assign the spies to our variables for use in expect() calls
-    mockRun = mockStatement.run;
-    mockGet = mockStatement.get;
-
-    // Ensure every call to db.prepare returns our mockStatement
-    (db.prepare as ReturnType<typeof vi.fn>).mockReturnValue(mockStatement);
+    // Reset mock implementations
+    mockDb.prepare.mockClear().mockImplementation(() => mockDb); // Ensure chaining is reset
+    mockDb.get.mockClear();
+    mockDb.run.mockClear();
   });
 
   afterEach(() => {
@@ -82,8 +74,8 @@ describe('userRepository', () => {
     it('should call db.prepare with the correct SQL and parameters for a new user', () => {
       upsertUserOnSignIn(mockUser, mockAccount);
 
-      expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO users'));
-      expect(mockRun).toHaveBeenCalledWith(
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO users'));
+      expect(mockDb.run).toHaveBeenCalledWith(
         mockUser.id,
         mockAccount.provider,
         mockUser.name,
@@ -103,7 +95,7 @@ describe('userRepository', () => {
       const userWithNulls: User = { id: 'user789', email: 'nonull@example.com' };
       upsertUserOnSignIn(userWithNulls, mockAccount);
 
-      expect(mockRun).toHaveBeenCalledWith(
+      expect(mockDb.run).toHaveBeenCalledWith(
         userWithNulls.id,
         mockAccount.provider,
         null,
@@ -118,7 +110,7 @@ describe('userRepository', () => {
 
     it('should work with AdapterUser type', () => {
       upsertUserOnSignIn(mockAdapterUser, mockAccount);
-      expect(mockRun).toHaveBeenCalledWith(
+      expect(mockDb.run).toHaveBeenCalledWith(
         mockAdapterUser.id,
         mockAccount.provider,
         null, // AdapterUser has no name
@@ -138,8 +130,8 @@ describe('userRepository', () => {
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         `[UserRepository] Missing user id or email for provider ${mockAccount.provider}. Skipping DB upsert.`
       );
-      expect(db.prepare).not.toHaveBeenCalled();
-      expect(mockRun).not.toHaveBeenCalled();
+      expect(mockDb.prepare).not.toHaveBeenCalled();
+      expect(mockDb.run).not.toHaveBeenCalled();
     });
 
     it('should log a warning and return if user email is missing', () => {
@@ -149,13 +141,13 @@ describe('userRepository', () => {
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         `[UserRepository] Missing user id or email for provider ${mockAccount.provider}. Skipping DB upsert.`
       );
-      expect(db.prepare).not.toHaveBeenCalled();
-      expect(mockRun).not.toHaveBeenCalled();
+      expect(mockDb.prepare).not.toHaveBeenCalled();
+      expect(mockDb.run).not.toHaveBeenCalled();
     });
 
     it('should catch and re-throw database errors', () => {
       const dbError = new Error('DB Connection Failed');
-      mockRun.mockImplementationOnce(() => {
+      mockDb.run.mockImplementationOnce(() => {
         throw dbError;
       });
 
@@ -175,30 +167,31 @@ describe('userRepository', () => {
 
     it('should return user id if user exists', () => {
       const expectedUserId = 12345;
-      mockGet.mockReturnValue({ id: expectedUserId });
+      mockDb.get.mockReturnValue({ id: expectedUserId });
 
       const result = findUserByProvider(providerId, provider);
 
-      expect(db.prepare).toHaveBeenCalledWith(
+      expect(mockDb.prepare).toHaveBeenCalledWith(
         'SELECT id FROM users WHERE provider_id = ? AND provider = ?'
       );
-      expect(mockGet).toHaveBeenCalledWith(providerId, provider);
+      expect(mockDb.get).toHaveBeenCalledWith(providerId, provider);
       expect(result).toEqual({ id: expectedUserId });
       expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
     it('should return null if user does not exist', () => {
-      mockGet.mockReturnValue(undefined);
+      mockDb.get.mockReturnValue(undefined);
 
       const result = findUserByProvider(providerId, provider);
 
       expect(result).toBeNull();
+      expect(mockDb.get).toHaveBeenCalledWith(providerId, provider); // Ensure get was still called
       expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
     it('should return null and log error if user record has invalid structure', () => {
       const invalidRecord = { someOtherField: 'value' };
-      mockGet.mockReturnValue(invalidRecord);
+      mockDb.get.mockReturnValue(invalidRecord);
 
       const result = findUserByProvider(providerId, provider);
 
@@ -211,7 +204,7 @@ describe('userRepository', () => {
 
     it('should catch and re-throw database errors', () => {
       const dbError = new Error('DB Query Failed');
-      mockGet.mockImplementationOnce(() => {
+      mockDb.get.mockImplementationOnce(() => {
         throw dbError;
       });
 

@@ -25,7 +25,8 @@ export const getAllTableNames = (): string[] => {
   } catch (error) {
     console.error('[AdminRepository] Error fetching table names:', error);
     // Re-throw or return empty array? Returning empty array for now.
-    return [];
+    // return [];
+    throw error; // Re-throw DB errors
   }
 };
 
@@ -38,14 +39,14 @@ export const getTableData = (
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit))); // Keep limit reasonable
   const offset = (safePage - 1) * safeLimit;
 
-  try {
-    // Basic security: Validate table name against known tables
-    const allowedTableNames = getAllTableNames(); // Call the exported function
-    if (!allowedTableNames.includes(tableName)) {
-      console.error(`[AdminRepository] Attempt to access disallowed table: ${tableName}`);
-      throw new Error('Invalid table name');
-    }
+  // Basic security: Validate table name against known tables first
+  const allowedTableNames = getAllTableNames(); // Call the exported function
+  if (!allowedTableNames.includes(tableName)) {
+    console.error(`[AdminRepository] Attempt to access disallowed table: ${tableName}`);
+    throw new Error('Invalid table name');
+  }
 
+  try {
     // Determine default ordering (can be refined)
     let orderByClause = 'ORDER BY ROWID DESC'; // Default safe ordering
     // Add specific default ordering for known tables if needed

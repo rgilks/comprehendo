@@ -221,6 +221,6 @@ export const countExercises = (
   } catch (error) {
     console.error('[QuizRepository] Error counting exercises:', error);
     // Return 0 or re-throw? Returning 0 for now.
-    return 0;
+    throw error; // Re-throw DB errors
   }
 };

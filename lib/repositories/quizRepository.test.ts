@@ -321,16 +321,15 @@ describe('QuizRepository Functions', () => {
       expect(result).toBe(0);
     });
 
-    it('should return 0 and log error if database query fails', () => {
+    it('should throw error if database query fails', () => {
       const dbError = new Error('DB Count Error');
       mockDb.get.mockImplementation(() => {
         throw dbError;
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = countExercises(pLang, qLang, level);
+      expect(() => countExercises(pLang, qLang, level)).toThrow(dbError);
 
-      expect(result).toBe(0);
       expect(errorSpy).toHaveBeenCalledWith('[QuizRepository] Error counting exercises:', dbError);
       errorSpy.mockRestore();
     });

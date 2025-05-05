@@ -65,17 +65,16 @@ describe('Admin Repository Functions', () => {
       expect(mockDb.all).toHaveBeenCalledTimes(1);
     });
 
-    it('should return an empty array if the database query fails', () => {
+    it('should throw an error if the database query fails', () => {
       const dbError = new Error('DB Error');
       mockDb.all.mockImplementation(() => {
         throw dbError;
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      // Call the standalone function
-      const tableNames = getAllTableNames();
+      // Call the standalone function and expect it to throw
+      expect(() => getAllTableNames()).toThrow(dbError);
 
-      expect(tableNames).toEqual([]);
       expect(errorSpy).toHaveBeenCalledWith(
         '[AdminRepository] Error fetching table names:',
         dbError
