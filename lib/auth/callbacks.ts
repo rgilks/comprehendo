@@ -1,11 +1,10 @@
 import { User, Account, Session } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { JWT } from 'next-auth/jwt';
-import db from '../db';
 import { validatedAuthEnv } from '../config/authEnv';
 import { upsertUserOnSignIn, findUserByProvider } from '../repositories/userRepository';
 
-interface UserWithEmail extends User {
+export interface UserWithEmail extends User {
   email?: string | null;
 }
 
@@ -16,44 +15,29 @@ export const signInCallback = ({
   user: User | AdapterUser;
   account: Account | null;
 }): boolean => {
-  try {
-    // Let upsertUserOnSignIn handle checks for valid user/account details
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (account && user) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (account && user) {
+    try {
+      // Rely solely on the repository function for upsert logic and error handling.
       upsertUserOnSignIn(user, account);
-    }
-    if (account && user.id && user.email) {
-      // Added checks for user.id and user.email
-      db.prepare(
-        `
-        INSERT INTO users (provider_id, provider, name, email, image, last_login, language)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-        ON CONFLICT(provider_id, provider)
-        DO UPDATE SET name = ?, email = ?, image = ?, last_login = CURRENT_TIMESTAMP
-      `
-      ).run(
-        user.id,
-        account.provider,
-        user.name || null,
-        user.email || null,
-        user.image || null,
-        'en', // Default language, consider making configurable
-        user.name || null,
-        user.email || null,
-        user.image || null
+      return true; // Sign-in allowed if upsert succeeds
+    } catch (error) {
+      console.error(
+        '[AUTH SignIn Callback] Error during sign in process (upsertUserOnSignIn failed):',
+        error
       );
-    } else if (account) {
-      console.warn(
-        `[AUTH SignIn Callback] Missing user id or email for provider ${account.provider}. Skipping DB upsert.`
-      );
+      // Prevent sign-in if the database operation fails
+      return false;
     }
-  } catch (error) {
-    console.error('[AUTH SignIn Callback] Error during sign in process:', error);
-    // If upsertUserOnSignIn throws, the error is caught here.
-    // Decide if sign-in should be prevented on DB error.
-    return false; // Prevent sign-in on DB error
+  } else {
+    // Log if essential account or user info is missing for the upsert operation.
+    // Depending on the provider flow, this might indicate an issue or be expected.
+    console.warn('[AUTH SignIn Callback] Missing account or user object. Skipping DB upsert.');
+    // Allow sign-in even if we skipped the DB operation?
+    // Or return false? Returning true for now, assuming sign-in should proceed.
+    return true;
   }
-  return true; // Allows sign-in even if DB operation fails
+  // Original direct DB logic removed.
 };
 
 export const jwtCallback = ({
@@ -82,13 +66,9 @@ export const jwtCallback = ({
       }
     } catch (error) {
       console.error('[AUTH JWT Callback] CRITICAL: Error resolving user DB ID for token:', error);
-      // Consider implications: Should JWT creation fail if DB lookup fails?
     }
 
-    // Use the pre-parsed admin emails array from validatedAuthEnv
-    // validatedAuthEnv is an object, ADMIN_EMAILS is string[] | undefined
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    const adminEmails = validatedAuthEnv.ADMIN_EMAILS ?? [];
+    const adminEmails = validatedAuthEnv.ADMIN_EMAILS;
     if (user.email && adminEmails.length > 0) {
       token.isAdmin = adminEmails.includes(user.email);
     } else {
