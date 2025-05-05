@@ -1,4 +1,28 @@
-import { z } from 'zod';
+import { z, ZodIssueCode } from 'zod';
+
+// Helper function to add issues for missing paired environment variables
+const checkPairedEnvVars = (
+  ctx: z.RefinementCtx,
+  id: string | undefined,
+  secret: string | undefined,
+  idName: string,
+  secretName: string
+) => {
+  if (id && !secret) {
+    ctx.addIssue({
+      code: ZodIssueCode.custom,
+      message: `${secretName} is required when ${idName} is set`,
+      path: [secretName],
+    });
+  }
+  if (!id && secret) {
+    ctx.addIssue({
+      code: ZodIssueCode.custom,
+      message: `${idName} is required when ${secretName} is set`,
+      path: [idName],
+    });
+  }
+};
 
 export const authEnvSchema = z
   .object({
@@ -24,68 +48,43 @@ export const authEnvSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.GITHUB_ID && !data.GITHUB_SECRET) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'GITHUB_SECRET is required when GITHUB_ID is set',
-        path: ['GITHUB_SECRET'],
-      });
-    }
-    if (!data.GITHUB_ID && data.GITHUB_SECRET) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'GITHUB_ID is required when GITHUB_SECRET is set',
-        path: ['GITHUB_ID'],
-      });
-    }
-    if (data.GOOGLE_CLIENT_ID && !data.GOOGLE_CLIENT_SECRET) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'GOOGLE_CLIENT_SECRET is required when GOOGLE_CLIENT_ID is set',
-        path: ['GOOGLE_CLIENT_SECRET'],
-      });
-    }
-    if (!data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_SECRET) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'GOOGLE_CLIENT_ID is required when GOOGLE_CLIENT_SECRET is set',
-        path: ['GOOGLE_CLIENT_ID'],
-      });
-    }
-    if (data.DISCORD_CLIENT_ID && !data.DISCORD_CLIENT_SECRET) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'DISCORD_CLIENT_SECRET is required when DISCORD_CLIENT_ID is set',
-        path: ['DISCORD_CLIENT_SECRET'],
-      });
-    }
-    if (!data.DISCORD_CLIENT_ID && data.DISCORD_CLIENT_SECRET) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'DISCORD_CLIENT_ID is required when DISCORD_CLIENT_SECRET is set',
-        path: ['DISCORD_CLIENT_ID'],
-      });
-    }
-    if (!data.NEXTAUTH_URL && data.NODE_ENV === 'production') {
-      console.warn('[NextAuth] NEXTAUTH_URL is not set, this might cause issues in production');
-    }
+    checkPairedEnvVars(ctx, data.GITHUB_ID, data.GITHUB_SECRET, 'GITHUB_ID', 'GITHUB_SECRET');
+    checkPairedEnvVars(
+      ctx,
+      data.GOOGLE_CLIENT_ID,
+      data.GOOGLE_CLIENT_SECRET,
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET'
+    );
+    checkPairedEnvVars(
+      ctx,
+      data.DISCORD_CLIENT_ID,
+      data.DISCORD_CLIENT_SECRET,
+      'DISCORD_CLIENT_ID',
+      'DISCORD_CLIENT_SECRET'
+    );
   });
 
 const authEnvVars = authEnvSchema.safeParse(process.env);
 
 if (!authEnvVars.success) {
-  console.error(
-    '❌ Invalid Auth environment variables:',
-    JSON.stringify(authEnvVars.error.format(), null, 4)
-  );
-  // Only throw if AUTH_SECRET is missing AND we are NOT in the build phase
-  const authSecretError = authEnvVars.error.errors.find(
-    (e) => e.path.length > 0 && e.path[0] === 'AUTH_SECRET'
-  );
-  if (authSecretError && process.env['NEXT_PHASE'] !== 'phase-production-build') {
-    throw new Error(authSecretError.message);
+  const formattedErrors = JSON.stringify(authEnvVars.error.format(), null, 4);
+  console.error('❌ Invalid Auth environment variables:', formattedErrors);
+
+  // Throw an error if validation fails outside the build phase
+  if (process.env['NEXT_PHASE'] !== 'phase-production-build') {
+    throw new Error('Invalid Auth environment variables: \n' + formattedErrors);
   }
-  // For other errors or during build, log but allow continuation
+  // During build, log errors but allow continuation (e.g., AUTH_SECRET might be added later)
+}
+
+// Add warning here, after successful validation
+if (
+  authEnvVars.success &&
+  !authEnvVars.data.NEXTAUTH_URL &&
+  authEnvVars.data.NODE_ENV === 'production'
+) {
+  console.warn('[NextAuth] NEXTAUTH_URL is not set, this might cause issues in production');
 }
 
 export const validatedAuthEnv = authEnvVars.success
