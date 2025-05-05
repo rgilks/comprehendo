@@ -48,4 +48,42 @@ export const createFeedback = (feedbackData: FeedbackInput): number | bigint => 
   }
 };
 
-// Add other methods if needed, e.g., findByUserId, findByQuizId, etc.
+export const findFeedbackByUserIdAndQuizId = (
+  userId: number,
+  quizId: number
+): FeedbackInput | null => {
+  try {
+    const row = db
+      .prepare(
+        'SELECT quiz_id, user_id, is_good, user_answer, is_correct FROM question_feedback WHERE user_id = ? AND quiz_id = ?'
+      )
+      .get(userId, quizId) as
+      | {
+          quiz_id: number;
+          user_id: number;
+          is_good: number;
+          user_answer: string | null;
+          is_correct: number | null;
+        }
+      | undefined;
+
+    if (!row) {
+      return null;
+    }
+
+    // Convert DB values (0/1) back to booleans for the application layer
+    return {
+      quiz_id: row.quiz_id,
+      user_id: row.user_id,
+      is_good: Boolean(row.is_good),
+      user_answer: row.user_answer ?? undefined, // Convert null back to undefined if needed by schema
+      is_correct: row.is_correct === null ? undefined : Boolean(row.is_correct),
+    };
+  } catch (error) {
+    console.error(
+      `[FeedbackRepository] Error finding feedback for user ${userId}, quiz ${quizId}:`,
+      error
+    );
+    throw error; // Re-throw DB errors
+  }
+};

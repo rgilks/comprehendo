@@ -1,8 +1,8 @@
 import { expect } from 'vitest';
 import { getTableNames, getTableData } from './actions';
-import db from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { Mock } from 'vitest';
+import * as adminRepository from '@/lib/repositories/adminRepository';
 
 vi.mock('next-auth', () => ({
   getServerSession: vi.fn(),
@@ -21,16 +21,9 @@ vi.mock('@/lib/authOptions', () => ({
   authOptions: {},
 }));
 
-vi.mock('@/lib/db', () => ({
-  __esModule: true,
-  default: {
-    prepare: vi.fn(() => ({
-      all: vi.fn(),
-      get: vi.fn(),
-      run: vi.fn(),
-    })),
-    transaction: vi.fn((cb) => cb()),
-  },
+vi.mock('@/lib/repositories/adminRepository', () => ({
+  getAllTableNames: vi.fn(),
+  getTableData: vi.fn(),
 }));
 
 const originalEnv = process.env;
@@ -40,15 +33,8 @@ describe('Admin actions security', () => {
     vi.clearAllMocks();
     process.env = { ...originalEnv, ADMIN_EMAILS: 'admin@example.com,another@example.com' };
 
-    const mockAll = vi.fn().mockReturnValue([{ name: 'users' }, { name: 'logs' }]);
-    const mockGet = vi.fn().mockReturnValue({ totalRows: 10 });
-    const mockRun = vi.fn();
-
-    (db.prepare as Mock).mockImplementation(() => ({
-      all: mockAll,
-      get: mockGet,
-      run: mockRun,
-    }));
+    // Default mocks for repository functions
+    vi.mocked(adminRepository.getAllTableNames).mockReturnValue(['users', 'logs']);
   });
 
   afterEach(() => {
@@ -82,6 +68,7 @@ describe('Admin actions security', () => {
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
+      vi.mocked(adminRepository.getAllTableNames).mockReturnValue(['table1', 'table2']);
       const result = await getTableNames();
       expect(result).toEqual({ data: expect.any(Array) });
     });
@@ -110,17 +97,13 @@ describe('Admin actions security', () => {
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
 
-      const mockPaginatedData = [{ id: 1, name: 'User 1' }];
-      (db.transaction as Mock).mockImplementation(() => {
-        return () => {
-          return {
-            data: mockPaginatedData,
-            totalRows: 10,
-            page: 1,
-            limit: 10,
-          };
-        };
-      });
+      const mockPaginatedData: adminRepository.PaginatedTableData = {
+        data: [{ id: 1, name: 'User 1' }],
+        totalRows: 10,
+        page: 1,
+        limit: 10,
+      };
+      vi.mocked(adminRepository.getTableData).mockReturnValue(mockPaginatedData);
 
       const result = await getTableData('users');
       expect(result).toHaveProperty('data');

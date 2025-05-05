@@ -95,3 +95,18 @@ export const findUserByProvider = (
     );
   }
 };
+
+/**
+ * Finds a user's internal database ID based on their OAuth provider and provider-specific ID.
+ */
+export const findUserIdByProvider = (providerId: string, provider: string): number | undefined => {
+  try {
+    const result = db
+      .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
+      .get(providerId, provider) as { id: number } | undefined;
+    return result?.id;
+  } catch (error) {
+    console.error('[UserRepo] Error finding user ID by provider:', error);
+    return undefined;
+  }
+};
