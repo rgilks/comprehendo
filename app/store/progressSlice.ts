@@ -1,16 +1,16 @@
 import type { StateCreator } from 'zustand';
-import { getProgress } from '@/app/actions/userProgress';
+import { getProgress } from '@/app/actions/progress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
-import { GetProgressResultSchema } from '@/lib/domain/userProgress';
+import { GetProgressResultSchema } from '@/lib/domain/progress';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
 
 export interface ProgressSlice extends BaseSlice {
   isProgressLoading: boolean;
   userStreak: number | null;
-  fetchUserProgress: () => Promise<void>;
+  fetchProgress: () => Promise<void>;
 }
 
 export const createProgressSlice: StateCreator<
@@ -23,7 +23,7 @@ export const createProgressSlice: StateCreator<
   isProgressLoading: false,
   userStreak: null,
 
-  fetchUserProgress: async () => {
+  fetchProgress: async () => {
     set((state) => {
       state.isProgressLoading = true;
     });

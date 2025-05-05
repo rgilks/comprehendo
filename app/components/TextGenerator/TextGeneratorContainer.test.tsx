@@ -25,7 +25,7 @@ describe('TextGeneratorContainer', () => {
       quizData: null,
       showContent: false,
       isAnswered: false,
-      fetchUserProgress: vi.fn(),
+      fetchProgress: vi.fn(),
     });
   });
 
@@ -44,7 +44,7 @@ describe('TextGeneratorContainer', () => {
       quizData: null,
       showContent: false,
       isAnswered: false,
-      fetchUserProgress: vi.fn(),
+      fetchProgress: vi.fn(),
     });
     render(<TextGeneratorContainer />);
     expect(screen.getByText('QuizSkeleton')).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe('TextGeneratorContainer', () => {
       quizData: { id: 1 },
       showContent: true,
       isAnswered: false,
-      fetchUserProgress: vi.fn(),
+      fetchProgress: vi.fn(),
     });
     render(<TextGeneratorContainer />);
     expect(screen.getByText('ReadingPassage')).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('TextGeneratorContainer', () => {
       quizData: { id: 1 },
       showContent: false,
       isAnswered: true,
-      fetchUserProgress: vi.fn(),
+      fetchProgress: vi.fn(),
     });
     render(<TextGeneratorContainer />);
     expect(screen.getByText('ProgressTracker')).toBeInTheDocument();
@@ -81,23 +81,23 @@ describe('TextGeneratorContainer', () => {
       quizData: null,
       showContent: false,
       isAnswered: false,
-      fetchUserProgress: vi.fn(),
+      fetchProgress: vi.fn(),
     });
     render(<TextGeneratorContainer />);
     expect(screen.getByText('ProgressTracker')).toBeInTheDocument();
   });
 
   it('fetches user progress when authenticated', () => {
-    const fetchUserProgress = vi.fn();
+    const fetchProgress = vi.fn();
     (useSession as any).mockReturnValue({ status: 'authenticated' });
     (useTextGeneratorStore as any).mockReturnValue({
       loading: false,
       quizData: null,
       showContent: false,
       isAnswered: false,
-      fetchUserProgress,
+      fetchProgress,
     });
     render(<TextGeneratorContainer />);
-    expect(fetchUserProgress).toHaveBeenCalled();
+    expect(fetchProgress).toHaveBeenCalled();
   });
 });

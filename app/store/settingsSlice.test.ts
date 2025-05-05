@@ -55,14 +55,14 @@ describe('settingsSlice', () => {
       generatedPassageLanguage: 'fr',
     });
     const stopPassageSpeech = vi.fn();
-    const fetchUserProgress = vi.fn();
-    useTextGeneratorStore.setState({ stopPassageSpeech, fetchUserProgress });
+    const fetchProgress = vi.fn();
+    useTextGeneratorStore.setState({ stopPassageSpeech, fetchProgress });
     act(() => {
       useTextGeneratorStore.getState().setPassageLanguage('es');
     });
     expect(useTextGeneratorStore.getState().passageLanguage).toBe('es');
     expect(useTextGeneratorStore.getState().generatedPassageLanguage).toBeNull();
     expect(stopPassageSpeech).toHaveBeenCalled();
-    expect(fetchUserProgress).toHaveBeenCalled();
+    expect(fetchProgress).toHaveBeenCalled();
   });
 });

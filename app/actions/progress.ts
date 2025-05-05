@@ -3,7 +3,7 @@
 import db from '@/lib/db';
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
-import { calculateAndUpdateProgress } from '../../lib/userProgressUtils';
+import { calculateAndUpdateProgress } from '../../lib/progressUtils';
 import { getAuthenticatedUserId } from './authUtils';
 
 const DEFAULT_CEFR_LEVEL = 'A1';
@@ -55,7 +55,7 @@ const QuizContentSchema = z.object({
 });
 
 // Schema for parsing the row from the user_language_progress table
-const UserProgressSchema = z.object({
+const ProgressSchema = z.object({
   cefr_level: z.string(),
   correct_streak: z.number().int(),
 });
@@ -180,7 +180,7 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
 };
 
 // Helper function to update user progress and modify the response payload
-const updateUserProgressAndGetResponse = (
+const updateProgressAndGetResponse = (
   userId: number,
   language: string,
   isCorrect: boolean,
@@ -256,7 +256,7 @@ export const submitAnswer = async (
 
   // Attempt to update progress only for authenticated users
   if (userId !== null) {
-    responsePayload = updateUserProgressAndGetResponse(userId, learn, isCorrect, responsePayload);
+    responsePayload = updateProgressAndGetResponse(userId, learn, isCorrect, responsePayload);
   } else {
     // Anonymous user defaults are set during initialization
   }
@@ -296,7 +296,7 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
       )
       .get(userId, normalizedLanguage);
 
-    const parsedProgress = UserProgressSchema.safeParse(progressRecord);
+    const parsedProgress = ProgressSchema.safeParse(progressRecord);
 
     if (!parsedProgress.success) {
       // Either no record exists, or the record is malformed. Treat as no progress.

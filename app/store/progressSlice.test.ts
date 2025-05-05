@@ -14,7 +14,7 @@ const { mockGetSession, mockGetProgress } = vi.hoisted(() => {
 vi.mock('next-auth/react', () => ({
   getSession: mockGetSession,
 }));
-vi.mock('@/app/actions/userProgress', () => ({
+vi.mock('@/app/actions/progress', () => ({
   getProgress: mockGetProgress,
 }));
 
@@ -22,7 +22,7 @@ vi.mock('@/app/actions/userProgress', () => ({
 import { createProgressSlice } from './progressSlice';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
-import type { GetProgressResult } from '@/lib/domain/userProgress';
+import type { GetProgressResult } from '@/lib/domain/progress';
 
 // Helper to create a store instance for testing
 const createTestStore = (
@@ -44,16 +44,16 @@ const createTestStore = (
         // From ProgressSlice (state)
         isProgressLoading: progressSlice.isProgressLoading,
         userStreak: progressSlice.userStreak,
-        // From SettingsSlice (state needed by fetchUserProgress)
+        // From SettingsSlice (state needed by fetchProgress)
         passageLanguage: 'en', // Default needed for get()
-        cefrLevel: 'A1', // Default needed & modified by fetchUserProgress
+        cefrLevel: 'A1', // Default needed & modified by fetchProgress
 
         // --- Methods used/modified by ProgressSlice ---
         // From BaseSlice (methods)
         setLoading: baseSlice.setLoading,
         setError: baseSlice.setError,
         // From ProgressSlice (methods)
-        fetchUserProgress: progressSlice.fetchUserProgress,
+        fetchProgress: progressSlice.fetchProgress,
 
         // --- Mocks for potentially called methods from other slices ---
         setCefrLevel: vi.fn(), // Mocked as ProgressSlice calls this via set()
@@ -124,7 +124,7 @@ describe('ProgressSlice', () => {
     expect(userStreak).toBeNull();
   });
 
-  describe('fetchUserProgress', () => {
+  describe('fetchProgress', () => {
     const userId = 123;
     const language = 'en';
 
@@ -136,7 +136,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockResolvedValue({ streak: 5, currentLevel: 'B1' });
 
-      const promise = store.getState().fetchUserProgress();
+      const promise = store.getState().fetchProgress();
       expect(store.getState().isProgressLoading).toBe(true);
       await promise;
       expect(store.getState().isProgressLoading).toBe(false);
@@ -146,7 +146,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue(null);
       store.setState({ userStreak: 5 }); // Set a pre-existing streak
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { isProgressLoading, userStreak } = store.getState();
       expect(isProgressLoading).toBe(false);
@@ -159,7 +159,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockResolvedValue(progressData);
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { userStreak, cefrLevel, isProgressLoading, error } = store.getState();
       expect(isProgressLoading).toBe(false);
@@ -174,7 +174,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockResolvedValue(progressData);
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { userStreak, cefrLevel } = store.getState();
       expect(userStreak).toBe(0);
@@ -188,7 +188,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockResolvedValue(progressData);
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { userStreak, cefrLevel } = store.getState();
       expect(userStreak).toBe(3);
@@ -201,7 +201,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockResolvedValue(progressData);
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { userStreak, isProgressLoading, error, showError } = store.getState();
       expect(isProgressLoading).toBe(false);
@@ -215,7 +215,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockResolvedValue(invalidProgressData as any);
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { userStreak, isProgressLoading, error, showError } = store.getState();
       expect(isProgressLoading).toBe(false);
@@ -229,7 +229,7 @@ describe('ProgressSlice', () => {
       mockGetSession.mockResolvedValue({ user: { dbId: userId } } as any);
       mockGetProgress.mockRejectedValue(new Error(errorMessage));
 
-      await store.getState().fetchUserProgress();
+      await store.getState().fetchProgress();
 
       const { userStreak, isProgressLoading, error, showError } = store.getState();
       expect(isProgressLoading).toBe(false);

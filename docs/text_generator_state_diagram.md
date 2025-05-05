@@ -6,7 +6,7 @@ stateDiagram-v2
     AuthCheck --> Idle : Not Authenticated / Auth Check Complete
 
     FetchingProgress : isProgressLoading = true
-    FetchingProgress --> Idle : fetchUserProgress() completes (Success/Error)
+    FetchingProgress --> Idle : fetchProgress() completes (Success/Error)
 
     Idle : Base state, selectors active
     Idle --> LoadingGeneration : generateText() triggered (e.g., button click)
@@ -48,5 +48,5 @@ stateDiagram-v2
     %% - quizSlice: quizData, currentQuizId, selectedAnswer, isAnswered, feedback*, generateText(), handleAnswerSelect(), loadNextQuiz(), nextQuizAvailable
     %% - audioSlice: isSpeakingPassage, isPaused, currentWordIndex, handlePlayPause(), handleStop(), speakText()
     %% - settingsSlice: passageLanguage, cefrLevel (influence generateText params)
-    %% - progressSlice: isProgressLoading, userStreak, fetchUserProgress()
+    %% - progressSlice: isProgressLoading, userStreak, fetchProgress()
 ```

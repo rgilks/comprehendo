@@ -8,9 +8,9 @@ import type { UISlice } from './uiSlice';
 import type { SettingsSlice } from './settingsSlice';
 import type { PartialQuizData } from '@/lib/domain/schemas';
 import { generateExerciseResponse } from '@/app/actions/exercise';
-import { submitAnswer, submitQuestionFeedback } from '@/app/actions/userProgress';
+import { submitAnswer, submitQuestionFeedback } from '@/app/actions/progress';
 
-vi.mock('@/app/actions/userProgress', () => ({
+vi.mock('@/app/actions/progress', () => ({
   submitAnswer: vi.fn(),
   submitQuestionFeedback: vi.fn(),
 }));
@@ -72,7 +72,7 @@ const mockOtherStateAndFunctions = {
   isSpeaking: false,
   userStreak: 0,
   setUserStreak: vi.fn(),
-  fetchUserProgress: vi.fn(),
+  fetchProgress: vi.fn(),
   textSettings: {
     isPassageVisible: true,
     fontScale: 1,
@@ -106,7 +106,7 @@ const createTestStore = () =>
         generateText: quizSliceInstance.generateText,
         resetQuizWithNewData: quizSliceInstance.resetQuizWithNewData,
         resetQuizState: quizSliceInstance.resetQuizState,
-        fetchUserProgress: mockOtherStateAndFunctions.fetchUserProgress,
+        fetchProgress: mockOtherStateAndFunctions.fetchProgress,
         updateAvailableVoices: mockOtherStateAndFunctions.updateAvailableVoices,
       };
       return combinedState as unknown as TextGeneratorState;

@@ -10,7 +10,7 @@ export const calculateAndUpdateProgress = (
   const normalizedLanguage = language.toLowerCase().slice(0, 2);
 
   try {
-    const userProgress = db
+    const progress = db
       .prepare(
         'SELECT cefr_level, correct_streak FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       )
@@ -21,7 +21,7 @@ export const calculateAndUpdateProgress = (
     let current_cefr_level: string;
     let correct_streak: number;
 
-    if (!userProgress) {
+    if (!progress) {
       db.prepare('INSERT INTO user_language_progress (user_id, language_code) VALUES (?, ?)').run(
         userId,
         normalizedLanguage
@@ -29,8 +29,8 @@ export const calculateAndUpdateProgress = (
       current_cefr_level = 'A1';
       correct_streak = 0;
     } else {
-      current_cefr_level = userProgress.cefr_level;
-      correct_streak = userProgress.correct_streak;
+      current_cefr_level = progress.cefr_level;
+      correct_streak = progress.correct_streak;
     }
 
     let leveledUp = false;

@@ -4,12 +4,12 @@ import {
   submitAnswer,
   getProgress,
   submitQuestionFeedback,
-} from '@/app/actions/userProgress';
-import { calculateAndUpdateProgress } from '@/lib/userProgressUtils';
+} from '@/app/actions/progress';
+import { calculateAndUpdateProgress } from '@/lib/progressUtils';
 import { getAuthenticatedUserId } from '@/app/actions/authUtils';
 import db from '@/lib/db';
 
-vi.mock('@/lib/userProgressUtils');
+vi.mock('@/lib/progressUtils');
 vi.mock('@/app/actions/authUtils');
 
 // vi.mock factory now returns a new mock statement each time prepare is called

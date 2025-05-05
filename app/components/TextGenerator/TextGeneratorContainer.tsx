@@ -16,7 +16,7 @@ import Generator from './Generator';
 const TextGeneratorContainer = () => {
   const { language: contextLanguage } = useLanguage();
   const { status } = useSession();
-  const { loading, quizData, showContent, isAnswered, fetchUserProgress } = useTextGeneratorStore();
+  const { loading, quizData, showContent, isAnswered, fetchProgress } = useTextGeneratorStore();
 
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const generatedContentRef = useRef<HTMLDivElement>(null);
@@ -38,11 +38,11 @@ const TextGeneratorContainer = () => {
     }
 
     if (status === 'authenticated') {
-      void fetchUserProgress();
+      void fetchProgress();
     }
 
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
-  }, [status, fetchUserProgress, contextLanguage]);
+  }, [status, fetchProgress, contextLanguage]);
 
   return (
     <div
