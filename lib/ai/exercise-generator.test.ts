@@ -1,18 +1,19 @@
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type MockedFunction, afterEach } from 'vitest';
 import { generateAndValidateExercise } from './exercise-generator';
 import { QuizDataSchema, type QuizData } from '@/lib/domain/schemas';
 import { generateExercisePrompt } from '@/lib/ai/prompts/exercise-prompt';
 import { ExerciseGenerationParamsSchema, type ExerciseGenerationParams } from '@/lib/domain/ai';
+import * as GoogleApiModule from '@/lib/ai/google-ai-api';
 
 // Mock the imported functions
 vi.mock('@/lib/ai/prompts/exercise-prompt');
 
-// Explicitly mock ONLY callGoogleAI within the module factory
-vi.mock('./exercise-generator', async (importOriginal) => {
-  const original = await importOriginal<typeof import('./exercise-generator')>();
+// Mock the google-ai-api module directly
+vi.mock('@/lib/ai/google-ai-api', async (importOriginal) => {
+  const original = await importOriginal<typeof GoogleApiModule>();
   return {
     ...original, // Keep other exports
-    callGoogleAI: vi.fn(), // Replace callGoogleAI with a mock function
+    callGoogleAI: vi.fn(), // Mock only callGoogleAI
   };
 });
 
@@ -34,12 +35,15 @@ const mockedGenerateExercisePrompt = generateExercisePrompt as MockedFunction<
   typeof generateExercisePrompt
 >;
 
-// Spies for Zod methods - declared but setup in beforeEach/tests
-let mockExerciseParamsParseSpy: vi.SpyInstance;
-let mockQuizDataSafeParseSpy: vi.SpyInstance;
+// Import the mocked function from the mocked module
+import { callGoogleAI } from '@/lib/ai/google-ai-api';
 
-// Use the mocked callGoogleAI via the alias
-const mockCallGoogleAI = vi.fn();
+const mockedCallGoogleAI = callGoogleAI as MockedFunction<typeof GoogleApiModule.callGoogleAI>;
+
+// Spies for Zod methods - declared but setup in beforeEach/tests
+let mockExerciseParamsParseSpy: any;
+
+let mockQuizDataSafeParseSpy: any;
 
 // Define valid parameters for testing generateAndValidateExercise
 const validParams: ExerciseGenerationParams = {
@@ -86,8 +90,8 @@ describe('AI Exercise Generation', () => {
       vi.resetAllMocks();
       mockedGenerateExercisePrompt.mockReturnValue('mock prompt');
 
-      // Set the return value for the mocked callGoogleAI
-      mockCallGoogleAI.mockResolvedValue(JSON.stringify(validAiResponseJson));
+      // Set the return value on the mocked function from google-ai-api
+      mockedCallGoogleAI.mockResolvedValue(JSON.stringify(validAiResponseJson));
 
       // Setup spies on the actual schema methods
       mockExerciseParamsParseSpy = vi.spyOn(ExerciseGenerationParamsSchema, 'parse');
@@ -105,7 +109,8 @@ describe('AI Exercise Generation', () => {
       // mockExerciseParamsParse.mockImplementation(ExerciseGenerationParamsSchema.parse);
       expect(mockExerciseParamsParseSpy).toHaveBeenCalledWith(validParams);
       expect(mockedGenerateExercisePrompt).toHaveBeenCalledWith(validParams);
-      expect(mockCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      // Use the imported mocked function for assertions
+      expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
       // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
       expect(mockQuizDataSafeParseSpy).toHaveBeenCalledWith(validAiResponseJson);
       expect(result).toEqual(validAiResponseJson);
@@ -121,54 +126,50 @@ describe('AI Exercise Generation', () => {
       // mockExerciseParamsParse.mockImplementation(ExerciseGenerationParamsSchema.parse);
       expect(mockExerciseParamsParseSpy).toHaveBeenCalledWith(invalidParams);
       expect(mockedGenerateExercisePrompt).not.toHaveBeenCalled();
-      expect(mockCallGoogleAI).not.toHaveBeenCalled();
+      // Use the imported mocked function for assertions
+      expect(mockedCallGoogleAI).not.toHaveBeenCalled();
       // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
       expect(mockQuizDataSafeParseSpy).not.toHaveBeenCalled();
     });
 
     it('should throw AIResponseProcessingError if AI response is not valid JSON', async () => {
       const invalidJsonResponse = 'not json{';
-      mockCallGoogleAI.mockResolvedValue(invalidJsonResponse);
+      // Update the mock implementation directly
+      mockedCallGoogleAI.mockResolvedValue(invalidJsonResponse);
 
-      // Check error message text
       await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
         /Failed to parse AI JSON response/
       );
-      // Check original error message is included if possible (depends on actual error thrown)
-      // await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
-      //     expect.objectContaining({ message: expect.stringMatching(/Failed to parse AI JSON/) })
-      // );
 
-      expect(mockCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      // Use the imported mocked function for assertions
+      expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
       expect(mockQuizDataSafeParseSpy).not.toHaveBeenCalled();
     });
 
     it('should throw AIResponseProcessingError if AI response fails Zod validation', async () => {
       const invalidDataResponse = { ...validAiResponseJson, question: undefined };
-      mockCallGoogleAI.mockResolvedValue(JSON.stringify(invalidDataResponse));
+      // Update the mock implementation directly
+      mockedCallGoogleAI.mockResolvedValue(JSON.stringify(invalidDataResponse));
 
-      // Check error message text
       await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
         /AI response failed validation/
       );
-      // await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
-      //     expect.objectContaining({ message: expect.stringMatching(/AI response failed validation/) })
-      // );
 
-      expect(mockCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      // Use the imported mocked function for assertions
+      expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
       expect(mockQuizDataSafeParseSpy).toHaveBeenCalledWith(invalidDataResponse);
     });
 
     it('should handle AI providing undefined topic by setting it to null', async () => {
       const responseWithUndefinedTopic = { ...validAiResponseJson, topic: undefined };
-      // Update the mock's implementation for this test
-      mockCallGoogleAI.mockResolvedValue(JSON.stringify(responseWithUndefinedTopic));
+      // Update the mock implementation directly
+      mockedCallGoogleAI.mockResolvedValue(JSON.stringify(responseWithUndefinedTopic));
 
       const result = await generateAndValidateExercise(validParams);
 
-      // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
+      expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
       expect(mockQuizDataSafeParseSpy).toHaveBeenCalledWith(responseWithUndefinedTopic);
-      expect(result).toEqual({ ...validAiResponseJson, topic: null }); // Expect topic to be null
+      expect(result).toEqual({ ...validAiResponseJson, topic: null });
     });
   });
 });
