@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import db from '@/lib/db'; // Mock this
-import {
-  createQuestionFeedback, // Import the standalone function
-  type QuestionFeedbackInput,
-} from './questionFeedbackRepository';
+import db from '@/lib/db';
+import { createFeedback, type FeedbackInput } from './feedbackRepository';
 
-// Mock the db dependency
 vi.mock('@/lib/db', () => {
   const mockDb = {
     prepare: vi.fn(),
@@ -20,15 +16,14 @@ const mockDb = db as unknown as {
   run: Mock;
 };
 
-describe('QuestionFeedbackRepository', () => {
+describe('FeedbackRepository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mock for successful run
     mockDb.run.mockReset().mockReturnValue({ changes: 1, lastInsertRowid: 50 });
   });
 
-  describe('createQuestionFeedback', () => {
-    const validInput: QuestionFeedbackInput = {
+  describe('createFeedback', () => {
+    const validInput: FeedbackInput = {
       quiz_id: 101,
       user_id: 202,
       is_good: true,
@@ -38,7 +33,7 @@ describe('QuestionFeedbackRepository', () => {
 
     it('should insert feedback with valid data and return lastInsertRowid', () => {
       const expectedRowId = 50;
-      const result = createQuestionFeedback(validInput);
+      const result = createFeedback(validInput);
 
       expect(result).toBe(expectedRowId);
       expect(mockDb.prepare).toHaveBeenCalledWith(
@@ -47,28 +42,26 @@ describe('QuestionFeedbackRepository', () => {
       expect(mockDb.run).toHaveBeenCalledWith(
         validInput.quiz_id,
         validInput.user_id,
-        1, // is_good true -> 1
+        1,
         validInput.user_answer,
-        0 // is_correct false -> 0
+        0
       );
     });
 
     it('should handle optional fields being undefined', () => {
-      const minimalInput: QuestionFeedbackInput = {
+      const minimalInput: FeedbackInput = {
         quiz_id: 102,
         user_id: 203,
         is_good: false,
-        // user_answer omitted
-        // is_correct omitted
       };
-      createQuestionFeedback(minimalInput);
+      createFeedback(minimalInput);
 
       expect(mockDb.run).toHaveBeenCalledWith(
         minimalInput.quiz_id,
         minimalInput.user_id,
-        0, // is_good false -> 0
-        null, // user_answer undefined -> null
-        null // is_correct undefined -> null
+        0,
+        null,
+        null
       );
     });
 
@@ -80,13 +73,11 @@ describe('QuestionFeedbackRepository', () => {
       } as any;
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => createQuestionFeedback(invalidInput)).toThrow(
-        /Invalid feedback data:/ // Check for the specific error message prefix
-      );
+      expect(() => createFeedback(invalidInput)).toThrow(/Invalid feedback data:/);
       expect(mockDb.prepare).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalledWith(
-        '[QuestionFeedbackRepository] Invalid input data for create:',
-        expect.anything() // Zod error object
+        '[FeedbackRepository] Invalid input data for create:',
+        expect.anything()
       );
       errorSpy.mockRestore();
     });
@@ -98,11 +89,11 @@ describe('QuestionFeedbackRepository', () => {
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      expect(() => createQuestionFeedback(validInput)).toThrow(dbError);
+      expect(() => createFeedback(validInput)).toThrow(dbError);
       expect(mockDb.prepare).toHaveBeenCalledTimes(1);
       expect(mockDb.run).toHaveBeenCalledTimes(1);
       expect(errorSpy).toHaveBeenCalledWith(
-        '[QuestionFeedbackRepository] Error creating question feedback:',
+        '[FeedbackRepository] Error creating question feedback:',
         dbError
       );
       errorSpy.mockRestore();

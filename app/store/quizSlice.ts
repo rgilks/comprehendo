@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { submitAnswer, submitQuestionFeedback } from '@/app/actions/progress';
+import { submitAnswer, submitFeedback } from '@/app/actions/progress';
 import { generateExerciseResponse } from '@/app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
@@ -395,7 +395,7 @@ export const createQuizSlice: StateCreator<
         currentLevel: cefrLevel,
       };
 
-      const result = await submitQuestionFeedback(payload);
+      const result = await submitFeedback(payload);
 
       if (!result.success) {
         const errorMessage = result.error || 'Failed to submit feedback via API.';

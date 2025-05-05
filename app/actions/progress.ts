@@ -342,7 +342,7 @@ export interface SubmitFeedbackResponse {
   cached?: boolean;
 }
 
-export const submitQuestionFeedback = async (
+export const submitFeedback = async (
   params: SubmitFeedbackParams
 ): Promise<SubmitFeedbackResponse> => {
   const userId = await getAuthenticatedUserId();

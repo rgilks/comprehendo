@@ -8,11 +8,11 @@ import type { UISlice } from './uiSlice';
 import type { SettingsSlice } from './settingsSlice';
 import type { PartialQuizData } from '@/lib/domain/schemas';
 import { generateExerciseResponse } from '@/app/actions/exercise';
-import { submitAnswer, submitQuestionFeedback } from '@/app/actions/progress';
+import { submitAnswer, submitFeedback } from '@/app/actions/progress';
 
 vi.mock('@/app/actions/progress', () => ({
   submitAnswer: vi.fn(),
-  submitQuestionFeedback: vi.fn(),
+  submitFeedback: vi.fn(),
 }));
 vi.mock('@/app/actions/exercise', () => ({
   generateExerciseResponse: vi.fn(),
@@ -122,7 +122,7 @@ describe('quizSlice', () => {
     mockOtherStateAndFunctions.stopPassageSpeech.mockClear();
     vi.mocked(generateExerciseResponse).mockClear();
     vi.mocked(submitAnswer).mockClear();
-    vi.mocked(submitQuestionFeedback).mockClear();
+    vi.mocked(submitFeedback).mockClear();
   });
 
   afterEach(() => {
@@ -666,7 +666,7 @@ describe('quizSlice', () => {
     });
 
     it.skip('should submit feedback, set feedbackSubmitted, and load next quiz if available', async () => {
-      vi.mocked(submitQuestionFeedback).mockResolvedValue({ success: true });
+      vi.mocked(submitFeedback).mockResolvedValue({ success: true });
       store.setState({ nextQuizAvailable: nextQuizInfo });
       const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
 
@@ -675,7 +675,7 @@ describe('quizSlice', () => {
       expect(store.getState().loading).toBe(false);
       expect(store.getState().error).toBeNull();
       expect(store.getState().feedbackSubmitted).toBe(true);
-      expect(submitQuestionFeedback).toHaveBeenCalledWith({
+      expect(submitFeedback).toHaveBeenCalledWith({
         quizId: 1,
         is_good: 1,
         userAnswer: 'A',
@@ -688,7 +688,7 @@ describe('quizSlice', () => {
     });
 
     it.skip('should submit feedback (bad) and not load next quiz if not available', async () => {
-      vi.mocked(submitQuestionFeedback).mockResolvedValue({ success: true });
+      vi.mocked(submitFeedback).mockResolvedValue({ success: true });
       store.setState({ nextQuizAvailable: null });
       const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
 
@@ -697,7 +697,7 @@ describe('quizSlice', () => {
       expect(store.getState().loading).toBe(false);
       expect(store.getState().error).toBeNull();
       expect(store.getState().feedbackSubmitted).toBe(true);
-      expect(submitQuestionFeedback).toHaveBeenCalledWith(expect.objectContaining({ is_good: 0 }));
+      expect(submitFeedback).toHaveBeenCalledWith(expect.objectContaining({ is_good: 0 }));
       expect(resetQuizWithNewDataSpy).not.toHaveBeenCalled();
     });
 
@@ -708,7 +708,7 @@ describe('quizSlice', () => {
       expect(store.getState().error).toBe('Cannot submit feedback: Invalid quiz ID.');
       expect(store.getState().loading).toBe(false);
       expect(store.getState().feedbackSubmitted).toBe(false);
-      expect(submitQuestionFeedback).not.toHaveBeenCalled();
+      expect(submitFeedback).not.toHaveBeenCalled();
     });
 
     it('should set error if generatedQuestionLanguage is missing', async () => {
@@ -720,11 +720,11 @@ describe('quizSlice', () => {
       );
       expect(store.getState().loading).toBe(false);
       expect(store.getState().feedbackSubmitted).toBe(false);
-      expect(submitQuestionFeedback).not.toHaveBeenCalled();
+      expect(submitFeedback).not.toHaveBeenCalled();
     });
 
     it('should handle API error response (success: false)', async () => {
-      vi.mocked(submitQuestionFeedback).mockResolvedValue({
+      vi.mocked(submitFeedback).mockResolvedValue({
         success: false,
         error: 'API Feedback Failed',
       });
@@ -736,7 +736,7 @@ describe('quizSlice', () => {
     });
 
     it('should handle API error response (success: false, no error message)', async () => {
-      vi.mocked(submitQuestionFeedback).mockResolvedValue({ success: false });
+      vi.mocked(submitFeedback).mockResolvedValue({ success: false });
       await store.getState().submitFeedback(true);
 
       expect(store.getState().loading).toBe(false);
@@ -748,7 +748,7 @@ describe('quizSlice', () => {
 
     it('should handle thrown error during submission', async () => {
       const error = new Error('Network Error');
-      vi.mocked(submitQuestionFeedback).mockRejectedValue(error);
+      vi.mocked(submitFeedback).mockRejectedValue(error);
       await store.getState().submitFeedback(true);
 
       expect(store.getState().loading).toBe(false);
@@ -758,7 +758,7 @@ describe('quizSlice', () => {
 
     it('should handle thrown non-error object during submission', async () => {
       const error = { message: 'Non-error object' };
-      vi.mocked(submitQuestionFeedback).mockRejectedValue(error);
+      vi.mocked(submitFeedback).mockRejectedValue(error);
       await store.getState().submitFeedback(true);
 
       expect(store.getState().loading).toBe(false);

@@ -1,9 +1,9 @@
 import {
-  getUserLanguageProgress,
-  initializeUserLanguageProgress,
-  updateUserLanguageProgress,
+  getProgress,
+  initializeProgress,
+  updateProgress,
   STREAK_THRESHOLD_FOR_LEVEL_UP,
-} from '@/lib/repositories/userLanguageProgressRepository';
+} from '@/lib/repositories/progressRepository';
 import { CEFR_LEVELS, ProgressUpdateResult } from '@/lib/domain/progress';
 import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
 
@@ -54,12 +54,12 @@ export const calculateAndUpdateProgress = (
 
   try {
     // 1. Get current progress or initialize if it doesn't exist
-    let currentProgress = getUserLanguageProgress(userId, languageCode);
+    let currentProgress = getProgress(userId, languageCode);
     if (!currentProgress) {
       console.log(
         `[calculateAndUpdateProgress] No progress found for user ${userId}, lang ${languageCode}. Initializing.`
       );
-      currentProgress = initializeUserLanguageProgress(userId, languageCode);
+      currentProgress = initializeProgress(userId, languageCode);
     }
 
     // 2. Calculate the next progress state
@@ -70,7 +70,7 @@ export const calculateAndUpdateProgress = (
     );
 
     // 3. Update progress in the database
-    updateUserLanguageProgress(userId, languageCode, nextLevel, nextStreak);
+    updateProgress(userId, languageCode, nextLevel, nextStreak);
 
     // 4. Return the result
     return {

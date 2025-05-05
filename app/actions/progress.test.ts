@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  updateProgress,
-  submitAnswer,
-  getProgress,
-  submitQuestionFeedback,
-} from '@/app/actions/progress';
+import { updateProgress, submitAnswer, getProgress, submitFeedback } from '@/app/actions/progress';
 import { calculateAndUpdateProgress } from '@/lib/progressUtils';
 import { getAuthenticatedUserId } from '@/app/actions/authUtils';
 import db from '@/lib/db';
@@ -366,8 +361,8 @@ describe('User Progress Server Actions', () => {
     });
   });
 
-  // Tests for submitQuestionFeedback
-  describe('submitQuestionFeedback', () => {
+  // Tests for submitFeedback
+  describe('submitFeedback', () => {
     const params = {
       quizId: MOCK_QUIZ_ID,
       is_good: 1,
@@ -379,7 +374,7 @@ describe('User Progress Server Actions', () => {
 
     it('should return Unauthorized if user is not authenticated', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(null);
-      const result = await submitQuestionFeedback(params);
+      const result = await submitFeedback(params);
       expect(result.success).toBe(false);
       expect(result.error).toBe('Unauthorized');
       expect(vi.mocked(db.prepare)).not.toHaveBeenCalled();
@@ -388,7 +383,7 @@ describe('User Progress Server Actions', () => {
     it('should return Invalid parameters for invalid input', async () => {
       vi.mocked(getAuthenticatedUserId).mockResolvedValue(MOCK_USER_ID);
       const invalidParams = { ...params, quizId: -5 }; // Invalid quiz ID
-      const result = await submitQuestionFeedback(invalidParams);
+      const result = await submitFeedback(invalidParams);
       expect(result.success).toBe(false);
       expect(result.error).toBe('Invalid parameters');
       expect(vi.mocked(db.prepare)).not.toHaveBeenCalled();
@@ -399,7 +394,7 @@ describe('User Progress Server Actions', () => {
       const mockStatement = { get: vi.fn().mockReturnValue(undefined), run: vi.fn() };
       vi.mocked(db.prepare).mockReturnValueOnce(mockStatement as any); // For the SELECT id call
 
-      const result = await submitQuestionFeedback(params);
+      const result = await submitFeedback(params);
 
       expect(vi.mocked(db.prepare)).toHaveBeenCalledWith(
         expect.stringContaining('SELECT id FROM quiz')
@@ -428,7 +423,7 @@ describe('User Progress Server Actions', () => {
       });
 
       const feedbackParams = { ...params, userAnswer: 'B', isCorrect: true };
-      const result = await submitQuestionFeedback(feedbackParams);
+      const result = await submitFeedback(feedbackParams);
 
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
@@ -456,7 +451,7 @@ describe('User Progress Server Actions', () => {
       });
 
       const feedbackParams = { ...params, is_good: 0, isCorrect: false };
-      const result = await submitQuestionFeedback(feedbackParams);
+      const result = await submitFeedback(feedbackParams);
 
       expect(result.success).toBe(true);
       expect(mockSelectStatement.get).toHaveBeenCalledWith(MOCK_QUIZ_ID);
@@ -488,7 +483,7 @@ describe('User Progress Server Actions', () => {
         return { get: vi.fn(), run: vi.fn() } as any;
       });
 
-      const result = await submitQuestionFeedback(params);
+      const result = await submitFeedback(params);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Database error saving feedback.');

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import db from '@/lib/db'; // Import db
 
 // Schema for the data being inserted
-export const QuestionFeedbackInputSchema = z.object({
+export const FeedbackInputSchema = z.object({
   quiz_id: z.number().int(),
   user_id: z.number().int(),
   is_good: z.boolean(), // Store as 0 or 1 in DB
@@ -10,17 +10,17 @@ export const QuestionFeedbackInputSchema = z.object({
   is_correct: z.boolean().optional(), // Store as 0 or 1 in DB
 });
 
-export type QuestionFeedbackInput = z.infer<typeof QuestionFeedbackInputSchema>;
+export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
 
 /**
  * Creates a new feedback record.
  * Validates input against the schema before insertion.
  */
-export const createQuestionFeedback = (feedbackData: QuestionFeedbackInput): number | bigint => {
+export const createFeedback = (feedbackData: FeedbackInput): number | bigint => {
   // Validate input data
-  const validation = QuestionFeedbackInputSchema.safeParse(feedbackData);
+  const validation = FeedbackInputSchema.safeParse(feedbackData);
   if (!validation.success) {
-    console.error('[QuestionFeedbackRepository] Invalid input data for create:', validation.error);
+    console.error('[FeedbackRepository] Invalid input data for create:', validation.error);
     // Use JSON.stringify for the error details to avoid [object Object]
     throw new Error(
       `Invalid feedback data: ${JSON.stringify(validation.error.flatten().fieldErrors)}`
@@ -43,7 +43,7 @@ export const createQuestionFeedback = (feedbackData: QuestionFeedbackInput): num
       );
     return result.lastInsertRowid;
   } catch (error) {
-    console.error('[QuestionFeedbackRepository] Error creating question feedback:', error);
+    console.error('[FeedbackRepository] Error creating question feedback:', error);
     throw error; // Re-throw DB errors
   }
 };

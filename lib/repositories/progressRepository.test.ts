@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import {
-  getUserLanguageProgress,
-  initializeUserLanguageProgress,
-  updateUserLanguageProgress,
+  getProgress,
+  initializeProgress,
+  updateProgress,
   STREAK_THRESHOLD_FOR_LEVEL_UP,
-} from './userLanguageProgressRepository';
+} from './progressRepository';
 import db from '@/lib/db'; // Import the actual db to mock it
-import { UserLanguageProgress } from '@/lib/domain/progress';
+import { Progress } from '@/lib/domain/progress';
 import { CEFRLevel } from '@/lib/domain/language-guidance';
 
 // Mock the db module
@@ -26,7 +26,7 @@ const mockPrepare = db.prepare as Mock;
 const mockGet = (db.prepare as any)().get as Mock;
 const mockRun = (db.prepare as any)().run as Mock;
 
-describe('userLanguageProgressRepository', () => {
+describe('progressRepository', () => {
   const userId = 1;
   const languageCode = 'en';
   const mockDate = new Date('2023-01-01T12:00:00.000Z');
@@ -51,7 +51,7 @@ describe('userLanguageProgressRepository', () => {
     expect(STREAK_THRESHOLD_FOR_LEVEL_UP).toBe(5);
   });
 
-  describe('getUserLanguageProgress', () => {
+  describe('getProgress', () => {
     it('should return user progress when found and valid', () => {
       const rawProgress = {
         user_id: userId,
@@ -62,8 +62,8 @@ describe('userLanguageProgressRepository', () => {
       };
       mockGet.mockReturnValue(rawProgress);
 
-      const result = getUserLanguageProgress(userId, languageCode);
-      const expectedProgress: UserLanguageProgress = {
+      const result = getProgress(userId, languageCode);
+      const expectedProgress: Progress = {
         ...rawProgress,
         last_practiced: mockDate,
       };
@@ -76,7 +76,7 @@ describe('userLanguageProgressRepository', () => {
     it('should return null when user progress is not found', () => {
       mockGet.mockReturnValue(undefined);
 
-      const result = getUserLanguageProgress(userId, languageCode);
+      const result = getProgress(userId, languageCode);
 
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT'));
       expect(mockGet).toHaveBeenCalledWith(userId, languageCode);
@@ -94,13 +94,13 @@ describe('userLanguageProgressRepository', () => {
       mockGet.mockReturnValue(invalidRawProgress);
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); // Suppress console error
 
-      const result = getUserLanguageProgress(userId, languageCode);
+      const result = getProgress(userId, languageCode);
 
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT'));
       expect(mockGet).toHaveBeenCalledWith(userId, languageCode);
       expect(result).toBeNull();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[getUserLanguageProgress] Failed to parse progress'),
+        expect.stringContaining('[getProgress] Failed to parse progress'),
         expect.any(Object) // Zod error details
       );
       consoleErrorSpy.mockRestore();
@@ -116,8 +116,8 @@ describe('userLanguageProgressRepository', () => {
       };
       mockGet.mockReturnValue(rawProgress);
 
-      const result = getUserLanguageProgress(userId, languageCode);
-      const expectedProgress: UserLanguageProgress = {
+      const result = getProgress(userId, languageCode);
+      const expectedProgress: Progress = {
         ...rawProgress,
         last_practiced: null,
       };
@@ -134,24 +134,24 @@ describe('userLanguageProgressRepository', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); // Suppress console error
 
       expect(() => {
-        getUserLanguageProgress(userId, languageCode);
+        getProgress(userId, languageCode);
       }).toThrow(`Database error fetching progress for user ${userId}, lang ${languageCode}.`);
       expect(mockGet).toHaveBeenCalledWith(userId, languageCode);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          `[getUserLanguageProgress] DB Error for user ${userId}, lang ${languageCode}: ${dbError.message}`
+          `[getProgress] DB Error for user ${userId}, lang ${languageCode}: ${dbError.message}`
         )
       );
       consoleErrorSpy.mockRestore();
     });
   });
 
-  describe('initializeUserLanguageProgress', () => {
+  describe('initializeProgress', () => {
     it('should insert initial progress and return the progress object', () => {
       mockRun.mockReturnValue({ changes: 1, lastInsertRowid: 123 }); // Simulate successful insert
 
-      const result = initializeUserLanguageProgress(userId, languageCode);
-      const expectedInitialProgress: UserLanguageProgress = {
+      const result = initializeProgress(userId, languageCode);
+      const expectedInitialProgress: Progress = {
         user_id: userId,
         language_code: languageCode,
         cefr_level: 'A1',
@@ -172,19 +172,19 @@ describe('userLanguageProgressRepository', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
-        initializeUserLanguageProgress(userId, languageCode);
+        initializeProgress(userId, languageCode);
       }).toThrow(`Database error initializing progress for user ${userId}, lang ${languageCode}.`);
       expect(mockRun).toHaveBeenCalledWith(userId, languageCode, 'A1', 0);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          `[initializeUserLanguageProgress] DB Error for user ${userId}, lang ${languageCode}: ${dbError.message}`
+          `[initializeProgress] DB Error for user ${userId}, lang ${languageCode}: ${dbError.message}`
         )
       );
       consoleErrorSpy.mockRestore();
     });
   });
 
-  describe('updateUserLanguageProgress', () => {
+  describe('updateProgress', () => {
     const newLevel: CEFRLevel = 'B1';
     const newStreak = 5;
 
@@ -192,7 +192,7 @@ describe('userLanguageProgressRepository', () => {
       mockRun.mockReturnValue({ changes: 1, lastInsertRowid: 0 });
 
       expect(() => {
-        updateUserLanguageProgress(userId, languageCode, newLevel, newStreak);
+        updateProgress(userId, languageCode, newLevel, newStreak);
       }).not.toThrow();
 
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE'));
@@ -204,12 +204,12 @@ describe('userLanguageProgressRepository', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       expect(() => {
-        updateUserLanguageProgress(userId, languageCode, newLevel, newStreak);
+        updateProgress(userId, languageCode, newLevel, newStreak);
       }).not.toThrow();
 
       expect(mockRun).toHaveBeenCalledWith(newLevel, newStreak, userId, languageCode);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[updateUserLanguageProgress] No rows updated')
+        expect.stringContaining('[updateProgress] No rows updated')
       );
       consoleWarnSpy.mockRestore();
     });
@@ -222,12 +222,12 @@ describe('userLanguageProgressRepository', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(() => {
-        updateUserLanguageProgress(userId, languageCode, newLevel, newStreak);
+        updateProgress(userId, languageCode, newLevel, newStreak);
       }).toThrow(`Database error updating progress for user ${userId}, lang ${languageCode}.`);
       expect(mockRun).toHaveBeenCalledWith(newLevel, newStreak, userId, languageCode);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          `[updateUserLanguageProgress] DB Error for user ${userId}, lang ${languageCode}: ${dbError.message}`
+          `[updateProgress] DB Error for user ${userId}, lang ${languageCode}: ${dbError.message}`
         )
       );
       consoleErrorSpy.mockRestore();
