@@ -146,3 +146,9 @@ export const GeneratedExerciseSchema = z.object({
   relevantText: z.string(),
 });
 export type GeneratedExercise = z.infer<typeof GeneratedExerciseSchema>;
+
+// Basic API response structure
+export const apiResponseSchema = z.object({
+  result: z.string(),
+});
+export type ApiResponse = z.infer<typeof apiResponseSchema>;

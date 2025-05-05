@@ -184,9 +184,13 @@ describe('generateExerciseResponse', () => {
   });
 
   test('should look up user ID if session exists', async () => {
-    const mockSession: Session = { expires: '1', user: { email: 'test@test.com', name: 'Test' } };
+    const mockSession: Session = {
+      expires: '1',
+      user: { email: 'test@test.com', name: 'Test', id: 'provider-test-id' },
+    };
+    const mockDbId = 456;
     vi.mocked(getServerSession).mockResolvedValue(mockSession);
-    vi.mocked(getDbUserIdFromSession).mockReturnValue(456);
+    vi.mocked(getDbUserIdFromSession).mockReturnValue(mockDbId);
     vi.mocked(saveExerciseToCache).mockReturnValue(124);
 
     await generateExerciseResponse(defaultParams);
@@ -204,7 +208,7 @@ describe('generateExerciseResponse', () => {
       defaultParams.questionLanguage,
       defaultParams.cefrLevel,
       JSON.stringify(mockValidatedAiData),
-      456
+      mockDbId
     );
   });
 
