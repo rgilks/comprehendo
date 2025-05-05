@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import {
   type Language,
   UI_LANGUAGES,
@@ -10,7 +11,12 @@ import type { TextGeneratorState } from './textGeneratorStore';
 
 export interface LanguageSlice {
   language: Language;
-  setLanguage: (lang: Language, router: unknown, pathname: string) => Promise<void>;
+  setLanguage: (
+    lang: Language,
+    router: AppRouterInstance,
+    pathname: string,
+    search: string
+  ) => Promise<void>;
   languages: typeof UI_LANGUAGES;
   languageGuidingText: string;
   setLanguageGuidingText: (guidingText: string) => void;
@@ -34,7 +40,7 @@ export const createLanguageSlice: StateCreator<
   language: 'en',
   languages: UI_LANGUAGES,
   languageGuidingText: '',
-  setLanguage: async (lang, router, pathname) => {
+  setLanguage: async (lang, router, pathname, search) => {
     let prevLang: Language | undefined;
     set((state) => {
       prevLang = state.language;
@@ -51,8 +57,7 @@ export const createLanguageSlice: StateCreator<
     }
     const segments = pathname.split('/');
     segments[1] = lang;
-    const currentSearch = window.location.search;
-    const newPath = segments.join('/') + currentSearch;
+    const newPath = segments.join('/') + search;
     if (isRouter(router)) {
       router.push(newPath);
     }

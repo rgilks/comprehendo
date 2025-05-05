@@ -2,6 +2,7 @@ import { act } from 'react';
 import { useTextGeneratorStore } from './textGeneratorStore';
 import { vi, beforeEach } from 'vitest';
 import { getSession } from 'next-auth/react';
+import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 // Mock next-auth/react
 vi.mock('next-auth/react', () => ({
@@ -85,7 +86,9 @@ describe('textGeneratorStore', () => {
   });
 
   it('should update Language slice state', async () => {
-    await useTextGeneratorStore.getState().setLanguage('fr', undefined, '/en/page');
+    await useTextGeneratorStore
+      .getState()
+      .setLanguage('fr', undefined as unknown as AppRouterInstance, '/en/page', '');
     expect(useTextGeneratorStore.getState().language).toBe('fr');
   });
 });

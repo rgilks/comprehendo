@@ -4,6 +4,7 @@ import { createLanguageSlice, type LanguageSlice } from './languageSlice';
 import type { Language } from '@/lib/domain/language';
 import { vi } from 'vitest';
 import type { TextGeneratorState } from './textGeneratorStore';
+import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 global.window = Object.create(window);
 const mockReload = vi.fn();
@@ -39,29 +40,36 @@ describe('languageSlice', () => {
 
   it('setLanguage updates language and calls i18n', async () => {
     const store = createStore();
-    await store.getState().setLanguage('fr' as Language, undefined, '/en/page');
+    await store
+      .getState()
+      .setLanguage('fr' as Language, undefined as unknown as AppRouterInstance, '/en/page', '');
     expect(store.getState().language).toBe('fr');
     expect(i18n.changeLanguage).toHaveBeenCalledWith('fr');
   });
 
   it('setLanguage does not update if language is the same', async () => {
     const store = createStore();
-    await store.getState().setLanguage('en' as Language, undefined, '/en/page');
+    await store
+      .getState()
+      .setLanguage('en' as Language, undefined as unknown as AppRouterInstance, '/en/page', '');
     expect(i18n.changeLanguage).not.toHaveBeenCalled();
   });
 
   it('reloads page if i18n.changeLanguage throws', async () => {
     (i18n.changeLanguage as any).mockRejectedValue(new Error('fail'));
     const store = createStore();
-    await store.getState().setLanguage('fr' as Language, undefined, '/en/page');
+    await store
+      .getState()
+      .setLanguage('fr' as Language, undefined as unknown as AppRouterInstance, '/en/page', '');
     expect(mockReload).toHaveBeenCalled();
   });
 
   it('router.push is called with new path if router is provided', async () => {
     const push = vi.fn();
-    const router = { push };
+    const router = { push } as unknown as AppRouterInstance;
     const store = createStore();
-    await store.getState().setLanguage('fr' as Language, router, '/en/page');
-    expect(push).toHaveBeenCalledWith('/fr/page?foo=bar');
+    const search = '?test=123';
+    await store.getState().setLanguage('fr' as Language, router, '/en/page', search);
+    expect(push).toHaveBeenCalledWith('/fr/page?test=123');
   });
 });

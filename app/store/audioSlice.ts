@@ -192,14 +192,10 @@ export const createAudioSlice: StateCreator<
     const { isSpeechSupported, volume } = get();
     if (!isSpeechSupported || !text) return;
 
-    // Removed stopPassageSpeech() - let the browser queue or interrupt handle it.
-    // stopPassageSpeech();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = SPEECH_LANGUAGES[lang];
     utterance.volume = volume;
 
-    // Find the full voice object using the stored URI
     const selectedVoiceURI = get().selectedVoiceURI;
     const selectedVoice = selectedVoiceURI
       ? window.speechSynthesis.getVoices().find((v) => v.voiceURI === selectedVoiceURI)

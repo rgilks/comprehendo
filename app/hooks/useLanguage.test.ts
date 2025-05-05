@@ -6,6 +6,7 @@ import type { Language } from '@/lib/domain/language';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/en/some/path',
+  useSearchParams: () => ({ toString: () => 'mock=search' }),
 }));
 
 const mockSetLanguage = vi.fn();
@@ -38,6 +39,11 @@ describe('useLanguage', () => {
     await act(async () => {
       await result.current.setLanguage('fr' as Language);
     });
-    expect(mockSetLanguage).toHaveBeenCalledWith('fr', expect.any(Object), '/en/some/path');
+    expect(mockSetLanguage).toHaveBeenCalledWith(
+      'fr',
+      expect.any(Object),
+      '/en/some/path',
+      '?mock=search'
+    );
   });
 });
