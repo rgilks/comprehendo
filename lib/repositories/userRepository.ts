@@ -5,8 +5,7 @@ import { type AdapterUser } from 'next-auth/adapters';
 
 // Define Zod schema for user data from the DB
 // Use this schema for validation if returning full user objects in the future
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const DbUserSchema = z.object({
+const _DbUserSchema = z.object({
   id: z.number(),
   provider_id: z.string(),
   provider: z.string(),
@@ -17,9 +16,7 @@ const DbUserSchema = z.object({
   language: z.string(),
 });
 
-// Use this schema for validation if returning full user objects in the future
-// export type DbUser = z.infer<typeof DbUserSchema>; // Still commented out, but referenced below
-type DbUser = z.infer<typeof DbUserSchema>; // Type for user returned from DB queries
+type DbUser = z.infer<typeof _DbUserSchema>; // Type for user returned from DB queries
 
 // Type for user returned from DB queries
 // type DbUser = z.infer<typeof DbUserSchema>; // Commented out as schema isn't used for validation yet
