@@ -43,7 +43,6 @@ export default defineConfig({
         'test-results/**',
 
         'vitest.setup.ts',
-        'app/api/auth/[...nextauth]/route.ts',
         'lib/__mocks__/**',
         '**/__generated__/**',
       ],
