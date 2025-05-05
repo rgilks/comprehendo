@@ -1,17 +1,11 @@
 import type { StateCreator } from 'zustand';
-import { z } from 'zod';
 import { getProgress } from '@/app/actions/userProgress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
+import { GetProgressResultSchema } from '@/lib/domain/userProgress';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
-
-const GetProgressResultSchema = z.object({
-  streak: z.number().optional().nullable(),
-  currentLevel: z.string().optional().nullable(),
-  error: z.string().optional().nullable(),
-});
 
 export interface ProgressSlice extends BaseSlice {
   isProgressLoading: boolean;
@@ -33,56 +27,56 @@ export const createProgressSlice: StateCreator<
     set((state) => {
       state.isProgressLoading = true;
     });
+
     const session = await getSession();
     const userId = (session?.user as { dbId?: number } | null)?.dbId;
 
+    let finalStreak: number | null = null;
+    let finalLevel: CEFRLevel | null | undefined = undefined;
+    let errorMessage: string | null = null;
+
     if (!userId) {
-      set((state) => {
-        state.userStreak = null;
-        state.isProgressLoading = false;
-      });
-      return;
-    }
+      // No user, final state (loading false, streak null) set in finally
+    } else {
+      try {
+        const { passageLanguage } = get();
+        const rawProgress = await getProgress({ language: passageLanguage });
 
-    try {
-      const { passageLanguage } = get();
-      const rawProgress = await getProgress({ language: passageLanguage });
+        const validatedProgress = GetProgressResultSchema.safeParse(rawProgress);
 
-      const validatedProgress = GetProgressResultSchema.safeParse(rawProgress);
-
-      if (!validatedProgress.success) {
-        console.error('Zod validation error (getProgress):', validatedProgress.error);
-        throw new Error(`Invalid API response structure: ${validatedProgress.error.message}`);
-      }
-
-      const progress = validatedProgress.data;
-
-      if (progress.error) {
-        throw new Error(progress.error);
-      }
-
-      set((state) => {
-        state.userStreak = progress.streak ?? 0;
-        if (progress.currentLevel) {
-          state.cefrLevel = progress.currentLevel as CEFRLevel;
+        if (!validatedProgress.success) {
+          console.error('Zod validation error (getProgress):', validatedProgress.error);
+          throw new Error(`Invalid API response structure: ${validatedProgress.error.message}`);
         }
-      });
 
-      if (progress.streak === null || progress.streak === undefined) {
-        console.warn('No progress data found for user/language. Defaulting streak to 0.');
+        const progress = validatedProgress.data;
+
+        if (progress.error) {
+          throw new Error(progress.error);
+        }
+
+        finalStreak = progress.streak ?? 0;
+        finalLevel = progress.currentLevel;
+
+        if (progress.streak === null || progress.streak === undefined) {
+          console.warn('No progress data found for user/language. Defaulting streak to 0.');
+        }
+      } catch (error: unknown) {
+        console.error('Error fetching user progress:', String(error));
+        errorMessage = error instanceof Error ? error.message : 'Unknown error fetching progress';
+        finalStreak = null;
+        finalLevel = undefined;
       }
-    } catch (error: unknown) {
-      console.error('Error fetching user progress:', String(error));
-      set((state) => {
-        state.userStreak = null;
-      });
-      const errorMessage: string =
-        error instanceof Error ? error.message : 'Unknown error fetching progress';
-      get().setError(errorMessage);
-    } finally {
-      set((state) => {
-        state.isProgressLoading = false;
-      });
     }
+
+    set((state) => {
+      state.isProgressLoading = false;
+      state.userStreak = finalStreak;
+      if (finalLevel) {
+        state.cefrLevel = finalLevel;
+      }
+      state.error = errorMessage;
+      state.showError = !!errorMessage;
+    });
   },
 });
