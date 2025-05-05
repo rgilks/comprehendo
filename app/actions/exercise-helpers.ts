@@ -1,19 +1,12 @@
-import { LANGUAGES } from '@/lib/domain/language';
-import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
-import { getRandomTopicForLevel } from '@/lib/domain/topics';
-import {
-  GenerateExerciseResultSchema,
-  type GenerateExerciseResult,
-  type PartialQuizData,
-  type ExerciseRequestParams,
-  ExerciseContentSchema,
-} from '@/lib/domain/schemas';
+import { type PartialQuizData, type GenerateExerciseResult } from '@/lib/domain/schemas';
 import { saveExerciseToCache, getValidatedExerciseFromCache } from '@/lib/exercise-cache';
 import {
   generateAndValidateExercise,
-  type QuizData,
   AIResponseProcessingError,
+  type ExerciseGenerationOptions,
 } from '@/lib/ai/exercise-generator';
+import { type ExerciseGenerationParams } from '@/lib/domain/ai';
+import { type Result, type ActionError, success, failure } from '@/lib/utils';
 
 export const DEFAULT_EMPTY_QUIZ_DATA: PartialQuizData = {
   paragraph: '',
@@ -31,125 +24,83 @@ export const createErrorResponse = (error: string): GenerateExerciseResult => ({
 });
 
 export const tryGenerateAndCacheExercise = async (
-  params: ExerciseRequestParams,
-  userId: number | null
-): Promise<GenerateExerciseResult> => {
+  params: ExerciseGenerationParams,
+  language: string
+): Promise<Result<ExerciseContent, ActionError>> => {
+  let generatedExercise: ExerciseContent | null = null;
+  let generationError: ActionError | null = null;
+
   try {
-    const topicResult = getRandomTopicForLevel(params.cefrLevel);
-    const topic = typeof topicResult === 'string' ? topicResult : null;
-    const topicForAI = typeof topicResult === 'string' ? topicResult : 'General';
-    const grammarGuidance: string = getGrammarGuidance(params.cefrLevel);
-    const vocabularyGuidance: string = getVocabularyGuidance(params.cefrLevel);
-    const passageLangName: string = LANGUAGES[params.passageLanguage];
-    const questionLangName: string = LANGUAGES[params.questionLanguage];
+    const options: ExerciseGenerationOptions = { ...params, language };
+    generatedExercise = await generateAndValidateExercise(options);
+  } catch (error) {
+    let errorMessage = 'Unknown error during AI generation/processing';
+    let stack = '';
+    let originalErrorDetail: unknown = null;
 
-    const aiData: QuizData | null = await generateAndValidateExercise({
-      topic: topicForAI,
-      passageLanguage: params.passageLanguage,
-      questionLanguage: params.questionLanguage,
-      passageLangName,
-      questionLangName,
-      level: params.cefrLevel,
-      grammarGuidance,
-      vocabularyGuidance,
-    });
-
-    if (aiData == null) {
-      return {
-        quizData: {
-          paragraph: '',
-          question: '',
-          options: { A: '', B: '', C: '', D: '' },
-          topic: null,
-          language: null,
-        },
-        quizId: -1,
-        error: 'Failed to validate AI response structure.',
-        cached: false,
-      };
-    }
-
-    const exerciseContentParseResult = ExerciseContentSchema.safeParse(aiData);
-
-    if (!exerciseContentParseResult.success) {
-      console.error(
-        '[API] AI response failed validation:',
-        exerciseContentParseResult.error.errors,
-        'Original Data:',
-        aiData
-      );
-      return createErrorResponse('Failed to validate AI response structure.');
-    }
-
-    const validatedExerciseContent = exerciseContentParseResult.data;
-
-    validatedExerciseContent.topic = topic;
-
-    const partialQuizData: PartialQuizData = {
-      paragraph: validatedExerciseContent.paragraph,
-      question: validatedExerciseContent.question,
-      options: validatedExerciseContent.options,
-      topic: validatedExerciseContent.topic ?? null,
-      language: params.passageLanguage,
-    };
-
-    let quizId: number | undefined;
-    try {
-      quizId = saveExerciseToCache(
-        params.passageLanguage,
-        params.questionLanguage,
-        params.cefrLevel,
-        JSON.stringify(validatedExerciseContent),
-        userId
-      );
-      if (quizId === undefined) {
-        throw new Error('Cache save returned undefined ID');
+    if (error instanceof AIResponseProcessingError) {
+      errorMessage = `Error during AI generation/processing: ${error.message}`;
+      if (error.originalError instanceof Error) {
+        // Log the original stack trace if available
+        console.error(
+          '[API] Original AI Error:',
+          error.originalError.message,
+          error.originalError.stack
+        );
+        stack = error.originalError.stack ?? '';
+      } else if (error.originalError !== null) {
+        // Log non-Error original error detail
+        console.error('[API] Original AI Error (non-Error object):', error.originalError);
+        originalErrorDetail = error.originalError;
+      } else {
+        stack = error.stack ?? '';
       }
-    } catch (error: unknown) {
-      console.error('[API:tryGenerate] Failed to save exercise to cache:', error);
-      return createErrorResponse('Failed to save generated exercise to cache.');
-    }
-
-    return {
-      quizData: partialQuizData,
-      quizId,
-      error: null,
-      cached: false,
-    };
-  } catch (error: unknown) {
-    let errorMessage = 'An unknown error occurred during exercise generation';
-    let originalErrorStack: string | undefined = undefined;
-
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      originalErrorStack = error.stack;
-      console.error(
-        '[API] Error during AI generation/processing:',
-        errorMessage,
-        originalErrorStack
-      );
-
-      if (error instanceof AIResponseProcessingError && error.originalError) {
-        if (error.originalError instanceof Error) {
-          console.error(
-            '[API] Original AI Error:',
-            error.originalError.message,
-            error.originalError.stack
-          );
-        } else {
-          console.error('[API] Original AI Error (non-Error object):', error.originalError);
-        }
-      }
+    } else if (error instanceof Error) {
+      errorMessage = `Error during AI generation/processing: ${error.message}`;
+      stack = error.stack ?? '';
     } else {
-      console.error('[API] Error during AI generation/processing (non-Error object):', error);
+      // Handle cases where a non-Error object is thrown
+      errorMessage = `Error during AI generation/processing (non-Error object): ${String(error)}`;
+      console.error(errorMessage);
+      originalErrorDetail = error;
     }
 
-    const finalErrorMessage =
-      error instanceof AIResponseProcessingError
-        ? errorMessage
-        : `An unexpected error occurred during exercise generation: ${errorMessage}`;
+    console.error(`[API] ${errorMessage}`, stack ? `\nStack: ${stack}` : '');
 
-    return createErrorResponse(finalErrorMessage);
+    generationError = {
+      error: errorMessage,
+      details: originalErrorDetail,
+      ...(stack && { stack }),
+    };
+  }
+
+  // If generation succeeded, try to save it to the cache
+  if (generatedExercise) {
+    try {
+      const exerciseId = await saveExerciseToCache(generatedExercise);
+      if (exerciseId === undefined) {
+        // Handle case where saving might not return an ID or fail silently
+        console.error(
+          '[API:tryGenerate] Failed to save exercise to cache: Cache save returned undefined ID'
+        );
+        return failure({
+          error: 'Exercise generated but failed to save to cache (undefined ID).',
+        });
+      }
+      console.log(`[API:tryGenerate] Generated and cached exercise ID: ${exerciseId}`);
+      return success(generatedExercise);
+    } catch (cacheError) {
+      console.error('[API:tryGenerate] Failed to save exercise to cache:', cacheError);
+      // Decide if we should still return the generated exercise even if caching failed
+      // For now, let's return failure as caching is important
+      return failure({
+        error: 'Exercise generated but failed to save to cache. Please try again.',
+        details: cacheError,
+      });
+    }
+  } else {
+    // Generation failed, return the captured error
+    return failure(generationError ?? { error: 'Unknown generation failure.' });
   }
 };
 

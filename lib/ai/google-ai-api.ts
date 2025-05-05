@@ -12,7 +12,7 @@ export class AIResponseProcessingError extends Error {
   }
 }
 
-export const callGoogleAI = async (prompt: string): Promise<string> => {
+export const callGoogleAI = async (prompt: string): Promise<unknown> => {
   const genAI: GoogleGenAI = getGoogleAIClient();
 
   const generationConfig = {
@@ -57,49 +57,78 @@ export const callGoogleAI = async (prompt: string): Promise<string> => {
       );
     }
 
-    // Clean up markdown fences (```json ... ```)
+    // Clean up markdown fences (```json ... ```) and attempt to parse
     const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
     const match = text.match(jsonRegex);
-    let potentialJson: string;
+    let potentialJsonString: string;
 
     if (match && match[1]) {
-      potentialJson = match[1].trim();
+      potentialJsonString = match[1].trim();
     } else {
       // If no fences, assume the whole text might be JSON
       const trimmedText = text.trim();
-      if (trimmedText.startsWith('{') && trimmedText.endsWith('}')) {
-        potentialJson = trimmedText;
+      // Basic check if it looks like a JSON object or array
+      if (
+        (trimmedText.startsWith('{') && trimmedText.endsWith('}')) ||
+        (trimmedText.startsWith('[') && trimmedText.endsWith(']'))
+      ) {
+        potentialJsonString = trimmedText;
       } else {
-        // If it doesn't look like JSON and wasn't in fences, throw an error.
-        console.warn('[AI API] Response received, but no JSON block found:', text);
+        // If it doesn't look like JSON and wasn't in fences, log and throw.
+        console.warn(
+          '[AI API] Response received, but no JSON block found or text is not valid JSON:',
+          text
+        );
         throw new AIResponseProcessingError(
-          'AI response received, but failed to extract JSON content block.'
+          'AI response received, but failed to extract valid JSON content.'
         );
       }
     }
-    return potentialJson;
+
+    try {
+      // Let JSON.parse handle invalid JSON. Caller should validate structure.
+      const parsedJson = JSON.parse(potentialJsonString);
+      return parsedJson;
+    } catch (parseError) {
+      console.error(
+        '[AI API] Failed to parse JSON from AI response string:',
+        potentialJsonString,
+        'Error:',
+        parseError
+      );
+      throw new AIResponseProcessingError('Failed to parse JSON from AI response.', parseError);
+    }
   } catch (error: unknown) {
-    // Use instanceof Error for type checking
     let errorMessage = 'Unknown AI generation error';
+    let originalErrorForRethrow = error;
+
     if (error instanceof Error) {
-      // If it's already our custom error, rethrow it directly potentially
-      if (error instanceof AIResponseProcessingError) {
-        throw error;
-      }
-      console.error('[AI API] Google AI API call failed:', error.message, error.stack);
       errorMessage = error.message;
+      // Keep the most specific error instance if it's already ours
+      if (error instanceof AIResponseProcessingError) {
+        originalErrorForRethrow = error.originalError ?? error; // Prefer original error if available
+      }
     } else {
       console.error('[AI API] Google AI API call failed with non-Error object:', error);
     }
 
-    // Check for specific error messages if possible (e.g., safety settings)
-    if (errorMessage.includes('SAFETY')) {
+    // Check for specific error messages like safety settings
+    if (typeof errorMessage === 'string' && errorMessage.includes('SAFETY')) {
+      console.warn(`[AI API] Safety setting blocked response: ${errorMessage}`);
       throw new AIResponseProcessingError(
         `Safety setting blocked response: ${errorMessage}`,
-        error // Pass original error (unknown)
+        originalErrorForRethrow
       );
     }
-    // General error
-    throw new AIResponseProcessingError(`AI generation failed: ${errorMessage}`, error); // Pass original error (unknown)
+
+    // General error wrapping
+    console.error(
+      `[AI API] AI generation failed. Message: ${errorMessage}`,
+      originalErrorForRethrow
+    );
+    throw new AIResponseProcessingError(
+      `AI generation failed: ${errorMessage}`,
+      originalErrorForRethrow
+    );
   }
 };
