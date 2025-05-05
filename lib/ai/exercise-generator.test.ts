@@ -1,127 +1,174 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { callGoogleAI, AIResponseProcessingError } from './exercise-generator';
+import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
+import { generateAndValidateExercise } from './exercise-generator';
+import { QuizDataSchema, type QuizData } from '@/lib/domain/schemas';
+import { generateExercisePrompt } from '@/lib/ai/prompts/exercise-prompt';
+import { ExerciseGenerationParamsSchema, type ExerciseGenerationParams } from '@/lib/domain/ai';
 
-const mockGenerateContent = vi.fn();
-const mockGenAIInstance = {
-  models: {
-    generateContent: mockGenerateContent,
-  },
-};
+// Mock the imported functions
+vi.mock('@/lib/ai/prompts/exercise-prompt');
 
+// Explicitly mock ONLY callGoogleAI within the module factory
+vi.mock('./exercise-generator', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./exercise-generator')>();
+  return {
+    ...original, // Keep other exports
+    callGoogleAI: vi.fn(), // Replace callGoogleAI with a mock function
+  };
+});
+
+// Mock the AI Client (still needed by google-ai-api.ts if not mocked, though less critical now)
 vi.mock('@/lib/ai/client', () => ({
-  getGoogleAIClient: vi.fn(() => mockGenAIInstance),
+  getGoogleAIClient: vi.fn(() => ({
+    models: {
+      // Provide a mock function that returns an object with a text property
+      generateContent: vi.fn().mockResolvedValue({ text: 'default mock response' }),
+    },
+  })),
 }));
 
-const samplePrompt = `Generate a reading comprehension exercise based on the following parameters:
-- Topic: Daily Routines
-- Passage Language: French (fr)
-- Question Language: English (en)
-- CEFR Level: A2
-- Grammar Guidance: Present tense verbs
-- Vocabulary Guidance: Words related to daily activities
+// Remove the vi.mock calls for Zod schemas
+// vi.mock('@/lib/domain/ai', ...);
+// vi.mock('@/lib/domain/schemas', ...);
 
-Instructions:
-1. Create a short paragraph (3-6 sentences) in fr suitable for a A2 learner, focusing on the topic "Daily Routines".
-2. Write ONE multiple-choice question in en. The question should target ONE of the following comprehension skills based on the paragraph: (a) main idea, (b) specific detail, (c) inference (requiring understanding information implied but not explicitly stated), OR (d) vocabulary in context (asking the meaning of a word/phrase as used in the paragraph).
-3. Provide four answer options (A, B, C, D) in en. Only one option should be correct.
-4. Create plausible distractors (incorrect options B, C, D): These should relate to the topic but be clearly contradicted, unsupported by the paragraph, or represent common misinterpretations based *only* on the text. Avoid options that are completely unrelated or rely on outside knowledge. **Ensure distractors are incorrect specifically because they contradict or are unsupported by the provided paragraph.**
-5. **CRITICAL REQUIREMENT:** The question **must be impossible** to answer correctly *without* reading and understanding the provided paragraph. The answer **must depend solely** on the specific details or implications within the text. Avoid any questions solvable by general knowledge or common sense.
-6. Identify the correct answer key (A, B, C, or D).
-7. Provide **concise explanations** (in en) for **ALL options (A, B, C, D)**. For the correct answer, explain why it's right. For incorrect answers, explain specifically why they are wrong according to the text. Each explanation MUST explicitly reference the specific part of the paragraph that supports or contradicts the option.
-8. Extract the specific sentence or phrase from the original paragraph (in fr) that provides the primary evidence for the correct answer ("relevantText").
+const mockedGenerateExercisePrompt = generateExercisePrompt as MockedFunction<
+  typeof generateExercisePrompt
+>;
 
-Output Format: Respond ONLY with a valid JSON object containing the following keys:
-- "paragraph": (string) The generated paragraph in fr.
-- "topic": (string) The topic used: "Daily Routines".
-- "question": (string) The multiple-choice question in en.
-- "options": (object) An object with keys "A", "B", "C", "D", where each value is an answer option string in en.
-- "correctAnswer": (string) The key ("A", "B", "C", or "D") of the correct answer.
-- "allExplanations": (object) An object with keys "A", "B", "C", "D", where each value is the concise explanation string in en for that option, explicitly referencing the text.
-- "relevantText": (string) The sentence or phrase from the paragraph in fr that supports the correct answer.
+// Spies for Zod methods - declared but setup in beforeEach/tests
+let mockExerciseParamsParseSpy: vi.SpyInstance;
+let mockQuizDataSafeParseSpy: vi.SpyInstance;
 
-Example JSON structure:
-{
-  "paragraph": "...",
-  "topic": "...",
-  "question": "...",
-  "options": { "A": "...", "B": "...", "C": "...", "D": "..." }
-  "correctAnswer": "B",
-  "allExplanations": { "A": "Explanation A referencing text...", "B": "Explanation B referencing text...", "C": "Explanation C referencing text...", "D": "Explanation D referencing text..." },
-  "relevantText": "..."
-}
+// Use the mocked callGoogleAI via the alias
+const mockCallGoogleAI = vi.fn();
 
-Ensure the entire output is a single, valid JSON object string without any surrounding text or markdown formatting.
-`;
+// Define valid parameters for testing generateAndValidateExercise
+const validParams: ExerciseGenerationParams = {
+  topic: 'Test Topic',
+  passageLanguage: 'en',
+  questionLanguage: 'es',
+  passageLangName: 'English',
+  questionLangName: 'Spanish',
+  level: 'B1',
+  grammarGuidance: 'Past tense',
+  vocabularyGuidance: 'Travel words',
+};
 
-describe('AI Exercise Generation - callGoogleAI', () => {
+// Define a valid AI response structure matching QuizDataSchema
+const validAiResponseJson: QuizData = {
+  paragraph: 'This is a test paragraph.',
+  topic: 'Test Topic',
+  question: 'What is this?',
+  options: { A: 'Test A', B: 'Test B', C: 'Test C', D: 'Test D' },
+  correctAnswer: 'A',
+  allExplanations: {
+    A: 'Correct because...',
+    B: 'Incorrect because...',
+    C: 'Incorrect because...',
+    D: 'Incorrect because...',
+  },
+  relevantText: 'test paragraph',
+};
+
+describe('AI Exercise Generation', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Restore mocks for schema methods if they were mocked individually in tests
+    // mockExerciseParamsParse.mockImplementation(ExerciseGenerationParamsSchema.parse);
+    // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
+    // Remove reset for the old mock variable
+    // mockCallGoogleAI.mockReset();
   });
 
-  describe('callGoogleAI', () => {
-    const mockApiResponseText = '{ "paragraph": "Bonjour.", "question": "Hello?" }';
+  // Add tests for generateAndValidateExercise
+  describe('generateAndValidateExercise', () => {
+    beforeEach(() => {
+      // Reset mocks
+      vi.resetAllMocks();
+      mockedGenerateExercisePrompt.mockReturnValue('mock prompt');
 
-    it('should call the AI API and return cleaned JSON content on success', async () => {
-      const rawText = `\`\`\`json\n${mockApiResponseText}\n\`\`\``;
-      mockGenerateContent.mockResolvedValue({ text: rawText });
+      // Set the return value for the mocked callGoogleAI
+      mockCallGoogleAI.mockResolvedValue(JSON.stringify(validAiResponseJson));
 
-      const result = await callGoogleAI(samplePrompt);
-
-      expect(mockGenerateContent).toHaveBeenCalledWith({
-        model: 'gemini-2.5-flash-preview-04-17',
-        contents: [{ role: 'user', parts: [{ text: samplePrompt }] }],
-        generationConfig: expect.objectContaining({
-          maxOutputTokens: 500,
-          responseMimeType: 'application/json',
-        }),
-      });
-      expect(result).toBe(mockApiResponseText);
+      // Setup spies on the actual schema methods
+      mockExerciseParamsParseSpy = vi.spyOn(ExerciseGenerationParamsSchema, 'parse');
+      mockQuizDataSafeParseSpy = vi.spyOn(QuizDataSchema, 'safeParse');
     });
 
-    it('should correctly clean JSON content with optional newlines around fences', async () => {
-      mockGenerateContent.mockResolvedValueOnce({
-        text: `\`\`\`json\n${mockApiResponseText}\`\`\``,
-      });
-      const result1 = await callGoogleAI(samplePrompt);
-      expect(result1).toBe(mockApiResponseText);
-
-      mockGenerateContent.mockResolvedValueOnce({
-        text: `\`\`\`json${mockApiResponseText}\n\`\`\``,
-      });
-      const result2 = await callGoogleAI(samplePrompt);
-      expect(result2).toBe(mockApiResponseText);
-
-      mockGenerateContent.mockResolvedValueOnce({
-        text: `\`\`\`json\n${mockApiResponseText}\n\`\`\``,
-      });
-      const result3 = await callGoogleAI(samplePrompt);
-      expect(result3).toBe(mockApiResponseText);
-
-      mockGenerateContent.mockResolvedValueOnce({ text: `\`\`\`json${mockApiResponseText}\`\`\`` });
-      const result4 = await callGoogleAI(samplePrompt);
-      expect(result4).toBe(mockApiResponseText);
+    afterEach(() => {
+      // Restore original implementations after each test
+      vi.restoreAllMocks();
     });
 
-    it('should throw AIResponseProcessingError if AI response has no text', async () => {
-      mockGenerateContent.mockResolvedValue({ text: null });
+    it('should successfully generate and validate an exercise', async () => {
+      const result = await generateAndValidateExercise(validParams);
 
-      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(AIResponseProcessingError);
+      // mockExerciseParamsParse.mockImplementation(ExerciseGenerationParamsSchema.parse);
+      expect(mockExerciseParamsParseSpy).toHaveBeenCalledWith(validParams);
+      expect(mockedGenerateExercisePrompt).toHaveBeenCalledWith(validParams);
+      expect(mockCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
+      expect(mockQuizDataSafeParseSpy).toHaveBeenCalledWith(validAiResponseJson);
+      expect(result).toEqual(validAiResponseJson);
     });
 
-    it('should throw specific AIResponseProcessingError for safety issues', async () => {
-      const safetyError = new Error('Blocked due to SAFETY');
-      mockGenerateContent.mockRejectedValue(safetyError);
+    it('should throw if input parameters fail validation', async () => {
+      const invalidParams = { ...validParams, level: undefined }; // Make params invalid
+      // No need to mock ExerciseGenerationParamsSchema.parse throwing,
+      // just pass invalid data and let the actual Zod schema handle it.
 
-      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(AIResponseProcessingError);
-      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(/Safety setting blocked response:/);
+      await expect(generateAndValidateExercise(invalidParams as any)).rejects.toThrow(); // Zod error
+
+      // mockExerciseParamsParse.mockImplementation(ExerciseGenerationParamsSchema.parse);
+      expect(mockExerciseParamsParseSpy).toHaveBeenCalledWith(invalidParams);
+      expect(mockedGenerateExercisePrompt).not.toHaveBeenCalled();
+      expect(mockCallGoogleAI).not.toHaveBeenCalled();
+      // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
+      expect(mockQuizDataSafeParseSpy).not.toHaveBeenCalled();
     });
 
-    it('should throw AIResponseProcessingError for generic API errors', async () => {
-      const genericError = new Error('API connection failed');
-      mockGenerateContent.mockRejectedValue(genericError);
+    it('should throw AIResponseProcessingError if AI response is not valid JSON', async () => {
+      const invalidJsonResponse = 'not json{';
+      mockCallGoogleAI.mockResolvedValue(invalidJsonResponse);
 
-      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(AIResponseProcessingError);
-      await expect(callGoogleAI(samplePrompt)).rejects.toThrow(/AI generation failed:/);
+      // Check error message text
+      await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+        /Failed to parse AI JSON response/
+      );
+      // Check original error message is included if possible (depends on actual error thrown)
+      // await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+      //     expect.objectContaining({ message: expect.stringMatching(/Failed to parse AI JSON/) })
+      // );
+
+      expect(mockCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      expect(mockQuizDataSafeParseSpy).not.toHaveBeenCalled();
+    });
+
+    it('should throw AIResponseProcessingError if AI response fails Zod validation', async () => {
+      const invalidDataResponse = { ...validAiResponseJson, question: undefined };
+      mockCallGoogleAI.mockResolvedValue(JSON.stringify(invalidDataResponse));
+
+      // Check error message text
+      await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+        /AI response failed validation/
+      );
+      // await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+      //     expect.objectContaining({ message: expect.stringMatching(/AI response failed validation/) })
+      // );
+
+      expect(mockCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      expect(mockQuizDataSafeParseSpy).toHaveBeenCalledWith(invalidDataResponse);
+    });
+
+    it('should handle AI providing undefined topic by setting it to null', async () => {
+      const responseWithUndefinedTopic = { ...validAiResponseJson, topic: undefined };
+      // Update the mock's implementation for this test
+      mockCallGoogleAI.mockResolvedValue(JSON.stringify(responseWithUndefinedTopic));
+
+      const result = await generateAndValidateExercise(validParams);
+
+      // mockQuizDataSafeParse.mockImplementation(QuizDataSchema.safeParse);
+      expect(mockQuizDataSafeParseSpy).toHaveBeenCalledWith(responseWithUndefinedTopic);
+      expect(result).toEqual({ ...validAiResponseJson, topic: null }); // Expect topic to be null
     });
   });
 });
