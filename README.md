@@ -48,6 +48,12 @@ Comprehendo is an AI-powered language learning application designed to help user
 
 * **State Diagram**: Visual representation of the text generation process. [View State Diagram](docs/text_generator_state_diagram.md)
 
+## Terminology
+
+- **Exercise**: The general term used in the codebase for any learning activity generated for the user. This could include various formats in the future.
+- **Quiz**: The specific type of exercise currently implemented, consisting of a reading passage, a multiple-choice question, and four answer options. User-facing text may refer to these as "Practices" for a friendlier tone.
+- **Practice**: The user-facing term for an Exercise/Quiz, used in UI elements.
+
 ## Technology Stack
 
 - **Next.js**: ^15.x (`package.json` has exact version)
