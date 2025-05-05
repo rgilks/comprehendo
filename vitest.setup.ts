@@ -1,6 +1,10 @@
 import 'vitest-dom/extend-expect';
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import { enableMapSet } from 'immer';
 
 // Mock environment variables needed for tests
 process.env.AUTH_SECRET = 'dummy-test-secret'; // Provide a dummy secret for authOptions loading
@@ -34,3 +38,11 @@ vi.mock('next/font/google', () => ({
 vi.mock('@vercel/analytics/react', () => ({
   Analytics: () => null, // Render nothing for Analytics component
 }));
+
+// Enable Immer plugin for Map and Set
+enableMapSet();
+
+// runs a cleanup after each test case (e.g. clearing jsdom)
+afterEach(() => {
+  cleanup();
+});

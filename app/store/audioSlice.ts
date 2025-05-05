@@ -226,7 +226,7 @@ export const createAudioSlice: StateCreator<
     get().setError(null);
     // Keep Unicode letters, numbers, whitespace, apostrophes, and hyphens
     const cleaningRegex = /[^\p{L}\p{N}\s'-]/gu;
-    const cleanedWord = word.replace(cleaningRegex, '');
+    const cleanedWord = word.replace(cleaningRegex, '').trim();
 
     if (!cleanedWord) {
       return null;
@@ -245,7 +245,12 @@ export const createAudioSlice: StateCreator<
     }
 
     try {
-      const translation = await translateWordWithGoogle(cleanedWord, targetLang, sourceLang);
+      // Call API with lowercase cleaned word for consistency
+      const translation = await translateWordWithGoogle(
+        cleanedWord.toLowerCase(), // Use lowercase
+        targetLang,
+        sourceLang
+      );
 
       // Store the successful translation in the cache
       if (translation) {

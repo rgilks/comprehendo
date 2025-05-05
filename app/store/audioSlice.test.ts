@@ -3,6 +3,18 @@ import { immer } from 'zustand/middleware/immer';
 import { createAudioSlice, AudioSlice } from './audioSlice';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { translateWordWithGoogle } from '../actions/translate';
+import { filterAndFormatVoices } from '@/lib/utils/speech';
+
+// Mock the server action
+vi.mock('../actions/translate', () => ({
+  translateWordWithGoogle: vi.fn(),
+}));
+
+// Mock the utility function
+vi.mock('@/lib/utils/speech', () => ({
+  filterAndFormatVoices: vi.fn(),
+}));
 
 type MinimalTextGeneratorState = Pick<
   TextGeneratorState,
@@ -45,14 +57,27 @@ type SpeechSynthesisMock = {
   onvoiceschanged: null | (() => void);
 };
 
-class MockSpeechSynthesisUtterance {
+class MockSpeechSynthesisUtterance implements SpeechSynthesisUtterance {
   text = '';
   lang = '';
   volume = 1;
+  pitch = 1;
+  rate = 1;
   voice: SpeechSynthesisVoice | null = null;
-  onboundary: ((event: any) => void) | null = null;
-  onend: (() => void) | null = null;
-  onerror: ((event: any) => void) | null = null;
+  onboundary: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null = null;
+  onend: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null = null;
+  onerror: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisErrorEvent) => any) | null = null;
+  onmark: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null = null;
+  onpause: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null = null;
+  onresume: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null = null;
+  onstart: ((this: SpeechSynthesisUtterance, ev: SpeechSynthesisEvent) => any) | null = null;
+
+  // Implement required EventTarget methods (can be minimal if not used)
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent() {
+    return true;
+  }
 
   constructor(text: string) {
     this.text = text;
@@ -89,15 +114,48 @@ describe('audioSlice', () => {
       volume: 0.5,
       currentWordIndex: null,
     });
+    // Reset mocks before each test
+    vi.resetAllMocks();
+    (translateWordWithGoogle as ReturnType<typeof vi.fn>).mockClear();
+    (filterAndFormatVoices as ReturnType<typeof vi.fn>).mockClear();
+    (store.getState().setError as ReturnType<typeof vi.fn>).mockClear();
     speechSynthesisMock.speak.mockClear();
     speechSynthesisMock.cancel.mockClear();
-    speechSynthesisMock.pause.mockClear();
-    speechSynthesisMock.resume.mockClear();
   });
 
   it('sets volume level', () => {
     store.getState().setVolumeLevel(0.8);
     expect(store.getState().volume).toBe(0.8);
+  });
+
+  it('setVolumeLevel restarts speech if speaking', () => {
+    // Start speaking
+    store.setState({ isSpeakingPassage: true, isPaused: false });
+    speechSynthesisMock.speaking = true;
+    const mockUtterance = new MockSpeechSynthesisUtterance('test');
+    store.setState({ passageUtteranceRef: mockUtterance });
+
+    store.getState().setVolumeLevel(0.9);
+
+    expect(speechSynthesisMock.cancel).toHaveBeenCalledTimes(1);
+    expect(speechSynthesisMock.speak).toHaveBeenCalledTimes(1);
+    expect(speechSynthesisMock.speak).toHaveBeenCalledWith(mockUtterance);
+    expect(mockUtterance.volume).toBe(0.9);
+    expect(store.getState().isSpeakingPassage).toBe(true); // Should remain true
+    expect(store.getState().isPaused).toBe(false); // Should remain false
+  });
+
+  it('setVolumeLevel does not restart speech if paused', () => {
+    store.setState({ isSpeakingPassage: true, isPaused: true });
+    speechSynthesisMock.speaking = true; // synthesis might still report speaking when paused
+    const mockUtterance = new MockSpeechSynthesisUtterance('test');
+    store.setState({ passageUtteranceRef: mockUtterance });
+
+    store.getState().setVolumeLevel(0.9);
+
+    expect(speechSynthesisMock.cancel).not.toHaveBeenCalled();
+    expect(speechSynthesisMock.speak).not.toHaveBeenCalled();
+    expect(mockUtterance.volume).toBe(0.9); // Volume still updates
   });
 
   it('stops passage speech and cancels synthesis', () => {
@@ -161,9 +219,17 @@ describe('audioSlice', () => {
   });
 
   it('updates available voices and selects default if needed', () => {
-    store.setState({ selectedVoiceURI: 'notfound' });
+    // Setup mock specifically for this test
+    const mockVoices = [
+      { uri: 'voice1', name: 'Voice 1' },
+      { uri: 'voice2', name: 'Voice 2' },
+    ];
+    (filterAndFormatVoices as ReturnType<typeof vi.fn>).mockReturnValueOnce(mockVoices);
+
+    store.setState({ selectedVoiceURI: 'notfound', isSpeechSupported: true });
     store.getState().updateAvailableVoices('en');
-    expect(store.getState().availableVoices.length).toBe(2);
+    expect(filterAndFormatVoices).toHaveBeenCalledWith('en');
+    expect(store.getState().availableVoices).toEqual(mockVoices);
     expect(store.getState().selectedVoiceURI).toBe('voice1');
   });
 
@@ -219,5 +285,202 @@ describe('audioSlice', () => {
     expect(utteranceArg.voice).toEqual(selectedSynthVoice);
     expect(utteranceArg.voice?.voiceURI).toBe('voice1');
     expect(utteranceArg.volume).toBe(0.6);
+  });
+
+  // Tests for getTranslation
+  it('getTranslation returns cached translation if available', async () => {
+    store.getState().translationCache.set('en:es:hello', 'hola_cached');
+    const result = await store.getState().getTranslation('hello', 'en', 'es');
+    expect(result).toBe('hola_cached');
+    expect(translateWordWithGoogle).not.toHaveBeenCalled();
+  });
+
+  it('getTranslation cleans word and calls translate action', async () => {
+    (translateWordWithGoogle as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      translation: 'hola_api',
+    });
+    const result = await store.getState().getTranslation(' hEllo! ', 'en', 'es');
+    expect(translateWordWithGoogle).toHaveBeenCalledWith('hello', 'es', 'en');
+    expect(result).toBe('hola_api');
+    // Check cache
+    expect(store.getState().translationCache.get('en:es:hello')).toBe('hola_api');
+  });
+
+  it('getTranslation handles translation failure and sets error', async () => {
+    const error = new Error('API error');
+    (translateWordWithGoogle as ReturnType<typeof vi.fn>).mockRejectedValueOnce(error);
+    const result = await store.getState().getTranslation('bonjour', 'fr', 'en');
+    expect(result).toBeNull();
+    expect(store.getState().setError).toHaveBeenCalledWith('Translation service failed.');
+  });
+
+  // Tests for updateAvailableVoices
+  it('updateAvailableVoices does nothing if speech not supported', () => {
+    // Explicitly set speech supported to false *before* calling action
+    store.setState({ isSpeechSupported: false });
+    store.getState().updateAvailableVoices('en');
+    expect(filterAndFormatVoices).not.toHaveBeenCalled();
+  });
+
+  it('updateAvailableVoices calls filterAndFormatVoices and updates state', () => {
+    const mockVoices = [
+      { uri: 'voice1', name: 'Voice 1' },
+      { uri: 'voice2', name: 'Voice 2' },
+    ];
+    (filterAndFormatVoices as ReturnType<typeof vi.fn>).mockReturnValueOnce(mockVoices);
+    store.setState({ isSpeechSupported: true });
+    store.getState().updateAvailableVoices('en');
+    expect(filterAndFormatVoices).toHaveBeenCalledWith('en');
+    expect(store.getState().availableVoices).toEqual(mockVoices);
+    // Should select the first voice if current selection is not available or null
+    expect(store.getState().selectedVoiceURI).toBe('voice1');
+  });
+
+  it('updateAvailableVoices keeps existing selection if available', () => {
+    const mockVoices = [
+      { uri: 'voice1', name: 'Voice 1' },
+      { uri: 'voice2', name: 'Voice 2' },
+    ];
+    (filterAndFormatVoices as ReturnType<typeof vi.fn>).mockReturnValueOnce(mockVoices);
+    store.setState({ isSpeechSupported: true, selectedVoiceURI: 'voice2' });
+    store.getState().updateAvailableVoices('en');
+    expect(store.getState().availableVoices).toEqual(mockVoices);
+    expect(store.getState().selectedVoiceURI).toBe('voice2');
+  });
+
+  it('updateAvailableVoices selects null if no voices are returned', () => {
+    (filterAndFormatVoices as ReturnType<typeof vi.fn>).mockReturnValueOnce([]);
+    store.setState({ isSpeechSupported: true, selectedVoiceURI: 'voice1' });
+    store.getState().updateAvailableVoices('en');
+    expect(store.getState().availableVoices).toEqual([]);
+    expect(store.getState().selectedVoiceURI).toBeNull();
+  });
+
+  // Test passage utterance event handlers
+  it('handlePlayPause sets up utterance and handles onboundary', () => {
+    store.setState({
+      quizData: {
+        paragraph: 'Hello brave world',
+        question: '',
+        options: { A: '', B: '', C: '', D: '' },
+      },
+      generatedPassageLanguage: 'en',
+      isSpeechSupported: true,
+    });
+    store.getState().handlePlayPause(); // Start speaking
+
+    const utterance = store.getState().passageUtteranceRef;
+    expect(utterance).not.toBeNull();
+    expect(utterance?.text).toBe('Hello brave world');
+    expect(speechSynthesisMock.speak).toHaveBeenCalledWith(utterance);
+    expect(store.getState().wordsRef).toEqual(['Hello', 'brave', 'world']);
+
+    // Simulate boundary event
+    const boundaryEvent = {
+      name: 'word',
+      charIndex: 6,
+      charLength: 5,
+      elapsedTime: 0.5,
+      utterance: utterance as SpeechSynthesisUtterance,
+    } as SpeechSynthesisEvent;
+    // Assert utterance exists, then optionally call handler
+    expect(utterance).not.toBeNull();
+
+    if (utterance) {
+      utterance.onboundary?.(boundaryEvent);
+    }
+    expect(store.getState().currentWordIndex).toBe(1); // Should be index of 'brave'
+  });
+
+  it('handlePlayPause sets up utterance and handles onend', () => {
+    store.setState({
+      quizData: { paragraph: 'End test', question: '', options: { A: '', B: '', C: '', D: '' } },
+      generatedPassageLanguage: 'en',
+      isSpeechSupported: true,
+    });
+
+    // 1. Call handlePlayPause to create utterance and attach handlers
+    store.getState().handlePlayPause();
+
+    // 2. Get the utterance created by the slice from the state
+    const utteranceInState = store.getState().passageUtteranceRef;
+    expect(utteranceInState).not.toBeNull();
+
+    // Pre-check state
+    expect(store.getState().isSpeakingPassage).toBe(true);
+    store.setState({ currentWordIndex: 1, wordsRef: ['End', 'test'] }); // Ensure other state is set for reset check
+
+    // 3. Simulate end event on the utterance from the state
+    const endEvent = {
+      utterance: utteranceInState as SpeechSynthesisUtterance,
+    } as SpeechSynthesisEvent;
+
+    if (utteranceInState) {
+      utteranceInState.onend?.(endEvent);
+    }
+    expect(store.getState().isSpeakingPassage).toBe(false);
+    expect(store.getState().isPaused).toBe(false);
+    expect(store.getState().currentWordIndex).toBe(null);
+    expect(store.getState().passageUtteranceRef).toBe(null);
+    expect(store.getState().wordsRef).toEqual([]);
+  });
+
+  it('speakText handles onerror event', () => {
+    store.setState({ isSpeechSupported: true });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    store.getState().speakText('Error test', 'en');
+
+    const utterance = speechSynthesisMock.speak.mock.calls[0][0] as MockSpeechSynthesisUtterance;
+    expect(utterance).toBeDefined();
+
+    // Simulate error event
+    const errorEvent = {
+      error: 'synthesis-failed',
+      charIndex: 0,
+      elapsedTime: 0.1,
+      utterance: utterance as SpeechSynthesisUtterance,
+    } as SpeechSynthesisErrorEvent;
+    // Assert utterance exists, then optionally call handler
+    expect(utterance).not.toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (utterance) {
+      utterance.onerror?.(errorEvent);
+    }
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Speech synthesis error in speakText: synthesis-failed'),
+      expect.any(Object)
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('speakText handles interrupted error event', () => {
+    store.setState({ isSpeechSupported: true });
+    const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    store.getState().speakText('Interrupt test', 'en');
+
+    const utterance = speechSynthesisMock.speak.mock.calls[0][0] as MockSpeechSynthesisUtterance;
+    expect(utterance).toBeDefined();
+
+    // Simulate interrupted error event
+    const errorEvent = {
+      error: 'interrupted',
+      charIndex: 0,
+      elapsedTime: 0.1,
+      utterance: utterance as SpeechSynthesisUtterance,
+    } as SpeechSynthesisErrorEvent;
+    // Assert utterance exists, then optionally call handler
+    expect(utterance).not.toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (utterance) {
+      utterance.onerror?.(errorEvent);
+    }
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Speech synthesis interrupted in speakText: interrupted')
+    );
+    consoleInfoSpy.mockRestore();
   });
 });
