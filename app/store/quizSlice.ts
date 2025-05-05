@@ -161,65 +161,88 @@ export const createQuizSlice: StateCreator<
   },
 
   generateText: async (isPrefetch = false): Promise<void> => {
+    set({ loading: !isPrefetch, error: null });
     if (!isPrefetch) {
-      get().setLoading(true);
-      get().setError(null);
       get().stopPassageSpeech();
-      get().resetQuizState();
-      get().setShowContent(false);
+      set({
+        selectedAnswer: null,
+        isAnswered: false,
+        relevantTextRange: null,
+        feedbackIsCorrect: null,
+        feedbackCorrectAnswer: null,
+        feedbackCorrectExplanation: null,
+        feedbackChosenIncorrectExplanation: null,
+        feedbackRelevantText: null,
+        showExplanation: false,
+        nextQuizAvailable: null,
+        feedbackSubmitted: false,
+        hoverCreditsUsed: 0,
+      });
     }
 
     try {
-      const { passageLanguage, cefrLevel, generatedQuestionLanguage } = get();
+      const response = await generateExerciseResponse({
+        passageLanguage: get().passageLanguage,
+        questionLanguage: get().generatedQuestionLanguage,
+        cefrLevel: get().cefrLevel,
+      });
 
-      const params = {
-        passageLanguage: passageLanguage,
-        questionLanguage: generatedQuestionLanguage ?? 'en',
-        cefrLevel: cefrLevel,
-      };
-
-      const rawResponse = await generateExerciseResponse(params);
-
-      const validatedResponse = GenerateExerciseResultSchema.safeParse(rawResponse as unknown);
-
-      if (!validatedResponse.success) {
-        console.error('Zod validation error (generateExercise):', validatedResponse.error.message);
-        throw new Error(`Invalid API response structure: ${validatedResponse.error.message}`);
+      if ('error' in response && response.error) {
+        if (!isPrefetch) {
+          console.error('[Store] API response contained error:', response.error);
+          get().setError(response.error);
+          get().setShowContent(false);
+          set({ loading: false });
+        } else {
+          console.warn('[Store] Prefetch API response contained error:', response.error);
+          set({ loading: false, nextQuizAvailable: null });
+        }
+        return;
       }
 
-      const response = validatedResponse.data;
-
-      if (response.error) {
-        throw new Error(response.error);
+      const parseResult = GenerateExerciseResultSchema.safeParse(response as unknown);
+      if (!parseResult.success) {
+        const errorMsg = `Invalid API response structure: ${parseResult.error.message}`;
+        console.error(
+          '[Store] Zod validation error (generateExercise):',
+          parseResult.error.format()
+        );
+        if (!isPrefetch) {
+          get().setError(errorMsg);
+          get().setShowContent(false);
+          set({ loading: false });
+        } else {
+          console.warn('[Store] Prefetch Zod validation failed:', parseResult.error.format());
+          set({ loading: false, nextQuizAvailable: null });
+        }
+        return;
       }
 
-      const quizData: PartialQuizData = response.quizData;
+      const validatedResponse = parseResult.data;
+      const quizData: PartialQuizData = validatedResponse.quizData;
 
       if (!quizData.language) {
         quizData.language = get().passageLanguage;
       }
 
       if (isPrefetch) {
-        get().setNextQuizAvailable({
-          quizData: quizData,
-          quizId: response.quizId,
+        set({
+          nextQuizAvailable: { quizData: quizData, quizId: validatedResponse.quizId },
+          loading: false,
         });
-        console.log('Next quiz pre-fetched.');
+        console.log('[Store] Next quiz pre-fetched.');
       } else {
-        get().resetQuizWithNewData(quizData, response.quizId);
+        get().resetQuizWithNewData(quizData, validatedResponse.quizId);
       }
-    } catch (error: unknown) {
-      console.error('Error generating text:', String(error));
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error during generation';
+      console.error('[Store] Error generating exercise:', e);
       if (!isPrefetch) {
-        const message: string =
-          error instanceof Error ? error.message : 'An unknown error occurred';
-        get().setError(message);
-        get().setLoading(false);
+        get().setError(errorMessage);
         get().setShowContent(false);
-      }
-    } finally {
-      if (!isPrefetch) {
-        get().setLoading(false);
+        set({ loading: false });
+      } else {
+        set({ loading: false, nextQuizAvailable: null });
       }
     }
   },
@@ -336,7 +359,7 @@ export const createQuizSlice: StateCreator<
     }
   },
 
-  submitFeedback: async (is_good: boolean): Promise<void> => {
+  submitFeedback: async (isGood: boolean): Promise<void> => {
     const {
       currentQuizId,
       selectedAnswer,
@@ -346,81 +369,63 @@ export const createQuizSlice: StateCreator<
       cefrLevel,
     } = get();
 
-    if (typeof currentQuizId !== 'number') {
-      console.error('[SubmitFeedback][Store] Invalid or missing quiz ID.');
-      set((state) => {
-        state.error = 'Cannot submit feedback: Invalid quiz ID.';
+    if (currentQuizId === null) {
+      set({ error: 'Cannot submit feedback: Invalid quiz ID.', loading: false });
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
+      set({
+        error: 'Cannot submit feedback: Missing required state (language/level). Please refresh.',
+        loading: false,
       });
       return;
     }
 
-    if (!generatedQuestionLanguage) {
-      console.error(
-        '[SubmitFeedback][Store] Missing language/level state required for fetching next question.',
-        { passageLanguage, generatedQuestionLanguage, cefrLevel }
-      );
-      set((state) => {
-        state.error =
-          'Cannot submit feedback: Missing required state (language/level). Please refresh.';
-      });
-      return;
-    }
+    set({ loading: true, error: null });
 
     try {
-      set((state) => {
-        state.loading = true;
-        state.error = null;
-        state.feedbackSubmitted = false;
-      });
-
-      const userAnswer = selectedAnswer;
-      const isCorrect = feedbackIsCorrect;
-
-      const params = {
+      const payload = {
         quizId: currentQuizId,
-        is_good: is_good ? 1 : 0,
-        userAnswer: userAnswer ?? undefined,
-        isCorrect: isCorrect ?? undefined,
-        passageLanguage: passageLanguage,
+        is_good: isGood ? 1 : 0,
+        userAnswer: selectedAnswer ?? undefined,
+        isCorrect: feedbackIsCorrect ?? undefined,
+        passageLanguage,
         questionLanguage: generatedQuestionLanguage,
         currentLevel: cefrLevel,
       };
 
-      const result = await submitQuestionFeedback(params);
+      const result = await submitQuestionFeedback(payload);
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to submit feedback via API.');
+        const errorMessage = result.error || 'Failed to submit feedback via API.';
+        throw new Error(errorMessage);
       }
 
-      console.log(
-        `[SubmitFeedback][Store] Feedback (${is_good}) submitted successfully for quiz ${currentQuizId}.`
-      );
-
-      set((state) => {
-        state.feedbackSubmitted = true;
-      });
+      set({ feedbackSubmitted: true, loading: false });
 
       const nextQuiz = get().nextQuizAvailable;
       if (nextQuiz) {
-        console.log(
-          `[SubmitFeedback][Store] Prefetched quiz data found (ID: ${nextQuiz.quizId}). Loading immediately...`
-        );
         get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
       } else {
-        console.warn(
-          `[SubmitFeedback][Store] Feedback saved, but no prefetched quiz was available to display.`
-        );
-        set((state) => {
-          state.loading = false;
-        });
+        try {
+          await get().generateText();
+        } catch (genError) {
+          console.error('[Store] Error generating next text after feedback:', genError);
+          get().setError(
+            genError instanceof Error ? genError.message : 'Failed to generate next exercise.'
+          );
+          get().setShowContent(false);
+        }
       }
     } catch (error: unknown) {
-      console.error('[SubmitFeedback][Store] Error during feedback submission process:', error);
-      set((state) => {
-        state.error = `Failed to submit feedback: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        state.loading = false;
-        state.feedbackSubmitted = false;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      set({
+        error: `Failed to submit feedback: ${message}`,
+        loading: false,
+        feedbackSubmitted: false,
       });
+      console.error('[Store] Error submitting feedback:', error);
     }
   },
 

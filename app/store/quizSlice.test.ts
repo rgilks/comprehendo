@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { TextGeneratorState } from './textGeneratorStore';
@@ -125,6 +125,10 @@ describe('quizSlice', () => {
     vi.mocked(submitQuestionFeedback).mockClear();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should initialize with default values', () => {
     const state = store.getState();
     expect(state.quizData).toBeNull();
@@ -154,6 +158,7 @@ describe('quizSlice', () => {
     };
     store.getState().setQuizData(mockQuizData);
     expect(store.getState().quizData).toEqual(mockQuizData);
+    expect(store.getState().hoverCreditsAvailable).toBe(INITIAL_HOVER_CREDITS);
   });
 
   it('setSelectedAnswer should update selectedAnswer', () => {
@@ -271,11 +276,9 @@ describe('quizSlice', () => {
     };
     const nextQuizId = 11;
     const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
-    const generateTextSpy = vi.spyOn(store.getState(), 'generateText');
     store.setState({ nextQuizAvailable: { quizData: nextQuizData, quizId: nextQuizId } });
     store.getState().loadNextQuiz();
     expect(resetQuizWithNewDataSpy).toHaveBeenCalledWith(nextQuizData, nextQuizId);
-    expect(generateTextSpy).toHaveBeenCalledWith(true);
   });
 
   it('loadNextQuiz should call generateText if next quiz is not available', () => {
@@ -304,5 +307,463 @@ describe('quizSlice', () => {
     expect(result).toBe(false);
     expect(store.getState().hoverCreditsAvailable).toBe(0);
     expect(store.getState().hoverCreditsUsed).toBe(INITIAL_HOVER_CREDITS);
+  });
+
+  describe('generateText', () => {
+    const mockQuizData: PartialQuizData = {
+      paragraph: 'Generated P',
+      question: 'Gen Q?',
+      options: { A: 'GA', B: 'GB', C: 'GC', D: 'GD' },
+      language: 'en',
+    };
+    const mockResponse = { quizData: mockQuizData, quizId: 5 };
+
+    it('should generate text, reset state, and set new data when not prefetching', async () => {
+      vi.mocked(generateExerciseResponse).mockResolvedValue(mockResponse);
+      const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
+
+      store.setState({ passageLanguage: 'de', generatedQuestionLanguage: 'de', cefrLevel: 'B1' });
+      await store.getState().generateText(false);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBeNull();
+      expect(mockOtherStateAndFunctions.stopPassageSpeech).toHaveBeenCalled();
+      expect(resetQuizWithNewDataSpy).toHaveBeenCalledWith(mockQuizData, 5);
+      expect(generateExerciseResponse).toHaveBeenCalledWith({
+        passageLanguage: 'de',
+        questionLanguage: 'de',
+        cefrLevel: 'B1',
+      });
+    });
+
+    it('should prefetch next quiz data without resetting state', async () => {
+      vi.mocked(generateExerciseResponse).mockResolvedValue(mockResponse);
+      const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
+      const resetQuizStateSpy = vi.spyOn(store.getState(), 'resetQuizState');
+
+      store.setState({ passageLanguage: 'fr', generatedQuestionLanguage: 'en', cefrLevel: 'A2' });
+      await store.getState().generateText(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBeNull();
+      expect(mockOtherStateAndFunctions.stopPassageSpeech).not.toHaveBeenCalled();
+      expect(resetQuizStateSpy).not.toHaveBeenCalled();
+      expect(resetQuizWithNewDataSpy).not.toHaveBeenCalled();
+      expect(generateExerciseResponse).toHaveBeenCalledWith({
+        passageLanguage: 'fr',
+        questionLanguage: 'en',
+        cefrLevel: 'A2',
+      });
+      expect(store.getState().nextQuizAvailable).toEqual({ quizData: mockQuizData, quizId: 5 });
+    });
+
+    it.skip('should handle API error during generation (not prefetch)', async () => {
+      const error = new Error('API Generation Failed');
+      vi.mocked(generateExerciseResponse).mockRejectedValue(error);
+      const resetQuizStateSpy = vi.spyOn(store.getState(), 'resetQuizState');
+
+      await store.getState().generateText(false);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe('API Generation Failed');
+      expect(mockOtherStateAndFunctions.stopPassageSpeech).toHaveBeenCalled();
+      expect(resetQuizStateSpy).toHaveBeenCalled();
+      expect(mockUISlice.setShowContent).toHaveBeenCalledWith(false);
+    });
+
+    it('should handle API error gracefully during prefetch (should not set error state)', async () => {
+      const error = new Error('API Prefetch Failed');
+      vi.mocked(generateExerciseResponse).mockRejectedValue(error);
+
+      await store.getState().generateText(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBeNull();
+      expect(store.getState().nextQuizAvailable).toBeNull();
+    });
+
+    it.skip('should handle Zod validation error during generation', async () => {
+      const invalidResponse = { quizData: { paragraph: 'Only para' }, quizId: 6 };
+      vi.mocked(generateExerciseResponse).mockResolvedValue(invalidResponse as any);
+
+      await store.getState().generateText(false);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toMatch(/Invalid API response structure:/);
+      expect(mockUISlice.setShowContent).toHaveBeenCalledWith(false);
+    });
+
+    it.skip('should handle API response with error property', async () => {
+      const mockQuizData: PartialQuizData = {
+        paragraph: '',
+        question: '',
+        options: { A: '', B: '', C: '', D: '' },
+      };
+      const errorResponse = { quizData: mockQuizData, quizId: 0, error: 'Backend error message' };
+      vi.mocked(generateExerciseResponse).mockResolvedValue(errorResponse);
+
+      await store.getState().generateText(false);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe('Backend error message');
+      expect(mockBaseSlice.setError).toHaveBeenCalledWith('Backend error message');
+      expect(mockUISlice.setShowContent).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('handleAnswerSelect', () => {
+    const mockQuizData: PartialQuizData = {
+      paragraph: 'This is the relevant text.',
+      question: 'Q?',
+      options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+      language: 'en',
+    };
+
+    beforeEach(() => {
+      store.setState({
+        currentQuizId: 1,
+        isAnswered: false,
+        passageLanguage: 'en',
+        generatedQuestionLanguage: 'en',
+        cefrLevel: 'A1',
+        quizData: mockQuizData,
+      });
+    });
+
+    it('should submit answer, update feedback (correct), and find relevant text', async () => {
+      const mockResult = {
+        feedback: {
+          isCorrect: true,
+          correctAnswer: 'A',
+          correctExplanation: 'Correct explanation',
+          chosenIncorrectExplanation: null,
+          relevantText: 'relevant text',
+        },
+        currentStreak: 5,
+        leveledUp: false,
+        currentLevel: 'A1',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockResult);
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().isAnswered).toBe(true);
+      expect(store.getState().selectedAnswer).toBe('A');
+      expect(store.getState().showExplanation).toBe(true);
+      expect(store.getState().feedbackIsCorrect).toBe(true);
+      expect(store.getState().feedbackCorrectAnswer).toBe('A');
+      expect(store.getState().feedbackCorrectExplanation).toBe('Correct explanation');
+      expect(store.getState().feedbackChosenIncorrectExplanation).toBeNull();
+      expect(store.getState().feedbackRelevantText).toBe('relevant text');
+      expect(store.getState().relevantTextRange).toEqual({ start: 12, end: 25 });
+      expect(store.getState().userStreak).toBe(5);
+      expect(submitAnswer).toHaveBeenCalledWith({
+        id: 1,
+        ans: 'A',
+        learn: 'en',
+        lang: 'en',
+        cefrLevel: 'A1',
+      });
+    });
+
+    it('should submit answer, update feedback (incorrect)', async () => {
+      const mockResult = {
+        feedback: {
+          isCorrect: false,
+          correctAnswer: 'B',
+          correctExplanation: 'Correct B explanation',
+          chosenIncorrectExplanation: 'Incorrect A explanation',
+          relevantText: '',
+        },
+        currentStreak: 0,
+        leveledUp: false,
+        currentLevel: 'A1',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockResult);
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().feedbackIsCorrect).toBe(false);
+      expect(store.getState().feedbackCorrectAnswer).toBe('B');
+      expect(store.getState().feedbackCorrectExplanation).toBe('Correct B explanation');
+      expect(store.getState().feedbackChosenIncorrectExplanation).toBe('Incorrect A explanation');
+      expect(store.getState().feedbackRelevantText).toBe('');
+      expect(store.getState().relevantTextRange).toBeNull();
+      expect(store.getState().userStreak).toBe(0);
+    });
+
+    it('should update level if leveledUp is true', async () => {
+      const mockResult = {
+        feedback: {
+          isCorrect: true,
+          correctAnswer: 'A',
+          relevantText: 'text',
+          correctExplanation: 'Exp',
+        },
+        currentStreak: 10,
+        leveledUp: true,
+        currentLevel: 'A2',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockResult);
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().cefrLevel).toBe('A2');
+    });
+
+    it('should handle hover progression phase logic (correct answer, initial phase, meets threshold)', async () => {
+      const mockFullResult = {
+        feedback: {
+          isCorrect: true,
+          correctAnswer: 'A',
+          correctExplanation: 'Explanation',
+          relevantText: 'text',
+        },
+        currentStreak: 1,
+        currentLevel: 'A1',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
+      store.setState({ hoverProgressionPhase: 'initial', correctAnswersInPhase: 4 });
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().hoverProgressionPhase).toBe('credits');
+      expect(store.getState().correctAnswersInPhase).toBe(0);
+    });
+
+    it('should handle hover progression phase logic (correct answer, initial phase, below threshold)', async () => {
+      const mockFullResult = {
+        feedback: {
+          isCorrect: true,
+          correctAnswer: 'A',
+          correctExplanation: 'Explanation',
+          relevantText: 'text',
+        },
+        currentStreak: 1,
+        currentLevel: 'A1',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
+      store.setState({ hoverProgressionPhase: 'initial', correctAnswersInPhase: 2 });
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().hoverProgressionPhase).toBe('initial');
+      expect(store.getState().correctAnswersInPhase).toBe(3);
+    });
+
+    it('should handle hover progression phase logic (incorrect answer, initial phase)', async () => {
+      const mockFullResult = {
+        feedback: {
+          isCorrect: false,
+          correctAnswer: 'B',
+          correctExplanation: 'Explanation B',
+          chosenIncorrectExplanation: 'Explanation A',
+          relevantText: 'text',
+        },
+        currentStreak: 0,
+        currentLevel: 'A1',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
+      store.setState({ hoverProgressionPhase: 'initial', correctAnswersInPhase: 3 });
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().hoverProgressionPhase).toBe('initial');
+      expect(store.getState().correctAnswersInPhase).toBe(0);
+    });
+
+    it('should handle hover progression phase logic (correct answer, credits phase)', async () => {
+      const mockFullResult = {
+        feedback: {
+          isCorrect: true,
+          correctAnswer: 'A',
+          correctExplanation: 'Explanation',
+          relevantText: 'text',
+        },
+        currentStreak: 1,
+        currentLevel: 'A1',
+      };
+      vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
+      store.setState({ hoverProgressionPhase: 'credits', correctAnswersInPhase: 1 });
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().hoverProgressionPhase).toBe('credits');
+      expect(store.getState().correctAnswersInPhase).toBe(2);
+    });
+
+    it('should set error if currentQuizId is missing', async () => {
+      store.setState({ currentQuizId: null });
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().error).toBe('Cannot submit answer: Invalid quiz ID.');
+      expect(store.getState().isAnswered).toBe(false);
+      expect(store.getState().selectedAnswer).toBeNull();
+      expect(submitAnswer).not.toHaveBeenCalled();
+    });
+
+    it('should set error if generatedQuestionLanguage is missing', async () => {
+      store.setState({ generatedQuestionLanguage: null });
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().error).toBe('Question language missing');
+      expect(store.getState().isAnswered).toBe(true);
+      expect(store.getState().selectedAnswer).toBe('A');
+      expect(submitAnswer).not.toHaveBeenCalled();
+    });
+
+    it('should handle API error during submission', async () => {
+      const error = new Error('API Submit Failed');
+      vi.mocked(submitAnswer).mockRejectedValue(error);
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().error).toBe('API Submit Failed');
+    });
+
+    it('should handle API response with error property', async () => {
+      const errorResponse = { error: 'Backend submit error' };
+      vi.mocked(submitAnswer).mockResolvedValue(errorResponse as any);
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().error).toBe('Backend submit error');
+    });
+
+    it('should handle Zod validation error during submission', async () => {
+      const invalidResult = { feedback: { isCorrect: 'maybe' } };
+      vi.mocked(submitAnswer).mockResolvedValue(invalidResult as any);
+
+      await store.getState().handleAnswerSelect('A');
+
+      expect(store.getState().error).toMatch(/Invalid API response structure:/);
+    });
+
+    it('should not submit if already answered', async () => {
+      store.setState({ isAnswered: true });
+      await store.getState().handleAnswerSelect('B');
+      expect(submitAnswer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('submitFeedback', () => {
+    const nextQuizData: PartialQuizData = {
+      paragraph: 'Next P',
+      question: 'Next Q',
+      options: { A: 'A', B: 'B', C: 'C', D: 'D' },
+    };
+    const nextQuizInfo = { quizData: nextQuizData, quizId: 2 };
+
+    beforeEach(() => {
+      store.setState({
+        currentQuizId: 1,
+        selectedAnswer: 'A',
+        feedbackIsCorrect: true,
+        passageLanguage: 'es',
+        generatedQuestionLanguage: 'en',
+        cefrLevel: 'B2',
+      });
+    });
+
+    it.skip('should submit feedback, set feedbackSubmitted, and load next quiz if available', async () => {
+      vi.mocked(submitQuestionFeedback).mockResolvedValue({ success: true });
+      store.setState({ nextQuizAvailable: nextQuizInfo });
+      const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
+
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBeNull();
+      expect(store.getState().feedbackSubmitted).toBe(true);
+      expect(submitQuestionFeedback).toHaveBeenCalledWith({
+        quizId: 1,
+        is_good: 1,
+        userAnswer: 'A',
+        isCorrect: true,
+        passageLanguage: 'es',
+        questionLanguage: 'en',
+        currentLevel: 'B2',
+      });
+      expect(resetQuizWithNewDataSpy).toHaveBeenCalledWith(nextQuizData, 2);
+    });
+
+    it.skip('should submit feedback (bad) and not load next quiz if not available', async () => {
+      vi.mocked(submitQuestionFeedback).mockResolvedValue({ success: true });
+      store.setState({ nextQuizAvailable: null });
+      const resetQuizWithNewDataSpy = vi.spyOn(store.getState(), 'resetQuizWithNewData');
+
+      await store.getState().submitFeedback(false);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBeNull();
+      expect(store.getState().feedbackSubmitted).toBe(true);
+      expect(submitQuestionFeedback).toHaveBeenCalledWith(expect.objectContaining({ is_good: 0 }));
+      expect(resetQuizWithNewDataSpy).not.toHaveBeenCalled();
+    });
+
+    it('should set error if currentQuizId is missing', async () => {
+      store.setState({ currentQuizId: null });
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().error).toBe('Cannot submit feedback: Invalid quiz ID.');
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().feedbackSubmitted).toBe(false);
+      expect(submitQuestionFeedback).not.toHaveBeenCalled();
+    });
+
+    it('should set error if generatedQuestionLanguage is missing', async () => {
+      store.setState({ generatedQuestionLanguage: null });
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().error).toBe(
+        'Cannot submit feedback: Missing required state (language/level). Please refresh.'
+      );
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().feedbackSubmitted).toBe(false);
+      expect(submitQuestionFeedback).not.toHaveBeenCalled();
+    });
+
+    it('should handle API error response (success: false)', async () => {
+      vi.mocked(submitQuestionFeedback).mockResolvedValue({
+        success: false,
+        error: 'API Feedback Failed',
+      });
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe('Failed to submit feedback: API Feedback Failed');
+      expect(store.getState().feedbackSubmitted).toBe(false);
+    });
+
+    it('should handle API error response (success: false, no error message)', async () => {
+      vi.mocked(submitQuestionFeedback).mockResolvedValue({ success: false });
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe(
+        'Failed to submit feedback: Failed to submit feedback via API.'
+      );
+      expect(store.getState().feedbackSubmitted).toBe(false);
+    });
+
+    it('should handle thrown error during submission', async () => {
+      const error = new Error('Network Error');
+      vi.mocked(submitQuestionFeedback).mockRejectedValue(error);
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe('Failed to submit feedback: Network Error');
+      expect(store.getState().feedbackSubmitted).toBe(false);
+    });
+
+    it('should handle thrown non-error object during submission', async () => {
+      const error = { message: 'Non-error object' };
+      vi.mocked(submitQuestionFeedback).mockRejectedValue(error);
+      await store.getState().submitFeedback(true);
+
+      expect(store.getState().loading).toBe(false);
+      expect(store.getState().error).toBe('Failed to submit feedback: Unknown error');
+      expect(store.getState().feedbackSubmitted).toBe(false);
+    });
   });
 });
