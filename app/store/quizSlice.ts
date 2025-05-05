@@ -42,13 +42,6 @@ export interface QuizSlice extends BaseSlice {
   setSelectedAnswer: (answer: string | null) => void;
   setIsAnswered: (answered: boolean) => void;
   setRelevantTextRange: (range: { start: number; end: number } | null) => void;
-  setFeedback: (
-    correct: boolean | null,
-    correctAnswer: string | null,
-    correctExplanation: string | null,
-    chosenIncorrectExplanation: string | null,
-    relevantText: string | null
-  ) => void;
   generateText: (isPrefetch?: boolean) => Promise<void>;
   handleAnswerSelect: (answer: string) => Promise<void>;
   submitFeedback: (is_good: boolean) => Promise<void>;
@@ -60,8 +53,9 @@ export interface QuizSlice extends BaseSlice {
   useHoverCredit: () => boolean;
 }
 
-const INITIAL_HOVER_CREDITS = 7;
 const INITIAL_PHASE_THRESHOLD = 5;
+
+export const INITIAL_HOVER_CREDITS = 7;
 
 export const createQuizSlice: StateCreator<
   TextGeneratorState,
@@ -108,21 +102,6 @@ export const createQuizSlice: StateCreator<
       state.relevantTextRange = range;
     });
   },
-  setFeedback: (
-    correct,
-    correctAnswer,
-    correctExplanation,
-    chosenIncorrectExplanation,
-    relevantText
-  ) => {
-    set((state) => {
-      state.feedbackIsCorrect = correct;
-      state.feedbackCorrectAnswer = correctAnswer;
-      state.feedbackCorrectExplanation = correctExplanation;
-      state.feedbackChosenIncorrectExplanation = chosenIncorrectExplanation;
-      state.feedbackRelevantText = relevantText;
-    });
-  },
 
   setNextQuizAvailable: (info) => {
     set((state) => {
@@ -154,17 +133,11 @@ export const createQuizSlice: StateCreator<
 
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
     get().stopPassageSpeech();
+    get().resetQuizState();
+
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
-      state.selectedAnswer = null;
-      state.isAnswered = false;
-      state.relevantTextRange = null;
-      state.feedbackIsCorrect = null;
-      state.feedbackCorrectAnswer = null;
-      state.feedbackCorrectExplanation = null;
-      state.feedbackChosenIncorrectExplanation = null;
-      state.feedbackRelevantText = null;
       state.showQuestionSection = true;
       state.showExplanation = false;
       state.showContent = true;
@@ -172,12 +145,6 @@ export const createQuizSlice: StateCreator<
       state.error = null;
       const currentPassageLanguage = get().passageLanguage;
       state.generatedPassageLanguage = currentPassageLanguage;
-      state.nextQuizAvailable = null;
-      state.feedbackSubmitted = false;
-
-      const currentPhase = state.hoverProgressionPhase;
-      state.hoverCreditsAvailable = currentPhase === 'initial' ? Infinity : INITIAL_HOVER_CREDITS;
-      state.hoverCreditsUsed = 0;
     });
 
     void get().generateText(true);
@@ -226,7 +193,7 @@ export const createQuizSlice: StateCreator<
         throw new Error(response.error);
       }
 
-      const quizData: PartialQuizData | null = response.quizData;
+      const quizData: PartialQuizData = response.quizData;
 
       if (!quizData.language) {
         quizData.language = get().passageLanguage;
@@ -461,10 +428,8 @@ export const createQuizSlice: StateCreator<
     const currentCredits = get().hoverCreditsAvailable;
     if (currentCredits > 0) {
       set((state) => {
-        if (state.hoverCreditsAvailable > 0) {
-          state.hoverCreditsAvailable -= 1;
-          state.hoverCreditsUsed += 1;
-        }
+        state.hoverCreditsAvailable -= 1;
+        state.hoverCreditsUsed += 1;
       });
       return true;
     }
