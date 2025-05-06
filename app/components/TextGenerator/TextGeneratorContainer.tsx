@@ -4,6 +4,7 @@ import React, { useRef, useEffect } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSession } from 'next-auth/react';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
+import { type LearningLanguage } from '@/lib/domain/language';
 import LanguageSelector from './LanguageSelector';
 import LoginPrompt from './LoginPrompt';
 import ErrorDisplay from './ErrorDisplay';
@@ -16,10 +17,12 @@ import Generator from './Generator';
 const TextGeneratorContainer = () => {
   const { language: contextLanguage } = useLanguage();
   const { status } = useSession();
-  const { loading, quizData, showContent, isAnswered, fetchProgress } = useTextGeneratorStore();
+  const { loading, quizData, showContent, isAnswered, fetchProgress, setPassageLanguage } =
+    useTextGeneratorStore();
 
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const generatedContentRef = useRef<HTMLDivElement>(null);
+  const defaultLanguageAppliedRef = useRef(false);
 
   const isContentVisible = !!(quizData && !loading && showContent);
 
@@ -41,8 +44,22 @@ const TextGeneratorContainer = () => {
       void fetchProgress();
     }
 
+    if (!defaultLanguageAppliedRef.current) {
+      const currentPassageLanguage = useTextGeneratorStore.getState().passageLanguage;
+      if (contextLanguage === 'en') {
+        if (currentPassageLanguage !== 'es') {
+          setPassageLanguage('es' as LearningLanguage);
+        }
+      } else {
+        if (currentPassageLanguage !== 'en') {
+          setPassageLanguage('en' as LearningLanguage);
+        }
+      }
+      defaultLanguageAppliedRef.current = true;
+    }
+
     useTextGeneratorStore.setState({ generatedQuestionLanguage: contextLanguage });
-  }, [status, fetchProgress, contextLanguage]);
+  }, [status, fetchProgress, contextLanguage, setPassageLanguage]);
 
   return (
     <div
