@@ -19,6 +19,10 @@ const config = {
       animation: {
         'scale-up': 'scaleUp 0.3s ease-out forwards',
       },
+      animationDelay: {
+        200: '0.2s',
+        300: '0.3s',
+      },
     },
   },
   plugins: [],
