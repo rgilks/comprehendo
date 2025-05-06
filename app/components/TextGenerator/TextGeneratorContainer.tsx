@@ -70,7 +70,9 @@ const TextGeneratorContainer = () => {
 
         {showProgressTracker && <ProgressTracker />}
 
-        <Generator />
+        <div className="mt-4">
+          <Generator />
+        </div>
       </div>
     </div>
   );
