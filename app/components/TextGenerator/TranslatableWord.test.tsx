@@ -92,9 +92,10 @@ describe('TranslatableWord', () => {
     const wordElement = screen.getByText('hello');
     fireEvent.click(wordElement);
 
-    // Hover to show "Translating..."
+    // Hover to show "Translating..." - This behavior has changed.
     fireEvent.mouseEnter(wordElement);
-    expect(screen.getByText('Translating...')).toBeInTheDocument();
+    // Expect "Translating..." NOT to be in the document while loading.
+    expect(screen.queryByText('Translating...')).not.toBeInTheDocument();
 
     // Resolve translation
     await waitFor(() => {

@@ -32,7 +32,7 @@ const TranslatableWord = memo(
       useHoverCredit: decrementHoverCredit,
       hoverProgressionPhase,
       hoverCreditsAvailable,
-      translationCache, // Access the translationCache
+      translationCache,
     } = useTextGeneratorStore();
 
     const shouldTranslate = fromLang !== toLang;
@@ -50,9 +50,8 @@ const TranslatableWord = memo(
             const cacheKey = getCacheKey(word, sourceLangIso, targetLangIso);
             if (translationCache.has(cacheKey)) {
               setTranslation(translationCache.get(cacheKey) ?? null);
-              setIsClicked(true); // Mark as clicked if already translated
+              setIsClicked(true);
             } else {
-              // Reset if word/lang changes and it's not in cache
               setTranslation(null);
               setIsClicked(false);
             }
@@ -62,7 +61,6 @@ const TranslatableWord = memo(
         setTranslation(null);
         setIsClicked(false);
       }
-      // Ensure all dependencies that influence cache lookup are included.
       // translationCache itself is a dependency because its contents can change.
     }, [word, fromLang, toLang, shouldTranslate, translationCache]);
 
@@ -134,9 +132,6 @@ const TranslatableWord = memo(
         if (canAttemptTranslation) {
           setIsClicked(true);
           void handleTranslationFetch();
-        } else {
-          // Optional: Log that the state change was blocked due to credits - REMOVING
-          // console.log(`[TranslatableWord: ${word}] Click interaction blocked (no state change): No credits left.`);
         }
       }
     }, [
@@ -190,11 +185,6 @@ const TranslatableWord = memo(
         {showTranslationPopup && (
           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
             <span className="font-medium">{translation}</span>
-          </div>
-        )}
-        {isClicked && isHovering && isLoading && (
-          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-gray-900/95 border border-gray-600 text-white text-base rounded-lg shadow-xl z-10 whitespace-nowrap min-w-[100px] text-center backdrop-blur-sm">
-            <span className="italic text-sm">Translating...</span>
           </div>
         )}
       </span>
