@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { enableMapSet } from 'immer';
 
 import { type UISlice, createUISlice } from './uiSlice';
@@ -27,14 +28,37 @@ export type TextGeneratorState = UISlice &
 enableMapSet();
 
 export const useTextGeneratorStore = create<TextGeneratorState>()(
-  immer((...args) => ({
-    ...createUISlice(...args),
-    ...createSettingsSlice(...args),
-    ...createQuizSlice(...args),
-    ...createAudioSlice(...args),
-    ...createProgressSlice(...args),
-    ...createLanguageSlice(...args),
-  }))
+  persist(
+    immer((...args) => ({
+      ...createUISlice(...args),
+      ...createSettingsSlice(...args),
+      ...createQuizSlice(...args),
+      ...createAudioSlice(...args),
+      ...createProgressSlice(...args),
+      ...createLanguageSlice(...args),
+    })),
+    {
+      name: 'text-generator-store',
+      storage: createJSONStorage(() => localStorage, {
+        replacer: (_key, value) => {
+          if (value instanceof Map) {
+            return { __type: 'Map', value: Array.from(value.entries()) };
+          }
+          return value;
+        },
+        reviver: (_key, value) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const val = value as any;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          if (typeof val === 'object' && val !== null && val.__type === 'Map') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+            return new Map(val.value);
+          }
+          return value;
+        },
+      }),
+    }
+  )
 );
 
 export default useTextGeneratorStore;
