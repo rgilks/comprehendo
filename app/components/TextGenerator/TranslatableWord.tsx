@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useEffect } from 'react';
 import { type Language, SPEECH_LANGUAGES } from '@/lib/domain/language';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 
@@ -11,6 +11,13 @@ interface TranslatableWordProps {
   isCurrentWord: boolean;
   isRelevant: boolean;
 }
+
+// Helper to clean word and generate cache key, consistent with audioSlice
+const getCacheKey = (word: string, sourceLang: string, targetLang: string): string => {
+  const cleaningRegex = /[^\p{L}\p{N}\s'-]/gu;
+  const cleanedWord = word.replace(cleaningRegex, '').trim().toLowerCase();
+  return `${sourceLang}:${targetLang}:${cleanedWord}`;
+};
 
 const TranslatableWord = memo(
   ({ word, fromLang, toLang, isCurrentWord, isRelevant }: TranslatableWordProps) => {
@@ -25,63 +32,97 @@ const TranslatableWord = memo(
       useHoverCredit: decrementHoverCredit,
       hoverProgressionPhase,
       hoverCreditsAvailable,
+      translationCache, // Access the translationCache
     } = useTextGeneratorStore();
 
     const shouldTranslate = fromLang !== toLang;
 
-    const handleTranslationFetch = useCallback(async () => {
-      if (!shouldTranslate || translation || isLoading) return;
+    useEffect(() => {
+      if (shouldTranslate) {
+        const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
+        const toLangSpeechCode = SPEECH_LANGUAGES[toLang];
 
-      if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
-        setIsLoading(true);
-        try {
-          const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
-          const toLangSpeechCode = SPEECH_LANGUAGES[toLang];
+        if (fromLangSpeechCode && toLangSpeechCode) {
+          const sourceLangIso = fromLangSpeechCode.split('-')[0];
+          const targetLangIso = toLangSpeechCode.split('-')[0];
 
-          if (fromLangSpeechCode && toLangSpeechCode) {
-            const sourceLang = fromLangSpeechCode.split('-')[0];
-            const targetLang = toLangSpeechCode.split('-')[0];
-
-            if (sourceLang && targetLang) {
-              const result = await getTranslation(word, sourceLang, targetLang);
-
-              if (result) {
-                setTranslation(result);
-                if (hoverProgressionPhase === 'credits') {
-                  decrementHoverCredit();
-                }
-              } else {
-                console.log('Translation fetch returned no result.');
-              }
+          if (sourceLangIso && targetLangIso) {
+            const cacheKey = getCacheKey(word, sourceLangIso, targetLangIso);
+            if (translationCache.has(cacheKey)) {
+              setTranslation(translationCache.get(cacheKey) ?? null);
+              setIsClicked(true); // Mark as clicked if already translated
             } else {
-              console.error('Error splitting language codes', {
-                fromLangSpeechCode,
-                toLangSpeechCode,
-              });
+              // Reset if word/lang changes and it's not in cache
+              setTranslation(null);
+              setIsClicked(false);
             }
-          } else {
-            console.error('Could not find speech codes for languages', { fromLang, toLang });
           }
-        } catch (error) {
-          console.error('Error fetching translation:', error);
-        } finally {
-          setIsLoading(false);
         }
       } else {
-        console.log('Click translation blocked: No credits left.');
+        setTranslation(null);
+        setIsClicked(false);
       }
-    }, [
-      shouldTranslate,
-      translation,
-      isLoading,
-      hoverProgressionPhase,
-      hoverCreditsAvailable,
-      fromLang,
-      toLang,
-      getTranslation,
-      word,
-      decrementHoverCredit,
-    ]);
+      // Ensure all dependencies that influence cache lookup are included.
+      // translationCache itself is a dependency because its contents can change.
+    }, [word, fromLang, toLang, shouldTranslate, translationCache]);
+
+    const handleTranslationFetch = useCallback(
+      async () => {
+        if (!shouldTranslate || translation || isLoading) return;
+
+        // Original logic, as 'ended' is not part of HoverProgressionPhase type
+        if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
+          setIsLoading(true);
+          try {
+            const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
+            const toLangSpeechCode = SPEECH_LANGUAGES[toLang];
+
+            if (fromLangSpeechCode && toLangSpeechCode) {
+              const sourceLang = fromLangSpeechCode.split('-')[0];
+              const targetLang = toLangSpeechCode.split('-')[0];
+
+              if (sourceLang && targetLang) {
+                const result = await getTranslation(word, sourceLang, targetLang);
+
+                if (result) {
+                  setTranslation(result);
+                  if (hoverProgressionPhase === 'credits') {
+                    decrementHoverCredit();
+                  }
+                } else {
+                  console.log('Translation fetch returned no result.');
+                }
+              } else {
+                console.error('Error splitting language codes', {
+                  fromLangSpeechCode,
+                  toLangSpeechCode,
+                });
+              }
+            } else {
+              console.error('Could not find speech codes for languages', { fromLang, toLang });
+            }
+          } catch (error) {
+            console.error('Error fetching translation:', error);
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          console.log('Click translation blocked: No credits left.');
+        }
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [
+        shouldTranslate,
+        isLoading,
+        hoverProgressionPhase,
+        hoverCreditsAvailable,
+        fromLang,
+        toLang,
+        getTranslation,
+        word,
+        decrementHoverCredit,
+      ]
+    );
 
     const handleClick = useCallback(() => {
       speakText(word, fromLang);
