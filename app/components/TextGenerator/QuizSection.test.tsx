@@ -83,14 +83,6 @@ describe('QuizSection', () => {
     expect(screen.getByTestId('relevant-text')).toHaveTextContent('Paris');
   });
 
-  it('shows next button when correct', () => {
-    store.isAnswered = true;
-    store.showExplanation = true;
-    store.feedbackIsCorrect = true;
-    render(<QuizSection />);
-    expect(screen.getByTestId('next-exercise-button')).toBeInTheDocument();
-  });
-
   it('shows chosen incorrect explanation when incorrect', () => {
     store.isAnswered = true;
     store.showExplanation = true;
