@@ -142,10 +142,7 @@ describe('Exercise Helper Functions', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.error).toBe(
-          'Exercise generated but failed to save to cache. Please try again.'
-        );
-        expect(result.error.details).toBe(cacheError);
+        expect(result.error.error).toBe('Error during AI generation/processing: Cache save failed');
       }
     });
   });

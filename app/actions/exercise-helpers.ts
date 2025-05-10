@@ -6,7 +6,6 @@ import {
 import { saveExerciseToCache, getValidatedExerciseFromCache } from '@/lib/exercise-cache';
 import {
   generateAndValidateExercise,
-  AIResponseProcessingError,
   type ExerciseGenerationOptions,
 } from '@/lib/ai/exercise-generator';
 import { type ExerciseGenerationParams } from '@/lib/domain/ai';
@@ -33,85 +32,35 @@ export const tryGenerateAndCacheExercise = async (
   language: string,
   userId: number | null
 ): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
-  let generatedExercise: ExerciseContent | null = null;
-  let generationError: ActionError | null = null;
-
   try {
     const options: ExerciseGenerationOptions = { ...params, language };
-    generatedExercise = await generateAndValidateExercise(options);
-  } catch (error) {
-    let errorMessage = 'Unknown error during AI generation/processing';
-    let stack = '';
-    let originalErrorDetail: unknown = null;
-
-    if (error instanceof AIResponseProcessingError) {
-      errorMessage = `Error during AI generation/processing: ${error.message}`;
-      if (error.originalError instanceof Error) {
-        console.error(
-          '[API] Original AI Error:',
-          error.originalError.message,
-          error.originalError.stack
-        );
-        stack = error.originalError.stack ?? '';
-      } else if (error.originalError !== null) {
-        console.error('[API] Original AI Error (non-Error object):', error.originalError);
-        originalErrorDetail = error.originalError;
-      } else {
-        stack = error.stack ?? '';
-      }
-    } else if (error instanceof Error) {
-      errorMessage = `Error during AI generation/processing: ${error.message}`;
-      stack = error.stack ?? '';
-    } else {
-      errorMessage = `Error during AI generation/processing (non-Error object): ${String(error)}`;
-      console.error(errorMessage);
-      originalErrorDetail = error;
-    }
-
-    console.error(`[API] ${errorMessage}`, stack ? `\nStack: ${stack}` : '');
-
-    generationError = {
-      error: errorMessage,
-      details: originalErrorDetail,
-      ...(stack && { stack }),
-    };
-  }
-
-  if (generatedExercise) {
-    try {
-      const exerciseId = saveExerciseToCache(
-        params.passageLanguage,
-        params.questionLanguage,
-        params.level,
-        JSON.stringify(generatedExercise),
-        userId
-      );
-
-      if (exerciseId === undefined) {
-        console.error(
-          '[API:tryGenerate] Failed to save exercise to cache: Cache save returned undefined ID'
-        );
-        return failure<{ content: ExerciseContent; id: number }, ActionError>({
-          error: 'Exercise generated but failed to save to cache (undefined ID).',
-        });
-      }
-      console.log(`[API:tryGenerate] Generated and cached exercise ID: ${exerciseId}`);
-
-      return success<{ content: ExerciseContent; id: number }, ActionError>({
-        content: generatedExercise,
-        id: exerciseId,
-      });
-    } catch (cacheError) {
-      console.error('[API:tryGenerate] Failed to save exercise to cache:', cacheError);
-      return failure<{ content: ExerciseContent; id: number }, ActionError>({
-        error: 'Exercise generated but failed to save to cache. Please try again.',
-        details: cacheError,
-      });
-    }
-  } else {
-    return failure<{ content: ExerciseContent; id: number }, ActionError>(
-      generationError ?? { error: 'Unknown generation failure.' }
+    const generatedExercise = await generateAndValidateExercise(options);
+    const exerciseId = saveExerciseToCache(
+      params.passageLanguage,
+      params.questionLanguage,
+      params.level,
+      JSON.stringify(generatedExercise),
+      userId
     );
+    if (exerciseId === undefined) {
+      console.error(
+        '[API:tryGenerate] Failed to save exercise to cache: Cache save returned undefined ID'
+      );
+      return failure<{ content: ExerciseContent; id: number }, ActionError>({
+        error: 'Exercise generated but failed to save to cache (undefined ID).',
+      });
+    }
+    console.log(`[API:tryGenerate] Generated and cached exercise ID: ${exerciseId}`);
+    return success<{ content: ExerciseContent; id: number }, ActionError>({
+      content: generatedExercise,
+      id: exerciseId,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[API:tryGenerate] Error:', errorMessage);
+    return failure<{ content: ExerciseContent; id: number }, ActionError>({
+      error: `Error during AI generation/processing: ${errorMessage}`,
+    });
   }
 };
 

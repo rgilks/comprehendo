@@ -357,7 +357,7 @@ describe('generateExerciseResponse', () => {
     const result = await generateExerciseResponse(defaultParams);
 
     expect(result.error).toContain(
-      'Error during AI generation/processing (non-Error object): Some random string error'
+      'Error during AI generation/processing: Some random string error'
     );
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
@@ -416,15 +416,11 @@ describe('generateExerciseResponse', () => {
 
     const result = await generateExerciseResponse(defaultParams);
 
-    expect(result.error).toContain(
-      'Exercise generated but failed to save to cache. Please try again.'
-    );
+    expect(result.error).toContain('Error during AI generation/processing: Cache save failed');
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
     expect(saveExerciseToCache).toHaveBeenCalled();
-    // Remove console error check as it's hard to predict accurately with internal logging
-    // expect(consoleErrorSpy).toHaveBeenCalledWith(...);
 
     consoleErrorSpy.mockRestore();
   });
@@ -448,8 +444,6 @@ describe('generateExerciseResponse', () => {
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
     expect(saveExerciseToCache).toHaveBeenCalled();
-    // Remove console error check as it's hard to predict accurately with internal logging
-    // expect(consoleErrorSpy).toHaveBeenCalledWith(...);
 
     consoleErrorSpy.mockRestore();
   });
@@ -479,8 +473,6 @@ describe('generateExerciseResponse', () => {
     expect(result.quizData).toEqual(defaultEmptyQuizData);
     expect(result.quizId).toBe(-1);
     expect(generateAndValidateExercise).toHaveBeenCalled();
-    // Remove console error check as it's hard to predict accurately with internal logging
-    // expect(consoleErrorSpy).toHaveBeenCalledWith(...);
 
     consoleErrorSpy.mockRestore();
   });

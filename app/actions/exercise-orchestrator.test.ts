@@ -101,13 +101,7 @@ describe('Exercise Orchestrator', () => {
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn).toHaveBeenNthCalledWith(
         1,
-        expect.stringContaining('[API] Generation failed (low cache): Generation Failed'),
-        expect.anything()
-      );
-      expect(log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '[API] Attempting cache fallback after non-terminal generation error.'
-        )
+        expect.stringContaining('[API] Generation failed (low cache): Generation Failed')
       );
       expect(log).toHaveBeenCalledWith(expect.stringContaining('[API] Cache fallback successful.'));
     });
@@ -156,10 +150,7 @@ describe('Exercise Orchestrator', () => {
 
       expect(result.error).toContain(generationFailError.error);
       expect(result.quizId).toBe(-1);
-      expect(helpers.createErrorResponse).toHaveBeenCalledWith(
-        generationFailError.error,
-        undefined
-      );
+      expect(helpers.createErrorResponse).toHaveBeenCalledWith(generationFailError.error);
       expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
       expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
     });
@@ -171,9 +162,9 @@ describe('Exercise Orchestrator', () => {
 
       expect(result.error).toContain(cacheFailError.error);
       expect(result.quizId).toBe(-1);
-      expect(helpers.createErrorResponse).toHaveBeenCalledWith(cacheFailError.error, undefined);
+      expect(helpers.createErrorResponse).toHaveBeenCalledWith(cacheFailError.error);
       expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
-      expect(helpers.tryGetCachedExercise).not.toHaveBeenCalled();
+      expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
     });
 
     it('returns cached exercise if cache is high and cache lookup succeeds', async () => {
@@ -208,10 +199,7 @@ describe('Exercise Orchestrator', () => {
 
       expect(result.error).toContain(generationFailError.error);
       expect(result.quizId).toBe(-1);
-      expect(helpers.createErrorResponse).toHaveBeenCalledWith(
-        generationFailError.error,
-        undefined
-      );
+      expect(helpers.createErrorResponse).toHaveBeenCalledWith(generationFailError.error);
       expect(helpers.tryGetCachedExercise).toHaveBeenCalledTimes(1);
       expect(helpers.tryGenerateAndCacheExercise).toHaveBeenCalledTimes(1);
     });

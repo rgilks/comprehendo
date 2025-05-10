@@ -10,18 +10,12 @@ import {
   type ExerciseContent,
   PartialQuizDataSchema,
 } from '@/lib/domain/schemas';
-import type { ActionError } from '@/lib/utils/result-types';
 import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 
 const CACHE_GENERATION_THRESHOLD = 100;
 
 export const validateRequestParams = (requestParams: unknown) =>
   ExerciseRequestParamsSchema.safeParse(requestParams);
-
-const isTerminalGenerationError = (
-  error: ActionError | null | undefined
-): error is ActionError & { error: string } =>
-  !!error && error.error === 'Exercise generated but failed to save to cache (undefined ID).';
 
 const createSuccessResult = (
   data: { content: ExerciseContent; id: number },
@@ -64,20 +58,14 @@ export const getOrGenerateExercise = async (
     if (generationResult.success) {
       return createSuccessResult(generationResult.data, false);
     } else {
-      console.warn(
-        `[API] Generation failed (low cache): ${generationResult.error.error}`,
-        generationResult.error.details ?? ''
-      );
-      if (!isTerminalGenerationError(generationResult.error)) {
-        console.log('[API] Attempting cache fallback after non-terminal generation error.');
-        const cachedResult = await tryCache();
-        if (cachedResult) {
-          console.log('[API] Cache fallback successful.');
-          return cachedResult;
-        }
-        console.warn('[API] Cache fallback failed.');
+      console.warn(`[API] Generation failed (low cache): ${generationResult.error.error}`);
+      const cachedResult = await tryCache();
+      if (cachedResult) {
+        console.log('[API] Cache fallback successful.');
+        return cachedResult;
       }
-      return createErrorResponse(generationResult.error.error, generationResult.error.details);
+      console.warn('[API] Cache fallback failed.');
+      return createErrorResponse(generationResult.error.error);
     }
   } else {
     console.log(`[API] Cache count high (${cachedCount}), attempting cache first.`);
@@ -95,11 +83,8 @@ export const getOrGenerateExercise = async (
       console.log('[API] Generation fallback successful.');
       return createSuccessResult(generationResult.data, false);
     } else {
-      console.error(
-        `[API] Generation fallback failed: ${generationResult.error.error}`,
-        generationResult.error.details ?? ''
-      );
-      return createErrorResponse(generationResult.error.error, generationResult.error.details);
+      console.error(`[API] Generation fallback failed: ${generationResult.error.error}`);
+      return createErrorResponse(generationResult.error.error);
     }
   }
 };
