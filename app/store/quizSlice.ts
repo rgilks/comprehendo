@@ -87,6 +87,25 @@ const getInitialQuizState = () => ({
   showExplanation: false,
 });
 
+const resetFeedbackState = (state: QuizSlice) => {
+  state.feedback.isCorrect = null;
+  state.feedback.correctAnswer = null;
+  state.feedback.correctExplanation = null;
+  state.feedback.chosenIncorrectExplanation = null;
+  state.feedback.relevantText = null;
+};
+
+const resetQuizCoreState = (state: QuizSlice) => {
+  state.selectedAnswer = null;
+  state.isAnswered = false;
+  state.relevantTextRange = null;
+  resetFeedbackState(state);
+  state.showExplanation = false;
+  state.nextQuizAvailable = null;
+  state.feedbackSubmitted = false;
+  state.hover.creditsUsed = 0;
+};
+
 export const createQuizSlice: StateCreator<
   TextGeneratorState,
   [['zustand/immer', never]],
@@ -147,7 +166,6 @@ export const createQuizSlice: StateCreator<
     if (nextQuiz) {
       get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
     } else {
-      console.warn('Next quiz not available, generating new one.');
       void get().generateText();
     }
   },
@@ -155,17 +173,14 @@ export const createQuizSlice: StateCreator<
     set({ loading: true, error: null, showContent: false });
     get().stopPassageSpeech();
     get().resetQuizState();
-
     try {
       const fetchParams = {
         passageLanguage: get().passageLanguage,
         questionLanguage: get().generatedQuestionLanguage,
         cefrLevel: get().cefrLevel,
       };
-
       const rawResult = await generateInitialExercisePair(fetchParams);
       const parseResult = InitialExercisePairResultSchema.safeParse(rawResult);
-
       if (!parseResult.success) {
         console.error(
           '[Store] Zod validation error (fetchInitialPair):',
@@ -173,27 +188,15 @@ export const createQuizSlice: StateCreator<
         );
         throw new Error(`Invalid API response structure: ${parseResult.error.message}`);
       }
-
       const result = parseResult.data;
-
-      if (result.error || result.quizzes.length !== 2) {
+      if (result.error || result.quizzes.length !== 2)
         throw new Error(result.error || 'Invalid number of quizzes received');
-      }
-
       const [quizInfo1, quizInfo2] = result.quizzes;
-
       set((state) => {
         state.quizData = quizInfo1.quizData;
         state.currentQuizId = quizInfo1.quizId;
         state.generatedPassageLanguage = fetchParams.passageLanguage;
-        state.selectedAnswer = null;
-        state.isAnswered = false;
-        state.relevantTextRange = null;
-        state.feedback.isCorrect = null;
-        state.feedback.correctAnswer = null;
-        state.feedback.correctExplanation = null;
-        state.feedback.chosenIncorrectExplanation = null;
-        state.feedback.relevantText = null;
+        resetQuizCoreState(state);
         state.showExplanation = false;
         state.feedbackSubmitted = false;
         state.hover.creditsUsed = 0;
@@ -202,11 +205,9 @@ export const createQuizSlice: StateCreator<
         state.showContent = true;
         state.loading = false;
         state.error = null;
-        console.log('[Store] Initial exercise pair fetched and processed.');
       });
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error fetching initial pair';
-      console.error('[Store] Error in fetchInitialPair:', e);
       get().setError(errorMessage);
       get().setShowContent(false);
       set({ loading: false, nextQuizAvailable: null });
@@ -214,87 +215,54 @@ export const createQuizSlice: StateCreator<
   },
   generateText: async (isPrefetch = false): Promise<void> => {
     if (!isPrefetch && get().nextQuizAvailable) {
-      console.log('[Store] Using pre-fetched quiz for generateText request.');
       get().loadNextQuiz();
       return;
     }
-
     set({ loading: !isPrefetch, error: null });
     if (!isPrefetch) {
       get().stopPassageSpeech();
       set((state) => {
-        state.selectedAnswer = null;
-        state.isAnswered = false;
-        state.relevantTextRange = null;
-        state.feedback.isCorrect = null;
-        state.feedback.correctAnswer = null;
-        state.feedback.correctExplanation = null;
-        state.feedback.chosenIncorrectExplanation = null;
-        state.feedback.relevantText = null;
-        state.showExplanation = false;
-        state.nextQuizAvailable = null;
-        state.feedbackSubmitted = false;
-        state.hover.creditsUsed = 0;
+        resetQuizCoreState(state);
       });
     }
-
     try {
       const response = await generateExerciseResponse({
         passageLanguage: get().passageLanguage,
         questionLanguage: get().generatedQuestionLanguage,
         cefrLevel: get().cefrLevel,
       });
-
       if ('error' in response && response.error) {
         if (!isPrefetch) {
-          console.error('[Store] API response contained error:', response.error);
           get().setError(response.error);
           get().setShowContent(false);
           set({ loading: false });
         } else {
-          console.warn('[Store] Prefetch API response contained error:', response.error);
           set({ loading: false, nextQuizAvailable: null });
         }
         return;
       }
-
       const parseResult = GenerateExerciseResultSchema.safeParse(response as unknown);
       if (!parseResult.success) {
         const errorMsg = `Invalid API response structure: ${parseResult.error.message}`;
-        console.error(
-          '[Store] Zod validation error (generateExercise):',
-          parseResult.error.format()
-        );
         if (!isPrefetch) {
           get().setError(errorMsg);
           get().setShowContent(false);
           set({ loading: false });
         } else {
-          console.warn('[Store] Prefetch Zod validation failed:', parseResult.error.format());
           set({ loading: false, nextQuizAvailable: null });
         }
         return;
       }
-
       const validatedResponse = parseResult.data;
       const quizData: PartialQuizData = validatedResponse.quizData;
-
-      if (!quizData.language) {
-        quizData.language = get().passageLanguage;
-      }
-
+      if (!quizData.language) quizData.language = get().passageLanguage;
       if (isPrefetch) {
-        set({
-          nextQuizAvailable: { quizData: quizData, quizId: validatedResponse.quizId },
-          loading: false,
-        });
-        console.log('[Store] Next quiz pre-fetched.');
+        set({ nextQuizAvailable: { quizData, quizId: validatedResponse.quizId }, loading: false });
       } else {
         get().resetQuizWithNewData(quizData, validatedResponse.quizId);
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error during generation';
-      console.error('[Store] Error generating exercise:', e);
       if (!isPrefetch) {
         get().setError(errorMessage);
         get().setShowContent(false);
@@ -306,16 +274,13 @@ export const createQuizSlice: StateCreator<
   },
   handleAnswerSelect: async (answer): Promise<void> => {
     if (get().isAnswered) return;
-
     set((state) => {
       state.selectedAnswer = answer;
       state.isAnswered = true;
       state.showExplanation = true;
     });
-    const { currentQuizId } = get();
-
-    if (typeof currentQuizId !== 'number') {
-      console.error('Invalid or missing current quiz ID:', currentQuizId);
+    const quizId = get().currentQuizId;
+    if (typeof quizId !== 'number') {
       set((state) => {
         state.error = 'Cannot submit answer: Invalid quiz ID.';
         state.isAnswered = false;
@@ -323,44 +288,22 @@ export const createQuizSlice: StateCreator<
       });
       return;
     }
-
     try {
       const { passageLanguage, generatedQuestionLanguage, cefrLevel } = get();
-
-      if (!generatedQuestionLanguage) {
-        console.error('Cannot submit answer: Question language not set in state.');
-        throw new Error('Question language missing');
-      }
-
-      const params: {
-        id?: number;
-        ans?: string;
-        learn: string;
-        lang: string;
-        cefrLevel?: string;
-      } = {
-        id: currentQuizId,
+      if (!generatedQuestionLanguage) throw new Error('Question language missing');
+      const params = {
+        id: quizId,
         ans: answer,
         learn: passageLanguage,
         lang: generatedQuestionLanguage,
         cefrLevel: cefrLevel,
       };
-
       const rawResult = await submitAnswer(params);
-
       const validatedResult = SubmitAnswerResultSchema.safeParse(rawResult as unknown);
-
-      if (!validatedResult.success) {
-        console.error('Zod validation error (submitAnswer):', validatedResult.error.message);
+      if (!validatedResult.success)
         throw new Error(`Invalid API response structure: ${validatedResult.error.message}`);
-      }
-
       const result = validatedResult.data;
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
+      if (result.error) throw new Error(result.error);
       set((state) => {
         state.feedback.isCorrect = result.feedback?.isCorrect ?? null;
         state.feedback.correctAnswer = result.feedback?.correctAnswer ?? null;
@@ -368,7 +311,6 @@ export const createQuizSlice: StateCreator<
         state.feedback.chosenIncorrectExplanation =
           result.feedback?.chosenIncorrectExplanation ?? null;
         state.feedback.relevantText = result.feedback?.relevantText ?? null;
-
         if (state.quizData?.paragraph && result.feedback?.relevantText) {
           const paragraph = state.quizData.paragraph;
           const relevantText = result.feedback.relevantText;
@@ -384,14 +326,12 @@ export const createQuizSlice: StateCreator<
         } else {
           state.relevantTextRange = null;
         }
-
         if (result.currentStreak !== undefined && result.currentStreak !== null) {
           state.userStreak = result.currentStreak;
         }
         if (result.leveledUp && result.currentLevel) {
           state.cefrLevel = result.currentLevel as CEFRLevel;
         }
-
         if (result.feedback?.isCorrect) {
           state.hover.correctAnswersInPhase += 1;
           if (
@@ -400,42 +340,53 @@ export const createQuizSlice: StateCreator<
           ) {
             state.hover.progressionPhase = 'credits';
             state.hover.correctAnswersInPhase = 0;
-            console.log('Transitioning to hover credits phase!');
           }
         } else if (state.hover.progressionPhase === 'initial') {
           state.hover.correctAnswersInPhase = 0;
         }
       });
     } catch (error: unknown) {
-      console.error('Error submitting answer:', error);
       set((state) => {
         state.error = error instanceof Error ? error.message : 'Failed to submit answer.';
       });
     }
   },
   submitFeedback: async (isGood: boolean): Promise<void> => {
-    const { currentQuizId, selectedAnswer, passageLanguage, generatedQuestionLanguage, cefrLevel } =
-      get();
+    const {
+      currentQuizId,
+      selectedAnswer,
+      passageLanguage,
+      generatedQuestionLanguage,
+      cefrLevel,
+    }: {
+      currentQuizId: number | null;
+      selectedAnswer: string | null;
+      passageLanguage: string | null;
+      generatedQuestionLanguage: string | null;
+      cefrLevel: string | null;
+    } = get();
     const feedbackIsCorrect = get().feedback.isCorrect;
-
-    if (currentQuizId === null) {
-      set({ error: 'Cannot submit feedback: Invalid quiz ID.', loading: false });
+    const quizId = currentQuizId;
+    if (typeof quizId !== 'number') {
+      set({
+        error: 'Cannot submit feedback: Invalid quiz ID.',
+        loading: false,
+        feedbackSubmitted: false,
+      });
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
       set({
         error: 'Cannot submit feedback: Missing required state (language/level). Please refresh.',
         loading: false,
+        feedbackSubmitted: false,
       });
       return;
     }
-
     set({ loading: true, error: null });
-
     try {
       const payload = {
-        quizId: currentQuizId,
+        quizId: quizId,
         is_good: isGood ? 1 : 0,
         userAnswer: selectedAnswer ?? undefined,
         isCorrect: feedbackIsCorrect ?? undefined,
@@ -443,16 +394,12 @@ export const createQuizSlice: StateCreator<
         questionLanguage: generatedQuestionLanguage,
         currentLevel: cefrLevel,
       };
-
       const result = await submitFeedback(payload);
-
       if (!result.success) {
         const errorMessage = result.error || 'Failed to submit feedback via API.';
         throw new Error(errorMessage);
       }
-
       set({ feedbackSubmitted: true, loading: false });
-
       const nextQuiz = get().nextQuizAvailable;
       if (nextQuiz) {
         get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
@@ -460,7 +407,6 @@ export const createQuizSlice: StateCreator<
         try {
           await get().generateText();
         } catch (genError) {
-          console.error('[Store] Error generating next text after feedback:', genError);
           get().setError(
             genError instanceof Error ? genError.message : 'Failed to generate next exercise.'
           );
@@ -474,7 +420,6 @@ export const createQuizSlice: StateCreator<
         loading: false,
         feedbackSubmitted: false,
       });
-      console.error('[Store] Error submitting feedback:', error);
     }
   },
   useHoverCredit: () => {
