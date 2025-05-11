@@ -1,95 +1,38 @@
 'use server';
 
-import { TranslationResult } from '@/lib/domain/translation';
-
-interface GoogleTranslatePayload {
-  q: string | string[];
-  target: string;
-  source?: string;
-  format?: 'text' | 'html';
-}
-
-interface GoogleTranslateResponse {
-  data?: {
-    translations?: Array<{
-      translatedText: string;
-      detectedSourceLanguage?: string;
-    }>;
-  };
-  error?: {
-    code: number;
-    message: string;
-    errors: Array<{
-      message: string;
-      domain: string;
-      reason: string;
-    }>;
-  };
-}
+import { TranslationResultSchema } from '@/lib/domain/translation';
 
 export const translateWordWithGoogle = async (
   word: string,
   targetLang: string,
   sourceLang: string
-): Promise<TranslationResult | null> => {
-  console.log(`[Translate API] Translating '${word}' from ${sourceLang} to ${targetLang}`);
-  if (!word || !targetLang || !sourceLang) {
-    console.error('[Translate API] Missing required parameters');
-    return null;
-  }
+) => {
+  if (!word || !targetLang || !sourceLang) return null;
 
   const googleApiKey = process.env['GOOGLE_TRANSLATE_API_KEY'];
-
-  if (!googleApiKey) {
-    console.error('Google Translate API key is not configured.');
-    return null;
-  }
+  if (!googleApiKey) return null;
 
   const apiUrl = `https://translation.googleapis.com/language/translate/v2?key=${googleApiKey}`;
 
-  const payload: GoogleTranslatePayload = {
+  const payload = {
     q: word,
     target: targetLang,
     format: 'text',
+    source: sourceLang,
   };
-
-  if (sourceLang) {
-    payload.source = sourceLang;
-  }
 
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    const data = (await response.json()) as GoogleTranslateResponse;
-
-    if (!response.ok || data.error) {
-      console.error(
-        'Google Translate API server action error:',
-        data.error || `HTTP status ${response.status}`
-      );
-      return null;
-    }
-
+    const data = await response.json();
+    if (!response.ok || data.error) return null;
     const translatedText = data.data?.translations?.[0]?.translatedText;
-
-    if (translatedText) {
-      const result: TranslationResult = {
-        translation: translatedText,
-        romanization: '',
-      };
-      return result;
-    } else {
-      console.warn('No translation found in Google Translate server action response:', data);
-      return null;
-    }
-  } catch (error: unknown) {
-    console.error('Error in Google Translate server action:', error);
+    if (!translatedText) return null;
+    return TranslationResultSchema.parse({ translation: translatedText, romanization: '' });
+  } catch {
     return null;
   }
 };
