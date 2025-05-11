@@ -17,9 +17,9 @@ import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 import { type InitialExercisePairResult, GenerateExerciseResultSchema } from '@/lib/domain/schemas';
 import { LANGUAGES } from '@/lib/domain/language';
 import { checkRateLimit } from '@/lib/rate-limiter';
-import type { ZodIssue } from 'zod';
 import { z } from 'zod';
 import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
+import { extractZodErrors } from '../../lib/utils/errorUtils';
 
 const getRequestContext = async () => {
   const headersList = await headers();
@@ -32,10 +32,10 @@ const getRequestContext = async () => {
 const validateAndExtractParams = (requestParams: unknown) => {
   const validationResult = validateRequestParams(requestParams);
   if (!validationResult.success) {
-    const errorMsg = `Invalid request parameters: ${validationResult.error.errors
-      .map((e: ZodIssue) => `${e.path.join('.')}: ${e.message}`)
-      .join(', ')}`;
-    return { validParams: null, errorMsg };
+    return {
+      validParams: null,
+      errorMsg: `Invalid request parameters: ${extractZodErrors(validationResult.error)}`,
+    };
   }
   return { validParams: validationResult.data, errorMsg: null };
 };
@@ -53,6 +53,18 @@ const buildGenParams = (
   grammarGuidance: getGrammarGuidance(validParams.cefrLevel),
   vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
 });
+
+const getExerciseWithCacheFallback = async (
+  genParams: ExerciseGenerationParams,
+  userId: number | null,
+  cachedCount: number
+): Promise<GenerateExerciseResult> => {
+  const result = await getOrGenerateExercise(genParams, userId, cachedCount);
+  if (result.quizId === -1 && result.error == null) {
+    throw new Error('Internal Error: Failed to generate or retrieve exercise.');
+  }
+  return result;
+};
 
 export const generateExerciseResponse = async (
   requestParams: unknown
@@ -75,11 +87,7 @@ export const generateExerciseResponse = async (
   );
 
   try {
-    const result = await getOrGenerateExercise(genParams, userId, cachedCount);
-    if (result.quizId === -1 && result.error == null) {
-      return { ...result, error: 'Internal Error: Failed to generate or retrieve exercise.' };
-    }
-    return result;
+    return await getExerciseWithCacheFallback(genParams, userId, cachedCount);
   } catch (error) {
     console.error('Error in generateExerciseResponse:', error);
     const errorMessage =
@@ -102,8 +110,8 @@ export const generateInitialExercisePair = async (
 
   try {
     const [res1, res2] = await Promise.all([
-      getOrGenerateExercise(genParams1, userId, 0),
-      getOrGenerateExercise(genParams2, userId, 0),
+      getExerciseWithCacheFallback(genParams1, userId, 0),
+      getExerciseWithCacheFallback(genParams2, userId, 0),
     ]);
     if ([res1, res2].every((r) => r.error === null && r.quizId !== -1)) {
       const validatedResults = z.array(GenerateExerciseResultSchema).safeParse([res1, res2]);
@@ -118,6 +126,7 @@ export const generateInitialExercisePair = async (
     const errors = [res1, res2].map((r) => r.error).filter((e) => e !== null);
     return { quizzes: [], error: `Failed to generate exercise pair: ${errors.join('; ')}` };
   } catch (error) {
+    console.error('Error in generateInitialExercisePair:', error);
     const message = error instanceof Error ? error.message : 'Unknown generation error';
     return { quizzes: [], error: `Server error during generation: ${message}` };
   }
