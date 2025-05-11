@@ -52,8 +52,7 @@ describe('ReadingPassage', () => {
       isSpeakingPassage: false,
       relevantTextRange: null,
       generatedPassageLanguage: 'en',
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 3,
+      hover: { progressionPhase: 'credits', creditsAvailable: 7 },
     } as any);
   });
 
@@ -67,7 +66,7 @@ describe('ReadingPassage', () => {
 
   it('shows hover credits when in credits phase', () => {
     render(<ReadingPassage />);
-    expect(screen.getByTestId('hover-credits-display')).toHaveTextContent('3');
+    expect(screen.getByTestId('hover-credits-display')).toHaveTextContent('7');
   });
 
   it('renders audio controls', () => {
@@ -89,8 +88,7 @@ describe('ReadingPassage', () => {
       isSpeakingPassage: false,
       relevantTextRange: null,
       generatedPassageLanguage: 'en',
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 3,
+      hover: { progressionPhase: 'credits', creditsAvailable: 7 },
     } as any);
     render(<ReadingPassage />);
     expect(screen.getByText('practice.questionWillAppear')).toBeInTheDocument();
@@ -119,8 +117,7 @@ describe('ReadingPassage', () => {
       isSpeakingPassage: false,
       relevantTextRange: { start: 6, end: 11 },
       generatedPassageLanguage: 'en',
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 3,
+      hover: { progressionPhase: 'credits', creditsAvailable: 7 },
     } as any);
     render(<ReadingPassage />);
     const highlights = screen.getAllByTestId('feedback-highlight');

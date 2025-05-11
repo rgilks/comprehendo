@@ -19,8 +19,7 @@ const ReadingPassage = () => {
     isSpeakingPassage,
     relevantTextRange,
     generatedPassageLanguage,
-    hoverProgressionPhase,
-    hoverCreditsAvailable,
+    hover,
   } = useTextGeneratorStore();
 
   const actualQuestionLanguage = questionLanguage;
@@ -46,13 +45,13 @@ const ReadingPassage = () => {
           </span>
         </div>
         <div className="flex items-center space-x-4">
-          {hoverProgressionPhase === 'credits' && (
+          {hover.progressionPhase === 'credits' && (
             <div
               className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium text-yellow-400 bg-gray-700/50"
               data-testid="hover-credits-display"
               title={t('practice.hoverCreditsTooltip') || 'Hover Credits'}
             >
-              <span>{hoverCreditsAvailable}</span>
+              <span>{hover.creditsAvailable}</span>
             </div>
           )}
           <AudioControls />

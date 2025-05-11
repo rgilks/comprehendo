@@ -30,8 +30,7 @@ const TranslatableWord = memo(
       speakText,
       getTranslation,
       useHoverCredit: decrementHoverCredit,
-      hoverProgressionPhase,
-      hoverCreditsAvailable,
+      hover,
       translationCache,
     } = useTextGeneratorStore();
 
@@ -69,7 +68,7 @@ const TranslatableWord = memo(
         if (!shouldTranslate || translation || isLoading) return;
 
         // Original logic, as 'ended' is not part of HoverProgressionPhase type
-        if (hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0) {
+        if (hover.progressionPhase === 'initial' || hover.creditsAvailable > 0) {
           setIsLoading(true);
           try {
             const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
@@ -84,7 +83,7 @@ const TranslatableWord = memo(
 
                 if (result) {
                   setTranslation(result);
-                  if (hoverProgressionPhase === 'credits') {
+                  if (hover.progressionPhase === 'credits') {
                     decrementHoverCredit();
                   }
                 } else {
@@ -112,8 +111,8 @@ const TranslatableWord = memo(
       [
         shouldTranslate,
         isLoading,
-        hoverProgressionPhase,
-        hoverCreditsAvailable,
+        hover.progressionPhase,
+        hover.creditsAvailable,
         fromLang,
         toLang,
         getTranslation,
@@ -127,7 +126,7 @@ const TranslatableWord = memo(
 
       if (!isClicked && shouldTranslate) {
         const canAttemptTranslation =
-          hoverProgressionPhase === 'initial' || hoverCreditsAvailable > 0;
+          hover.progressionPhase === 'initial' || hover.creditsAvailable > 0;
 
         if (canAttemptTranslation) {
           setIsClicked(true);
@@ -140,8 +139,8 @@ const TranslatableWord = memo(
       fromLang,
       isClicked,
       shouldTranslate,
-      hoverProgressionPhase,
-      hoverCreditsAvailable,
+      hover.progressionPhase,
+      hover.creditsAvailable,
       handleTranslationFetch,
     ]);
 
@@ -163,7 +162,7 @@ const TranslatableWord = memo(
     } else if (isClicked) {
       combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
-      if (hoverProgressionPhase !== 'credits' || hoverCreditsAvailable > 0) {
+      if (hover.progressionPhase !== 'credits' || hover.creditsAvailable > 0) {
         combinedClassName += ' hover:underline';
       }
     }

@@ -19,8 +19,7 @@ const defaultStoreState = {
   speakText: mockSpeakText,
   getTranslation: mockGetTranslation,
   useHoverCredit: mockDecrementHoverCredit,
-  hoverProgressionPhase: 'initial' as 'initial' | 'credits' | 'ended',
-  hoverCreditsAvailable: 10,
+  hover: { progressionPhase: 'initial', creditsAvailable: 5 },
   translationCache: new Map<string, string>(),
   setTranslationInCache: vi.fn(),
 };
@@ -134,8 +133,7 @@ describe('TranslatableWord', () => {
     mockGetTranslation.mockResolvedValue('hola');
     (useTextGeneratorStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultStoreState,
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 1,
+      hover: { progressionPhase: 'credits', creditsAvailable: 1 },
     });
 
     render(<TranslatableWord {...defaultProps} />);
@@ -150,8 +148,7 @@ describe('TranslatableWord', () => {
   it('does not fetch translation if no hover credits are available in "credits" phase', () => {
     (useTextGeneratorStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultStoreState,
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 0,
+      hover: { progressionPhase: 'credits', creditsAvailable: 0 },
     });
 
     render(<TranslatableWord {...defaultProps} />);
@@ -213,8 +210,7 @@ describe('TranslatableWord', () => {
     cleanup(); // Clean up previous render
     (useTextGeneratorStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultStoreState,
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 0,
+      hover: { progressionPhase: 'credits', creditsAvailable: 0 },
     });
     // Need to remount for the new store state to take effect in class computation
     // No need for rerender if we cleanup and render fresh
@@ -226,8 +222,7 @@ describe('TranslatableWord', () => {
   it('handles click correctly when translation is blocked (no credits)', () => {
     (useTextGeneratorStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultStoreState,
-      hoverProgressionPhase: 'credits',
-      hoverCreditsAvailable: 0,
+      hover: { progressionPhase: 'credits', creditsAvailable: 0 },
     });
     render(<TranslatableWord {...defaultProps} />);
     const wordElement = screen.getByText('hello');
