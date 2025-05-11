@@ -15,10 +15,14 @@ interface QuizOptionButtonProps {
   index: number;
   isAnswered: boolean;
   selectedAnswer: string | null;
-  feedbackCorrectAnswer: string | null;
-  feedbackIsCorrect: boolean | null;
+  feedback: {
+    isCorrect: boolean | null;
+    correctAnswer: string | null;
+    correctExplanation: string | null;
+    chosenIncorrectExplanation: string | null;
+    relevantText: string | null;
+  };
   showExplanation: boolean;
-  feedbackChosenIncorrectExplanation: string | null;
   questionLanguage: string;
   handleAsyncClick: (answer: string) => (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
@@ -29,10 +33,8 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
   index,
   isAnswered,
   selectedAnswer,
-  feedbackCorrectAnswer,
-  feedbackIsCorrect,
+  feedback,
   showExplanation,
-  feedbackChosenIncorrectExplanation,
   questionLanguage,
   handleAsyncClick,
 }) => (
@@ -41,8 +43,8 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
     onClick={handleAsyncClick(optionKey)}
     disabled={isAnswered}
     className={`w-full text-left p-3 rounded-md border transition-colors relative ${
-      isAnswered && feedbackCorrectAnswer
-        ? optionKey === feedbackCorrectAnswer
+      isAnswered && feedback.correctAnswer
+        ? optionKey === feedback.correctAnswer
           ? 'bg-green-900/50 border-green-700 text-green-100'
           : selectedAnswer === optionKey
             ? 'bg-red-900/50 border-red-700 text-red-100'
@@ -56,16 +58,16 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
     {value}
     {isAnswered &&
       showExplanation &&
-      !feedbackIsCorrect &&
+      !feedback.isCorrect &&
       selectedAnswer === optionKey &&
-      feedbackChosenIncorrectExplanation && (
+      feedback.chosenIncorrectExplanation && (
         <div
           className="mt-2 p-2 text-sm bg-red-900/60 ring-1 ring-red-600/60 rounded text-red-100 flex items-start space-x-2"
           data-testid="chosen-incorrect-explanation-text"
           dir={getTextDirection(questionLanguage as Language)}
         >
           <InformationCircleIcon className="h-5 w-5 flex-shrink-0 text-red-300 mt-0.5" />
-          <span>{feedbackChosenIncorrectExplanation}</span>
+          <span>{feedback.chosenIncorrectExplanation}</span>
         </div>
       )}
   </button>
@@ -74,9 +76,13 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
 interface FeedbackExplanationProps {
   isAnswered: boolean;
   showExplanation: boolean;
-  feedbackCorrectExplanation: string | null;
-  feedbackIsCorrect: boolean | null;
-  feedbackCorrectAnswer: string | null;
+  feedback: {
+    isCorrect: boolean | null;
+    correctAnswer: string | null;
+    correctExplanation: string | null;
+    chosenIncorrectExplanation: string | null;
+    relevantText: string | null;
+  };
   quizData: QuizData;
   t: (key: string) => string;
   questionLanguage: string;
@@ -91,9 +97,7 @@ const getValidLanguage = (lang: string | null | undefined): Language => {
 const FeedbackExplanation: React.FC<FeedbackExplanationProps> = ({
   isAnswered,
   showExplanation,
-  feedbackCorrectExplanation,
-  feedbackIsCorrect,
-  feedbackCorrectAnswer,
+  feedback,
   quizData,
   t,
   questionLanguage,
@@ -106,25 +110,25 @@ const FeedbackExplanation: React.FC<FeedbackExplanationProps> = ({
       data-testid="feedback-explanation"
     >
       <h4 className="text-lg font-semibold mb-3 text-blue-300">{t('practice.explanation')}</h4>
-      {feedbackCorrectExplanation && (
+      {feedback.correctExplanation && (
         <div
           className="p-2 rounded bg-green-900/30 ring-1 ring-green-600/50 text-green-200 mb-4"
           data-testid="correct-explanation-text"
           dir={getTextDirection(questionLanguage as Language)}
         >
-          {feedbackCorrectExplanation}
+          {feedback.correctExplanation}
         </div>
       )}
-      {feedbackIsCorrect &&
-        feedbackCorrectAnswer &&
-        quizData.options[feedbackCorrectAnswer as keyof typeof quizData.options] && (
+      {feedback.isCorrect &&
+        feedback.correctAnswer &&
+        quizData.options[feedback.correctAnswer as keyof typeof quizData.options] && (
           <div
             className="p-2 rounded bg-blue-900/30 ring-1 ring-blue-600/50 text-blue-200 mb-4"
             data-testid="relevant-text"
           >
             <strong>{t('practice.relevantText')}:</strong>{' '}
             <span dir={getTextDirection(getValidLanguage(generatedPassageLanguage))}>
-              {quizData.options[feedbackCorrectAnswer as keyof typeof quizData.options]}
+              {quizData.options[feedback.correctAnswer as keyof typeof quizData.options]}
             </span>
           </div>
         )}
@@ -142,10 +146,7 @@ const QuizSection = () => {
     showExplanation,
     showQuestionSection,
     handleAnswerSelect,
-    feedbackIsCorrect,
-    feedbackCorrectAnswer,
-    feedbackCorrectExplanation,
-    feedbackChosenIncorrectExplanation,
+    feedback,
     generatedPassageLanguage,
   } = useTextGeneratorStore();
   const questionLanguage = contextQuestionLanguage;
@@ -177,10 +178,8 @@ const QuizSection = () => {
             index={index}
             isAnswered={isAnswered}
             selectedAnswer={selectedAnswer}
-            feedbackCorrectAnswer={feedbackCorrectAnswer}
-            feedbackIsCorrect={feedbackIsCorrect}
+            feedback={feedback}
             showExplanation={showExplanation}
-            feedbackChosenIncorrectExplanation={feedbackChosenIncorrectExplanation}
             questionLanguage={questionLanguage}
             handleAsyncClick={handleAsyncClick}
           />
@@ -189,9 +188,7 @@ const QuizSection = () => {
       <FeedbackExplanation
         isAnswered={isAnswered}
         showExplanation={showExplanation}
-        feedbackCorrectExplanation={feedbackCorrectExplanation}
-        feedbackIsCorrect={feedbackIsCorrect}
-        feedbackCorrectAnswer={feedbackCorrectAnswer}
+        feedback={feedback}
         quizData={quizData}
         t={t}
         questionLanguage={questionLanguage}

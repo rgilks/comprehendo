@@ -33,7 +33,7 @@ describe('QuizSection', () => {
       showExplanation: false,
       showQuestionSection: true,
       handleAnswerSelect: vi.fn(),
-      feedbackIsCorrect: false,
+      feedback: { isCorrect: false },
       feedbackCorrectAnswer: 'A',
       feedbackCorrectExplanation: 'Paris is the correct answer.',
       feedbackChosenIncorrectExplanation: 'That is not correct.',
@@ -77,7 +77,7 @@ describe('QuizSection', () => {
   it('shows relevant text when correct', () => {
     store.isAnswered = true;
     store.showExplanation = true;
-    store.feedbackIsCorrect = true;
+    store.feedback.isCorrect = true;
     render(<QuizSection />);
     expect(screen.getByTestId('relevant-text')).toBeInTheDocument();
     expect(screen.getByTestId('relevant-text')).toHaveTextContent('Paris');
@@ -86,7 +86,7 @@ describe('QuizSection', () => {
   it('shows chosen incorrect explanation when incorrect', () => {
     store.isAnswered = true;
     store.showExplanation = true;
-    store.feedbackIsCorrect = false;
+    store.feedback.isCorrect = false;
     store.selectedAnswer = 'B';
     render(<QuizSection />);
     expect(screen.getByTestId('chosen-incorrect-explanation-text')).toBeInTheDocument();
