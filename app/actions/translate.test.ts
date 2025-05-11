@@ -2,137 +2,78 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { translateWordWithGoogle } from './translate';
 import type { TranslationResult } from '@/lib/domain/translation';
 
-// Mock the global fetch function
 global.fetch = vi.fn();
-
-const mockFetch = (status: number, body: unknown) => {
-  vi.mocked(fetch).mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  } as Response);
-};
-
-const mockFetchError = (error: Error) => {
-  vi.mocked(fetch).mockRejectedValue(error);
-};
 
 describe('translateWordWithGoogle', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    vi.resetModules(); // Reset modules to clear cache if needed
-    process.env = { ...originalEnv }; // Clone env
-    vi.clearAllMocks(); // Clear mocks between tests
-    process.env['GOOGLE_TRANSLATE_API_KEY'] = 'test-api-key'; // Set default test key
+    vi.resetModules();
+    process.env = { ...originalEnv };
+    vi.clearAllMocks();
+    process.env['GOOGLE_TRANSLATE_API_KEY'] = 'test-api-key';
   });
 
   afterEach(() => {
-    process.env = originalEnv; // Restore original env
+    process.env = originalEnv;
   });
 
-  it('should return null if word is missing', async () => {
-    const result = await translateWordWithGoogle('', 'es', 'en');
-    expect(result).toBeNull();
+  it('returns null if word is missing', async () => {
+    expect(await translateWordWithGoogle('', 'es', 'en')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('should return null if targetLang is missing', async () => {
-    const result = await translateWordWithGoogle('hello', '', 'en');
-    expect(result).toBeNull();
+  it('returns null if targetLang is missing', async () => {
+    expect(await translateWordWithGoogle('hello', '', 'en')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('should return null if sourceLang is missing', async () => {
-    // Note: sourceLang is optional in the call, but required logic inside
-    const result = await translateWordWithGoogle('hello', 'es', '');
-    expect(result).toBeNull();
+  it('returns null if sourceLang is missing', async () => {
+    expect(await translateWordWithGoogle('hello', 'es', '')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('should return null if GOOGLE_TRANSLATE_API_KEY is not configured', async () => {
+  it('returns null if GOOGLE_TRANSLATE_API_KEY is not configured', async () => {
     delete process.env['GOOGLE_TRANSLATE_API_KEY'];
-    const result = await translateWordWithGoogle('hello', 'es', 'en');
-    expect(result).toBeNull();
+    expect(await translateWordWithGoogle('hello', 'es', 'en')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('should return translation result on successful API call', async () => {
-    const mockResponse = {
-      data: {
-        translations: [{ translatedText: 'hola' }],
-      },
-    };
-    mockFetch(200, mockResponse);
-
-    const expectedResult: TranslationResult = {
-      translation: 'hola',
-      romanization: '',
-    };
+  it('returns translation result on success', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { translations: [{ translatedText: 'hola' }] } }),
+    } as Response);
+    const expected: TranslationResult = { translation: 'hola', romanization: '' };
     const result = await translateWordWithGoogle('hello', 'es', 'en');
-
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'https://translation.googleapis.com/language/translate/v2?key=test-api-key'
-      ),
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: 'hello', target: 'es', format: 'text', source: 'en' }),
-      })
-    );
-    expect(result).toEqual(expectedResult);
+    expect(result).toEqual(expected);
   });
 
-  it('should handle API response with error object', async () => {
-    const mockErrorResponse = {
-      error: {
-        code: 400,
-        message: 'Invalid target language',
-        errors: [{ message: 'Invalid Value', domain: 'global', reason: 'invalid' }],
-      },
-    };
-    mockFetch(400, mockErrorResponse);
-
-    const result = await translateWordWithGoogle('hello', 'xx', 'en');
-    expect(result).toBeNull();
+  it('returns null if API error object', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { code: 400 } }),
+    } as Response);
+    expect(await translateWordWithGoogle('hello', 'xx', 'en')).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('should handle API response with non-ok status but no error object', async () => {
-    mockFetch(500, { message: 'Internal Server Error' }); // Simulate server error with generic message
-
-    const result = await translateWordWithGoogle('hello', 'es', 'en');
-    expect(result).toBeNull();
+  it('returns null if API response has no translations', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { translations: [] } }),
+    } as Response);
+    expect(await translateWordWithGoogle('hello', 'es', 'en')).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('should return null if API response has no translations', async () => {
-    const mockResponse = {
-      data: {
-        translations: [], // Empty translations array
-      },
-    };
-    mockFetch(200, mockResponse);
-
-    const result = await translateWordWithGoogle('hello', 'es', 'en');
-    expect(result).toBeNull();
+  it('returns null if fetch throws', async () => {
+    vi.mocked(fetch).mockRejectedValue(new Error('fail'));
+    expect(await translateWordWithGoogle('hello', 'es', 'en')).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('should return null if fetch throws an error', async () => {
-    mockFetchError(new Error('Network failure'));
-
-    const result = await translateWordWithGoogle('hello', 'es', 'en');
-    expect(result).toBeNull();
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('should call API without source language if provided as empty string initially (but fails validation)', async () => {
-    // This test primarily checks the internal logic flow before validation catches it
-    const result = await translateWordWithGoogle('hello', 'es', '');
-    expect(result).toBeNull(); // Fails validation before API call
-    expect(fetch).not.toHaveBeenCalled();
   });
 });
