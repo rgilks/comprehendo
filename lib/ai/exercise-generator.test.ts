@@ -119,6 +119,21 @@ describe('AI Exercise Generation', () => {
       expect(mockExerciseContentSafeParseSpy).not.toHaveBeenCalled();
     });
 
+    it('should throw AIResponseProcessingError if callGoogleAI fails with a generic error', async () => {
+      const genericError = new Error('Generic Google AI call failure');
+      mockedCallGoogleAI.mockRejectedValue(genericError);
+
+      await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+        AIResponseProcessingError
+      );
+      await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+        /AI generation call failed/
+      );
+
+      expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      expect(mockExerciseContentSafeParseSpy).not.toHaveBeenCalled();
+    });
+
     it('should throw AIResponseProcessingError if AI response fails Zod validation', async () => {
       const invalidDataResponse = { ...validAiResponseJson, question: undefined };
       mockedCallGoogleAI.mockResolvedValue(invalidDataResponse); // AI returns invalid data
@@ -132,6 +147,58 @@ describe('AI Exercise Generation', () => {
 
       expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
       expect(mockExerciseContentSafeParseSpy).toHaveBeenCalledWith(invalidDataResponse);
+    });
+
+    it.each([
+      {
+        scenario: 'null',
+        response: null,
+        expectedError: /AI response format is invalid \(not an object\)\./,
+      },
+      {
+        scenario: 'string',
+        response: 'not an object',
+        expectedError: /AI response format is invalid \(not an object\)\./,
+      },
+      {
+        scenario: 'number',
+        response: 12345,
+        expectedError: /AI response format is invalid \(not an object\)\./,
+      },
+    ])(
+      'should throw AIResponseProcessingError if AI response is $scenario',
+      async ({ response, expectedError }) => {
+        mockedCallGoogleAI.mockResolvedValue(response);
+
+        await expect(generateAndValidateExercise(validParams)).rejects.toThrow(
+          AIResponseProcessingError
+        );
+        await expect(generateAndValidateExercise(validParams)).rejects.toThrow(expectedError);
+
+        expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+        expect(mockExerciseContentSafeParseSpy).not.toHaveBeenCalled();
+      }
+    );
+
+    it('should throw AIResponseProcessingError for unexpected error during Zod validation', async () => {
+      mockedCallGoogleAI.mockResolvedValue(validAiResponseJson); // Valid AI response
+      const validationError = new Error('Unexpected Zod error');
+      mockExerciseContentSafeParseSpy.mockImplementationOnce(() => {
+        throw validationError; // Simulate Zod itself throwing an unexpected error
+      });
+
+      try {
+        await generateAndValidateExercise(validParams);
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (e) {
+        expect(e).toBeInstanceOf(AIResponseProcessingError);
+        expect((e as AIResponseProcessingError).message).toMatch(/Unexpected validation error/);
+        expect((e as AIResponseProcessingError).originalError).toBe(validationError);
+      }
+
+      expect(mockedCallGoogleAI).toHaveBeenCalledWith('mock prompt');
+      expect(mockExerciseContentSafeParseSpy).toHaveBeenCalledWith(validAiResponseJson);
     });
 
     it('should handle successful validation when AI response topic is null', async () => {

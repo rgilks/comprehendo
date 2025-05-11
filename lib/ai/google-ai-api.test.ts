@@ -147,6 +147,25 @@ describe('callGoogleAI', () => {
     );
   });
 
+  it('should correctly re-throw AIResponseProcessingError with its originalError if nested', async () => {
+    const deepOriginalError = new Error('Deep Original Cause');
+    const nestedAIError = new AIResponseProcessingError('Nested AI Error', deepOriginalError);
+    mockGenerateContent.mockRejectedValue(nestedAIError);
+
+    try {
+      await callGoogleAI('test prompt');
+      throw new Error('Test should have thrown'); // Should not reach here
+    } catch (e) {
+      expect(e).toBeInstanceOf(AIResponseProcessingError);
+      if (e instanceof AIResponseProcessingError) {
+        // The message will be from the outer error thrown by callGoogleAI
+        expect(e.message).toBe(`AI generation failed: ${nestedAIError.message}`);
+        // The originalError should be the one from the *nested* AIResponseProcessingError
+        expect(e.originalError).toBe(deepOriginalError);
+      }
+    }
+  });
+
   it('should throw AIResponseProcessingError with safety message if generateContent throws a SAFETY error', async () => {
     const safetyError = new Error('Blocked due to SAFETY settings');
     mockGenerateContent.mockRejectedValue(safetyError);
