@@ -47,44 +47,27 @@ export const getOrGenerateExercise = async (
     cefrLevel: genParams.level,
   };
 
-  const tryGenerate = async () =>
+  const tryGenerate = () =>
     tryGenerateAndCacheExercise(genParams, genParams.passageLanguage, userId);
-  const tryCache = async () => tryGetCachedExercise(requestParams, userId);
+  const tryCache = () => tryGetCachedExercise(requestParams, userId);
+  const preferGenerate = cachedCount < CACHE_GENERATION_THRESHOLD;
 
-  if (cachedCount < CACHE_GENERATION_THRESHOLD) {
-    console.log(`[API] Cache count low (${cachedCount}), attempting generation first.`);
+  if (preferGenerate) {
     const generationResult = await tryGenerate();
-
-    if (generationResult.success) {
-      return createSuccessResult(generationResult.data, false);
-    } else {
-      console.warn(`[API] Generation failed (low cache): ${generationResult.error.error}`);
-      const cachedResult = await tryCache();
-      if (cachedResult) {
-        console.log('[API] Cache fallback successful.');
-        return cachedResult;
-      }
-      console.warn('[API] Cache fallback failed.');
-      return createErrorResponse(generationResult.error.error);
-    }
-  } else {
-    console.log(`[API] Cache count high (${cachedCount}), attempting cache first.`);
+    if (generationResult.success) return createSuccessResult(generationResult.data, false);
+    console.warn(`[API] Generation failed (low cache): ${generationResult.error.error}`);
     const cachedResult = await tryCache();
-
     if (cachedResult) {
-      console.log('[API] Cache lookup successful.');
+      console.log('[API] Cache fallback successful.');
       return cachedResult;
     }
-
+    return createErrorResponse(generationResult.error.error);
+  } else {
+    const cachedResult = await tryCache();
+    if (cachedResult) return cachedResult;
     console.warn('[API] Cache lookup failed (high cache count), attempting generation.');
     const generationResult = await tryGenerate();
-
-    if (generationResult.success) {
-      console.log('[API] Generation fallback successful.');
-      return createSuccessResult(generationResult.data, false);
-    } else {
-      console.error(`[API] Generation fallback failed: ${generationResult.error.error}`);
-      return createErrorResponse(generationResult.error.error);
-    }
+    if (generationResult.success) return createSuccessResult(generationResult.data, false);
+    return createErrorResponse(generationResult.error.error);
   }
 };
