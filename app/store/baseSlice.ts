@@ -1,4 +1,3 @@
-import type { StateCreator } from 'zustand';
 import type { Draft } from 'immer';
 
 export interface BaseSlice {
@@ -9,21 +8,19 @@ export interface BaseSlice {
   setError: (error: string | null) => void;
 }
 
-export const createBaseSlice = <
-  T extends { loading: boolean; error: string | null; showError: boolean },
->(
-  set: Parameters<StateCreator<T, [['zustand/immer', never]], [], T>>[0]
+export const createBaseSlice = (
+  set: (fn: (state: Draft<BaseSlice>) => void) => void
 ): BaseSlice => ({
   loading: false,
   error: null,
   showError: false,
   setLoading: (loading) => {
-    set((state: Draft<T>) => {
+    set((state) => {
       state.loading = loading;
     });
   },
   setError: (error) => {
-    set((state: Draft<T>) => {
+    set((state) => {
       state.error = error;
       state.showError = !!error;
     });

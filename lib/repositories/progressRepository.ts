@@ -21,35 +21,24 @@ export const getProgress = (userId: number, languageCode: string): Progress | nu
         'SELECT user_id, language_code, cefr_level, correct_streak, last_practiced FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       )
       .get(userId, languageCode) as RawProgress | undefined;
-
-    if (!row) {
-      return null;
-    }
-
-    // Validate and potentially transform the raw DB data
+    if (!row) return null;
     const parseResult = ProgressSchema.safeParse({
       ...row,
       // Assuming last_practiced is stored as TEXT (ISO 8601) which Zod parses to Date
       // If stored differently (e.g., unix timestamp), adjust parsing here
       last_practiced: row.last_practiced ? new Date(row.last_practiced) : null,
     });
-
     if (!parseResult.success) {
       console.error(
         `[getProgress] Failed to parse progress for user ${userId}, lang ${languageCode}:`,
         parseResult.error.issues
       );
-      // Decide on error handling: return null, throw, or return a default?
-      // Returning null seems reasonable if data is invalid.
       return null;
     }
-
     return parseResult.data;
   } catch (dbError) {
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
     console.error(`[getProgress] DB Error for user ${userId}, lang ${languageCode}: ${message}`);
-    // Propagate the error or return null/default?
-    // Throwing might be better here to signal a DB issue upstream.
     throw new Error(`Database error fetching progress for user ${userId}, lang ${languageCode}.`);
   }
 };
@@ -96,11 +85,9 @@ export const updateProgress = (
       .run(newLevel, newStreak, userId, languageCode);
 
     if (result.changes === 0) {
-      // This might happen if the record didn't exist, although getProgress should handle creation
       console.warn(
         `[updateProgress] No rows updated for user ${userId}, lang ${languageCode}. Progress might not have been initialized.`
       );
-      // Optionally, try to initialize here, or rely on the calling logic to handle this
     }
   } catch (dbError) {
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';

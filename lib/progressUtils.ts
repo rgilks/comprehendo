@@ -13,27 +13,20 @@ const calculateNextProgress = (
   currentLevel: CEFRLevel,
   currentStreak: number,
   isCorrect: boolean
-): {
-  nextLevel: CEFRLevel;
-  nextStreak: number;
-  leveledUp: boolean;
-} => {
+) => {
   let nextLevel = currentLevel;
-  let nextStreak: number = currentStreak;
+  let nextStreak = currentStreak;
   let leveledUp = false;
 
   if (isCorrect) {
-    nextStreak += 1;
+    nextStreak++;
     if (nextStreak >= STREAK_THRESHOLD_FOR_LEVEL_UP) {
       const currentLevelIndex = CEFR_LEVEL_INDICES[currentLevel];
       if (currentLevelIndex < CEFR_LEVELS.length - 1) {
-        const nextLevelIndex = currentLevelIndex + 1;
-        nextLevel = CEFR_LEVELS[nextLevelIndex];
+        nextLevel = CEFR_LEVELS[currentLevelIndex + 1];
         nextStreak = 0;
         leveledUp = true;
       } else {
-        // Already at max level, reset streak to prevent infinite growth
-        // Or keep it capped? Resetting seems simpler.
         nextStreak = 0;
       }
     }
@@ -44,6 +37,11 @@ const calculateNextProgress = (
   return { nextLevel, nextStreak, leveledUp };
 };
 
+const getOrInitProgress = (userId: number, languageCode: string) => {
+  const currentProgress = getProgress(userId, languageCode);
+  return currentProgress || initializeProgress(userId, languageCode);
+};
+
 // Fetches current progress, calculates the next state, updates the database, and returns the new state.
 export const calculateAndUpdateProgress = (
   userId: number,
@@ -51,40 +49,16 @@ export const calculateAndUpdateProgress = (
   isCorrect: boolean
 ): ProgressUpdateResult => {
   const languageCode = language.toLowerCase().slice(0, 2);
-
-  try {
-    // 1. Get current progress or initialize if it doesn't exist
-    let currentProgress = getProgress(userId, languageCode);
-    if (!currentProgress) {
-      console.log(
-        `[calculateAndUpdateProgress] No progress found for user ${userId}, lang ${languageCode}. Initializing.`
-      );
-      currentProgress = initializeProgress(userId, languageCode);
-    }
-
-    // 2. Calculate the next progress state
-    const { nextLevel, nextStreak, leveledUp } = calculateNextProgress(
-      currentProgress.cefr_level,
-      currentProgress.correct_streak,
-      isCorrect
-    );
-
-    // 3. Update progress in the database
-    updateProgress(userId, languageCode, nextLevel, nextStreak);
-
-    // 4. Return the result
-    return {
-      currentLevel: nextLevel,
-      currentStreak: nextStreak,
-      leveledUp: leveledUp,
-    };
-  } catch (error) {
-    // Assume error is always an instance of Error based on lint rules
-    const message = (error as Error).message; // Cast to Error
-    console.error(
-      `[calculateAndUpdateProgress] Error for user ${userId}, lang ${languageCode}: ${message}`
-    );
-    // Rethrow the error to be handled by the caller
-    throw error;
-  }
+  const currentProgress = getOrInitProgress(userId, languageCode);
+  const { nextLevel, nextStreak, leveledUp } = calculateNextProgress(
+    currentProgress.cefr_level,
+    currentProgress.correct_streak,
+    isCorrect
+  );
+  updateProgress(userId, languageCode, nextLevel, nextStreak);
+  return {
+    currentLevel: nextLevel,
+    currentStreak: nextStreak,
+    leveledUp,
+  };
 };
