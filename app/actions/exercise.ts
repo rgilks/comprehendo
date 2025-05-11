@@ -14,11 +14,7 @@ import { countCachedExercises } from '@/lib/exercise-cache';
 import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
 import type { ExerciseGenerationParams } from '@/lib/domain/ai';
-import {
-  // InitialExercisePairResultSchema, // Unused schema
-  type InitialExercisePairResult,
-  GenerateExerciseResultSchema,
-} from '@/lib/domain/schemas';
+import { type InitialExercisePairResult, GenerateExerciseResultSchema } from '@/lib/domain/schemas';
 import { LANGUAGES } from '@/lib/domain/language';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import type { ZodIssue } from 'zod';
@@ -58,8 +54,6 @@ const buildGenParams = (
   vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
 });
 
-// --- Main Action ---
-
 export const generateExerciseResponse = async (
   requestParams: unknown
 ): Promise<GenerateExerciseResult> => {
@@ -93,8 +87,6 @@ export const generateExerciseResponse = async (
     return createErrorResponse(errorMessage);
   }
 };
-
-// --- New Action for Initial Pair ---
 
 export const generateInitialExercisePair = async (
   requestParams: unknown
