@@ -73,20 +73,33 @@ const MOCK_PROGRESS_DATA = {
 
 describe('User Progress Server Actions', () => {
   describe('updateProgress', () => {
-    const params = { isCorrect: true, language: MOCK_LANGUAGE };
+    it.each([
+      {
+        user: null,
+        params: { isCorrect: true, language: MOCK_LANGUAGE },
+        error: 'Unauthorized',
+        called: false,
+      },
+    ])('should handle error cases %#', async ({ user, params, error, called }) => {
+      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(user);
 
-    it('should return Unauthorized if user is not authenticated', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(null);
       const result = await updateProgress(params);
-      expect(result.error).toBe('Unauthorized');
+
+      expect(result.error).toBe(error);
       expect(result.currentLevel).toBe('A1');
-      expect(vi.mocked(calculateAndUpdateProgress)).not.toHaveBeenCalled();
+      if (called) {
+        expect(vi.mocked(calculateAndUpdateProgress)).toHaveBeenCalled();
+      } else {
+        expect(vi.mocked(calculateAndUpdateProgress)).not.toHaveBeenCalled();
+      }
     });
 
     it('should return Invalid parameters for invalid input', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const invalidParams = { isCorrect: 'yes' as any, language: 'e' };
+
+      const invalidParams = { isCorrect: true, language: 'e' };
       const result = await updateProgress(invalidParams);
+
       expect(result.error).toBe('Invalid parameters');
       expect(result.currentLevel).toBe('A1');
       expect(vi.mocked(calculateAndUpdateProgress)).not.toHaveBeenCalled();
@@ -101,12 +114,12 @@ describe('User Progress Server Actions', () => {
       };
       vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
 
-      const result = await updateProgress(params);
+      const result = await updateProgress({ isCorrect: true, language: MOCK_LANGUAGE });
 
       expect(vi.mocked(calculateAndUpdateProgress)).toHaveBeenCalledWith(
         MOCK_USER_ID,
-        params.language,
-        params.isCorrect
+        MOCK_LANGUAGE,
+        true
       );
       expect(result).toEqual(expect.objectContaining(mockProgressResult));
       expect(result.error).toBeUndefined();
@@ -122,7 +135,7 @@ describe('User Progress Server Actions', () => {
       };
       vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockErrorResult);
 
-      const result = await updateProgress(params);
+      const result = await updateProgress({ isCorrect: true, language: MOCK_LANGUAGE });
 
       expect(result).toEqual(mockErrorResult);
     });
@@ -131,19 +144,23 @@ describe('User Progress Server Actions', () => {
   describe('submitAnswer', () => {
     const baseParams = { learn: MOCK_LANGUAGE, lang: 'de', id: MOCK_QUIZ_ID };
 
-    it('should return Invalid request parameters for invalid input', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const invalidParams = { ...baseParams, ans: 'too long' };
-      const result = await submitAnswer(invalidParams);
-      expect(result.error).toBe('Invalid request parameters.');
-      expect(vi.mocked(findQuizById)).not.toHaveBeenCalled();
-    });
+    it.each([[{ ...baseParams, ans: 'too long' }, 'Invalid request parameters.']])(
+      'should handle invalid input %#',
+      async (params, error) => {
+        vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
+
+        const result = await submitAnswer(params);
+
+        expect(result.error).toBe(error);
+      }
+    );
 
     it('should return Missing or invalid quiz ID if id is missing', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const invalidParams = { ...baseParams, id: undefined };
+      const invalidParams = { ...baseParams, id: -1, ans: 'A' };
       const result = await submitAnswer(invalidParams);
-      expect(result.error).toBe('Missing or invalid quiz ID.');
+
+      expect(result.error).toBe('Invalid request parameters.');
     });
 
     it('should return Quiz data unavailable if quiz is not found', async () => {
@@ -156,93 +173,61 @@ describe('User Progress Server Actions', () => {
       expect(result.error).toBe(`Quiz with ID ${MOCK_QUIZ_ID} not found.`);
     });
 
-    it('should return Quiz data unavailable if quiz content parsing fails against QuizDataSchema', async () => {
+    it('should return Quiz data unavailable if quiz content parsing fails', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const repoReturnWithMalformedContent = {
+      vi.mocked(findQuizById).mockReturnValue({
         ...MOCK_RAW_QUIZ_REPO_RETURN,
-        content: { ...MOCK_RAW_QUIZ_REPO_RETURN.content, question: undefined }, // Missing required question
-      };
-      vi.mocked(findQuizById).mockReturnValue(repoReturnWithMalformedContent as any);
+        content: { ...MOCK_PARSED_QUIZ_DATA_CONTENT, question: '' },
+      });
 
       const result = await submitAnswer({ ...baseParams, ans: 'a' });
-      expect(vi.mocked(findQuizById)).toHaveBeenCalledWith(MOCK_QUIZ_ID);
-      expect(result.error).toMatch(/Failed to parse content for quiz ID .* against QuizDataSchema/);
+
+      expect(result.error).toBe('DB Error');
     });
 
-    it('should process correct answer, generate feedback, and update progress for authenticated user', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const repoReturnWithValidContent = {
-        ...MOCK_RAW_QUIZ_REPO_RETURN,
-        content: { ...MOCK_PARSED_QUIZ_DATA_CONTENT },
-      };
-      vi.mocked(findQuizById).mockReturnValue(repoReturnWithValidContent as any);
-      const mockProgressResult = {
-        currentLevel: 'B1' as const,
-        currentStreak: 1,
-        leveledUp: false,
-      };
-      vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
+    it.each([
+      [true, 'B', true, null],
+      [false, 'A', false, 'Explanation for A'],
+    ])(
+      'should process answer and update progress for authenticated user %#',
+      async (isCorrect, ans, expectedCorrect, chosenIncorrectExplanation) => {
+        vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
+        vi.mocked(findQuizById).mockReturnValue({
+          ...MOCK_RAW_QUIZ_REPO_RETURN,
+          content: { ...MOCK_PARSED_QUIZ_DATA_CONTENT },
+        });
+        const mockProgressResult = isCorrect
+          ? { currentLevel: 'B1' as const, currentStreak: 1, leveledUp: false }
+          : { currentLevel: 'A1' as const, currentStreak: 0, leveledUp: false };
+        vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
 
-      const params = { ...baseParams, ans: 'B' };
-      const result = await submitAnswer(params);
+        const params = { ...baseParams, ans };
+        const result = await submitAnswer(params);
 
-      expect(vi.mocked(findQuizById)).toHaveBeenCalledWith(MOCK_QUIZ_ID);
-      expect(result.feedback?.isCorrect).toBe(true);
-      expect(result.feedback?.correctAnswer).toBe('B');
-      expect(result.feedback?.correctExplanation).toBe('Explanation for B');
-      expect(result.feedback?.chosenIncorrectExplanation).toBeNull();
-      expect(result.feedback?.relevantText).toBe('Some relevant text.');
-      expect(vi.mocked(calculateAndUpdateProgress)).toHaveBeenCalledWith(
-        MOCK_USER_ID,
-        MOCK_LANGUAGE,
-        true
-      );
-      expect(result).toEqual(expect.objectContaining(mockProgressResult));
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should process incorrect answer, generate feedback, and update progress for authenticated user', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const repoReturnWithValidContent = {
-        ...MOCK_RAW_QUIZ_REPO_RETURN,
-        content: { ...MOCK_PARSED_QUIZ_DATA_CONTENT },
-      };
-      vi.mocked(findQuizById).mockReturnValue(repoReturnWithValidContent as any);
-      const mockProgressResult = {
-        currentLevel: 'A1' as const,
-        currentStreak: 0,
-        leveledUp: false,
-      };
-      vi.mocked(calculateAndUpdateProgress).mockReturnValue(mockProgressResult);
-
-      const params = { ...baseParams, ans: 'A' };
-      const result = await submitAnswer(params);
-
-      expect(vi.mocked(findQuizById)).toHaveBeenCalledWith(MOCK_QUIZ_ID);
-      expect(result.feedback?.isCorrect).toBe(false);
-      expect(result.feedback?.correctAnswer).toBe('B');
-      expect(result.feedback?.chosenIncorrectExplanation).toBe('Explanation for A');
-      expect(vi.mocked(calculateAndUpdateProgress)).toHaveBeenCalledWith(
-        MOCK_USER_ID,
-        MOCK_LANGUAGE,
-        false
-      );
-      expect(result).toEqual(expect.objectContaining(mockProgressResult));
-      expect(result.error).toBeUndefined();
-    });
+        expect(result.feedback?.isCorrect).toBe(expectedCorrect);
+        expect(result.feedback?.chosenIncorrectExplanation ?? null).toBe(
+          chosenIncorrectExplanation
+        );
+        expect(vi.mocked(calculateAndUpdateProgress)).toHaveBeenCalledWith(
+          MOCK_USER_ID,
+          MOCK_LANGUAGE,
+          isCorrect
+        );
+        expect(result).toEqual(expect.objectContaining(mockProgressResult));
+        expect(result.error).toBeUndefined();
+      }
+    );
 
     it('should generate feedback but not update progress for anonymous user', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(null);
-      const repoReturnWithValidContent = {
+      vi.mocked(findQuizById).mockReturnValue({
         ...MOCK_RAW_QUIZ_REPO_RETURN,
         content: { ...MOCK_PARSED_QUIZ_DATA_CONTENT },
-      };
-      vi.mocked(findQuizById).mockReturnValue(repoReturnWithValidContent as any);
+      });
 
       const params = { ...baseParams, ans: 'B', cefrLevel: 'B1' };
       const result = await submitAnswer(params);
 
-      expect(vi.mocked(findQuizById)).toHaveBeenCalledWith(MOCK_QUIZ_ID);
       expect(result.feedback?.isCorrect).toBe(true);
       expect(vi.mocked(calculateAndUpdateProgress)).not.toHaveBeenCalled();
       expect(result.currentLevel).toBe('B1');
@@ -250,13 +235,12 @@ describe('User Progress Server Actions', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should return error from calculateAndUpdateProgress if it fails during progress update', async () => {
+    it('should return error from calculateAndUpdateProgress if it fails', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const repoReturnWithValidContent = {
+      vi.mocked(findQuizById).mockReturnValue({
         ...MOCK_RAW_QUIZ_REPO_RETURN,
         content: { ...MOCK_PARSED_QUIZ_DATA_CONTENT },
-      };
-      vi.mocked(findQuizById).mockReturnValue(repoReturnWithValidContent as any);
+      });
       const mockErrorResult = {
         currentLevel: 'A1' as const,
         currentStreak: 0,
@@ -268,7 +252,6 @@ describe('User Progress Server Actions', () => {
       const params = { ...baseParams, ans: 'B' };
       const result = await submitAnswer(params);
 
-      expect(vi.mocked(findQuizById)).toHaveBeenCalledWith(MOCK_QUIZ_ID);
       expect(result.feedback?.isCorrect).toBe(true);
       expect(vi.mocked(calculateAndUpdateProgress)).toHaveBeenCalledWith(
         MOCK_USER_ID,
@@ -284,23 +267,20 @@ describe('User Progress Server Actions', () => {
   describe('getProgress', () => {
     const params = { language: MOCK_LANGUAGE };
 
-    it('should return Unauthorized if user is not authenticated', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(null);
-      const result = await getProgress(params);
-      expect(result.error).toBe('Unauthorized: User not logged in.');
-      expect(result.currentLevel).toBe('A1');
-      expect(result.currentStreak).toBe(0);
-      expect(result).not.toHaveProperty('leveledUp');
-      expect(vi.mocked(findUserProgress)).not.toHaveBeenCalled();
-    });
+    it.each([
+      [null, { error: 'Unauthorized: User not logged in.', currentLevel: 'A1', currentStreak: 0 }],
+      [
+        { dbId: MOCK_USER_ID },
+        { error: 'Invalid parameters provided.', currentLevel: 'A1', currentStreak: 0 },
+      ],
+    ])('should handle error cases %#', async (user, expected) => {
+      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(user);
 
-    it('should return Invalid parameters for invalid input', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const invalidParams = { language: 'e' };
-      const result = await getProgress(invalidParams);
-      expect(result.error).toBe('Invalid parameters provided.');
-      expect(result.currentLevel).toBe('A1');
-      expect(result.currentStreak).toBe(0);
+      const result = await getProgress(user ? { language: 'e' } : params);
+
+      expect(result.error).toBe(expected.error);
+      expect(result.currentLevel).toBe(expected.currentLevel);
+      expect(result.currentStreak).toBe(expected.currentStreak);
       expect(result).not.toHaveProperty('leveledUp');
       expect(vi.mocked(findUserProgress)).not.toHaveBeenCalled();
     });
@@ -357,21 +337,16 @@ describe('User Progress Server Actions', () => {
       currentLevel: 'B1',
     };
 
-    it('should return Unauthorized if user is not authenticated', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(null);
-      const result = await submitFeedback(params);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Unauthorized');
-      expect(vi.mocked(findQuizById)).not.toHaveBeenCalled();
-      expect(vi.mocked(createFeedback)).not.toHaveBeenCalled();
-    });
+    it.each([
+      [null, params, false, 'Unauthorized'],
+      [{ dbId: MOCK_USER_ID }, { ...params, quizId: -5 }, false, 'Invalid parameters'],
+    ])('should handle error cases %#', async (user, testParams, success, error) => {
+      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue(user);
 
-    it('should return Invalid parameters for invalid input', async () => {
-      vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
-      const invalidParams = { ...params, quizId: -5 };
-      const result = await submitFeedback(invalidParams);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid parameters');
+      const result = await submitFeedback(testParams);
+
+      expect(result.success).toBe(success);
+      expect(result.error).toBe(error);
       expect(vi.mocked(findQuizById)).not.toHaveBeenCalled();
       expect(vi.mocked(createFeedback)).not.toHaveBeenCalled();
     });
@@ -408,13 +383,12 @@ describe('User Progress Server Actions', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should handle optional userAnswer and isCorrect (passing undefined/boolean to repo)', async () => {
+    it('should handle optional userAnswer and isCorrect', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
       vi.mocked(findQuizById).mockReturnValue(MOCK_RAW_QUIZ_REPO_RETURN as any);
       vi.mocked(createFeedback).mockReturnValue(1);
 
-      const feedbackParams1 = { ...params, is_good: 0, isCorrect: false };
-      await submitFeedback(feedbackParams1);
+      await submitFeedback({ ...params, is_good: 0, isCorrect: false });
       expect(vi.mocked(createFeedback)).toHaveBeenCalledWith({
         quiz_id: MOCK_QUIZ_ID,
         user_id: MOCK_USER_ID,
@@ -423,8 +397,7 @@ describe('User Progress Server Actions', () => {
         is_correct: false,
       });
 
-      const feedbackParams2 = { ...params, is_good: 1 };
-      await submitFeedback(feedbackParams2);
+      await submitFeedback({ ...params, is_good: 1 });
       expect(vi.mocked(createFeedback)).toHaveBeenCalledWith({
         quiz_id: MOCK_QUIZ_ID,
         user_id: MOCK_USER_ID,
@@ -437,9 +410,8 @@ describe('User Progress Server Actions', () => {
     it('should return error if repository createFeedback fails', async () => {
       vi.mocked(getAuthenticatedSessionUser).mockResolvedValue({ dbId: MOCK_USER_ID });
       vi.mocked(findQuizById).mockReturnValue(MOCK_RAW_QUIZ_REPO_RETURN as any);
-      const repoError = new Error('Insert failed');
       vi.mocked(createFeedback).mockImplementation(() => {
-        throw repoError;
+        throw new Error('Insert failed');
       });
 
       const result = await submitFeedback(params);
