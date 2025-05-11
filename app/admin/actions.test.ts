@@ -81,6 +81,30 @@ describe('Admin actions security', () => {
       const result = await getTableNames();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
+
+    it('should handle errors from repository.getAllTableNames when it throws an Error instance', async () => {
+      (getServerSession as Mock).mockResolvedValue({
+        user: { name: 'Admin User', email: 'admin@example.com' },
+      });
+      const errorMessage = 'Repo error';
+      vi.mocked(adminRepository.getAllTableNames).mockImplementation(() => {
+        throw new Error(errorMessage);
+      });
+      const result = await getTableNames();
+      expect(result).toEqual({ error: 'Failed to fetch table names' });
+    });
+
+    it('should handle errors from repository.getAllTableNames when it throws a string', async () => {
+      (getServerSession as Mock).mockResolvedValue({
+        user: { name: 'Admin User', email: 'admin@example.com' },
+      });
+      const errorContent = 'Repo string error';
+      vi.mocked(adminRepository.getAllTableNames).mockImplementation(() => {
+        throw new Error(errorContent);
+      });
+      const result = await getTableNames();
+      expect(result).toEqual({ error: 'Failed to fetch table names' });
+    });
   });
 
   describe('getTableData function', () => {
@@ -121,6 +145,30 @@ describe('Admin actions security', () => {
           limit: expect.any(Number),
         })
       );
+    });
+
+    it('should handle errors from repository.getTableData when it throws an Error instance', async () => {
+      (getServerSession as Mock).mockResolvedValue({
+        user: { name: 'Admin User', email: 'admin@example.com' },
+      });
+      const repoErrorMessage = 'DB is down';
+      vi.mocked(adminRepository.getTableData).mockImplementation(() => {
+        throw new Error(repoErrorMessage);
+      });
+      const result = await getTableData('some_table');
+      expect(result).toEqual({ error: repoErrorMessage });
+    });
+
+    it('should handle errors from repository.getTableData when it throws a string', async () => {
+      (getServerSession as Mock).mockResolvedValue({
+        user: { name: 'Admin User', email: 'admin@example.com' },
+      });
+      const errorContent = 'DB string error';
+      vi.mocked(adminRepository.getTableData).mockImplementation(() => {
+        throw new Error(errorContent);
+      });
+      const result = await getTableData('some_table');
+      expect(result).toEqual({ error: errorContent });
     });
   });
 });
