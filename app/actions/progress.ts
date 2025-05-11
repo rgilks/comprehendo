@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
 import { calculateAndUpdateProgress } from '../../lib/progressUtils';
-import { getAuthenticatedUserId } from './authUtils';
+import { getAuthenticatedSessionUser } from './authUtils';
 import { findQuizById } from '@/lib/repositories/quizRepository';
 import { getProgress as findUserProgress } from '@/lib/repositories/progressRepository';
 import { createFeedback } from '@/lib/repositories/feedbackRepository';
@@ -142,7 +142,8 @@ const generateFeedback = (
 };
 
 export const updateProgress = async (params: UpdateProgressParams): Promise<ProgressResponse> => {
-  const userId = await getAuthenticatedUserId();
+  const sessionUser = await getAuthenticatedSessionUser();
+  const userId = sessionUser?.dbId ?? null;
   if (userId === null) {
     return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Unauthorized' };
   }
@@ -200,7 +201,8 @@ const updateProgressAndGetResponse = (
 export const submitAnswer = async (
   params: z.infer<typeof submitAnswerSchema>
 ): Promise<ProgressResponse> => {
-  const userId = await getAuthenticatedUserId(); // userId can be null for anonymous users
+  const sessionUser = await getAuthenticatedSessionUser();
+  const userId = sessionUser?.dbId ?? null;
 
   const parsedBody = submitAnswerSchema.safeParse(params);
   if (!parsedBody.success) {
@@ -257,7 +259,8 @@ export const submitAnswer = async (
 };
 
 export const getProgress = async (params: GetProgressParams): Promise<ProgressResponse> => {
-  const userId = await getAuthenticatedUserId();
+  const sessionUser = await getAuthenticatedSessionUser();
+  const userId = sessionUser?.dbId ?? null;
   if (userId === null) {
     return {
       currentLevel: DEFAULT_CEFR_LEVEL,
@@ -322,7 +325,8 @@ export interface SubmitFeedbackResponse {
 export const submitFeedback = async (
   params: SubmitFeedbackParams
 ): Promise<SubmitFeedbackResponse> => {
-  const userId = await getAuthenticatedUserId();
+  const sessionUser = await getAuthenticatedSessionUser();
+  const userId = sessionUser?.dbId ?? null;
   if (userId === null) {
     return { success: false, error: 'Unauthorized' };
   }

@@ -1,29 +1,20 @@
 import { getServerSession } from 'next-auth/next';
-import type { Session } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
+import { z } from 'zod';
 
-interface SessionUser extends NonNullable<Session['user']> {
-  dbId?: number;
-}
+export const SessionUserSchema = z.object({
+  dbId: z.number(),
+  name: z.string().optional(),
+  email: z.string().optional(),
+  image: z.string().optional(),
+});
 
-export const getAuthenticatedUserId = async (): Promise<number | null> => {
-  const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as SessionUser | undefined;
-
-  if (!session || !sessionUser?.dbId) {
-    return null;
-  }
-
-  return sessionUser.dbId;
-};
+export type SessionUser = z.infer<typeof SessionUserSchema>;
 
 export const getAuthenticatedSessionUser = async (): Promise<SessionUser | null> => {
   const session = await getServerSession(authOptions);
-  const sessionUser = session?.user as SessionUser | undefined;
-
-  if (!session || !sessionUser?.dbId) {
-    return null;
-  }
-
-  return sessionUser;
+  const user = session?.user;
+  const parsed = SessionUserSchema.safeParse(user);
+  if (!parsed.success) return null;
+  return parsed.data;
 };
