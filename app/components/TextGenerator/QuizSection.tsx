@@ -63,7 +63,6 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
       feedback.chosenIncorrectExplanation && (
         <div
           className="mt-2 p-2 text-sm bg-red-900/60 ring-1 ring-red-600/60 rounded text-red-100 flex items-start space-x-2"
-          data-testid="chosen-incorrect-explanation-text"
           dir={getTextDirection(questionLanguage as Language)}
         >
           <InformationCircleIcon className="h-5 w-5 flex-shrink-0 text-red-300 mt-0.5" />
@@ -83,7 +82,6 @@ interface FeedbackExplanationProps {
     chosenIncorrectExplanation: string | null;
     relevantText: string | null;
   };
-  quizData: QuizData;
   t: (key: string) => string;
   questionLanguage: string;
   generatedPassageLanguage: string | null | undefined;
@@ -98,7 +96,6 @@ const FeedbackExplanation: React.FC<FeedbackExplanationProps> = ({
   isAnswered,
   showExplanation,
   feedback,
-  quizData,
   t,
   questionLanguage,
   generatedPassageLanguage,
@@ -119,19 +116,26 @@ const FeedbackExplanation: React.FC<FeedbackExplanationProps> = ({
           {feedback.correctExplanation}
         </div>
       )}
-      {feedback.isCorrect &&
-        feedback.correctAnswer &&
-        quizData.options[feedback.correctAnswer as keyof typeof quizData.options] && (
-          <div
-            className="p-2 rounded bg-blue-900/30 ring-1 ring-blue-600/50 text-blue-200 mb-4"
-            data-testid="relevant-text"
-          >
-            <strong>{t('practice.relevantText')}:</strong>{' '}
-            <span dir={getTextDirection(getValidLanguage(generatedPassageLanguage))}>
-              {quizData.options[feedback.correctAnswer as keyof typeof quizData.options]}
-            </span>
-          </div>
-        )}
+      {feedback.isCorrect && feedback.relevantText && (
+        <div
+          className="p-2 rounded bg-blue-900/30 ring-1 ring-blue-600/50 text-blue-200 mb-4"
+          data-testid="relevant-text"
+        >
+          <strong>{t('practice.relevantText')}:</strong>{' '}
+          <span dir={getTextDirection(getValidLanguage(generatedPassageLanguage))}>
+            {feedback.relevantText}
+          </span>
+        </div>
+      )}
+      {!feedback.isCorrect && feedback.chosenIncorrectExplanation && (
+        <div
+          className="p-2 rounded bg-red-900/30 ring-1 ring-red-600/50 text-red-200 mb-4"
+          data-testid="chosen-incorrect-explanation-text"
+          dir={getTextDirection(questionLanguage as Language)}
+        >
+          {feedback.chosenIncorrectExplanation}
+        </div>
+      )}
     </div>
   );
 };
@@ -189,7 +193,6 @@ const QuizSection = () => {
         isAnswered={isAnswered}
         showExplanation={showExplanation}
         feedback={feedback}
-        quizData={quizData}
         t={t}
         questionLanguage={questionLanguage}
         generatedPassageLanguage={generatedPassageLanguage}

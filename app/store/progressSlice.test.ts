@@ -148,6 +148,19 @@ const setupStore = () =>
       languageGuidingText: '',
       setLanguage: vi.fn(),
       setLanguageGuidingText: vi.fn(),
+      feedback: {
+        isCorrect: null,
+        correctAnswer: null,
+        correctExplanation: null,
+        chosenIncorrectExplanation: null,
+        relevantText: null,
+      },
+      hover: {
+        progressionPhase: 'credits',
+        correctAnswersInPhase: 0,
+        creditsAvailable: 0,
+        creditsUsed: 0,
+      },
     }))
   );
 

@@ -41,6 +41,8 @@ export interface QuizSlice extends BaseSlice {
     creditsAvailable: number;
     creditsUsed: number;
   };
+  showQuestionSection: boolean;
+  showExplanation: boolean;
   setQuizData: (data: PartialQuizData | null) => void;
   setSelectedAnswer: (answer: string | null) => void;
   setIsAnswered: (answered: boolean) => void;
@@ -60,7 +62,7 @@ const INITIAL_PHASE_THRESHOLD = 5;
 
 export const INITIAL_HOVER_CREDITS = 7;
 
-const getInitialQuizState = (get: () => QuizSlice) => ({
+const getInitialQuizState = () => ({
   quizData: null,
   currentQuizId: null,
   selectedAnswer: null,
@@ -76,11 +78,13 @@ const getInitialQuizState = (get: () => QuizSlice) => ({
   nextQuizAvailable: null,
   feedbackSubmitted: false,
   hover: {
-    progressionPhase: 'credits',
+    progressionPhase: 'credits' as HoverProgressionPhase,
     correctAnswersInPhase: 0,
-    creditsAvailable: get().hover.progressionPhase === 'initial' ? Infinity : INITIAL_HOVER_CREDITS,
+    creditsAvailable: INITIAL_HOVER_CREDITS,
     creditsUsed: 0,
   },
+  showQuestionSection: false,
+  showExplanation: false,
 });
 
 export const createQuizSlice: StateCreator<
@@ -90,7 +94,7 @@ export const createQuizSlice: StateCreator<
   QuizSlice
 > = (set, get) => ({
   ...createBaseSlice(set),
-  ...getInitialQuizState(get),
+  ...getInitialQuizState(),
 
   setQuizData: (data) => {
     set((state) => {
@@ -119,7 +123,7 @@ export const createQuizSlice: StateCreator<
   },
   resetQuizState: () => {
     set((state) => {
-      Object.assign(state, getInitialQuizState(get));
+      Object.assign(state, getInitialQuizState());
     });
   },
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
@@ -418,6 +422,7 @@ export const createQuizSlice: StateCreator<
       set({ error: 'Cannot submit feedback: Invalid quiz ID.', loading: false });
       return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
       set({
         error: 'Cannot submit feedback: Missing required state (language/level). Please refresh.',

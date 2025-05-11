@@ -138,17 +138,17 @@ describe('quizSlice', () => {
     expect(state.selectedAnswer).toBeNull();
     expect(state.isAnswered).toBe(false);
     expect(state.relevantTextRange).toBeNull();
-    expect(state.feedbackIsCorrect).toBeNull();
-    expect(state.feedbackCorrectAnswer).toBeNull();
-    expect(state.feedbackCorrectExplanation).toBeNull();
-    expect(state.feedbackChosenIncorrectExplanation).toBeNull();
-    expect(state.feedbackRelevantText).toBeNull();
+    expect(state.feedback.isCorrect).toBeNull();
+    expect(state.feedback.correctAnswer).toBeNull();
+    expect(state.feedback.correctExplanation).toBeNull();
+    expect(state.feedback.chosenIncorrectExplanation).toBeNull();
+    expect(state.feedback.relevantText).toBeNull();
     expect(state.nextQuizAvailable).toBeNull();
     expect(state.feedbackSubmitted).toBe(false);
-    expect(state.hoverProgressionPhase).toBe('credits');
-    expect(state.correctAnswersInPhase).toBe(0);
-    expect(state.hoverCreditsAvailable).toBe(INITIAL_HOVER_CREDITS);
-    expect(state.hoverCreditsUsed).toBe(0);
+    expect(state.hover.progressionPhase).toBe('credits');
+    expect(state.hover.correctAnswersInPhase).toBe(0);
+    expect(state.hover.creditsAvailable).toBe(INITIAL_HOVER_CREDITS);
+    expect(state.hover.creditsUsed).toBe(0);
   });
 
   it('setQuizData should update quizData', () => {
@@ -160,7 +160,7 @@ describe('quizSlice', () => {
     };
     store.getState().setQuizData(mockQuizData);
     expect(store.getState().quizData).toEqual(mockQuizData);
-    expect(store.getState().hoverCreditsAvailable).toBe(INITIAL_HOVER_CREDITS);
+    expect(store.getState().hover.creditsAvailable).toBe(INITIAL_HOVER_CREDITS);
   });
 
   it('setSelectedAnswer should update selectedAnswer', () => {
@@ -205,11 +205,13 @@ describe('quizSlice', () => {
       selectedAnswer: 'A',
       isAnswered: true,
       relevantTextRange: { start: 0, end: 4 },
-      feedbackIsCorrect: true,
-      feedbackCorrectAnswer: 'A',
-      feedbackCorrectExplanation: 'Because.',
-      feedbackChosenIncorrectExplanation: null,
-      feedbackRelevantText: 'Test',
+      feedback: {
+        isCorrect: true,
+        correctAnswer: 'A',
+        correctExplanation: 'Because.',
+        chosenIncorrectExplanation: null,
+        relevantText: 'Test',
+      },
       showQuestionSection: true,
       showExplanation: true,
       nextQuizAvailable: {
@@ -217,7 +219,12 @@ describe('quizSlice', () => {
         quizId: 2,
       },
       feedbackSubmitted: true,
-      hoverCreditsUsed: 2,
+      hover: {
+        progressionPhase: 'credits',
+        correctAnswersInPhase: 0,
+        creditsAvailable: 0,
+        creditsUsed: 2,
+      },
     });
 
     store.getState().resetQuizState();
@@ -228,17 +235,17 @@ describe('quizSlice', () => {
     expect(state.selectedAnswer).toBeNull();
     expect(state.isAnswered).toBe(false);
     expect(state.relevantTextRange).toBeNull();
-    expect(state.feedbackIsCorrect).toBeNull();
-    expect(state.feedbackCorrectAnswer).toBeNull();
-    expect(state.feedbackCorrectExplanation).toBeNull();
-    expect(state.feedbackChosenIncorrectExplanation).toBeNull();
-    expect(state.feedbackRelevantText).toBeNull();
+    expect(state.feedback.isCorrect).toBeNull();
+    expect(state.feedback.correctAnswer).toBeNull();
+    expect(state.feedback.correctExplanation).toBeNull();
+    expect(state.feedback.chosenIncorrectExplanation).toBeNull();
+    expect(state.feedback.relevantText).toBeNull();
     expect(state.showQuestionSection).toBe(false);
     expect(state.showExplanation).toBe(false);
     expect(state.nextQuizAvailable).toBeNull();
     expect(state.feedbackSubmitted).toBe(false);
-    expect(state.hoverCreditsUsed).toBe(0);
-    expect(state.hoverCreditsAvailable).toBe(INITIAL_HOVER_CREDITS);
+    expect(state.hover.creditsUsed).toBe(0);
+    expect(state.hover.creditsAvailable).toBe(INITIAL_HOVER_CREDITS);
   });
 
   it('resetQuizWithNewData should reset state and set new quiz data', () => {
@@ -296,19 +303,25 @@ describe('quizSlice', () => {
   });
 
   it('useHoverCredit should decrement credits and return true if available', () => {
-    store.setState({ hoverCreditsAvailable: 5, hoverCreditsUsed: 2 });
+    store.setState((state) => {
+      state.hover.creditsAvailable = 5;
+      state.hover.creditsUsed = 2;
+    });
     const result = store.getState().useHoverCredit();
     expect(result).toBe(true);
-    expect(store.getState().hoverCreditsAvailable).toBe(4);
-    expect(store.getState().hoverCreditsUsed).toBe(3);
+    expect(store.getState().hover.creditsAvailable).toBe(4);
+    expect(store.getState().hover.creditsUsed).toBe(3);
   });
 
   it('useHoverCredit should return false if no credits available', () => {
-    store.setState({ hoverCreditsAvailable: 0, hoverCreditsUsed: INITIAL_HOVER_CREDITS });
+    store.setState((state) => {
+      state.hover.creditsAvailable = 0;
+      state.hover.creditsUsed = INITIAL_HOVER_CREDITS;
+    });
     const result = store.getState().useHoverCredit();
     expect(result).toBe(false);
-    expect(store.getState().hoverCreditsAvailable).toBe(0);
-    expect(store.getState().hoverCreditsUsed).toBe(INITIAL_HOVER_CREDITS);
+    expect(store.getState().hover.creditsAvailable).toBe(0);
+    expect(store.getState().hover.creditsUsed).toBe(INITIAL_HOVER_CREDITS);
   });
 
   describe('generateText', () => {
@@ -452,11 +465,11 @@ describe('quizSlice', () => {
       expect(store.getState().isAnswered).toBe(true);
       expect(store.getState().selectedAnswer).toBe('A');
       expect(store.getState().showExplanation).toBe(true);
-      expect(store.getState().feedbackIsCorrect).toBe(true);
-      expect(store.getState().feedbackCorrectAnswer).toBe('A');
-      expect(store.getState().feedbackCorrectExplanation).toBe('Correct explanation');
-      expect(store.getState().feedbackChosenIncorrectExplanation).toBeNull();
-      expect(store.getState().feedbackRelevantText).toBe('relevant text');
+      expect(store.getState().feedback.isCorrect).toBe(true);
+      expect(store.getState().feedback.correctAnswer).toBe('A');
+      expect(store.getState().feedback.correctExplanation).toBe('Correct explanation');
+      expect(store.getState().feedback.chosenIncorrectExplanation).toBeNull();
+      expect(store.getState().feedback.relevantText).toBe('relevant text');
       expect(store.getState().relevantTextRange).toEqual({ start: 12, end: 25 });
       expect(store.getState().userStreak).toBe(5);
       expect(submitAnswer).toHaveBeenCalledWith({
@@ -485,11 +498,11 @@ describe('quizSlice', () => {
 
       await store.getState().handleAnswerSelect('A');
 
-      expect(store.getState().feedbackIsCorrect).toBe(false);
-      expect(store.getState().feedbackCorrectAnswer).toBe('B');
-      expect(store.getState().feedbackCorrectExplanation).toBe('Correct B explanation');
-      expect(store.getState().feedbackChosenIncorrectExplanation).toBe('Incorrect A explanation');
-      expect(store.getState().feedbackRelevantText).toBe('');
+      expect(store.getState().feedback.isCorrect).toBe(false);
+      expect(store.getState().feedback.correctAnswer).toBe('B');
+      expect(store.getState().feedback.correctExplanation).toBe('Correct B explanation');
+      expect(store.getState().feedback.chosenIncorrectExplanation).toBe('Incorrect A explanation');
+      expect(store.getState().feedback.relevantText).toBe('');
       expect(store.getState().relevantTextRange).toBeNull();
       expect(store.getState().userStreak).toBe(0);
     });
@@ -525,12 +538,15 @@ describe('quizSlice', () => {
         currentLevel: 'A1',
       };
       vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
-      store.setState({ hoverProgressionPhase: 'initial', correctAnswersInPhase: 4 });
+      store.setState((state) => {
+        state.hover.progressionPhase = 'initial';
+        state.hover.correctAnswersInPhase = 4;
+      });
 
       await store.getState().handleAnswerSelect('A');
 
-      expect(store.getState().hoverProgressionPhase).toBe('credits');
-      expect(store.getState().correctAnswersInPhase).toBe(0);
+      expect(store.getState().hover.progressionPhase).toBe('credits');
+      expect(store.getState().hover.correctAnswersInPhase).toBe(0);
     });
 
     it('should handle hover progression phase logic (correct answer, initial phase, below threshold)', async () => {
@@ -545,12 +561,15 @@ describe('quizSlice', () => {
         currentLevel: 'A1',
       };
       vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
-      store.setState({ hoverProgressionPhase: 'initial', correctAnswersInPhase: 2 });
+      store.setState((state) => {
+        state.hover.progressionPhase = 'initial';
+        state.hover.correctAnswersInPhase = 2;
+      });
 
       await store.getState().handleAnswerSelect('A');
 
-      expect(store.getState().hoverProgressionPhase).toBe('initial');
-      expect(store.getState().correctAnswersInPhase).toBe(3);
+      expect(store.getState().hover.progressionPhase).toBe('initial');
+      expect(store.getState().hover.correctAnswersInPhase).toBe(3);
     });
 
     it('should handle hover progression phase logic (incorrect answer, initial phase)', async () => {
@@ -566,12 +585,15 @@ describe('quizSlice', () => {
         currentLevel: 'A1',
       };
       vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
-      store.setState({ hoverProgressionPhase: 'initial', correctAnswersInPhase: 3 });
+      store.setState((state) => {
+        state.hover.progressionPhase = 'initial';
+        state.hover.correctAnswersInPhase = 3;
+      });
 
       await store.getState().handleAnswerSelect('A');
 
-      expect(store.getState().hoverProgressionPhase).toBe('initial');
-      expect(store.getState().correctAnswersInPhase).toBe(0);
+      expect(store.getState().hover.progressionPhase).toBe('initial');
+      expect(store.getState().hover.correctAnswersInPhase).toBe(0);
     });
 
     it('should handle hover progression phase logic (correct answer, credits phase)', async () => {
@@ -586,12 +608,15 @@ describe('quizSlice', () => {
         currentLevel: 'A1',
       };
       vi.mocked(submitAnswer).mockResolvedValue(mockFullResult);
-      store.setState({ hoverProgressionPhase: 'credits', correctAnswersInPhase: 1 });
+      store.setState((state) => {
+        state.hover.progressionPhase = 'credits';
+        state.hover.correctAnswersInPhase = 1;
+      });
 
       await store.getState().handleAnswerSelect('A');
 
-      expect(store.getState().hoverProgressionPhase).toBe('credits');
-      expect(store.getState().correctAnswersInPhase).toBe(2);
+      expect(store.getState().hover.progressionPhase).toBe('credits');
+      expect(store.getState().hover.correctAnswersInPhase).toBe(2);
     });
 
     it('should set error if currentQuizId is missing', async () => {
@@ -660,7 +685,13 @@ describe('quizSlice', () => {
       store.setState({
         currentQuizId: 1,
         selectedAnswer: 'A',
-        feedbackIsCorrect: true,
+        feedback: {
+          isCorrect: true,
+          correctAnswer: null,
+          correctExplanation: null,
+          chosenIncorrectExplanation: null,
+          relevantText: null,
+        },
         passageLanguage: 'es',
         generatedQuestionLanguage: 'en',
         cefrLevel: 'B2',

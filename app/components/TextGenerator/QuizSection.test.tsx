@@ -33,7 +33,13 @@ describe('QuizSection', () => {
       showExplanation: false,
       showQuestionSection: true,
       handleAnswerSelect: vi.fn(),
-      feedback: { isCorrect: false },
+      feedback: {
+        isCorrect: false,
+        correctAnswer: 'A',
+        correctExplanation: 'Paris is the correct answer.',
+        chosenIncorrectExplanation: 'That is not correct.',
+        relevantText: 'Paris',
+      },
       feedbackCorrectAnswer: 'A',
       feedbackCorrectExplanation: 'Paris is the correct answer.',
       feedbackChosenIncorrectExplanation: 'That is not correct.',
@@ -67,6 +73,7 @@ describe('QuizSection', () => {
   it('shows correct explanation when answered and showExplanation', () => {
     store.isAnswered = true;
     store.showExplanation = true;
+    store.feedback.correctExplanation = 'Paris is the correct answer.';
     render(<QuizSection />);
     expect(screen.getByTestId('feedback-explanation')).toBeInTheDocument();
     expect(screen.getByTestId('correct-explanation-text')).toHaveTextContent(
@@ -78,6 +85,7 @@ describe('QuizSection', () => {
     store.isAnswered = true;
     store.showExplanation = true;
     store.feedback.isCorrect = true;
+    store.feedback.relevantText = 'Paris';
     render(<QuizSection />);
     expect(screen.getByTestId('relevant-text')).toBeInTheDocument();
     expect(screen.getByTestId('relevant-text')).toHaveTextContent('Paris');
@@ -88,6 +96,7 @@ describe('QuizSection', () => {
     store.showExplanation = true;
     store.feedback.isCorrect = false;
     store.selectedAnswer = 'B';
+    store.feedback.chosenIncorrectExplanation = 'That is not correct.';
     render(<QuizSection />);
     expect(screen.getByTestId('chosen-incorrect-explanation-text')).toBeInTheDocument();
     expect(screen.getByTestId('chosen-incorrect-explanation-text')).toHaveTextContent(
