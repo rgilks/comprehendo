@@ -10,7 +10,7 @@ import { validateRequestParams, getOrGenerateExercise } from './exercise-orchest
 import { checkRateLimit } from '@/lib/rate-limiter';
 import type { ZodIssue } from 'zod';
 import { z } from 'zod';
-import type { GenerateExerciseResult } from '@/lib/domain/schemas';
+import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
 import { LANGUAGES } from '@/lib/domain/language';
 import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
@@ -21,48 +21,55 @@ import {
   GenerateExerciseResultSchema,
 } from '@/lib/domain/schemas';
 
-// --- Main Action ---
-
-export const generateExerciseResponse = async (
-  requestParams: unknown
-): Promise<GenerateExerciseResult> => {
+const getRequestContext = async () => {
   const headersList = await headers();
   const ip = headersList.get('x-forwarded-for') || 'unknown';
   const session: Session | null = await getServerSession(authOptions);
   const userId = getDbUserIdFromSession(session);
+  return { ip, userId };
+};
 
+const validateAndExtractParams = (requestParams: unknown) => {
   const validationResult = validateRequestParams(requestParams);
   if (!validationResult.success) {
     const errorMsg = `Invalid request parameters: ${validationResult.error.errors
       .map((e: ZodIssue) => `${e.path.join('.')}: ${e.message}`)
       .join(', ')}`;
-    return createErrorResponse(errorMsg);
+    return { validParams: null, errorMsg };
   }
-  const validParams = validationResult.data;
+  return { validParams: validationResult.data, errorMsg: null };
+};
 
-  const isAllowed = checkRateLimit(ip);
+const buildGenParams = (
+  validParams: ExerciseRequestParams,
+  topic?: string
+): ExerciseGenerationParams => ({
+  passageLanguage: validParams.passageLanguage,
+  questionLanguage: validParams.questionLanguage,
+  level: validParams.cefrLevel,
+  passageLangName: LANGUAGES[validParams.passageLanguage],
+  questionLangName: LANGUAGES[validParams.questionLanguage],
+  topic: topic || getRandomTopicForLevel(validParams.cefrLevel),
+  grammarGuidance: getGrammarGuidance(validParams.cefrLevel),
+  vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
+});
 
-  if (!isAllowed) {
+// --- Main Action ---
+
+export const generateExerciseResponse = async (
+  requestParams: unknown
+): Promise<GenerateExerciseResult> => {
+  const { ip, userId } = await getRequestContext();
+  const { validParams, errorMsg } = validateAndExtractParams(requestParams);
+  if (!validParams) return createErrorResponse(errorMsg);
+
+  if (!checkRateLimit(ip)) {
     const cachedResult = await tryGetCachedExercise(validParams, userId);
-    if (cachedResult) {
-      console.log(`Rate limit exceeded for IP ${ip} but returning cached question.`);
-      return cachedResult;
-    }
-    console.warn(`Rate limit exceeded for IP ${ip} and no cached question available.`);
+    if (cachedResult) return cachedResult;
     return createErrorResponse('Rate limit exceeded and no cached question available.');
   }
 
-  const genParams: ExerciseGenerationParams = {
-    passageLanguage: validParams.passageLanguage,
-    questionLanguage: validParams.questionLanguage,
-    level: validParams.cefrLevel,
-    passageLangName: LANGUAGES[validParams.passageLanguage],
-    questionLangName: LANGUAGES[validParams.questionLanguage],
-    topic: getRandomTopicForLevel(validParams.cefrLevel),
-    grammarGuidance: getGrammarGuidance(validParams.cefrLevel),
-    vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
-  };
-
+  const genParams = buildGenParams(validParams);
   const cachedCount = countCachedExercises(
     genParams.passageLanguage,
     genParams.questionLanguage,
@@ -88,78 +95,34 @@ export const generateExerciseResponse = async (
 export const generateInitialExercisePair = async (
   requestParams: unknown
 ): Promise<InitialExercisePairResult> => {
-  // const actionStartTime = Date.now(); // Unused var
-  const headersList = await headers();
-  const ip = headersList.get('x-forwarded-for') || 'unknown';
-  const session: Session | null = await getServerSession(authOptions);
-  const userId = getDbUserIdFromSession(session);
+  const { ip, userId } = await getRequestContext();
+  const { validParams, errorMsg } = validateAndExtractParams(requestParams);
+  if (!validParams) return { quizzes: [], error: errorMsg };
 
-  const validationResult = validateRequestParams(requestParams); // Reuse existing validation
-  if (!validationResult.success) {
-    const errorMsg = `Invalid request parameters: ${validationResult.error.errors
-      .map((e: ZodIssue) => `${e.path.join('.')}: ${e.message}`)
-      .join(', ')}`;
-    return { quizzes: [], error: errorMsg }; // Return error in the new format
-  }
-  const validParams = validationResult.data;
+  if (!checkRateLimit(ip)) return { quizzes: [], error: 'Rate limit exceeded.' };
 
-  // --- 2. Rate Limiting (Counts as one action call) ---
-  const isAllowed = checkRateLimit(ip);
-  if (!isAllowed) {
-    // Maybe try returning cached *pair*? For now, just deny.
-    return { quizzes: [], error: 'Rate limit exceeded.' };
-  }
-
-  // --- 3. Prepare Generation Params (Same for both calls) ---
-  const genParams: ExerciseGenerationParams = {
-    passageLanguage: validParams.passageLanguage,
-    questionLanguage: validParams.questionLanguage,
-    level: validParams.cefrLevel,
-    passageLangName: LANGUAGES[validParams.passageLanguage],
-    questionLangName: LANGUAGES[validParams.questionLanguage],
-    topic: getRandomTopicForLevel(validParams.cefrLevel),
-    grammarGuidance: getGrammarGuidance(validParams.cefrLevel),
-    vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
-  };
-  const genParams2 = { ...genParams, topic: getRandomTopicForLevel(validParams.cefrLevel) };
-
-  // --- 4. Concurrent Generation Attempt ---
-  let results: [GenerateExerciseResult, GenerateExerciseResult] | null = null;
-  let errorResult: { quizzes: []; error: string } | null = null;
+  const genParams1 = buildGenParams(validParams);
+  const genParams2 = buildGenParams(validParams, getRandomTopicForLevel(validParams.cefrLevel));
 
   try {
-    const generationPromises = [
-      getOrGenerateExercise(genParams, userId, 0),
+    const [res1, res2] = await Promise.all([
+      getOrGenerateExercise(genParams1, userId, 0),
       getOrGenerateExercise(genParams2, userId, 0),
-    ];
-
-    const settledResults = await Promise.all(generationPromises);
-
-    if (settledResults.every((r) => r.error === null && r.quizId !== -1)) {
-      const validatedResults = z.array(GenerateExerciseResultSchema).safeParse(settledResults);
+    ]);
+    if ([res1, res2].every((r) => r.error === null && r.quizId !== -1)) {
+      const validatedResults = z.array(GenerateExerciseResultSchema).safeParse([res1, res2]);
       if (validatedResults.success) {
-        results = validatedResults.data as [GenerateExerciseResult, GenerateExerciseResult];
-      } else {
-        errorResult = { quizzes: [], error: 'Internal error processing generated results.' };
+        return {
+          quizzes: validatedResults.data as [GenerateExerciseResult, GenerateExerciseResult],
+          error: null,
+        };
       }
-    } else {
-      const errors = settledResults.map((r) => r.error).filter((e) => e !== null);
-      errorResult = {
-        quizzes: [],
-        error: `Failed to generate exercise pair: ${errors.join('; ')}`,
-      };
+      return { quizzes: [], error: 'Internal error processing generated results.' };
     }
+    const errors = [res1, res2].map((r) => r.error).filter((e) => e !== null);
+    return { quizzes: [], error: `Failed to generate exercise pair: ${errors.join('; ')}` };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown generation error';
-    errorResult = { quizzes: [], error: `Server error during generation: ${message}` };
-  }
-
-  // --- 5. Return Result ---
-  if (results) {
-    // console.log(`[Action:InitialPair] Successfully generated pair. Total time: ${Date.now() - actionStartTime}ms`); // Remove reference to unused var
-    return { quizzes: results, error: null };
-  } else {
-    // console.log(`[Action:InitialPair] Failed to generate pair. Total time: ${Date.now() - actionStartTime}ms`); // Remove reference to unused var
-    return errorResult ?? { quizzes: [], error: 'Unknown failure generating exercise pair.' };
+    return { quizzes: [], error: `Server error during generation: ${message}` };
   }
 };
