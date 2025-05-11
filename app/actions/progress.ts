@@ -223,7 +223,7 @@ export const submitFeedback = async (
     };
     createFeedback(feedbackData);
     return { success: true };
-  } catch (dbError) {
+  } catch {
     return { success: false, error: `Repository error saving feedback.` };
   }
 };
