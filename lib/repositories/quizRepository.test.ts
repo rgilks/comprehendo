@@ -107,6 +107,25 @@ describe('QuizRepository Functions', () => {
       errorSpy.mockRestore();
     });
 
+    it('should return null if quiz content fails QuizContentSchema validation', () => {
+      const contentWithMissingField = { ...mockQuizContent, question: undefined };
+      const rowWithInvalidContentSchema = {
+        ...mockDbRow,
+        content: JSON.stringify(contentWithMissingField),
+      };
+      mockDb.get.mockReturnValue(rowWithInvalidContentSchema);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = findQuizById(1);
+
+      expect(result).toBeNull();
+      expect(errorSpy).toHaveBeenCalledWith(
+        `[QuizRepository] Invalid quiz content JSON for ID ${rowWithInvalidContentSchema.id}:`,
+        expect.objectContaining({ name: 'ZodError' })
+      );
+      errorSpy.mockRestore();
+    });
+
     it('should throw error if database query fails', () => {
       const dbError = new Error('DB Get Error');
       mockDb.get.mockImplementation(() => {
@@ -233,6 +252,26 @@ describe('QuizRepository Functions', () => {
       expect(errorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to parse cached quiz content JSON'),
         expect.any(SyntaxError)
+      );
+      errorSpy.mockRestore();
+    });
+
+    it('should return null if cached quiz content fails QuizContentSchema validation', () => {
+      const contentWithInvalidType = { ...mockQuizContent, correctAnswer: 123 }; // correctAnswer should be string
+      const rowWithInvalidContentSchema = {
+        ...mockDbRow,
+        id: 2, // Use a different ID to avoid interfering with other tests if needed
+        content: JSON.stringify(contentWithInvalidType),
+      };
+      mockDb.get.mockReturnValue(rowWithInvalidContentSchema);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = findSuitableQuizForUser(pLang, qLang, level, userId);
+
+      expect(result).toBeNull();
+      expect(errorSpy).toHaveBeenCalledWith(
+        `[QuizRepository] Invalid cached quiz content JSON found for ${pLang}/${level}, ID ${rowWithInvalidContentSchema.id}:`,
+        expect.objectContaining({ name: 'ZodError' })
       );
       errorSpy.mockRestore();
     });

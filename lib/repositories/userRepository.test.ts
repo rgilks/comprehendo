@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { type Account, type User } from 'next-auth';
 import { type AdapterUser } from 'next-auth/adapters';
-import { upsertUserOnSignIn, findUserByProvider } from './userRepository';
+import { upsertUserOnSignIn, findUserByProvider, findUserIdByProvider } from './userRepository';
 import db from '../db'; // Import the actual db to mock it
 
 // Mock the db dependency
@@ -213,6 +213,52 @@ describe('userRepository', () => {
       );
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         '[UserRepository] DB error fetching user ID:',
+        dbError
+      );
+    });
+  });
+
+  describe('findUserIdByProvider', () => {
+    const providerId = 'userPId123';
+    const provider = 'test_provider';
+
+    it('should return user id if user is found', () => {
+      const expectedId = 789;
+      mockDb.get.mockReturnValue({ id: expectedId });
+
+      const result = findUserIdByProvider(providerId, provider);
+
+      expect(result).toBe(expectedId);
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        'SELECT id FROM users WHERE provider_id = ? AND provider = ?'
+      );
+      expect(mockDb.get).toHaveBeenCalledWith(providerId, provider);
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return undefined if user is not found', () => {
+      mockDb.get.mockReturnValue(undefined);
+
+      const result = findUserIdByProvider(providerId, provider);
+
+      expect(result).toBeUndefined();
+      expect(mockDb.get).toHaveBeenCalledWith(providerId, provider);
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return undefined and log error if database query fails', () => {
+      const dbError = new Error('DB Get Crashed');
+      mockDb.get.mockImplementation(() => {
+        throw dbError;
+      });
+
+      const result = findUserIdByProvider(providerId, provider);
+
+      expect(result).toBeUndefined();
+      expect(mockDb.prepare).toHaveBeenCalledTimes(1); // Ensure prepare was called before the error
+      expect(mockDb.get).toHaveBeenCalledWith(providerId, provider);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[UserRepo] Error finding user ID by provider:',
         dbError
       );
     });
