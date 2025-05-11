@@ -4,14 +4,13 @@ import { getServerSession, type Session } from 'next-auth';
 import { headers } from 'next/headers';
 import { authOptions } from '@/lib/authOptions';
 import { getDbUserIdFromSession } from '../../lib/authUtils';
-import { createErrorResponse, tryGetCachedExercise } from './exercise-helpers';
+import {
+  createErrorResponse,
+  tryGetCachedExercise,
+  validateRequestParams,
+  getOrGenerateExercise,
+} from './exercise-logic';
 import { countCachedExercises } from '@/lib/exercise-cache';
-import { validateRequestParams, getOrGenerateExercise } from './exercise-orchestrator';
-import { checkRateLimit } from '@/lib/rate-limiter';
-import type { ZodIssue } from 'zod';
-import { z } from 'zod';
-import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
-import { LANGUAGES } from '@/lib/domain/language';
 import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
 import type { ExerciseGenerationParams } from '@/lib/domain/ai';
@@ -20,6 +19,11 @@ import {
   type InitialExercisePairResult,
   GenerateExerciseResultSchema,
 } from '@/lib/domain/schemas';
+import { LANGUAGES } from '@/lib/domain/language';
+import { checkRateLimit } from '@/lib/rate-limiter';
+import type { ZodIssue } from 'zod';
+import { z } from 'zod';
+import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
 
 const getRequestContext = async () => {
   const headersList = await headers();
