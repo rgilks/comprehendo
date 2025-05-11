@@ -40,7 +40,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **State Management**: Uses `zustand` for lightweight global state management.
 - **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
 - **Testing**:
-  - Unit and integration tests with Jest & React Testing Library.
+  - Unit and integration tests with Vitest & React Testing Library.
   - End-to-end tests with Playwright.
 - **Code Quality**:
   - ESLint and Prettier for linting and formatting.
@@ -68,7 +68,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **@ducanh2912/next-pwa**: PWA features
 - **zustand**: State management
 - **Playwright**: End-to-end testing
-- **Jest / React Testing Library**: Unit/Integration testing
+- **Vitest / React Testing Library**: Unit/Integration testing
 - **ESLint / Prettier**: Linting & Formatting
 - **Husky / lint-staged**: Git hooks
 - **Turbopack**: (Optional, used with `npm run dev`)
@@ -214,10 +214,10 @@ npm run verify
 # Fix formatting & linting, run type checks, unit tests, e2e tests
 npm run check
 
-# Run unit/integration tests (Jest)
+# Run unit/integration tests (Vitest)
 npm run test
 
-# Run Jest in watch mode
+# Run Vitest in watch mode
 npm run test:watch
 
 # Run end-to-end tests (Playwright)
@@ -239,7 +239,7 @@ npm run nuke
 ### Testing Strategy
 
 - **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
-- **Unit/Integration**: Jest and React Testing Library (`npm test`).
+- **Unit/Integration**: Vitest and React Testing Library (`npm test`).
 - **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
 - **Git Hooks**: Husky manages Git hooks defined in `.husky/`:
   - **Pre-commit (`.husky/pre-commit`)**: Runs `npm run check` (includes formatting, linting, type checks, unit tests, and e2e tests). _Note: This includes E2E tests and might take some time._
@@ -301,7 +301,6 @@ npm run nuke
 ├── next.config.js            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
-├── jest.config.js            # Jest configuration (Note: Vitest is used, see vitest.config.ts)
 ├── vitest.config.ts          # Vitest configuration
 ├── playwright.config.ts      # Playwright configuration
 ├── Dockerfile / fly.toml     # Deployment configuration
