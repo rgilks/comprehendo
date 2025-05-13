@@ -23,7 +23,6 @@ vi.mock('@/app/actions/exercise', () => ({
 const mockBaseSlice: BaseSlice = {
   loading: false,
   error: null,
-  showError: false,
   setLoading: vi.fn(),
   setError: vi.fn(),
 };

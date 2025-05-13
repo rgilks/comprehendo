@@ -30,7 +30,6 @@ export const createProgressSlice: StateCreator<
     set((state) => {
       state.status = 'loading';
       state.error = null;
-      state.showError = false;
     });
 
     try {
@@ -53,7 +52,6 @@ export const createProgressSlice: StateCreator<
           state.error = validatedProgress.success
             ? String(validatedProgress.data.error || 'Unknown error')
             : 'Invalid API response structure';
-          state.showError = true;
         });
         return;
       }
@@ -63,14 +61,12 @@ export const createProgressSlice: StateCreator<
         state.userStreak = progress.currentStreak;
         state.cefrLevel = progress.currentLevel;
         state.error = null;
-        state.showError = false;
       });
     } catch (error) {
       set((state) => {
         state.status = 'error';
         state.userStreak = null;
         state.error = error instanceof Error ? error.message : String(error);
-        state.showError = true;
       });
     }
   },
