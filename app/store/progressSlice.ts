@@ -5,10 +5,14 @@ import type { TextGeneratorState } from './textGeneratorStore';
 import { ProgressUpdateResultSchema } from '@/lib/domain/progress';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
+import type { CEFRLevel } from '@/lib/domain/language-guidance';
+
+export type ProgressStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export interface ProgressSlice extends BaseSlice {
-  isProgressLoading: boolean;
+  status: ProgressStatus;
   userStreak: number | null;
+  cefrLevel?: CEFRLevel;
   fetchProgress: () => Promise<void>;
 }
 
@@ -19,12 +23,14 @@ export const createProgressSlice: StateCreator<
   ProgressSlice
 > = (set, get) => ({
   ...createBaseSlice(set),
-  isProgressLoading: false,
+  status: 'idle',
   userStreak: null,
 
   fetchProgress: async () => {
     set((state) => {
-      state.isProgressLoading = true;
+      state.status = 'loading';
+      state.error = null;
+      state.showError = false;
     });
 
     try {
@@ -32,7 +38,7 @@ export const createProgressSlice: StateCreator<
       const userId = (session?.user as { dbId?: number } | null)?.dbId;
       if (!userId) {
         set((state) => {
-          state.isProgressLoading = false;
+          state.status = 'idle';
           state.userStreak = null;
         });
         return;
@@ -42,7 +48,7 @@ export const createProgressSlice: StateCreator<
       const validatedProgress = ProgressUpdateResultSchema.safeParse(rawProgress);
       if (!validatedProgress.success || validatedProgress.data.error) {
         set((state) => {
-          state.isProgressLoading = false;
+          state.status = 'error';
           state.userStreak = null;
           state.error = validatedProgress.success
             ? String(validatedProgress.data.error || 'Unknown error')
@@ -53,7 +59,7 @@ export const createProgressSlice: StateCreator<
       }
       const progress = validatedProgress.data;
       set((state) => {
-        state.isProgressLoading = false;
+        state.status = 'success';
         state.userStreak = progress.currentStreak;
         state.cefrLevel = progress.currentLevel;
         state.error = null;
@@ -61,7 +67,7 @@ export const createProgressSlice: StateCreator<
       });
     } catch (error) {
       set((state) => {
-        state.isProgressLoading = false;
+        state.status = 'error';
         state.userStreak = null;
         state.error = error instanceof Error ? error.message : String(error);
         state.showError = true;

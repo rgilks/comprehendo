@@ -8,8 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 const LanguageSelector = () => {
   const { t } = useTranslation('common');
-  const { passageLanguage, cefrLevel, setPassageLanguage, isProgressLoading } =
-    useTextGeneratorStore();
+  const { passageLanguage, cefrLevel, setPassageLanguage, status } = useTextGeneratorStore();
 
   return (
     <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
@@ -55,7 +54,7 @@ const LanguageSelector = () => {
           <span>
             <span className="hidden sm:inline">{cefrLevel} - </span>
             {t(`practice.cefr.levels.${cefrLevel}.name`)}
-            {isProgressLoading && (
+            {status === 'loading' && (
               <span
                 className="ml-2 text-xs text-gray-400 animate-pulse"
                 data-testid="loading-indicator"

@@ -43,7 +43,7 @@ describe('textGeneratorStore', () => {
     expect(state).toHaveProperty('passageLanguage');
     expect(state).toHaveProperty('quizData');
     expect(state).toHaveProperty('isSpeechSupported');
-    expect(state).toHaveProperty('isProgressLoading');
+    expect(state).toHaveProperty('status');
     expect(state).toHaveProperty('language');
   });
 
@@ -81,8 +81,8 @@ describe('textGeneratorStore', () => {
   });
 
   it('should update Progress slice state', () => {
-    useTextGeneratorStore.setState({ isProgressLoading: true });
-    expect(useTextGeneratorStore.getState().isProgressLoading).toBe(true);
+    useTextGeneratorStore.setState({ status: 'loading' });
+    expect(useTextGeneratorStore.getState().status).toBe('loading');
   });
 
   it('should update Language slice state', async () => {

@@ -10,17 +10,15 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/store/textGeneratorStore', () => {
-  let isProgressLoading = false;
+  let status = 'idle';
   const store = () => ({
     passageLanguage: 'en',
     cefrLevel: 'B1',
     setPassageLanguage: mockSetPassageLanguage,
-    get isProgressLoading() {
-      return isProgressLoading;
-    },
+    status,
   });
-  store.setLoading = (val: boolean) => {
-    isProgressLoading = val;
+  store.setStatus = (val: string) => {
+    status = val;
   };
   return {
     __esModule: true,
@@ -61,12 +59,12 @@ describe('LanguageSelector', () => {
     expect(screen.getByText('practice.cefr.levels.B1.name')).toBeInTheDocument();
   });
 
-  it('shows loading indicator when isProgressLoading is true', async () => {
+  it('shows loading indicator when status is loading', async () => {
     const storeModule = await import('@/store/textGeneratorStore');
-    (storeModule.default as any).setLoading?.(true);
+    (storeModule.default as any).setStatus?.('loading');
     const { default: ReloadedLanguageSelector } = await import('./LanguageSelector');
     render(<ReloadedLanguageSelector />);
     expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
-    (storeModule.default as any).setLoading?.(false);
+    (storeModule.default as any).setStatus?.('idle');
   });
 });
