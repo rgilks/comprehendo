@@ -2,7 +2,6 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from './db/schema';
 
 const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data');
@@ -42,16 +41,6 @@ function initializeDatabase(): ReturnType<typeof drizzle<typeof schema>> {
       schema,
       logger: process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test',
     });
-
-    if (!isBuildPhase && process.env.NODE_ENV !== 'test') {
-      console.log('[DB] Checking for and applying Drizzle migrations...');
-      migrate(drizzleInstance, { migrationsFolder: path.join(process.cwd(), 'migrations') });
-      console.log('[DB] Drizzle migrations check complete.');
-    } else if (process.env.NODE_ENV === 'test') {
-      console.log('[DB] Skipping Drizzle migrations for test environment.');
-    } else {
-      console.log('[DB] Skipping Drizzle migrations for in-memory build phase database.');
-    }
 
     console.log('[DB] Database initialized successfully with Drizzle.');
     return drizzleInstance;

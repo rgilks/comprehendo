@@ -1,27 +1,24 @@
-import { expect } from 'vitest';
-import { getTableNames, getTableData } from './actions';
+import { expect, Mock } from 'vitest';
+import {
+  getTableNames as getTableNamesAction,
+  getTableData as getTableDataAction,
+} from './actions';
 import { getServerSession } from 'next-auth';
-import { Mock } from 'vitest';
-import * as adminRepository from '@/lib/repositories/adminRepository';
+import {
+  getAllTableNames,
+  getTableData,
+  type PaginatedTableData,
+} from '@/lib/repo/adminRepository';
 
 vi.mock('next-auth', () => ({
   getServerSession: vi.fn(),
-}));
-
-vi.mock('next/router', () => ({
-  useRouter: vi.fn(() => ({
-    events: {
-      on: vi.fn(),
-      off: vi.fn(),
-    },
-  })),
 }));
 
 vi.mock('@/lib/authOptions', () => ({
   authOptions: {},
 }));
 
-vi.mock('@/lib/repositories/adminRepository', () => ({
+vi.mock('@/lib/repo/adminRepository', () => ({
   getAllTableNames: vi.fn(),
   getTableData: vi.fn(),
 }));
@@ -34,7 +31,7 @@ describe('Admin actions security', () => {
     process.env = { ...originalEnv, ADMIN_EMAILS: 'admin@example.com,another@example.com' };
 
     // Default mocks for repository functions
-    vi.mocked(adminRepository.getAllTableNames).mockReturnValue(['users', 'logs']);
+    (getAllTableNames as Mock).mockReturnValue(['users', 'logs']);
   });
 
   afterEach(() => {
@@ -44,7 +41,7 @@ describe('Admin actions security', () => {
   describe('getTableNames authorization', () => {
     it('should return false if user is not logged in', async () => {
       (getServerSession as Mock).mockResolvedValue(null);
-      const result = await getTableNames();
+      const result = await getTableNamesAction();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
@@ -52,7 +49,7 @@ describe('Admin actions security', () => {
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Test User' },
       });
-      const result = await getTableNames();
+      const result = await getTableNamesAction();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
@@ -60,7 +57,7 @@ describe('Admin actions security', () => {
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Test User', email: 'user@example.com' },
       });
-      const result = await getTableNames();
+      const result = await getTableNamesAction();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
@@ -68,9 +65,10 @@ describe('Admin actions security', () => {
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
-      vi.mocked(adminRepository.getAllTableNames).mockReturnValue(['table1', 'table2']);
-      const result = await getTableNames();
-      expect(result).toEqual({ data: expect.any(Array) });
+      const expectedTableNames = ['table1', 'table2'];
+      (getAllTableNames as Mock).mockReturnValue(expectedTableNames);
+      const result = await getTableNamesAction();
+      expect(result).toEqual({ data: expectedTableNames });
     });
 
     it('should handle empty ADMIN_EMAILS environment variable', async () => {
@@ -78,7 +76,7 @@ describe('Admin actions security', () => {
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
-      const result = await getTableNames();
+      const result = await getTableNamesAction();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
@@ -87,10 +85,10 @@ describe('Admin actions security', () => {
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
       const errorMessage = 'Repo error';
-      vi.mocked(adminRepository.getAllTableNames).mockImplementation(() => {
+      (getAllTableNames as Mock).mockImplementation(() => {
         throw new Error(errorMessage);
       });
-      const result = await getTableNames();
+      const result = await getTableNamesAction();
       expect(result).toEqual({ error: 'Failed to fetch table names' });
     });
 
@@ -99,10 +97,10 @@ describe('Admin actions security', () => {
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
       const errorContent = 'Repo string error';
-      vi.mocked(adminRepository.getAllTableNames).mockImplementation(() => {
+      (getAllTableNames as Mock).mockImplementation(() => {
         throw new Error(errorContent);
       });
-      const result = await getTableNames();
+      const result = await getTableNamesAction();
       expect(result).toEqual({ error: 'Failed to fetch table names' });
     });
   });
@@ -112,7 +110,7 @@ describe('Admin actions security', () => {
       (getServerSession as Mock).mockResolvedValue({
         user: { name: 'Test User', email: 'user@example.com' },
       });
-      const result = await getTableData('users');
+      const result = await getTableDataAction('users');
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
@@ -121,30 +119,17 @@ describe('Admin actions security', () => {
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
 
-      const mockPaginatedData: adminRepository.PaginatedTableData = {
+      const mockPaginatedData: PaginatedTableData = {
         data: [{ id: 1, name: 'User 1' }],
         totalRows: 10,
         page: 1,
         limit: 10,
       };
-      vi.mocked(adminRepository.getTableData).mockReturnValue(mockPaginatedData);
+      (getTableData as Mock).mockReturnValue(mockPaginatedData);
 
-      const result = await getTableData('users');
+      const result = await getTableDataAction('users');
       expect(result).toHaveProperty('data');
-      const data = result.data as {
-        data: unknown[];
-        totalRows: number;
-        page: number;
-        limit: number;
-      };
-      expect(data).toEqual(
-        expect.objectContaining({
-          data: expect.any(Array),
-          totalRows: expect.any(Number),
-          page: expect.any(Number),
-          limit: expect.any(Number),
-        })
-      );
+      expect(result.data).toEqual(mockPaginatedData);
     });
 
     it('should handle errors from repository.getTableData when it throws an Error instance', async () => {
@@ -152,10 +137,10 @@ describe('Admin actions security', () => {
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
       const repoErrorMessage = 'DB is down';
-      vi.mocked(adminRepository.getTableData).mockImplementation(() => {
+      (getTableData as Mock).mockImplementation(() => {
         throw new Error(repoErrorMessage);
       });
-      const result = await getTableData('some_table');
+      const result = await getTableDataAction('some_table');
       expect(result).toEqual({ error: repoErrorMessage });
     });
 
@@ -164,10 +149,10 @@ describe('Admin actions security', () => {
         user: { name: 'Admin User', email: 'admin@example.com' },
       });
       const errorContent = 'DB string error';
-      vi.mocked(adminRepository.getTableData).mockImplementation(() => {
+      (getTableData as Mock).mockImplementation(() => {
         throw new Error(errorContent);
       });
-      const result = await getTableData('some_table');
+      const result = await getTableDataAction('some_table');
       expect(result).toEqual({ error: errorContent });
     });
   });
