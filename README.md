@@ -200,6 +200,7 @@ Key scripts defined in `package.json`:
 
 ```bash
 # Run dev server (with Turbopack)
+# This script will also attempt to stop any existing Next.js server processes before starting.
 npm run dev
 
 # Build for production

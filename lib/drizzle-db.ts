@@ -2,61 +2,70 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from './db/schema';
 
 const DB_DIR = process.env.NODE_ENV === 'production' ? '/data' : path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
-const isBuildPhase =
-  process.env.NODE_ENV === 'production' && process.env['NEXT_PHASE'] === 'phase-production-build';
+const isBuildPhase = process.env['NEXT_PHASE'] === 'phase-production-build';
 
 let betterSqliteInstance: Database.Database | null = null;
-let drizzleDbInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
+let drizzleInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-const initializeDrizzle = (): ReturnType<typeof drizzle<typeof schema>> => {
-  if (drizzleDbInstance) {
-    return drizzleDbInstance;
+function initializeDatabase(): ReturnType<typeof drizzle<typeof schema>> {
+  if (drizzleInstance) {
+    return drizzleInstance;
   }
 
-  console.log('[DB] Initializing Drizzle ORM...');
+  console.log('[DB] Starting database initialization (Drizzle)...');
 
   try {
-    if (isBuildPhase || !fs.existsSync(process.cwd())) {
+    if (isBuildPhase) {
+      console.log('[DB] Using in-memory database for build phase (Drizzle).');
       betterSqliteInstance = new Database(':memory:');
-      console.log('[DB] Using in-memory database for build phase with Drizzle');
     } else {
       if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
         console.log(`[DB] Created database directory at ${DB_DIR}`);
       }
+      console.log(`[DB] Connecting to database at ${DB_PATH} (Drizzle)...`);
       betterSqliteInstance = new Database(DB_PATH);
-      console.log(`[DB] Connected to database at ${DB_PATH} for Drizzle`);
     }
 
-    betterSqliteInstance.pragma('foreign_keys = ON');
-    console.log('[DB] Enabled foreign key constraints for Drizzle');
     betterSqliteInstance.pragma('journal_mode = WAL');
-    console.log('[DB] Set journal mode to WAL for Drizzle');
+    console.log('[DB] Set journal mode to WAL');
+    betterSqliteInstance.pragma('foreign_keys = ON');
+    console.log('[DB] Enabled foreign key constraints');
 
-    drizzleDbInstance = drizzle(betterSqliteInstance, {
+    drizzleInstance = drizzle(betterSqliteInstance, {
       schema,
-      logger: process.env.NODE_ENV !== 'production',
+      logger: process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test',
     });
 
-    console.log('[DB] Drizzle ORM initialized successfully.');
-    return drizzleDbInstance;
+    if (!isBuildPhase && process.env.NODE_ENV !== 'test') {
+      console.log('[DB] Checking for and applying Drizzle migrations...');
+      migrate(drizzleInstance, { migrationsFolder: path.join(process.cwd(), 'migrations') });
+      console.log('[DB] Drizzle migrations check complete.');
+    } else if (process.env.NODE_ENV === 'test') {
+      console.log('[DB] Skipping Drizzle migrations for test environment.');
+    } else {
+      console.log('[DB] Skipping Drizzle migrations for in-memory build phase database.');
+    }
+
+    console.log('[DB] Database initialized successfully with Drizzle.');
+    return drizzleInstance;
   } catch (error) {
-    console.error('Error initializing Drizzle ORM:', error);
+    console.error('[DB] Drizzle Database initialization error:', error);
     if (process.env.NODE_ENV === 'production' && !isBuildPhase) {
-      console.warn('[DB] CRITICAL: Falling back to in-memory database for Drizzle due to error!');
+      console.warn('[DB] CRITICAL: Falling back to in-memory database due to error (Drizzle)!');
       betterSqliteInstance = new Database(':memory:');
-      // We still need to initialize drizzle with the in-memory DB
-      drizzleDbInstance = drizzle(betterSqliteInstance, { schema, logger: true });
-      return drizzleDbInstance;
+      drizzleInstance = drizzle(betterSqliteInstance, { schema, logger: true });
+      return drizzleInstance;
     }
     throw error;
   }
-};
+}
 
-const db = initializeDrizzle();
+const db = initializeDatabase();
 export default db;
