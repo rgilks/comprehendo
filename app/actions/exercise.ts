@@ -14,10 +14,9 @@ import { countCachedExercises } from '@/lib/exercise-cache';
 import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
 import type { ExerciseGenerationParams } from '@/lib/domain/ai';
-import { type InitialExercisePairResult, GenerateExerciseResultSchema } from '@/lib/domain/schemas';
+import { type InitialExercisePairResult } from '@/lib/domain/schemas';
 import { LANGUAGES } from '@/lib/domain/language';
 import { checkRateLimit } from '@/lib/rate-limiter';
-import { z } from 'zod';
 import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
 import { extractZodErrors } from '../../lib/utils/errorUtils';
 
@@ -101,33 +100,66 @@ export const generateInitialExercisePair = async (
 ): Promise<InitialExercisePairResult> => {
   const { ip, userId } = await getRequestContext();
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
-  if (!validParams) return { quizzes: [], error: errorMsg };
 
-  if (!(await checkRateLimit(ip))) return { quizzes: [], error: 'Rate limit exceeded.' };
+  if (!validParams) {
+    const detailedErrorMsg = errorMsg || 'Invalid request parameters for initial pair.';
+    console.warn(`[generateInitialExercisePair] Validation Error: ${detailedErrorMsg}`);
+    const errorResult = createErrorResponse(detailedErrorMsg);
+    return { quizzes: [errorResult, errorResult], error: detailedErrorMsg };
+  }
+
+  if (!(await checkRateLimit(ip))) {
+    console.warn(`[generateInitialExercisePair] Rate limit exceeded for IP: ${ip}`);
+    const errorResult = createErrorResponse('Rate limit exceeded.');
+    return { quizzes: [errorResult, errorResult], error: 'Rate limit exceeded.' };
+  }
 
   const genParams1 = buildGenParams(validParams);
   const genParams2 = buildGenParams(validParams, getRandomTopicForLevel(validParams.cefrLevel));
 
   try {
-    const [res1, res2] = await Promise.all([
+    const settledResults = await Promise.allSettled([
       getExerciseWithCacheFallback(genParams1, userId, 0),
       getExerciseWithCacheFallback(genParams2, userId, 0),
     ]);
-    if ([res1, res2].every((r) => r.error === null && r.quizId !== -1)) {
-      const validatedResults = z.array(GenerateExerciseResultSchema).safeParse([res1, res2]);
-      if (validatedResults.success) {
-        return {
-          quizzes: validatedResults.data as [GenerateExerciseResult, GenerateExerciseResult],
-          error: null,
-        };
+
+    const finalQuizzes = settledResults.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        const reason = result.reason;
+        const individualErrorMsg =
+          reason instanceof Error ? reason.message : 'Unknown error generating individual exercise';
+        console.error(
+          `[generateInitialExercisePair] Error for exercise ${index + 1}:`,
+          individualErrorMsg,
+          reason
+        );
+        return createErrorResponse(
+          `Exercise ${index + 1} generation failed: ${individualErrorMsg}`
+        );
       }
-      return { quizzes: [], error: 'Internal error processing generated results.' };
-    }
-    const errors = [res1, res2].map((r) => r.error).filter((e) => e !== null);
-    return { quizzes: [], error: `Failed to generate exercise pair: ${errors.join('; ')}` };
+    });
+
+    const quizzesTuple: [GenerateExerciseResult, GenerateExerciseResult] = [
+      finalQuizzes[0],
+      finalQuizzes[1],
+    ];
+
+    const anyIndividualErrors = quizzesTuple.some((q) => q.error || q.quizId === -1);
+    const overallError = anyIndividualErrors
+      ? 'One or more exercises could not be generated. Please check individual quiz details.'
+      : null;
+
+    return {
+      quizzes: quizzesTuple,
+      error: overallError,
+    };
   } catch (error) {
-    console.error('Error in generateInitialExercisePair:', error);
-    const message = error instanceof Error ? error.message : 'Unknown generation error';
-    return { quizzes: [], error: `Server error during generation: ${message}` };
+    console.error('[generateInitialExercisePair] Critical unexpected error:', error);
+    const criticalErrorMsg =
+      error instanceof Error ? error.message : 'Unknown critical server error';
+    const errorResult = createErrorResponse(`Critical server error: ${criticalErrorMsg}`);
+    return { quizzes: [errorResult, errorResult], error: `Server error: ${criticalErrorMsg}` };
   }
 };

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
-import { users, quiz, userLanguageProgress, questionFeedback, rateLimits } from '../db/schema.pg';
+import { users, quiz, userLanguageProgress, questionFeedback, rateLimits } from '../db/schema';
 
 // Users
 export const selectUserSchema = createSelectSchema(users);
