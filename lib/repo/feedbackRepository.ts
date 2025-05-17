@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import db from '@/lib/drizzle-db'; // Import Drizzle db instance
+import db from '@/lib/db'; // Import Drizzle db instance
 import { questionFeedback } from '@/lib/db/schema'; // Import Drizzle table schema
 
 export const FeedbackInputSchema = z.object({

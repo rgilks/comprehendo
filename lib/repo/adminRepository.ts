@@ -1,5 +1,5 @@
 import { sql, SQL } from 'drizzle-orm';
-import db from '@/lib/drizzle-db';
+import db from '@/lib/db';
 
 interface TableNameResult {
   name: string;

@@ -1,4 +1,4 @@
-import db from '@/lib/drizzle-db';
+import db from '@/lib/db';
 import { rateLimits } from '@/lib/db/schema'; // Corrected to use actual export name
 import { eq, sql } from 'drizzle-orm'; // Added sql import
 import { type RateLimit, selectRateLimitSchema } from '@/lib/domain/schema'; // Zod schema and TS type

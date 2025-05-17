@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import db from '@/lib/drizzle-db';
+import db from '@/lib/db';
 import { userLanguageProgress } from '@/lib/db/schema';
 import { Progress, ProgressSchema } from '@/lib/domain/progress';
 import { CEFRLevel } from '@/lib/domain/language-guidance';

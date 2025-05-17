@@ -1,4 +1,4 @@
-import db from '@/lib/drizzle-db';
+import db from '@/lib/db';
 import { quiz, questionFeedback } from '@/lib/db/schema';
 import { eq, and, sql, desc, count as dslCount, SQL } from 'drizzle-orm';
 import { QuizDataSchema, type PartialQuizData } from '@/lib/domain/schemas';
