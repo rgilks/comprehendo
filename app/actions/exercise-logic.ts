@@ -59,7 +59,7 @@ export const tryGenerateAndCacheExercise = async (
   try {
     const options: ExerciseGenerationOptions = { ...params, language };
     const generatedExercise = await generateAndValidateExercise(options);
-    const exerciseId = saveExerciseToCache(
+    const exerciseId = await saveExerciseToCache(
       params.passageLanguage,
       params.questionLanguage,
       params.level,

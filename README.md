@@ -240,7 +240,7 @@ npm run nuke
 ### Testing Strategy
 
 - **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
-- **Unit/Integration**: Vitest and React Testing Library (`npm test`).
+- **Unit/Integration**: Vitest and React Testing Library (`npm test`). Earlier versions of this application aimed for near 100% unit test coverage using Vitest. However, these have been largely replaced by more comprehensive Playwright E2E tests to reduce overall code bloat and improve the effectiveness of LLM-based development and maintenance. Some Vitest tests may still exist for specific utility functions.
 - **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
 - **Git Hooks**: Husky manages Git hooks defined in `.husky/`:
   - **Pre-commit (`.husky/pre-commit`)**: Runs `npm run check` (includes formatting, linting, type checks, unit tests, and e2e tests). _Note: This includes E2E tests and might take some time._
@@ -302,7 +302,6 @@ npm run nuke
 ├── next.config.js            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
-├── vitest.config.ts          # Vitest configuration
 ├── playwright.config.ts      # Playwright configuration
 ├── Dockerfile / fly.toml     # Deployment configuration
 ├── package.json              # Project dependencies and scripts

@@ -1,47 +1,49 @@
 import {
-  sqliteTable,
+  pgTable,
+  serial,
   text,
   integer,
+  timestamp,
+  boolean,
   primaryKey,
   index,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+  unique,
+} from 'drizzle-orm/pg-core';
 
-export const users = sqliteTable(
+export const users = pgTable(
   'users',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     providerId: text('provider_id').notNull(),
     provider: text('provider').notNull(),
     name: text('name'),
     email: text('email'),
     image: text('image'),
-    firstLogin: integer('first_login', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
-    lastLogin: integer('last_login', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    firstLogin: timestamp('first_login').defaultNow(),
+    lastLogin: timestamp('last_login').defaultNow(),
     language: text('language').default('en'),
   },
   (table) => [
-    uniqueIndex('users_provider_id_provider_unique').on(table.providerId, table.provider),
+    unique('users_provider_id_provider_unique').on(table.providerId, table.provider),
     index('idx_users_last_login').on(table.lastLogin),
   ]
 );
 
-export const quiz = sqliteTable(
+export const quiz = pgTable(
   'quiz',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     language: text('language').notNull(),
     level: text('level').notNull(),
     content: text('content').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    createdAt: timestamp('created_at').defaultNow(),
     questionLanguage: text('question_language'),
     userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
   },
   (table) => [index('idx_quiz_created_at').on(table.createdAt)]
 );
 
-export const userLanguageProgress = sqliteTable(
+export const userLanguageProgress = pgTable(
   'user_language_progress',
   {
     userId: integer('user_id')
@@ -50,7 +52,7 @@ export const userLanguageProgress = sqliteTable(
     languageCode: text('language_code').notNull(),
     cefrLevel: text('cefr_level').notNull().default('A1'),
     correctStreak: integer('correct_streak').notNull().default(0),
-    lastPracticed: integer('last_practiced', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    lastPracticed: timestamp('last_practiced').defaultNow(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.languageCode] }),
@@ -58,20 +60,20 @@ export const userLanguageProgress = sqliteTable(
   ]
 );
 
-export const questionFeedback = sqliteTable(
+export const questionFeedback = pgTable(
   'question_feedback',
   {
-    id: integer('id').primaryKey({ autoIncrement: true }),
+    id: serial('id').primaryKey(),
     quizId: integer('quiz_id')
       .notNull()
       .references(() => quiz.id, { onDelete: 'cascade' }),
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    isGood: integer('is_good', { mode: 'boolean' }).notNull(),
+    isGood: boolean('is_good').notNull(),
     userAnswer: text('user_answer'),
-    isCorrect: integer('is_correct', { mode: 'boolean' }),
-    submittedAt: integer('submitted_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+    isCorrect: boolean('is_correct'),
+    submittedAt: timestamp('submitted_at').defaultNow(),
   },
   (table) => [
     index('idx_question_feedback_quiz_id').on(table.quizId),
@@ -79,14 +81,8 @@ export const questionFeedback = sqliteTable(
   ]
 );
 
-export const rateLimits = sqliteTable('rate_limits', {
+export const rateLimits = pgTable('rate_limits', {
   ipAddress: text('ip_address').primaryKey(),
   requestCount: integer('request_count').notNull().default(1),
-  windowStartTime: integer('window_start_time', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  windowStartTime: timestamp('window_start_time').notNull().defaultNow(),
 });
-
-// Note: The unique constraint on users(provider_id, provider) was named 'sqlite_autoindex_users_1'
-// This is often an auto-generated name by SQLite. Drizzle allows specifying a custom name.
-// If you have a specific name you prefer for this constraint, you can change it in the users table definition.

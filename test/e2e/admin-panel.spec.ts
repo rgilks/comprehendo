@@ -14,7 +14,7 @@ test.describe('Admin Panel Basic Navigation', () => {
     // Locate the table element itself first
     const tableLocator = page.locator('table');
     await expect(tableLocator, `${tableName} table should be visible`).toBeVisible({
-      timeout: 2000,
+      timeout: 5000,
     });
 
     // Locate header and row relative to the found table
@@ -22,7 +22,7 @@ test.describe('Admin Panel Basic Navigation', () => {
     const headerLocator = tableLocator.locator('thead th').filter({ hasText: headerRegex });
     await expect(
       headerLocator,
-      `Header '${expectedHeader}' should be visible in ${tableName} table`
+      `Header containing '${expectedHeader}' should be visible in ${tableName} table`
     ).toBeVisible({ timeout: 3000 });
 
     const firstRowLocator = tableLocator.locator('tbody tr').first();

@@ -1,4 +1,4 @@
-import { findUserIdByProvider } from '@/lib/repositories/userRepository';
+import { findUserIdByProvider } from '@/lib/repo/userRepository';
 import type { Session } from 'next-auth';
 
 export const getDbUserIdFromSession = (session: Session | null): number | null => {

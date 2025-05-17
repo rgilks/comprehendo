@@ -65,5 +65,6 @@ export const createSettingsSlice: StateCreator<
 
     get().updateAvailableVoices(lang);
     void get().fetchProgress();
+    void get().fetchInitialPair();
   },
 });

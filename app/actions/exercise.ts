@@ -73,7 +73,7 @@ export const generateExerciseResponse = async (
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
   if (!validParams) return createErrorResponse(errorMsg);
 
-  if (!checkRateLimit(ip)) {
+  if (!(await checkRateLimit(ip))) {
     const cachedResult = await tryGetCachedExercise(validParams, userId);
     if (cachedResult) return cachedResult;
     return createErrorResponse('Rate limit exceeded and no cached question available.');
@@ -103,7 +103,7 @@ export const generateInitialExercisePair = async (
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
   if (!validParams) return { quizzes: [], error: errorMsg };
 
-  if (!checkRateLimit(ip)) return { quizzes: [], error: 'Rate limit exceeded.' };
+  if (!(await checkRateLimit(ip))) return { quizzes: [], error: 'Rate limit exceeded.' };
 
   const genParams1 = buildGenParams(validParams);
   const genParams2 = buildGenParams(validParams, getRandomTopicForLevel(validParams.cefrLevel));

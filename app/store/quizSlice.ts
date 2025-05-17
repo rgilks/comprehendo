@@ -179,12 +179,19 @@ export const createQuizSlice: StateCreator<
         questionLanguage: get().generatedQuestionLanguage,
         cefrLevel: get().cefrLevel,
       };
-      const rawResult = await generateInitialExercisePair(fetchParams);
+      const rawResult: unknown = await generateInitialExercisePair(fetchParams);
+      console.log('[Store] typeof rawResult (fetchInitialPair):', typeof rawResult);
+      if (typeof rawResult === 'string') {
+        console.log(
+          '[Store] rawResult string value (fetchInitialPair) (first 100 chars):',
+          rawResult.substring(0, 100)
+        );
+      }
       const parseResult = InitialExercisePairResultSchema.safeParse(rawResult);
       if (!parseResult.success) {
         console.error(
-          '[Store] Zod validation error (fetchInitialPair):',
-          parseResult.error.format()
+          '[Store] Zod validation error (fetchInitialPair). Error details:',
+          JSON.stringify(parseResult.error.format(), null, 2)
         );
         throw new Error(`Invalid API response structure: ${parseResult.error.message}`);
       }

@@ -1,84 +1,111 @@
-import db from '@/lib/db';
+import db from '@/lib/drizzle-db';
+import { quiz, questionFeedback } from '@/lib/db/schema';
+import { eq, and, sql, desc, count as dslCount, SQL } from 'drizzle-orm';
 import { QuizDataSchema, type PartialQuizData } from '@/lib/domain/schemas';
+import type { RunResult } from 'better-sqlite3';
 
+// The QuizRow type from Drizzle schema (quiz.$inferSelect) should be preferred.
+// This local QuizRow might differ slightly (e.g. created_at vs createdAt field name and type Date vs string).
+// For consistency, we should align with Drizzle's output.
+// type QuizRowFromDb = typeof quiz.$inferSelect;
+
+// This interface was based on direct DB output. Drizzle will return fields as defined in schema.ts (e.g., createdAt as Date)
 export interface QuizRow {
   id: number;
   language: string;
   level: string;
   content: string;
-  created_at: string;
-  question_language: string | null;
+  createdAt: Date | null; // Changed from created_at: string to align with Drizzle schema output
+  questionLanguage: string | null;
+  // userId is not selected in the original getCachedExercise SQL, but present in quiz table.
+  // If it were selected, it would be: userId: number | null;
 }
 
 export const getCachedExercise = (
   passageLanguage: string,
-  questionLanguage: string,
-  level: string,
-  userId: number | null
+  questionLanguageInput: string,
+  levelInput: string,
+  userIdInput: number | null
 ): QuizRow | undefined => {
   try {
-    let stmt;
-    let result;
+    const conditions: (SQL | undefined)[] = [
+      eq(quiz.language, passageLanguage),
+      eq(quiz.questionLanguage, questionLanguageInput),
+      eq(quiz.level, levelInput),
+    ];
 
-    if (userId !== null) {
-      const sql = `SELECT 
-           q.id, q.language, q.level, q.content, q.created_at, q.question_language
-         FROM 
-           quiz q
-         LEFT JOIN 
-           question_feedback qf ON q.id = qf.quiz_id AND qf.user_id = ?
-         WHERE 
-           q.language = ? 
-           AND q.question_language = ? 
-           AND q.level = ?
-           AND qf.user_id IS NULL -- Ensure no feedback exists for this user
-         ORDER BY 
-           q.created_at DESC 
-         LIMIT 1`;
-      stmt = db.prepare<[number, string, string, string]>(sql);
-      result = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
-    } else {
-      const sql = `SELECT id, language, level, content, created_at, question_language
-         FROM quiz
-         WHERE language = ? AND question_language = ? AND level = ?
-         ORDER BY created_at DESC LIMIT 1`;
-      stmt = db.prepare<[string, string, string]>(sql);
-      result = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
+    if (userIdInput !== null) {
+      const feedbackSubQuery = db
+        .select({ quizId: questionFeedback.quizId })
+        .from(questionFeedback)
+        .where(eq(questionFeedback.userId, userIdInput));
+      conditions.push(sql`${quiz.id} NOT IN ${feedbackSubQuery}`);
     }
 
-    return result;
+    const row: typeof quiz.$inferSelect | undefined = db
+      .select()
+      .from(quiz)
+      .where(and(...conditions.filter((c) => c !== undefined))) // Filter out undefined and cast
+      .orderBy(desc(quiz.createdAt))
+      .limit(1)
+      .get();
+
+    if (!row) return undefined;
+
+    // The row from Drizzle already matches the field names (id, language, level, content, createdAt, questionLanguage)
+    // The types also match (createdAt is Date | null).
+    // So a direct cast or return should be fine if QuizRow is identical to typeof quiz.$inferSelect (excluding userId if not selected)
+    // For this function, QuizRow does not include userId, and quiz.$inferSelect does. So we need to map or ensure selection matches QuizRow.
+
+    // Let's make sure we only select what QuizRow expects, or use a more precise type for row.
+    const selectedRow = db
+      .select({
+        id: quiz.id,
+        language: quiz.language,
+        level: quiz.level,
+        content: quiz.content,
+        createdAt: quiz.createdAt,
+        questionLanguage: quiz.questionLanguage,
+      })
+      .from(quiz)
+      .where(and(...conditions.filter((c) => c !== undefined)))
+      .orderBy(desc(quiz.createdAt))
+      .limit(1)
+      .get();
+
+    if (!selectedRow) return undefined;
+
+    return selectedRow as QuizRow; // selectedRow now structurally matches QuizRow
   } catch (error) {
     console.error('[Cache] Error getting cached exercise:', error);
     return undefined;
   }
 };
 
-export const saveExerciseToCache = (
+export const saveExerciseToCache = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   jsonContent: string,
   userId: number | null
-): number | undefined => {
+): Promise<number | undefined> => {
   try {
-    const result = db
-      .prepare(
-        `
-        INSERT INTO quiz (language, question_language, level, content, created_at, user_id)
-        VALUES (?, ?, ?, ?, datetime('now'), ?) -- Use datetime('now') explicitly and 6 placeholders
-        RETURNING id
-      `
-      )
-      .get(
-        passageLanguage,
-        questionLanguage,
-        level,
-        jsonContent,
-        userId // Pass userId as the 5th argument corresponding to the 6th placeholder
-      ) as { id: number } | undefined;
+    const executionResult: RunResult = await db
+      .insert(quiz)
+      .values({
+        language: passageLanguage,
+        questionLanguage: questionLanguage,
+        level: level,
+        content: jsonContent,
+        userId: userId,
+        // createdAt will use the default from the schema (CURRENT_TIMESTAMP)
+      })
+      .execute();
 
-    if (result?.id) {
-      return result.id;
+    if (executionResult.lastInsertRowid) {
+      return typeof executionResult.lastInsertRowid === 'bigint'
+        ? Number(executionResult.lastInsertRowid)
+        : executionResult.lastInsertRowid;
     } else {
       console.error(
         '[Cache] Failed to get ID after saving to cache. Insert might have failed silently.'
@@ -87,25 +114,28 @@ export const saveExerciseToCache = (
     }
   } catch (error) {
     console.error('[Cache] Error saving exercise to cache:', error);
-    return undefined;
+    return undefined; // Return undefined on error as per original function
   }
 };
 
 export const countCachedExercises = (
   passageLanguage: string,
-  questionLanguage: string,
-  level: string
+  questionLanguageInput: string,
+  levelInput: string
 ): number => {
   try {
-    const stmt = db.prepare<[string, string, string]>(
-      `SELECT COUNT(*) as count
-       FROM quiz
-       WHERE language = ? AND question_language = ? AND level = ?`
-    );
-    const result = stmt.get(passageLanguage, questionLanguage, level) as
-      | { count: number }
-      | undefined;
-    return result?.count ?? 0;
+    const result = db
+      .select({ value: dslCount() })
+      .from(quiz)
+      .where(
+        and(
+          eq(quiz.language, passageLanguage),
+          eq(quiz.questionLanguage, questionLanguageInput),
+          eq(quiz.level, levelInput)
+        )
+      )
+      .get();
+    return result?.value ?? 0;
   } catch (error) {
     console.error('[Cache] Error counting cached exercises:', error);
     return 0;
@@ -119,29 +149,27 @@ export const getValidatedExerciseFromCache = (
   level: string,
   userId: number | null
 ): { quizData: PartialQuizData; quizId: number } | undefined => {
-  const cachedExercise: QuizRow | undefined = getCachedExercise(
+  const cachedExerciseRow: QuizRow | undefined = getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
     userId
   );
 
-  if (cachedExercise) {
+  if (cachedExerciseRow) {
     try {
-      const parsedCachedContent: unknown = JSON.parse(cachedExercise.content);
+      const parsedCachedContent: unknown = JSON.parse(cachedExerciseRow.content);
       const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
 
       if (!validatedCachedData.success) {
         console.error(
           '[Cache:getValidated] Invalid data found in cache for ID',
-          cachedExercise.id,
+          cachedExerciseRow.id,
           ':',
           validatedCachedData.error.format()
         );
-        // If cache data is invalid, treat it as a cache miss
         return undefined;
       } else {
-        // Type is inferred correctly after successful validation
         const fullData = validatedCachedData.data;
         const partialData: PartialQuizData = {
           paragraph: fullData.paragraph,
@@ -151,21 +179,18 @@ export const getValidatedExerciseFromCache = (
         };
         return {
           quizData: partialData,
-          quizId: cachedExercise.id,
+          quizId: cachedExerciseRow.id,
         };
       }
     } catch (error) {
       console.error(
         '[Cache:getValidated] Error processing cached exercise ID',
-        cachedExercise.id,
+        cachedExerciseRow.id,
         ':',
         error
       );
-      // If processing fails, treat it as a cache miss
       return undefined;
     }
   }
-
-  // No cached exercise found
   return undefined;
 };

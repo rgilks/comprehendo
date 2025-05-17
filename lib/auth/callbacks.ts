@@ -2,24 +2,23 @@ import { User, Account, Session } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { JWT } from 'next-auth/jwt';
 import { validatedAuthEnv } from '../config/authEnv';
-import { upsertUserOnSignIn, findUserByProvider } from '../repositories/userRepository';
+import { upsertUserOnSignIn, findUserByProvider } from '../repo/userRepository';
 
 export interface UserWithEmail extends User {
   email?: string | null;
 }
 
-export const signInCallback = ({
+export const signInCallback = async ({
   user,
   account,
 }: {
   user: User | AdapterUser;
   account: Account | null;
-}): boolean => {
+}): Promise<boolean> => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (account && user) {
     try {
-      // Rely solely on the repository function for upsert logic and error handling.
-      upsertUserOnSignIn(user, account);
+      await upsertUserOnSignIn(user, account);
       return true; // Sign-in allowed if upsert succeeds
     } catch (error) {
       console.error(

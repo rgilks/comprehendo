@@ -1,12 +1,13 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { z } from 'zod';
+import { selectUserSchema } from '../../lib/domain/schema';
 
 export const SessionUserSchema = z.object({
-  dbId: z.number(),
-  name: z.string().optional(),
-  email: z.string().optional(),
-  image: z.string().optional(),
+  dbId: selectUserSchema.shape.id,
+  name: selectUserSchema.shape.name.unwrap().optional(),
+  email: selectUserSchema.shape.email.unwrap().optional(),
+  image: selectUserSchema.shape.image.unwrap().optional(),
 });
 
 export type SessionUser = z.infer<typeof SessionUserSchema>;

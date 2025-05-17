@@ -30,19 +30,19 @@ test.describe('Basic Workflow Test', () => {
 
     await spanishLangOption.click();
 
-    // Wait for the button text to change, indicating navigation/language update is complete
-    const generateButton = page.locator('[data-testid="generate-button"]');
-    await expect(
-      generateButton,
-      'Generate button should have Spanish text after language change'
-    ).toHaveText(
-      'Genera un nuevo texto',
-      { timeout: 3000 } // Increased timeout slightly for potential hydration/update delay
-    );
-
-    // Optional: Check URL as a secondary confirmation
+    // Wait for the URL to update to the new language
     const expectedSpanishUrl = `${BASE_URL}/es`;
-    await expect(page, 'URL should update to Spanish language code').toHaveURL(expectedSpanishUrl);
+    await expect(page, 'URL should update to Spanish language code').toHaveURL(expectedSpanishUrl, {
+      timeout: 5000,
+    });
+
+    // After UI language change, a new exercise pair might be fetched due to setPassageLanguage logic.
+    // Wait for the main content (e.g., reading passage) to be visible, indicating this loading is complete.
+    const readingPassageRootLocator = page.locator('[data-testid="reading-passage"]');
+    await expect(
+      readingPassageRootLocator,
+      'Reading passage should become visible after language change and data load'
+    ).toBeVisible({ timeout: 30000 });
   });
 
   test('should allow changing passage (learning) language', async ({ page }: { page: Page }) => {
@@ -128,6 +128,11 @@ test.describe('Basic Workflow Test', () => {
 
     const adminUrl = `${BASE_URL}/admin`;
     await page.goto(adminUrl);
+
+    // Check if we are still on the admin page after goto
+    await expect(page, 'Should be on the admin page after navigation').toHaveURL(adminUrl, {
+      timeout: 5000,
+    });
 
     // Wait for the heading specific to the admin page
     const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });

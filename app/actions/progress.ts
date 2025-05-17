@@ -2,11 +2,11 @@
 
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
-import { calculateAndUpdateProgress } from '../../lib/progressUtils';
+import { calculateAndUpdateProgress } from '@/lib/progressUtils';
 import { getAuthenticatedSessionUser } from './authUtils';
-import { findQuizById } from '@/lib/repositories/quizRepository';
-import { getProgress as findUserProgress } from '@/lib/repositories/progressRepository';
-import { createFeedback } from '@/lib/repositories/feedbackRepository';
+import { findQuizById } from '@/lib/repo/quizRepository';
+import { getProgress as findUserProgress } from '@/lib/repo/progressRepository';
+import { createFeedback as createDBFeedback } from '@/lib/repo/feedbackRepository';
 
 const DEFAULT_CEFR_LEVEL = 'A1';
 
@@ -107,7 +107,7 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
   if (!parsedBody.success)
     return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Invalid parameters' };
   const { isCorrect, language } = parsedBody.data;
-  const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
+  const progressResult = await calculateAndUpdateProgress(userId, language, isCorrect);
   return {
     currentLevel: progressResult.currentLevel,
     currentStreak: progressResult.currentStreak,
@@ -150,7 +150,7 @@ export const submitAnswer = async (
     feedback: feedbackData,
   };
   if (userId !== null) {
-    const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
+    const progressUpdate = await calculateAndUpdateProgress(userId, learn, isCorrect);
     responsePayload.currentLevel = progressUpdate.currentLevel;
     responsePayload.currentStreak = progressUpdate.currentStreak;
     responsePayload.leveledUp = progressUpdate.leveledUp;
@@ -159,41 +159,54 @@ export const submitAnswer = async (
   return responsePayload;
 };
 
-export const getProgress = async (params: GetProgressParams): Promise<ProgressResponse> => {
+export interface GetProgressServerResponse {
+  data: {
+    user_id: number;
+    language_code: string;
+    cefr_level: string;
+    correct_streak: number;
+    last_practiced: Date | null;
+  } | null;
+  error?: string;
+}
+
+export const getProgress = async (
+  params: GetProgressParams
+): Promise<GetProgressServerResponse> => {
   const sessionUser = await getAuthenticatedSessionUser();
   const userId = sessionUser?.dbId ?? null;
-  if (userId === null)
-    return {
-      currentLevel: DEFAULT_CEFR_LEVEL,
-      currentStreak: 0,
-      error: 'Unauthorized: User not logged in.',
-    };
-  const parsedParams = getProgressSchema.safeParse(params);
-  if (!parsedParams.success)
-    return {
-      currentLevel: DEFAULT_CEFR_LEVEL,
-      currentStreak: 0,
-      error: 'Invalid parameters provided.',
-    };
-  const { language } = parsedParams.data;
-  let currentLevel = DEFAULT_CEFR_LEVEL;
-  let currentStreak = 0;
-  const languageCode = language.toLowerCase().slice(0, 2);
-  try {
-    const progressRecord = findUserProgress(userId, languageCode);
-    if (progressRecord) {
-      currentLevel = progressRecord.cefr_level;
-      currentStreak = progressRecord.correct_streak;
-    }
-  } catch (error: unknown) {
-    return {
-      currentLevel: DEFAULT_CEFR_LEVEL,
-      currentStreak: 0,
-      leveledUp: false,
-      error: `Repository error fetching progress: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    };
+  if (userId === null) {
+    return { data: null, error: 'Unauthorized' };
   }
-  return { currentLevel, currentStreak, leveledUp: false };
+
+  const parsedParams = getProgressSchema.safeParse(params);
+  if (!parsedParams.success) {
+    return { data: null, error: 'Invalid parameters' };
+  }
+
+  const { language } = parsedParams.data;
+  const languageCode = language.toLowerCase().slice(0, 2);
+
+  try {
+    const progressRecord = await findUserProgress(userId, languageCode);
+
+    if (progressRecord) {
+      return {
+        data: {
+          user_id: progressRecord.user_id,
+          language_code: progressRecord.language_code,
+          cefr_level: progressRecord.cefr_level,
+          correct_streak: progressRecord.correct_streak,
+          last_practiced:
+            progressRecord.last_practiced instanceof Date ? progressRecord.last_practiced : null,
+        },
+      };
+    } else {
+      return { data: null };
+    }
+  } catch {
+    return { data: null, error: 'DB Error' };
+  }
 };
 
 export interface SubmitFeedbackResponse {
@@ -215,13 +228,13 @@ export const submitFeedback = async (
     const quizExists = findQuizById(quizId);
     if (!quizExists) return { success: false, error: `Quiz not found.` };
     const feedbackData = {
-      quiz_id: quizId,
-      user_id: userId,
-      is_good: is_good === 1,
-      user_answer: userAnswer,
-      is_correct: isCorrect === undefined ? undefined : isCorrect,
+      quizId: quizId,
+      userId: userId,
+      isGood: is_good === 1,
+      userAnswer: userAnswer,
+      isCorrect: isCorrect === undefined ? undefined : isCorrect,
     };
-    createFeedback(feedbackData);
+    await createDBFeedback(feedbackData);
     return { success: true };
   } catch {
     return { success: false, error: `Repository error saving feedback.` };
