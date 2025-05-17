@@ -1,5 +1,5 @@
 import { generateExercisePrompt } from '@/lib/ai/prompts/exercise-prompt';
-import { ExerciseContent, ExerciseContentSchema, type QuizData } from '@/lib/domain/schemas';
+import { GeneratedExercise, GeneratedExerciseSchema, type QuizData } from '@/lib/domain/schemas';
 import { type ExerciseGenerationParams } from '@/lib/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from '@/lib/ai/google-ai-api';
 
@@ -25,7 +25,7 @@ export type ExerciseGenerationOptions = ExerciseGenerationParams & {
 
 export const generateAndValidateExercise = async (
   options: ExerciseGenerationOptions
-): Promise<ExerciseContent> => {
+): Promise<GeneratedExercise> => {
   const prompt = generateExercisePrompt(options);
   //  console.log('[AI:generateAndValidateExercise] Generated Prompt:\n', prompt);
 
@@ -63,7 +63,7 @@ export const generateAndValidateExercise = async (
 
   try {
     // Validate the structure of the parsed JSON using Zod
-    const validationResult = ExerciseContentSchema.safeParse(parsedAiContent);
+    const validationResult = GeneratedExerciseSchema.safeParse(parsedAiContent);
 
     if (!validationResult.success) {
       console.error(

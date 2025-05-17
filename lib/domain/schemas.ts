@@ -82,23 +82,6 @@ export const SubmitAnswerResultSchema = z.object({
 
 export type SubmitAnswerResult = z.infer<typeof SubmitAnswerResultSchema>;
 
-// Represents the core content structure generated for an exercise
-export const ExerciseContentSchema = z.object({
-  paragraph: z.string(),
-  question: z.string(),
-  options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  correctAnswer: z.string(),
-  allExplanations: z.object({
-    A: z.string(),
-    B: z.string(),
-    C: z.string(),
-    D: z.string(),
-  }),
-  relevantText: z.string(),
-  topic: z.string().optional().nullable(),
-});
-export type ExerciseContent = z.infer<typeof ExerciseContentSchema>; // Renamed type alias
-
 export const LanguageLevels = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 
 export const VoiceInfoSchema = z.object({

@@ -2,7 +2,7 @@ import {
   ExerciseRequestParamsSchema,
   type GenerateExerciseResult,
   type ExerciseRequestParams,
-  type ExerciseContent,
+  type GeneratedExercise,
   PartialQuizDataSchema,
 } from '@/lib/domain/schemas';
 import { saveExerciseToCache, getValidatedExerciseFromCache } from '@/lib/exercise-cache';
@@ -34,7 +34,7 @@ export const validateRequestParams = (requestParams: unknown) =>
 const CACHE_GENERATION_THRESHOLD = 100;
 
 const createSuccessResult = (
-  data: { content: ExerciseContent; id: number },
+  data: { content: GeneratedExercise; id: number },
   cached: boolean = false
 ): GenerateExerciseResult => {
   const partialData = PartialQuizDataSchema.parse({
@@ -55,7 +55,7 @@ export const tryGenerateAndCacheExercise = async (
   params: ExerciseGenerationParams,
   language: string,
   userId: number | null
-): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
+): Promise<Result<{ content: GeneratedExercise; id: number }, ActionError>> => {
   try {
     const options: ExerciseGenerationOptions = { ...params, language };
     const generatedExercise = await generateAndValidateExercise(options);
@@ -67,17 +67,17 @@ export const tryGenerateAndCacheExercise = async (
       userId
     );
     if (exerciseId === undefined) {
-      return failure<{ content: ExerciseContent; id: number }, ActionError>({
+      return failure<{ content: GeneratedExercise; id: number }, ActionError>({
         error: 'Exercise generated but failed to save to cache (undefined ID).',
       });
     }
-    return success<{ content: ExerciseContent; id: number }, ActionError>({
+    return success<{ content: GeneratedExercise; id: number }, ActionError>({
       content: generatedExercise,
       id: exerciseId,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return failure<{ content: ExerciseContent; id: number }, ActionError>({
+    return failure<{ content: GeneratedExercise; id: number }, ActionError>({
       error: `Error during AI generation/processing: ${errorMessage}`,
     });
   }
