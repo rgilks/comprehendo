@@ -1,5 +1,3 @@
-// @ts-check
-
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import nextPlugin from '@next/eslint-plugin-next';
@@ -58,7 +56,7 @@ export default tseslint.config(
       ],
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
         'warn',

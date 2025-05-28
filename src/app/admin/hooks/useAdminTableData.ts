@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getTableNames, getTableData } from '../actions'; // Adjust path as needed
+import { getTableNames, getTableData } from '../actions';
 
 export const useAdminTableData = (initialRowsPerPage = 10) => {
   const [tableNames, setTableNames] = useState<string[]>([]);
@@ -42,20 +42,20 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
       const result = await getTableData(tableName, page, limit);
       if (result.error) {
         setError(result.error);
-        setTableData([]); // Clear data on error
+        setTableData([]);
       } else if (result.data) {
         setTableData(result.data.data);
         setTotalRows(result.data.totalRows);
         setCurrentPage(result.data.page);
         setRowsPerPage(result.data.limit);
       } else {
-        setTableData([]); // Ensure data is cleared if no data returned
+        setTableData([]);
         setTotalRows(0);
       }
     } catch (err) {
       console.error('Error fetching table data:', err);
       setError('Failed to load table data');
-      setTableData([]); // Clear data on error
+      setTableData([]);
     } finally {
       setIsLoadingData(false);
     }
@@ -64,7 +64,7 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
   const selectAndFetchTable = useCallback(
     async (tableName: string) => {
       setSelectedTable(tableName);
-      setCurrentPage(1); // Reset to first page
+      setCurrentPage(1);
       await fetchDataForTable(tableName, 1, rowsPerPage);
     },
     [fetchDataForTable, rowsPerPage]
@@ -102,9 +102,9 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
     isLoadingTables,
     isLoadingData,
     error,
-    selectAndFetchTable, // Renamed from handleTableSelect
-    refreshData, // Renamed from handleRefresh
-    goToPreviousPage, // Renamed from handlePreviousPage
-    goToNextPage, // Renamed from handleNextPage
+    selectAndFetchTable,
+    refreshData,
+    goToPreviousPage,
+    goToNextPage,
   };
 };

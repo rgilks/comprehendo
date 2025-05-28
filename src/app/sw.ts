@@ -8,7 +8,6 @@ interface ExpectedPushData {
 
 interface SkipWaitingMessage {
   type: 'SKIP_WAITING';
-  // Add other properties if your message has them
 }
 
 declare global {
@@ -49,6 +48,5 @@ export default {
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
-  // Other Serwist options can be added here
   runtimeCaching: defaultCache,
 };

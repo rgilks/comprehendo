@@ -1,8 +1,6 @@
 import React from 'react';
 import { FormattedValueDisplay } from './FormattedValueDisplay';
 
-// Remove this comment
-
 interface RowDetailViewProps {
   rowData: Record<string, unknown>;
   tableName: string | null;
@@ -26,7 +24,6 @@ export const RowDetailView: React.FC<RowDetailViewProps> = ({
     }
   };
 
-  // Render only the modal
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col relative">

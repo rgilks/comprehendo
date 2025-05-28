@@ -49,9 +49,8 @@ export const useTextGeneratorStore = create<TextGeneratorState>()(
         reviver: (_key, value) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const val = value as any;
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (typeof val === 'object' && val !== null && val.__type === 'Map') {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             return new Map(val.value);
           }
           return value;

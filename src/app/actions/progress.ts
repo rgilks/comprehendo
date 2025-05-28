@@ -47,15 +47,13 @@ const calculateNextProgress = (
     if (currentLevelIndex < CEFR_LEVELS.length - 1) {
       return {
         nextLevel: CEFR_LEVELS[currentLevelIndex + 1],
-        nextStreak: 0, // Reset streak on level up
+        nextStreak: 0,
         leveledUp: true,
       };
     }
-    // At max level, but met streak threshold - reset streak as per original behavior
     return { nextLevel: currentLevel, nextStreak: 0, leveledUp: false };
   }
 
-  // Correct, but not enough streak to level up (or attempt was for max level)
   return { nextLevel: currentLevel, nextStreak: newStreak, leveledUp: false };
 };
 
@@ -64,7 +62,6 @@ const getOrInitProgress = (userId: number, languageCode: string) => {
   return currentProgress || initializeProgress(userId, languageCode);
 };
 
-// This function is not a Server Action, it's a utility function called by Server Actions
 const calculateAndUpdateProgress = (
   userId: number,
   language: string,
@@ -202,7 +199,6 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
     };
   }
   const { isCorrect, language } = parsedBody.data;
-  // calculateAndUpdateProgress is synchronous
   const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
   return {
     currentLevel: progressResult.currentLevel,

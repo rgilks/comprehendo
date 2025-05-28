@@ -40,7 +40,7 @@ const MAX_REQUESTS_PER_HOUR = parseInt(
   process.env['RATE_LIMIT_MAX_REQUESTS_PER_HOUR'] || '100',
   10
 );
-const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10); // 1 hour in milliseconds
+const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
 
 const checkRateLimit = (ip: string): boolean => {
   try {
@@ -67,7 +67,7 @@ const checkRateLimit = (ip: string): boolean => {
     return true;
   } catch (error) {
     console.error('[RateLimiter] Error checking rate limit:', error);
-    return false; // Default to allowing request if rate limiter fails
+    return false;
   }
 };
 
@@ -185,13 +185,11 @@ const getOrGenerateExercise = async (
     if (cachedResult) {
       return cachedResult;
     }
-    // If both generation and cache fail, use the error from the generation attempt.
     return createErrorResponse(
       generationError.error || 'Generation preferred but failed, and no cached version available.'
     );
   }
 
-  // Prefer cache
   const cachedResult = attemptCache();
   if (cachedResult) {
     return cachedResult;
@@ -201,7 +199,6 @@ const getOrGenerateExercise = async (
   if (genResult.success) {
     return createSuccessResult(genResult.data, false);
   }
-  // If cache misses and generation fails, use the error from the generation attempt.
   return createErrorResponse(
     genResult.error.error || 'Cache miss and subsequent generation failed.'
   );

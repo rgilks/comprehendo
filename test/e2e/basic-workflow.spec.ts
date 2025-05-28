@@ -1,18 +1,15 @@
 import { test, expect, type Page, type Browser } from '@playwright/test';
 
 const BASE_URL = process.env['BASE_URL'] || 'http://localhost:3000';
-// Default to English for base target URL if not specified otherwise
 const TARGET_URL = `${BASE_URL}/en`;
 
 test.describe('Basic Workflow Test', () => {
   test('should allow changing UI language', async ({ page }: { page: Page }) => {
     await page.goto(TARGET_URL);
 
-    // Wait for the main content area first
     const mainContent = page.locator('main');
     await expect(mainContent, 'Main content area should be visible').toBeVisible();
 
-    // Now look for the button within the main area
     const languageDropdownButton = mainContent.locator('#language-select-button');
     await expect(
       languageDropdownButton,
@@ -29,14 +26,12 @@ test.describe('Basic Workflow Test', () => {
 
     await spanishLangOption.click();
 
-    // Wait for the button text to change, indicating navigation/language update is complete
     const generateButton = page.locator('[data-testid="generate-button"]');
     await expect(
       generateButton,
       'Generate button should have Spanish text after language change'
     ).toHaveText('Genera un nuevo texto');
 
-    // Optional: Check URL as a secondary confirmation
     const expectedSpanishUrl = `${BASE_URL}/es`;
     await expect(page, 'URL should update to Spanish language code').toHaveURL(expectedSpanishUrl);
   });
@@ -45,7 +40,6 @@ test.describe('Basic Workflow Test', () => {
     await page.goto(TARGET_URL);
 
     const passageLangSelect = page.locator('[data-testid="language-select"]');
-    // Wait for the element itself first
     await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible();
 
     await passageLangSelect.selectOption({ value: 'es' });
@@ -59,11 +53,9 @@ test.describe('Basic Workflow Test', () => {
   test('should display the correct default CEFR level', async ({ page }: { page: Page }) => {
     await page.goto(TARGET_URL);
 
-    // Wait for the main content area first
     const mainContent = page.locator('main');
     await expect(mainContent, 'Main content area should be visible').toBeVisible();
 
-    // Now look for the level display within the main area
     const levelDisplay = mainContent.locator('[data-testid="level-display"]');
     await expect(levelDisplay, 'CEFR level display should be visible').toBeVisible();
 
@@ -71,7 +63,6 @@ test.describe('Basic Workflow Test', () => {
   });
 
   test('should show avatar after mock GitHub sign-in', async ({ page }: { page: Page }) => {
-    // Mock the session API response
     await page.route('**/api/auth/session', async (route) => {
       const mockSession = {
         user: {
@@ -90,7 +81,6 @@ test.describe('Basic Workflow Test', () => {
 
     await page.goto(TARGET_URL);
 
-    // Use getByAltText for better semantics if possible, or keep current selector
     const avatarImage = page.getByAltText('Mock User');
 
     await expect(avatarImage, 'Avatar image should be visible after mock login').toBeVisible();
@@ -115,11 +105,9 @@ test.describe('Basic Workflow Test', () => {
     const adminUrl = `${BASE_URL}/admin`;
     await page.goto(adminUrl);
 
-    // Wait for the heading specific to the admin page
     const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
     await expect(adminHeading, 'Admin page heading should be visible').toBeVisible();
 
-    // Check that common elements from the non-admin page are NOT visible as an extra check
     const unauthorizedMessage = page.locator(
       'text=/Unauthorized|You do not have admin permissions./i'
     );
@@ -144,18 +132,14 @@ test.describe('Basic Workflow Test', () => {
     const adminUrl = `${BASE_URL}/admin`;
     await page.goto(adminUrl);
 
-    // Instead of just checking URL, wait for an element on the page we expect to be redirected TO.
-    // Using the language dropdown button as an example element from the main page.
     const languageDropdownButton = page.locator('#language-select-button');
     await expect(
       languageDropdownButton,
       'Should be redirected to main page (language button visible)'
     ).toBeVisible();
 
-    // Optionally, still check the URL if desired
     await expect(page, 'URL should be the main target URL after redirect').toHaveURL(TARGET_URL);
 
-    // Check that the admin heading is NOT visible
     const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
     await expect(
       adminHeading,
@@ -168,36 +152,28 @@ test.describe('Basic Workflow Test', () => {
   test('should display static home page content correctly', async ({ page }: { page: Page }) => {
     await page.goto(TARGET_URL);
 
-    // 1. Main Title
     await expect(page.getByRole('heading', { name: /Comprehendo/i, level: 1 })).toBeVisible();
 
-    // Meta Description
     const metaDescription = page.locator('meta[name="description"]');
     await expect(metaDescription).toHaveAttribute(
       'content',
       'An AI-powered language learning tool'
     );
 
-    // 2. Subtitle
     const expectedSubtitle =
       'An AI-powered language learning tool to improve your reading comprehension';
     await expect(page.getByText(expectedSubtitle)).toBeVisible();
 
-    // 3. TextGenerator Component
     await expect(page.locator('[data-testid="text-generator-container"]')).toBeVisible();
 
-    // 4. Footer
-    // 4a. Powered By
     const expectedPoweredBy = 'Powered by Google Gemini';
     await expect(page.getByText(new RegExp(expectedPoweredBy, 'i'))).toBeVisible();
 
-    // 4b. GitHub Link
     const expectedGitHubText = 'GitHub';
     const githubLink = page.getByRole('link', { name: new RegExp(expectedGitHubText, 'i') });
     await expect(githubLink).toBeVisible();
     await expect(githubLink).toHaveAttribute('href', 'https://github.com/rgilks/comprehendo');
 
-    // 4c. Ko-fi Link
     const kofiLink = page.getByRole('link', { name: /Buy Me a Coffee at ko-fi.com/i });
     await expect(kofiLink).toBeVisible();
     await expect(kofiLink).toHaveAttribute('href', 'https://ko-fi.com/N4N31DPNUS');
@@ -210,9 +186,8 @@ test.describe('Basic Workflow Test', () => {
   });
 
   test('should display 404 page for invalid language route', async ({ page }: { page: Page }) => {
-    await page.goto(`${BASE_URL}/xx`); // 'xx' is an invalid language code
+    await page.goto(`${BASE_URL}/xx`);
 
-    // Check for content from the custom not-found.tsx page
     await expect(page.getByRole('heading', { name: /404 - Page Not Found/i })).toBeVisible();
     await expect(
       page.getByText('Oops! The page you are looking for does not exist.')
