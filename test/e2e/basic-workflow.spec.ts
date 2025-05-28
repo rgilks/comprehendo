@@ -10,15 +10,14 @@ test.describe('Basic Workflow Test', () => {
 
     // Wait for the main content area first
     const mainContent = page.locator('main');
-    await expect(mainContent, 'Main content area should be visible').toBeVisible({
-      timeout: 15000,
-    });
+    await expect(mainContent, 'Main content area should be visible').toBeVisible();
 
     // Now look for the button within the main area
     const languageDropdownButton = mainContent.locator('#language-select-button');
-    await expect(languageDropdownButton, 'Language dropdown button should be visible').toBeVisible({
-      timeout: 1000, // Reduce timeout slightly as main is already visible
-    });
+    await expect(
+      languageDropdownButton,
+      'Language dropdown button should be visible'
+    ).toBeVisible();
 
     await languageDropdownButton.click();
 
@@ -26,7 +25,7 @@ test.describe('Basic Workflow Test', () => {
     await expect(
       spanishLangOption,
       'Spanish language option should be visible in dropdown'
-    ).toBeVisible({ timeout: 2000 });
+    ).toBeVisible();
 
     await spanishLangOption.click();
 
@@ -35,10 +34,7 @@ test.describe('Basic Workflow Test', () => {
     await expect(
       generateButton,
       'Generate button should have Spanish text after language change'
-    ).toHaveText(
-      'Genera un nuevo texto',
-      { timeout: 3000 } // Increased timeout slightly for potential hydration/update delay
-    );
+    ).toHaveText('Genera un nuevo texto');
 
     // Optional: Check URL as a secondary confirmation
     const expectedSpanishUrl = `${BASE_URL}/es`;
@@ -50,16 +46,14 @@ test.describe('Basic Workflow Test', () => {
 
     const passageLangSelect = page.locator('[data-testid="language-select"]');
     // Wait for the element itself first
-    await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible({
-      timeout: 3000,
-    });
+    await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible();
 
     await passageLangSelect.selectOption({ value: 'es' });
 
     await expect(
       passageLangSelect,
       'Passage language selector value should be Spanish'
-    ).toHaveValue('es', { timeout: 1000 });
+    ).toHaveValue('es');
   });
 
   test('should display the correct default CEFR level', async ({ page }: { page: Page }) => {
@@ -67,19 +61,13 @@ test.describe('Basic Workflow Test', () => {
 
     // Wait for the main content area first
     const mainContent = page.locator('main');
-    await expect(mainContent, 'Main content area should be visible').toBeVisible({
-      timeout: 15000,
-    });
+    await expect(mainContent, 'Main content area should be visible').toBeVisible();
 
     // Now look for the level display within the main area
     const levelDisplay = mainContent.locator('[data-testid="level-display"]');
-    await expect(levelDisplay, 'CEFR level display should be visible').toBeVisible({
-      timeout: 1000, // Reduce timeout slightly
-    });
+    await expect(levelDisplay, 'CEFR level display should be visible').toBeVisible();
 
-    await expect(levelDisplay, 'CEFR level display should show default level').toContainText('A1', {
-      timeout: 1000,
-    });
+    await expect(levelDisplay, 'CEFR level display should show default level').toContainText('A1');
   });
 
   test('should show avatar after mock GitHub sign-in', async ({ page }: { page: Page }) => {
@@ -105,9 +93,7 @@ test.describe('Basic Workflow Test', () => {
     // Use getByAltText for better semantics if possible, or keep current selector
     const avatarImage = page.getByAltText('Mock User');
 
-    await expect(avatarImage, 'Avatar image should be visible after mock login').toBeVisible({
-      timeout: 10000,
-    });
+    await expect(avatarImage, 'Avatar image should be visible after mock login').toBeVisible();
 
     const expectedEncodedUrlPart = 'https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F999999';
     await expect(
@@ -131,9 +117,7 @@ test.describe('Basic Workflow Test', () => {
 
     // Wait for the heading specific to the admin page
     const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
-    await expect(adminHeading, 'Admin page heading should be visible').toBeVisible({
-      timeout: 10000,
-    });
+    await expect(adminHeading, 'Admin page heading should be visible').toBeVisible();
 
     // Check that common elements from the non-admin page are NOT visible as an extra check
     const unauthorizedMessage = page.locator(
@@ -166,12 +150,10 @@ test.describe('Basic Workflow Test', () => {
     await expect(
       languageDropdownButton,
       'Should be redirected to main page (language button visible)'
-    ).toBeVisible({ timeout: 5000 });
+    ).toBeVisible();
 
     // Optionally, still check the URL if desired
-    await expect(page, 'URL should be the main target URL after redirect').toHaveURL(TARGET_URL, {
-      timeout: 1000,
-    });
+    await expect(page, 'URL should be the main target URL after redirect').toHaveURL(TARGET_URL);
 
     // Check that the admin heading is NOT visible
     const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });

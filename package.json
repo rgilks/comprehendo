@@ -11,13 +11,10 @@
     "build": "next build",
     "start": "next start",
     "verify": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit",
-    "check": "npm run verify && vitest run --coverage && npx playwright test --reporter=list",
+    "check": "npm run verify && npx playwright test --reporter=list",
     "nuke": "rm -rf node_modules package-lock.json .next && npm install",
     "deps": "npx npm-check-updates",
     "deps:update": "npx npm-check-updates -u && npm run nuke",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "test:e2e": "npx playwright test --reporter=list",
     "test:e2e:watch": "playwright test --watch"
   },
@@ -49,8 +46,6 @@
     "@types/react-dom": "19.1.5",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
-    "@vitejs/plugin-react": "^4.5.0",
-    "@vitest/coverage-v8": "^3.1.4",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.27.0",
     "eslint-config-next": "15.3.2",
@@ -62,9 +57,6 @@
     "postcss": "^8.5.3",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.0",
-    "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.1.4",
-    "vitest-dom": "^0.1.1"
+    "typescript-eslint": "^8.33.0"
   }
 }

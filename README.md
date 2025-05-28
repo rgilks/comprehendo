@@ -40,7 +40,6 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **State Management**: Uses `zustand` for lightweight global state management.
 - **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
 - **Testing**:
-  - Unit and integration tests with Vitest & React Testing Library.
   - End-to-end tests with Playwright.
 - **Code Quality**:
   - ESLint and Prettier for linting and formatting.
@@ -67,7 +66,6 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **@serwist/next**: PWA features
 - **zustand**: State management
 - **Playwright**: End-to-end testing
-- **Vitest / React Testing Library**: Unit/Integration testing
 - **ESLint / Prettier**: Linting & Formatting
 - **Turbopack**: (Optional, used with `npm run dev`)
 
@@ -212,20 +210,8 @@ npm run verify
 # Fix formatting & linting, run type checks, unit tests, e2e tests
 npm run check
 
-# Run unit/integration tests (Vitest)
-npm run test
-
-# Run Vitest in watch mode
-npm run test:watch
-
 # Run end-to-end tests (Playwright)
 npm run test:e2e
-
-# Run tests and generate coverage report
-npm run test:coverage
-
-# Run tests related to changed files (used by lint-staged)
-npm run test:quick
 
 # Check for dependency updates
 npm run deps
@@ -237,7 +223,6 @@ npm run nuke
 ### Testing Strategy
 
 - **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
-- **Unit/Integration**: Vitest and React Testing Library (`npm test`).
 - **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
 
 ## Production Considerations
@@ -296,7 +281,6 @@ npm run nuke
 ├── next.config.js            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
-├── vitest.config.ts          # Vitest configuration
 ├── playwright.config.ts      # Playwright configuration
 ├── Dockerfile / fly.toml     # Deployment configuration
 ├── package.json              # Project dependencies and scripts

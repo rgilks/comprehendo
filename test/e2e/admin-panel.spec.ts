@@ -5,7 +5,7 @@ test.describe('Admin Panel Basic Navigation', () => {
 
   test.beforeEach(async ({ page }: { page: Page }) => {
     await page.goto('/admin');
-    await expect(page.locator('h1')).toContainText(/Comprehendo admin/i, { timeout: 10000 });
+    await expect(page.locator('h1')).toContainText(/Comprehendo admin/i);
   });
 
   const checkTableLoads = async (page: Page, tableName: string, expectedHeader: string) => {
@@ -13,9 +13,7 @@ test.describe('Admin Panel Basic Navigation', () => {
 
     // Locate the table element itself first
     const tableLocator = page.locator('table');
-    await expect(tableLocator, `${tableName} table should be visible`).toBeVisible({
-      timeout: 2000,
-    });
+    await expect(tableLocator, `${tableName} table should be visible`).toBeVisible();
 
     // Locate header and row relative to the found table
     const headerRegex = new RegExp(`^${expectedHeader}$`, 'i');
@@ -23,12 +21,13 @@ test.describe('Admin Panel Basic Navigation', () => {
     await expect(
       headerLocator,
       `Header '${expectedHeader}' should be visible in ${tableName} table`
-    ).toBeVisible({ timeout: 3000 });
+    ).toBeVisible();
 
     const firstRowLocator = tableLocator.locator('tbody tr').first();
-    await expect(firstRowLocator, `First row of ${tableName} table should be visible`).toBeVisible({
-      timeout: 3000,
-    });
+    await expect(
+      firstRowLocator,
+      `First row of ${tableName} table should be visible`
+    ).toBeVisible();
   };
 
   test('should display the users table with email header', async ({ page }) => {
