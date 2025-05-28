@@ -19,7 +19,6 @@ screenshots/
 .eslintcache
 *.tsbuildinfo
 .swc/
-.husky/
 coverage/
 .env.example
 .github/

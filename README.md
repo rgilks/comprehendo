@@ -44,7 +44,6 @@ Comprehendo is an AI-powered language learning application designed to help user
   - End-to-end tests with Playwright.
 - **Code Quality**:
   - ESLint and Prettier for linting and formatting.
-  - Husky and lint-staged for Git hooks (see Testing Strategy section).
 
 * **State Diagram**: Visual representation of the text generation process. [View State Diagram](docs/text_generator_state_diagram.md)
 
@@ -70,7 +69,6 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Playwright**: End-to-end testing
 - **Vitest / React Testing Library**: Unit/Integration testing
 - **ESLint / Prettier**: Linting & Formatting
-- **Husky / lint-staged**: Git hooks
 - **Turbopack**: (Optional, used with `npm run dev`)
 
 ## How It Works
@@ -241,9 +239,6 @@ npm run nuke
 - **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
 - **Unit/Integration**: Vitest and React Testing Library (`npm test`).
 - **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
-- **Git Hooks**: Husky manages Git hooks defined in `.husky/`:
-  - **Pre-commit (`.husky/pre-commit`)**: Runs `npm run check` (includes formatting, linting, type checks, unit tests, and e2e tests). _Note: This includes E2E tests and might take some time._
-  - **Pre-push (`.husky/pre-push`)**: Runs `npm run preview-build` to ensure the application builds successfully before pushing.
 
 ## Production Considerations
 

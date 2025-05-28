@@ -2,24 +2,24 @@
   "name": "comprehendo",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "clear && next dev",
     "build": "next build",
-    "preview-build": "NEXT_PREVIEW_BUILD=true next build",
     "start": "next start",
-    "verify": "prettier --check . && next lint --no-cache && npx tsc --noEmit",
-    "check": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit && vitest run --coverage && npx playwright test --reporter=list",
+    "verify": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit",
+    "check": "npm run verify && vitest run --coverage && npx playwright test --reporter=list",
+    "nuke": "rm -rf node_modules package-lock.json .next && npm install",
     "deps": "npx npm-check-updates",
-    "deps:update": "npx npm-check-updates -u && npm install",
+    "deps:update": "npx npm-check-updates -u && npm run nuke",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:quick": "vitest related --run --passWithNoTests",
-    "nuke": "rm -rf node_modules package-lock.json .next .next-validation && npm install",
     "test:e2e": "npx playwright test --reporter=list",
-    "init:dev": "npx husky install && npx playwright install",
-    "generate:state-diagram": "mmdc -i docs/state-diagram.md -o docs/state-diagram.png --scale 4"
+    "test:e2e:watch": "playwright test --watch"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -39,7 +39,6 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.4.2",
     "@playwright/test": "^1.51.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
@@ -55,31 +54,20 @@
     "eslint": "^9.23.0",
     "eslint-config-next": "15.2.4",
     "eslint-config-prettier": "^10.1.1",
-    "husky": "^8.0.0",
     "jsdom": "^26.1.0",
-    "lint-staged": "^15.5.0",
-    "msw": "^2.7.3",
     "node-mocks-http": "^1.16.2",
     "npm-check-updates": "^17.1.16",
     "playwright": "^1.51.1",
     "postcss": "^8.4.38",
     "prettier": "^3.5.3",
-    "supertest": "^7.1.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.30.1",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.1.2",
-    "vitest-dom": "^0.1.1",
-    "wait-on": "^7.2.0"
+    "vitest-dom": "^0.1.1"
   },
   "overrides": {
     "@types/react": "19.0.12",
     "@types/react-dom": "19.0.4"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "prettier --write",
-      "npm run test:quick"
-    ]
   }
 }
