@@ -135,14 +135,6 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
-
-  {
-    files: ['src/app/actions/**/*.ts'],
-    rules: {
-      '@typescript-eslint/require-await': 'off',
-    },
-  },
-
   {
     rules: prettierConfig.rules,
   }

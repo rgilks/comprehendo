@@ -74,7 +74,7 @@ export const generateExerciseResponse = async (
   if (!validParams) return createErrorResponse(errorMsg);
 
   if (!checkRateLimit(ip)) {
-    const cachedResult = await tryGetCachedExercise(validParams, userId);
+    const cachedResult = tryGetCachedExercise(validParams, userId);
     if (cachedResult) return cachedResult;
     return createErrorResponse('Rate limit exceeded and no cached question available.');
   }

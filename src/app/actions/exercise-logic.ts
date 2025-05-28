@@ -83,10 +83,10 @@ export const tryGenerateAndCacheExercise = async (
   }
 };
 
-export const tryGetCachedExercise = async (
+export const tryGetCachedExercise = (
   params: ExerciseRequestParams,
   userId: number | null
-): Promise<GenerateExerciseResult | null> => {
+): GenerateExerciseResult | null => {
   const validatedCacheResult = getValidatedExerciseFromCache(
     params.passageLanguage,
     params.questionLanguage,
@@ -121,11 +121,11 @@ export const getOrGenerateExercise = async (
   if (preferGenerate) {
     const generationResult = await tryGenerate();
     if (generationResult.success) return createSuccessResult(generationResult.data, false);
-    const cachedResult = await tryCache();
+    const cachedResult = tryCache();
     if (cachedResult) return cachedResult;
     return createErrorResponse(generationResult.error.error);
   }
-  const cachedResult = await tryCache();
+  const cachedResult = tryCache();
   if (cachedResult) return cachedResult;
   const generationResult = await tryGenerate();
   if (generationResult.success) return createSuccessResult(generationResult.data, false);
