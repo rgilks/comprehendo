@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import AuthButton from '@/components/AuthButton';
+import AuthButton from 'src/app/components/AuthButton';
 
 const LoginPrompt = () => {
   const { t } = useTranslation('common');

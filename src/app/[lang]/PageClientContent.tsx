@@ -2,9 +2,9 @@
 
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { type Language } from '@/lib/domain/language';
-import HomeContent from '@/app/[lang]/HomeContent';
+import HomeContent from 'src/app/[lang]/HomeContent';
 import { Suspense, useEffect } from 'react';
-import i18n from '@/app/i18n.client';
+import i18n from 'src/app/i18n.client';
 import { type Resource, type i18n as I18nInstanceType } from 'i18next';
 
 interface PageClientContentProps {

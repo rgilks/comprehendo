@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { getProgress } from '@/app/actions/progress';
+import { getProgress } from '@/actions/progress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
 import { ProgressUpdateResultSchema } from '@/lib/domain/progress';

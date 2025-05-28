@@ -13,7 +13,7 @@ export const initServerI18n = async (
     .use(initReactI18next)
     .use(
       resourcesToBackend(
-        (lang: string, ns: string) => import(`../public/locales/${lang}/${ns}.json`)
+        (lang: string, ns: string) => import(`../../public/locales/${lang}/${ns}.json`)
       )
     )
     .init({

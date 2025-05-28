@@ -3,9 +3,9 @@
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import Image from 'next/image';
-import LanguageSelector from '@/components/LanguageSelector';
-import AuthButton from '@/components/AuthButton';
-import TextGenerator from '@/components/TextGenerator';
+import LanguageSelector from 'src/app/components/LanguageSelector';
+import AuthButton from 'src/app/components/AuthButton';
+import TextGenerator from 'src/app/components/TextGenerator';
 
 const HomeContent = () => {
   const { t } = useTranslation('common');

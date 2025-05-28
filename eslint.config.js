@@ -137,7 +137,7 @@ export default tseslint.config(
   },
 
   {
-    files: ['app/actions/**/*.ts'],
+    files: ['src/app/actions/**/*.ts'],
     rules: {
       '@typescript-eslint/require-await': 'off',
     },

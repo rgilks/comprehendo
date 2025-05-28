@@ -1,10 +1,10 @@
 'use client';
 
-import TextGenerator from '@/components/TextGenerator';
+import TextGenerator from 'src/app/components/TextGenerator';
 import Link from 'next/link';
-import AuthButton from '@/components/AuthButton';
+import AuthButton from 'src/app/components/AuthButton';
 import { useTranslation } from 'react-i18next';
-import LanguageSelector from '@/components/LanguageSelector';
+import LanguageSelector from 'src/app/components/LanguageSelector';
 
 const HomeContent = () => {
   const { t } = useTranslation('common');

@@ -28,14 +28,15 @@
       }
     ],
     "paths": {
-      "@/app/*": ["app/*"],
-      "@/components/*": ["app/components/*"],
-      "@/store/*": ["app/store/*"],
-      "@/contexts/*": ["app/contexts/*"],
-      "@/config/*": ["app/config/*"],
-      "@/utils/*": ["app/utils/*"],
+      "@/app/*": ["src/app/*"],
+      "@/components/*": ["src/app/components/*"],
+      "@/actions/*": ["src/app/actions/*"],
+      "@/store/*": ["src/app/store/*"],
+      "@/contexts/*": ["src/app/contexts/*"],
+      "@/config/*": ["src/app/config/*"],
+      "@/utils/*": ["src/app/utils/*"],
       "@/lib/*": ["src/lib/*"],
-      "@/hooks/*": ["app/hooks/*"],
+      "@/hooks/*": ["src/app/hooks/*"],
       "@/types/*": ["types/*"]
     },
     "sourceMap": true,

@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import { submitAnswer, submitFeedback } from '@/app/actions/progress';
-import { generateExerciseResponse, generateInitialExercisePair } from '@/app/actions/exercise';
+import { submitAnswer, submitFeedback } from '@/actions/progress';
+import { generateExerciseResponse, generateInitialExercisePair } from '@/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from '@/lib/domain/language-guidance';
 import {} from '@/hooks/useLanguage';
