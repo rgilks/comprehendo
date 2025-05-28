@@ -15,7 +15,8 @@ export interface PaginatedTableData {
   limit: number;
 }
 
-export const getAllTableNames = (): string[] => {
+// eslint-disable-next-line @typescript-eslint/require-await
+export const getAllTableNames = async (): Promise<string[]> => {
   try {
     const tables = db
       .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
@@ -27,32 +28,32 @@ export const getAllTableNames = (): string[] => {
   }
 };
 
-const validateTableName = (tableName: string) => {
-  const allowedTableNames = getAllTableNames();
+const validateTableName = async (tableName: string): Promise<void> => {
+  const allowedTableNames = await getAllTableNames();
   if (!allowedTableNames.includes(tableName)) {
     console.error(`[AdminRepository] Attempt to access disallowed table: ${tableName}`);
     throw new Error('Invalid table name');
   }
 };
 
-const getOrderByClause = (tableName: string) => {
+const getOrderByClause = (tableName: string): string => {
   if (tableName === 'quiz') return 'ORDER BY created_at DESC';
   if (tableName === 'users') return 'ORDER BY last_login DESC';
   return 'ORDER BY ROWID DESC';
 };
 
-export const getTableData = (
+export const getTableData = async (
   tableName: string,
   page: number,
   limit: number
-): PaginatedTableData => {
+): Promise<PaginatedTableData> => {
   const safePage = Math.max(1, Math.floor(page));
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
   const offset = (safePage - 1) * safeLimit;
-  validateTableName(tableName);
+  await validateTableName(tableName);
   const orderByClause = getOrderByClause(tableName);
   try {
-    return db.transaction(() => {
+    const result = db.transaction(() => {
       const countResult = db.prepare(`SELECT COUNT(*) as totalRows FROM "${tableName}"`).get() as
         | CountResult
         | undefined;
@@ -66,6 +67,7 @@ export const getTableData = (
         limit: safeLimit,
       };
     })();
+    return result;
   } catch (error) {
     console.error(`[AdminRepository] Error fetching paginated data for table ${tableName}:`, error);
     if (error instanceof Error) {

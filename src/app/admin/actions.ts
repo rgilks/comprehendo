@@ -10,7 +10,7 @@ import {
 
 const ensureAdmin = async (): Promise<void> => {
   const session = await getServerSession(authOptions);
-  const userEmail = session?.user?.email;
+  const userEmail = session?.user.email;
 
   if (!userEmail) {
     throw new Error('Unauthorized');
@@ -26,7 +26,7 @@ const ensureAdmin = async (): Promise<void> => {
   }
 };
 
-const createAdminAction = <TArgs extends any[], TReturn>(
+const createAdminAction = <TArgs extends unknown[], TReturn>(
   action: (...args: TArgs) => Promise<TReturn> | TReturn,
   actionNameForLog: string,
   defaultFailureMessage: string
@@ -56,14 +56,14 @@ const createAdminAction = <TArgs extends any[], TReturn>(
 };
 
 export const getTableNames = createAdminAction(
-  async () => repoGetAllTableNames(),
+  async () => await repoGetAllTableNames(),
   'getTableNames',
   'Failed to fetch table names'
 );
 
 export const getTableData = createAdminAction(
   async (tableName: string, page: number = 1, limit: number = 10): Promise<PaginatedTableData> =>
-    repoGetTableData(tableName, page, limit),
+    await repoGetTableData(tableName, page, limit),
   'getTableData',
   'Failed to fetch table data'
 );
