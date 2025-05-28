@@ -189,6 +189,13 @@ test.describe('Basic Workflow Test', () => {
     // 1. Main Title
     await expect(page.getByRole('heading', { name: /Comprehendo/i, level: 1 })).toBeVisible();
 
+    // Meta Description
+    const metaDescription = page.locator('meta[name="description"]');
+    await expect(metaDescription).toHaveAttribute(
+      'content',
+      'An AI-powered language learning tool'
+    );
+
     // 2. Subtitle
     const expectedSubtitle =
       'An AI-powered language learning tool to improve your reading comprehension';
@@ -218,5 +225,16 @@ test.describe('Basic Workflow Test', () => {
       'src',
       /https%3A%2F%2Fstorage\.ko-fi\.com%2Fcdn%2Fkofi2\.png%3Fv%3D6/
     );
+  });
+
+  test('should display 404 page for invalid language route', async ({ page }: { page: Page }) => {
+    await page.goto(`${BASE_URL}/xx`); // 'xx' is an invalid language code
+
+    // Check for content from the custom not-found.tsx page
+    await expect(page.getByRole('heading', { name: /404 - Page Not Found/i })).toBeVisible();
+    await expect(
+      page.getByText('Oops! The page you are looking for does not exist.')
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: /Go back to Home/i })).toBeVisible();
   });
 });
