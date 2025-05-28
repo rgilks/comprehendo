@@ -28,16 +28,8 @@
       }
     ],
     "paths": {
-      "@/app/*": ["src/app/*"],
-      "@/components/*": ["src/app/components/*"],
-      "@/actions/*": ["src/app/actions/*"],
-      "@/store/*": ["src/app/store/*"],
-      "@/contexts/*": ["src/app/contexts/*"],
-      "@/config/*": ["src/app/config/*"],
-      "@/utils/*": ["src/app/utils/*"],
-      "@/hooks/*": ["src/app/hooks/*"],
-      "@/types/*": ["types/*"],
-      "@/*": ["./src/*"]
+      "@/*": ["app/*"],
+      "@/types/*": ["types/*"]
     },
     "sourceMap": true,
     "inlineSources": true,
