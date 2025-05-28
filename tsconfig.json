@@ -21,7 +21,7 @@
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": false,
-    "types": ["node", "@testing-library/jest-dom", "@serwist/next/typings"],
+    "types": ["node", "@serwist/next/typings"],
     "plugins": [
       {
         "name": "next"
