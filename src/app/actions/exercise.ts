@@ -5,21 +5,152 @@ import { headers } from 'next/headers';
 import { authOptions } from '@/lib/authOptions';
 import { getDbUserIdFromSession } from '@/lib/authUtils';
 import {
-  createErrorResponse,
-  tryGetCachedExercise,
-  validateRequestParams,
-  getOrGenerateExercise,
-} from './exercise-logic';
-import { countCachedExercises } from '@/lib/exercise-cache';
+  ExerciseRequestParamsSchema,
+  type GenerateExerciseResult,
+  type ExerciseRequestParams,
+  type ExerciseContent,
+  PartialQuizDataSchema,
+  type InitialExercisePairResult,
+  GenerateExerciseResultSchema,
+} from '@/lib/domain/schemas';
+import {
+  saveExerciseToCache,
+  getValidatedExerciseFromCache,
+  countCachedExercises,
+} from '@/lib/exercise-cache';
+import {
+  generateAndValidateExercise,
+  type ExerciseGenerationOptions,
+} from '@/lib/ai/exercise-generator';
+import { type ExerciseGenerationParams } from '@/lib/domain/ai';
+import { type Result, type ActionError, success, failure } from '@/lib/utils/result-types';
 import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
-import type { ExerciseGenerationParams } from '@/lib/domain/ai';
-import { type InitialExercisePairResult, GenerateExerciseResultSchema } from '@/lib/domain/schemas';
 import { LANGUAGES } from '@/lib/domain/language';
 import { checkRateLimit } from '@/app/actions/rate-limiter';
 import { z } from 'zod';
-import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
+
+const DEFAULT_EMPTY_QUIZ_DATA = {
+  paragraph: '',
+  question: '',
+  options: { A: '', B: '', C: '', D: '' },
+  language: null,
+  topic: null,
+};
+
+const createErrorResponse = (error: string, details?: unknown): GenerateExerciseResult => ({
+  quizData: DEFAULT_EMPTY_QUIZ_DATA,
+  quizId: -1,
+  error: `${error}${details ? `: ${JSON.stringify(details)}` : ''}`,
+  cached: false,
+});
+
+const validateRequestParams = (requestParams: unknown) =>
+  ExerciseRequestParamsSchema.safeParse(requestParams);
+
+const CACHE_GENERATION_THRESHOLD = 100;
+
+const createSuccessResult = (
+  data: { content: ExerciseContent; id: number },
+  cached: boolean = false
+): GenerateExerciseResult => {
+  const partialData = PartialQuizDataSchema.parse({
+    paragraph: data.content.paragraph,
+    question: data.content.question,
+    options: data.content.options,
+    topic: data.content.topic,
+  });
+  return {
+    quizData: partialData,
+    quizId: data.id,
+    error: null,
+    cached,
+  };
+};
+
+const tryGenerateAndCacheExercise = async (
+  params: ExerciseGenerationParams,
+  language: string,
+  userId: number | null
+): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
+  try {
+    const options: ExerciseGenerationOptions = { ...params, language };
+    const generatedExercise = await generateAndValidateExercise(options);
+    const exerciseId = saveExerciseToCache(
+      params.passageLanguage,
+      params.questionLanguage,
+      params.level,
+      JSON.stringify(generatedExercise),
+      userId
+    );
+    if (exerciseId === undefined) {
+      return failure<{ content: ExerciseContent; id: number }, ActionError>({
+        error: 'Exercise generated but failed to save to cache (undefined ID).',
+      });
+    }
+    return success<{ content: ExerciseContent; id: number }, ActionError>({
+      content: generatedExercise,
+      id: exerciseId,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return failure<{ content: ExerciseContent; id: number }, ActionError>({
+      error: `Error during AI generation/processing: ${errorMessage}`,
+    });
+  }
+};
+
+const tryGetCachedExercise = (
+  params: ExerciseRequestParams,
+  userId: number | null
+): GenerateExerciseResult | null => {
+  const validatedCacheResult = getValidatedExerciseFromCache(
+    params.passageLanguage,
+    params.questionLanguage,
+    params.cefrLevel,
+    userId
+  );
+  if (validatedCacheResult) {
+    return {
+      quizData: validatedCacheResult.quizData,
+      quizId: validatedCacheResult.quizId,
+      cached: true,
+      error: null,
+    };
+  }
+  return null;
+};
+
+const getOrGenerateExercise = async (
+  genParams: ExerciseGenerationParams,
+  userId: number | null,
+  cachedCount: number
+): Promise<GenerateExerciseResult> => {
+  const requestParams: ExerciseRequestParams = {
+    passageLanguage: genParams.passageLanguage,
+    questionLanguage: genParams.questionLanguage,
+    cefrLevel: genParams.level,
+  };
+  const tryGenerate = () =>
+    tryGenerateAndCacheExercise(genParams, genParams.passageLanguage, userId);
+  const tryCache = () => tryGetCachedExercise(requestParams, userId);
+  const preferGenerate = cachedCount < CACHE_GENERATION_THRESHOLD;
+
+  if (preferGenerate) {
+    const generationResult = await tryGenerate();
+    if (generationResult.success) return createSuccessResult(generationResult.data, false);
+    const cachedResult = tryCache();
+    if (cachedResult) return cachedResult;
+    return createErrorResponse(generationResult.error.error);
+  }
+
+  const cachedResult = tryCache();
+  if (cachedResult) return cachedResult;
+  const generationResult = await tryGenerate();
+  if (generationResult.success) return createSuccessResult(generationResult.data, false);
+  return createErrorResponse(generationResult.error.error);
+};
 
 const getRequestContext = async () => {
   const headersList = await headers();
@@ -80,14 +211,14 @@ export const generateExerciseResponse = async (
   }
 
   const genParams = buildGenParams(validParams);
-  const cachedCount = countCachedExercises(
+  const cachedCountValue = countCachedExercises(
     genParams.passageLanguage,
     genParams.questionLanguage,
     genParams.level
   );
 
   try {
-    return await getExerciseWithCacheFallback(genParams, userId, cachedCount);
+    return await getExerciseWithCacheFallback(genParams, userId, cachedCountValue);
   } catch (error) {
     console.error('Error in generateExerciseResponse:', error);
     const errorMessage =

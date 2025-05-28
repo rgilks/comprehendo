@@ -1,8 +1,14 @@
 'use server';
 
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/authOptions';
 import { z } from 'zod';
-import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
-import { getAuthenticatedSessionUser } from './authUtils';
+import {
+  QuizDataSchema,
+  SubmitAnswerResultSchema,
+  SessionUserSchema,
+  SessionUser,
+} from '@/lib/domain/schemas';
 import { findQuizById } from '@/lib/repositories/quizRepository';
 import {
   getProgress as findUserProgress,
@@ -13,6 +19,23 @@ import {
 import { createFeedback } from '@/lib/repositories/feedbackRepository';
 import { CEFR_LEVELS, ProgressUpdateResult } from '@/lib/domain/progress';
 import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
+
+// export const SessionUserSchema = z.object({
+//   dbId: z.number(),
+//   name: z.string().optional(),
+//   email: z.string().optional(),
+//   image: z.string().optional(),
+// });
+
+// export type SessionUser = z.infer<typeof SessionUserSchema>;
+
+export const getAuthenticatedSessionUser = async (): Promise<SessionUser | null> => {
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
+  const parsed = SessionUserSchema.safeParse(user);
+  if (!parsed.success) return null;
+  return parsed.data;
+};
 
 const DEFAULT_CEFR_LEVEL = 'A1';
 
@@ -55,19 +78,32 @@ const calculateAndUpdateProgress = (
   language: string,
   isCorrect: boolean
 ): ProgressUpdateResult => {
-  const languageCode = language.toLowerCase().slice(0, 2);
-  const currentProgress = getOrInitProgress(userId, languageCode);
-  const { nextLevel, nextStreak, leveledUp } = calculateNextProgress(
-    currentProgress.cefr_level,
-    currentProgress.correct_streak,
-    isCorrect
-  );
-  updateProgressRepository(userId, languageCode, nextLevel, nextStreak);
-  return {
-    currentLevel: nextLevel,
-    currentStreak: nextStreak,
-    leveledUp,
-  };
+  try {
+    const languageCode = language.toLowerCase().slice(0, 2);
+    const currentProgress = getOrInitProgress(userId, languageCode);
+    const { nextLevel, nextStreak, leveledUp } = calculateNextProgress(
+      currentProgress.cefr_level,
+      currentProgress.correct_streak,
+      isCorrect
+    );
+    updateProgressRepository(userId, languageCode, nextLevel, nextStreak);
+    return {
+      currentLevel: nextLevel,
+      currentStreak: nextStreak,
+      leveledUp,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unknown error';
+    console.error(
+      `[calculateAndUpdateProgress] Error for user ${userId}, lang ${language}, isCorrect ${isCorrect}: ${message}`
+    );
+    return {
+      currentLevel: DEFAULT_CEFR_LEVEL, // Or fetch last known good state if critical
+      currentStreak: 0,
+      leveledUp: false,
+      error: `Error updating progress for user ${userId}.`,
+    };
+  }
 };
 
 const updateProgressSchema = z.object({
@@ -112,15 +148,21 @@ export interface ProgressResponse {
 }
 
 const getParsedQuizData = (quizId: number) => {
-  const quizRecord = findQuizById(quizId);
-  if (!quizRecord) return { data: null, error: `Quiz with ID ${quizId} not found.` };
-  const parsedContent = QuizDataSchema.safeParse(quizRecord.content);
-  if (!parsedContent.success)
-    return {
-      data: null,
-      error: `Failed to parse content for quiz ID ${quizId} against QuizDataSchema.`,
-    };
-  return { data: parsedContent.data };
+  try {
+    const quizRecord = findQuizById(quizId);
+    if (!quizRecord) return { data: null, error: `Quiz with ID ${quizId} not found.` };
+    const parsedContent = QuizDataSchema.safeParse(quizRecord.content);
+    if (!parsedContent.success)
+      return {
+        data: null,
+        error: `Failed to parse content for quiz ID ${quizId} against QuizDataSchema.`,
+      };
+    return { data: parsedContent.data };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unknown error';
+    console.error(`[getParsedQuizData] Error parsing quiz data for ID ${quizId}: ${message}`);
+    return { data: null, error: `Error processing quiz data for ID ${quizId}.` };
+  }
 };
 
 const generateFeedback = (

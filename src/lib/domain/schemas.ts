@@ -160,3 +160,12 @@ export const InitialExercisePairResultSchema = z.object({
 });
 
 export type InitialExercisePairResult = z.infer<typeof InitialExercisePairResultSchema>;
+
+export const SessionUserSchema = z.object({
+  dbId: z.number(),
+  name: z.string().optional(),
+  email: z.string().optional(),
+  image: z.string().optional(),
+});
+
+export type SessionUser = z.infer<typeof SessionUserSchema>;
