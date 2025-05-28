@@ -182,4 +182,41 @@ test.describe('Basic Workflow Test', () => {
 
     await context.close();
   });
+
+  test('should display static home page content correctly', async ({ page }: { page: Page }) => {
+    await page.goto(TARGET_URL);
+
+    // 1. Main Title
+    await expect(page.getByRole('heading', { name: /Comprehendo/i, level: 1 })).toBeVisible();
+
+    // 2. Subtitle
+    const expectedSubtitle =
+      'An AI-powered language learning tool to improve your reading comprehension';
+    await expect(page.getByText(expectedSubtitle)).toBeVisible();
+
+    // 3. TextGenerator Component
+    await expect(page.locator('[data-testid="text-generator-container"]')).toBeVisible();
+
+    // 4. Footer
+    // 4a. Powered By
+    const expectedPoweredBy = 'Powered by Google Gemini';
+    await expect(page.getByText(new RegExp(expectedPoweredBy, 'i'))).toBeVisible();
+
+    // 4b. GitHub Link
+    const expectedGitHubText = 'GitHub';
+    const githubLink = page.getByRole('link', { name: new RegExp(expectedGitHubText, 'i') });
+    await expect(githubLink).toBeVisible();
+    await expect(githubLink).toHaveAttribute('href', 'https://github.com/rgilks/comprehendo');
+
+    // 4c. Ko-fi Link
+    const kofiLink = page.getByRole('link', { name: /Buy Me a Coffee at ko-fi.com/i });
+    await expect(kofiLink).toBeVisible();
+    await expect(kofiLink).toHaveAttribute('href', 'https://ko-fi.com/N4N31DPNUS');
+    const kofiImage = page.getByAltText('Buy Me a Coffee at ko-fi.com');
+    await expect(kofiImage).toBeVisible();
+    await expect(kofiImage).toHaveAttribute(
+      'src',
+      /https%3A%2F%2Fstorage\.ko-fi\.com%2Fcdn%2Fkofi2\.png%3Fv%3D6/
+    );
+  });
 });
