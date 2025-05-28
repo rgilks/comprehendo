@@ -12,12 +12,9 @@ import {
   PartialQuizDataSchema,
   type InitialExercisePairResult,
   GenerateExerciseResultSchema,
+  QuizDataSchema,
+  type PartialQuizData,
 } from '@/domain/schemas';
-import {
-  saveExerciseToCache,
-  getValidatedExerciseFromCache,
-  countCachedExercises,
-} from '@/lib/exercise-cache';
 import {
   generateAndValidateExercise,
   type ExerciseGenerationOptions,
@@ -33,8 +30,67 @@ import {
   resetRateLimit,
   createRateLimit,
 } from '@/repo/rateLimitRepo';
+import {
+  getCachedExerciseToAttempt as getCachedExercise,
+  saveExercise as saveExerciseToCache,
+  countCachedExercisesInRepo as countCachedExercises,
+  type QuizRow,
+} from '@/repo/quizRepo';
 import { z } from 'zod';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
+
+const getValidatedExerciseFromCache = (
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  userId: number | null
+): { quizData: PartialQuizData; quizId: number } | undefined => {
+  const cachedExercise: QuizRow | undefined = getCachedExercise(
+    passageLanguage,
+    questionLanguage,
+    level,
+    userId
+  );
+
+  if (cachedExercise) {
+    try {
+      const parsedCachedContent: unknown = JSON.parse(cachedExercise.content);
+      const validatedCachedData = QuizDataSchema.safeParse(parsedCachedContent);
+
+      if (!validatedCachedData.success) {
+        console.error(
+          '[Action:getValidated] Invalid data found in cache for ID',
+          cachedExercise.id,
+          ':',
+          validatedCachedData.error.format()
+        );
+        return undefined;
+      } else {
+        const fullData = validatedCachedData.data;
+        const partialData: PartialQuizData = {
+          paragraph: fullData.paragraph,
+          question: fullData.question,
+          options: fullData.options,
+          topic: fullData.topic,
+        };
+        return {
+          quizData: partialData,
+          quizId: cachedExercise.id,
+        };
+      }
+    } catch (error) {
+      console.error(
+        '[Action:getValidated] Error processing cached exercise ID',
+        cachedExercise.id,
+        ':',
+        error
+      );
+      return undefined;
+    }
+  }
+
+  return undefined;
+};
 
 const MAX_REQUESTS_PER_HOUR = parseInt(
   process.env['RATE_LIMIT_MAX_REQUESTS_PER_HOUR'] || '100',
@@ -86,9 +142,6 @@ const createErrorResponse = (error: string, details?: unknown): GenerateExercise
   cached: false,
 });
 
-const validateRequestParams = (requestParams: unknown) =>
-  ExerciseRequestParamsSchema.safeParse(requestParams);
-
 const CACHE_GENERATION_THRESHOLD = 100;
 
 const createSuccessResult = (
@@ -111,11 +164,10 @@ const createSuccessResult = (
 
 const tryGenerateAndCacheExercise = async (
   params: ExerciseGenerationParams,
-  language: string,
   userId: number | null
 ): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
   try {
-    const options: ExerciseGenerationOptions = { ...params, language };
+    const options: ExerciseGenerationOptions = { ...params, language: params.passageLanguage };
     const generatedExercise = await generateAndValidateExercise(options);
     const exerciseId = saveExerciseToCache(
       params.passageLanguage,
@@ -124,7 +176,7 @@ const tryGenerateAndCacheExercise = async (
       JSON.stringify(generatedExercise),
       userId
     );
-    if (exerciseId === undefined) {
+    if (typeof exerciseId !== 'number') {
       return failure({ error: 'Exercise generated but failed to save to cache (undefined ID).' });
     }
     return success({ content: generatedExercise, id: exerciseId });
@@ -133,27 +185,6 @@ const tryGenerateAndCacheExercise = async (
       error: `Error during AI generation/processing: ${error instanceof Error ? error.message : String(error)}`,
     });
   }
-};
-
-const tryGetCachedExercise = (
-  params: ExerciseRequestParams,
-  userId: number | null
-): GenerateExerciseResult | null => {
-  const validatedCacheResult = getValidatedExerciseFromCache(
-    params.passageLanguage,
-    params.questionLanguage,
-    params.cefrLevel,
-    userId
-  );
-  if (validatedCacheResult) {
-    return {
-      quizData: validatedCacheResult.quizData,
-      quizId: validatedCacheResult.quizId,
-      cached: true,
-      error: null,
-    };
-  }
-  return null;
 };
 
 const getOrGenerateExercise = async (
@@ -167,9 +198,7 @@ const getOrGenerateExercise = async (
     cefrLevel: genParams.level,
   };
 
-  const attemptGeneration = () =>
-    tryGenerateAndCacheExercise(genParams, genParams.passageLanguage, userId);
-  const attemptCache = () => tryGetCachedExercise(requestParams, userId);
+  const attemptGeneration = () => tryGenerateAndCacheExercise(genParams, userId);
 
   const preferGenerate = cachedCount < CACHE_GENERATION_THRESHOLD;
   let generationError: ActionError | null = null;
@@ -181,18 +210,38 @@ const getOrGenerateExercise = async (
     }
     generationError = genResult.error;
 
-    const cachedResult = attemptCache();
-    if (cachedResult) {
-      return cachedResult;
+    const validatedCacheResultPreferGen = getValidatedExerciseFromCache(
+      requestParams.passageLanguage,
+      requestParams.questionLanguage,
+      requestParams.cefrLevel,
+      userId
+    );
+    if (validatedCacheResultPreferGen) {
+      return {
+        quizData: validatedCacheResultPreferGen.quizData,
+        quizId: validatedCacheResultPreferGen.quizId,
+        cached: true,
+        error: null,
+      };
     }
     return createErrorResponse(
       generationError.error || 'Generation preferred but failed, and no cached version available.'
     );
   }
 
-  const cachedResult = attemptCache();
-  if (cachedResult) {
-    return cachedResult;
+  const validatedCacheResultOtherwise = getValidatedExerciseFromCache(
+    requestParams.passageLanguage,
+    requestParams.questionLanguage,
+    requestParams.cefrLevel,
+    userId
+  );
+  if (validatedCacheResultOtherwise) {
+    return {
+      quizData: validatedCacheResultOtherwise.quizData,
+      quizId: validatedCacheResultOtherwise.quizId,
+      cached: true,
+      error: null,
+    };
   }
 
   const genResult = await attemptGeneration();
@@ -213,7 +262,7 @@ const getRequestContext = async () => {
 };
 
 const validateAndExtractParams = (requestParams: unknown) => {
-  const validationResult = validateRequestParams(requestParams);
+  const validationResult = ExerciseRequestParamsSchema.safeParse(requestParams);
   if (!validationResult.success) {
     return {
       validParams: null,
@@ -245,8 +294,20 @@ export const generateExerciseResponse = async (
   if (!validParams) return createErrorResponse(errorMsg);
 
   if (!checkRateLimit(ip)) {
-    const cachedResult = tryGetCachedExercise(validParams, userId);
-    if (cachedResult) return cachedResult;
+    const validatedCacheResultRateLimit = getValidatedExerciseFromCache(
+      validParams.passageLanguage,
+      validParams.questionLanguage,
+      validParams.cefrLevel,
+      userId
+    );
+    if (validatedCacheResultRateLimit) {
+      return {
+        quizData: validatedCacheResultRateLimit.quizData,
+        quizId: validatedCacheResultRateLimit.quizId,
+        cached: true,
+        error: null,
+      };
+    }
     return createErrorResponse('Rate limit exceeded and no cached question available.');
   }
 

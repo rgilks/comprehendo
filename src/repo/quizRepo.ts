@@ -107,26 +107,28 @@ export const saveExercise = (
   level: string,
   contentJson: string,
   userId: number | null
-): number | bigint => {
+): number | undefined => {
   try {
     const result = db
       .prepare(
-        'INSERT INTO quiz (language, level, content, question_language, user_id) VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO quiz (language, level, content, question_language, user_id, created_at) VALUES (?, ?, ?, ?, ?, datetime("now")) RETURNING id'
       )
-      .run(passageLanguage, level, contentJson, questionLanguage, userId);
-    return result.lastInsertRowid;
+      .get(passageLanguage, level, contentJson, questionLanguage, userId) as
+      | { id: number }
+      | undefined;
+    return result?.id;
   } catch (error) {
     console.error('[QuizRepository] Error saving exercise:', error);
-    throw error;
+    return undefined;
   }
 };
 
-export const findSuitableQuizForUser = (
+export const getCachedExerciseToAttempt = (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   userId: number | null
-): Quiz | null => {
+): QuizRow | undefined => {
   try {
     let stmt;
     let row: QuizRow | undefined;
@@ -142,9 +144,9 @@ export const findSuitableQuizForUser = (
            q.language = ? 
            AND q.question_language = ? 
            AND q.level = ?
-           AND qf.user_id IS NULL -- Exclude if feedback exists for this user
+           AND qf.user_id IS NULL
          ORDER BY 
-           q.created_at DESC -- Consider RANDOM() or other strategies?
+           q.created_at DESC 
          LIMIT 1`;
       stmt = db.prepare<[number, string, string, string]>(sql);
       row = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
@@ -159,48 +161,16 @@ export const findSuitableQuizForUser = (
     }
 
     if (!row) {
-      return null;
+      return undefined;
     }
-
-    const rowParseResult = QuizRowSchema.safeParse(row);
-    if (!rowParseResult.success) {
-      console.error(
-        `[QuizRepository] Invalid cached quiz row structure found for ${passageLanguage}/${level}:`,
-        rowParseResult.error
-      );
-      return null;
-    }
-
-    let parsedContent: unknown;
-    try {
-      parsedContent = JSON.parse(row.content);
-    } catch (jsonError) {
-      console.error(
-        `[QuizRepository] Failed to parse cached quiz content JSON for ID ${row.id}:`,
-        jsonError
-      );
-      return null;
-    }
-    const contentParseResult = QuizContentSchema.safeParse(parsedContent);
-    if (!contentParseResult.success) {
-      console.error(
-        `[QuizRepository] Invalid cached quiz content JSON found for ${passageLanguage}/${level}, ID ${row.id}:`,
-        contentParseResult.error
-      );
-      return null;
-    }
-
-    return {
-      ...rowParseResult.data,
-      content: contentParseResult.data,
-    };
+    return QuizRowSchema.parse(row);
   } catch (error) {
     console.error('[QuizRepository] Error finding suitable quiz:', error);
-    throw error;
+    return undefined;
   }
 };
 
-export const countExercises = (
+export const countCachedExercisesInRepo = (
   passageLanguage: string,
   questionLanguage: string,
   level: string
