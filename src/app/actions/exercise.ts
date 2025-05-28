@@ -16,7 +16,7 @@ import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language
 import type { ExerciseGenerationParams } from '@/lib/domain/ai';
 import { type InitialExercisePairResult, GenerateExerciseResultSchema } from '@/lib/domain/schemas';
 import { LANGUAGES } from '@/lib/domain/language';
-import { checkRateLimit } from '@/lib/rate-limiter';
+import { checkRateLimit } from '@/app/actions/rate-limiter';
 import { z } from 'zod';
 import type { GenerateExerciseResult, ExerciseRequestParams } from '@/lib/domain/schemas';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
