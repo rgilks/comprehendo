@@ -47,21 +47,22 @@ export const createSettingsSlice: StateCreator<
   setPassageLanguage: (lang) => {
     get().stopPassageSpeech();
 
+    get().setQuizData(null);
+    get().setSelectedAnswer(null);
+    get().setIsAnswered(false);
+    get().setRelevantTextRange(null);
+    get().setNextQuizAvailable(null);
+
     set((state) => {
       state.passageLanguage = lang;
-      state.quizData = null;
-      state.selectedAnswer = null;
-      state.isAnswered = false;
-      state.showExplanation = false;
-      state.showQuestionSection = false;
-      state.currentWordIndex = null;
-      state.relevantTextRange = null;
+      state.generatedPassageLanguage = null;
       state.error = null;
       state.loading = false;
-      state.showContent = false;
-      state.generatedPassageLanguage = null;
-      state.nextQuizAvailable = null;
     });
+
+    get().setShowExplanation(false);
+    get().setShowQuestionSection(false);
+    get().setShowContent(false);
 
     get().updateAvailableVoices(lang);
     void get().fetchProgress();

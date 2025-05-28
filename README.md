@@ -64,7 +64,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Zod**: Schema validation
 - **i18next / react-i18next**: Internationalization
 - **@serwist/next**: PWA features
-- **zustand**: State management
+- **zustand**: State management. [See documentation for details](docs/state-management.md)
 - **Playwright**: End-to-end testing
 - **ESLint / Prettier**: Linting & Formatting
 - **Turbopack**: (Optional, used with `npm run dev`)

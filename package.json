@@ -46,6 +46,7 @@
     "eslint": "^9.27.0",
     "eslint-config-next": "15.3.2",
     "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-immer": "^0.0.1",
     "npm-check-updates": "^18.0.1",
     "playwright": "^1.52.0",
     "postcss": "^8.5.3",

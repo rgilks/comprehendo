@@ -4,12 +4,16 @@ import nextPlugin from '@next/eslint-plugin-next';
 import reactPlugin from 'eslint-plugin-react';
 import hooksPlugin from 'eslint-plugin-react-hooks';
 import prettierConfig from 'eslint-config-prettier';
+import immerPlugin from 'eslint-plugin-immer';
 import globals from 'globals';
 
-const removeGlobal = (globalsObj, globalToRemove) => {
-  const rest = { ...globalsObj };
-  delete rest[globalToRemove];
-  return rest;
+const nodeGlobals = {
+  ...globals.node,
+};
+
+const browserGlobals = {
+  ...globals.browser,
+  AudioWorkletGlobalScope: 'readonly',
 };
 
 export default tseslint.config(
@@ -25,7 +29,41 @@ export default tseslint.config(
     ],
   },
   eslint.configs.recommended,
-
+  {
+    files: ['*.js', '*.mjs'],
+    languageOptions: {
+      globals: nodeGlobals,
+    },
+  },
+  {
+    files: ['**/*.js', '**/*.mjs', '**/*.jsx', '**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      globals: {
+        ...browserGlobals,
+        ...nodeGlobals,
+      },
+    },
+    plugins: {
+      '@next/next': nextPlugin,
+      react: reactPlugin,
+      'react-hooks': hooksPlugin,
+    },
+    rules: {
+      'no-undef': 'error',
+      ...reactPlugin.configs.recommended.rules,
+      ...hooksPlugin.configs.recommended.rules,
+      '@next/next/no-html-link-for-pages': 'warn',
+      '@next/next/no-sync-scripts': 'warn',
+      'react-hooks/exhaustive-deps': 'error',
+      'react/no-unescaped-entities': 'error',
+      'react/react-in-jsx-scope': 'off',
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
     extends: [...tseslint.configs.strictTypeChecked],
@@ -33,11 +71,6 @@ export default tseslint.config(
       parserOptions: {
         project: true,
         tsconfigRootDir: import.meta.dirname,
-      },
-      globals: {
-        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '),
-        ...globals.node,
-        AudioWorkletGlobalScope: 'readonly',
       },
     },
     rules: {
@@ -67,57 +100,8 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'warn',
     },
   },
-
-  {
-    files: ['**/*.js', '**/*.mjs'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '),
-        AudioWorkletGlobalScope: 'readonly',
-      },
-    },
-    rules: {
-      'no-undef': 'error',
-    },
-  },
-
-  {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-    plugins: {
-      '@next/next': nextPlugin,
-      react: reactPlugin,
-      'react-hooks': hooksPlugin,
-    },
-    languageOptions: {
-      globals: {
-        ...removeGlobal(globals.browser, 'AudioWorkletGlobalScope '),
-        AudioWorkletGlobalScope: 'readonly',
-      },
-    },
-    rules: {
-      ...reactPlugin.configs.recommended.rules,
-      ...hooksPlugin.configs.recommended.rules,
-      '@next/next/no-html-link-for-pages': 'warn',
-      '@next/next/no-sync-scripts': 'warn',
-      'react-hooks/exhaustive-deps': 'error',
-      'react/no-unescaped-entities': 'error',
-      'react/react-in-jsx-scope': 'off',
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
-    },
-  },
-
   {
     files: ['**/playwright.config.js'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -131,6 +115,15 @@ export default tseslint.config(
       'no-undef': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
+  {
+    files: ['app/**/*.ts'],
+    plugins: {
+      immer: immerPlugin,
+    },
+    rules: {
+      'immer/no-update-map': 'warn',
     },
   },
   {

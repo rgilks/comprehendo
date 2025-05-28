@@ -25,6 +25,8 @@ export const createProgressSlice: StateCreator<
   fetchProgress: async () => {
     set((state) => {
       state.isProgressLoading = true;
+      state.error = null;
+      state.showError = false;
     });
 
     try {
@@ -55,10 +57,10 @@ export const createProgressSlice: StateCreator<
       set((state) => {
         state.isProgressLoading = false;
         state.userStreak = progress.currentStreak;
-        state.cefrLevel = progress.currentLevel;
         state.error = null;
         state.showError = false;
       });
+      get().setCefrLevel(progress.currentLevel);
     } catch (error) {
       set((state) => {
         state.isProgressLoading = false;

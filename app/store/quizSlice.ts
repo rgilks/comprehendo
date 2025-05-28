@@ -41,8 +41,6 @@ export interface QuizSlice extends BaseSlice {
     creditsAvailable: number;
     creditsUsed: number;
   };
-  showQuestionSection: boolean;
-  showExplanation: boolean;
   setQuizData: (data: PartialQuizData | null) => void;
   setSelectedAnswer: (answer: string | null) => void;
   setIsAnswered: (answered: boolean) => void;
@@ -83,8 +81,6 @@ const getInitialQuizState = () => ({
     creditsAvailable: INITIAL_HOVER_CREDITS,
     creditsUsed: 0,
   },
-  showQuestionSection: false,
-  showExplanation: false,
 });
 
 const resetFeedbackState = (state: QuizSlice) => {
@@ -100,7 +96,6 @@ const resetQuizCoreState = (state: QuizSlice) => {
   state.isAnswered = false;
   state.relevantTextRange = null;
   resetFeedbackState(state);
-  state.showExplanation = false;
   state.nextQuizAvailable = null;
   state.feedbackSubmitted = false;
   state.hover.creditsUsed = 0;
@@ -143,6 +138,9 @@ export const createQuizSlice: StateCreator<
   resetQuizState: () => {
     set((state) => {
       Object.assign(state, getInitialQuizState());
+      get().setShowQuestionSection(false);
+      get().setShowExplanation(false);
+      get().setShowContent(false);
     });
   },
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
@@ -151,14 +149,14 @@ export const createQuizSlice: StateCreator<
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
-      state.showQuestionSection = true;
-      state.showExplanation = false;
-      state.showContent = true;
       state.loading = false;
       state.error = null;
       const currentPassageLanguage = get().passageLanguage;
       state.generatedPassageLanguage = currentPassageLanguage;
     });
+    get().setShowQuestionSection(true);
+    get().setShowExplanation(false);
+    get().setShowContent(true);
     void get().generateText(true);
   },
   loadNextQuiz: () => {
@@ -170,7 +168,8 @@ export const createQuizSlice: StateCreator<
     }
   },
   fetchInitialPair: async (): Promise<void> => {
-    set({ loading: true, error: null, showContent: false });
+    set({ loading: true, error: null });
+    get().setShowContent(false);
     get().stopPassageSpeech();
     get().resetQuizState();
     try {
@@ -196,16 +195,15 @@ export const createQuizSlice: StateCreator<
         state.quizData = quizInfo1.quizData;
         state.currentQuizId = quizInfo1.quizId;
         state.generatedPassageLanguage = fetchParams.passageLanguage;
-        resetQuizCoreState(state);
-        state.showExplanation = false;
         state.feedbackSubmitted = false;
         state.hover.creditsUsed = 0;
         state.nextQuizAvailable = { quizData: quizInfo2.quizData, quizId: quizInfo2.quizId };
-        state.showQuestionSection = true;
-        state.showContent = true;
         state.loading = false;
         state.error = null;
       });
+      get().setShowExplanation(false);
+      get().setShowQuestionSection(true);
+      get().setShowContent(true);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error fetching initial pair';
       get().setError(errorMessage);
@@ -224,6 +222,7 @@ export const createQuizSlice: StateCreator<
       set((state) => {
         resetQuizCoreState(state);
       });
+      get().setShowExplanation(false);
     }
     try {
       const response = await generateExerciseResponse({
@@ -277,15 +276,16 @@ export const createQuizSlice: StateCreator<
     set((state) => {
       state.selectedAnswer = answer;
       state.isAnswered = true;
-      state.showExplanation = true;
     });
+    get().setShowExplanation(true);
+
     const quizId = get().currentQuizId;
     if (typeof quizId !== 'number') {
       set((state) => {
-        state.error = 'Cannot submit answer: Invalid quiz ID.';
         state.isAnswered = false;
         state.selectedAnswer = null;
       });
+      get().setError('Cannot submit answer: Invalid quiz ID.');
       return;
     }
     try {
@@ -346,9 +346,7 @@ export const createQuizSlice: StateCreator<
         }
       });
     } catch (error: unknown) {
-      set((state) => {
-        state.error = error instanceof Error ? error.message : 'Failed to submit answer.';
-      });
+      get().setError(error instanceof Error ? error.message : 'Failed to submit answer.');
     }
   },
   submitFeedback: async (isGood: boolean): Promise<void> => {
@@ -368,22 +366,19 @@ export const createQuizSlice: StateCreator<
     const feedbackIsCorrect = get().feedback.isCorrect;
     const quizId = currentQuizId;
     if (typeof quizId !== 'number') {
-      set({
-        error: 'Cannot submit feedback: Invalid quiz ID.',
-        loading: false,
-        feedbackSubmitted: false,
-      });
+      get().setError('Cannot submit feedback: Invalid quiz ID.');
+      set({ loading: false, feedbackSubmitted: false });
       return;
     }
     if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
-      set({
-        error: 'Cannot submit feedback: Missing required state (language/level). Please refresh.',
-        loading: false,
-        feedbackSubmitted: false,
-      });
+      get().setError(
+        'Cannot submit feedback: Missing required state (language/level). Please refresh.'
+      );
+      set({ loading: false, feedbackSubmitted: false });
       return;
     }
-    set({ loading: true, error: null });
+    get().setError(null);
+    set({ loading: true });
     try {
       const payload = {
         quizId: quizId,
@@ -415,11 +410,8 @@ export const createQuizSlice: StateCreator<
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      set({
-        error: `Failed to submit feedback: ${message}`,
-        loading: false,
-        feedbackSubmitted: false,
-      });
+      get().setError(`Failed to submit feedback: ${message}`);
+      set({ loading: false, feedbackSubmitted: false });
     }
   },
   useHoverCredit: () => {
