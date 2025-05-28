@@ -2,8 +2,6 @@ import db from '@/lib/db';
 import { Progress, ProgressSchema } from '@/lib/domain/progress';
 import { CEFRLevel } from '@/lib/domain/language-guidance';
 
-// Define the expected raw shape returned by the DB query
-// Note: last_practiced might be string (ISO 8601) or null from DB
 type RawProgress = {
   user_id: number;
   language_code: string;
@@ -24,8 +22,6 @@ export const getProgress = (userId: number, languageCode: string): Progress | nu
     if (!row) return null;
     const parseResult = ProgressSchema.safeParse({
       ...row,
-      // Assuming last_practiced is stored as TEXT (ISO 8601) which Zod parses to Date
-      // If stored differently (e.g., unix timestamp), adjust parsing here
       last_practiced: row.last_practiced ? new Date(row.last_practiced) : null,
     });
     if (!parseResult.success) {
@@ -58,7 +54,7 @@ export const initializeProgress = (userId: number, languageCode: string): Progre
       ...initialProgress,
       user_id: userId,
       language_code: languageCode,
-      last_practiced: null, // Initial state has no last practiced date
+      last_practiced: null,
     };
   } catch (dbError) {
     const message = dbError instanceof Error ? dbError.message : 'Unknown DB error';
@@ -96,5 +92,4 @@ export const updateProgress = (
   }
 };
 
-// Constant for streak threshold
 export { STREAK_THRESHOLD_FOR_LEVEL_UP };

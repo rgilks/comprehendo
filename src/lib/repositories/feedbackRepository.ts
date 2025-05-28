@@ -37,7 +37,7 @@ export const createFeedback = (feedbackData: FeedbackInput): number | bigint => 
     return result.lastInsertRowid;
   } catch (error) {
     console.error('[FeedbackRepository] Error creating question feedback:', error);
-    throw error; // Re-throw DB errors
+    throw error;
   }
 };
 
@@ -68,7 +68,7 @@ export const findFeedbackByUserIdAndQuizId = (
       quiz_id: row.quiz_id,
       user_id: row.user_id,
       is_good: Boolean(row.is_good),
-      user_answer: row.user_answer ?? undefined, // Convert null back to undefined if needed by schema
+      user_answer: row.user_answer ?? undefined,
       is_correct: row.is_correct === null ? undefined : Boolean(row.is_correct),
     };
   } catch (error) {
@@ -76,6 +76,6 @@ export const findFeedbackByUserIdAndQuizId = (
       `[FeedbackRepository] Error finding feedback for user ${userId}, quiz ${quizId}:`,
       error
     );
-    throw error; // Re-throw DB errors
+    throw error;
   }
 };
