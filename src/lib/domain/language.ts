@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// Base Language Schema
 export const LanguageSchema = z.enum([
   'zh', // Chinese
   'en', // English
@@ -59,7 +58,6 @@ export const SPEECH_LANGUAGES: Record<Language, string> = {
   th: 'th-TH',
 };
 
-// Define languages available for learning content
 const excludedLearningLanguages = ['zh', 'ja', 'ko'];
 export const LearningLanguageSchema = LanguageSchema.refine(
   (lang) => !excludedLearningLanguages.includes(lang),
@@ -67,7 +65,6 @@ export const LearningLanguageSchema = LanguageSchema.refine(
 );
 export type LearningLanguage = z.infer<typeof LearningLanguageSchema>;
 
-// Create a helper to filter LANGUAGES for LEARNING_LANGUAGES
 const learningLanguageValues = LanguageSchema.options.filter(
   (lang) => !excludedLearningLanguages.includes(lang)
 );
@@ -86,7 +83,6 @@ export const getTextDirection = (language: Language): 'ltr' | 'rtl' => {
   return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
 };
 
-// Define the languages specifically available for the UI based on locale files
 export const SUPPORTED_UI_LANG_CODES = [
   'zh', // Chinese
   'en', // English

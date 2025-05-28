@@ -5,7 +5,6 @@ import type { CEFRLevel } from '@/lib/domain/language-guidance';
 const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const languageKeys = Object.keys(LANGUAGES) as Language[];
 
-// Schema for the parameters required to request a new exercise
 export const ExerciseRequestParamsSchema = z.object({
   passageLanguage: z
     .string()
@@ -24,7 +23,6 @@ export const ExerciseRequestParamsSchema = z.object({
     }),
 });
 
-// Exporting the inferred type for usage
 export type ExerciseRequestParams = z.infer<typeof ExerciseRequestParamsSchema>;
 
 export const QuizDataSchema = z.object({
@@ -82,7 +80,6 @@ export const SubmitAnswerResultSchema = z.object({
 
 export type SubmitAnswerResult = z.infer<typeof SubmitAnswerResultSchema>;
 
-// Represents the core content structure generated for an exercise
 export const ExerciseContentSchema = z.object({
   paragraph: z.string(),
   question: z.string(),
@@ -97,7 +94,7 @@ export const ExerciseContentSchema = z.object({
   relevantText: z.string(),
   topic: z.string().optional().nullable(),
 });
-export type ExerciseContent = z.infer<typeof ExerciseContentSchema>; // Renamed type alias
+export type ExerciseContent = z.infer<typeof ExerciseContentSchema>;
 
 export const LanguageLevels = z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 
@@ -117,8 +114,6 @@ export const CEFRTopicsSchema = z.record(z.string(), z.array(TopicCategorySchema
 
 export type TopicCategory = z.infer<typeof TopicCategorySchema>;
 export type CEFRTopics = z.infer<typeof CEFRTopicsSchema>;
-
-// Exercise-related schemas (moved from exercise.types.ts)
 
 export const ExerciseOptionsSchema = z.object({
   A: z.string(),
@@ -147,13 +142,11 @@ export const GeneratedExerciseSchema = z.object({
 });
 export type GeneratedExercise = z.infer<typeof GeneratedExerciseSchema>;
 
-// Basic API response structure
 export const apiResponseSchema = z.object({
   result: z.string(),
 });
 export type ApiResponse = z.infer<typeof apiResponseSchema>;
 
-// Schema for the result of generating an initial pair of exercises
 export const InitialExercisePairResultSchema = z.object({
   quizzes: z.array(GenerateExerciseResultSchema).length(2),
   error: z.string().nullable(),

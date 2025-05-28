@@ -1,6 +1,5 @@
 import { z, ZodIssueCode } from 'zod';
 
-// Helper function to add issues for missing paired environment variables
 const checkPairedEnvVars = (
   ctx: z.RefinementCtx,
   id: string | undefined,
@@ -71,14 +70,11 @@ if (!authEnvVars.success) {
   const formattedErrors = JSON.stringify(authEnvVars.error.format(), null, 4);
   console.error('❌ Invalid Auth environment variables:', formattedErrors);
 
-  // Throw an error if validation fails outside the build phase
   if (process.env['NEXT_PHASE'] !== 'phase-production-build') {
     throw new Error('Invalid Auth environment variables: \n' + formattedErrors);
   }
-  // During build, log errors but allow continuation (e.g., AUTH_SECRET might be added later)
 }
 
-// Add warning here, after successful validation
 if (
   authEnvVars.success &&
   !authEnvVars.data.NEXTAUTH_URL &&
@@ -89,4 +85,4 @@ if (
 
 export const validatedAuthEnv = authEnvVars.success
   ? authEnvVars.data
-  : ({} as z.infer<typeof authEnvSchema>); // Provide a default empty object if validation fails but AUTH_SECRET is present
+  : ({} as z.infer<typeof authEnvSchema>);

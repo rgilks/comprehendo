@@ -1,6 +1,5 @@
-import db from '@/lib/db'; // Import db
+import db from '@/lib/db';
 
-// Define interfaces for the results used within this repository
 interface TableNameResult {
   name: string;
 }
