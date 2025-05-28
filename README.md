@@ -36,7 +36,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Continuous Deployment**: Automatic deployment to Fly.io via GitHub Actions when code is pushed to the `main` branch.
 - **Admin Panel**: A secure area for administrators to view application data (users, quizzes, feedback).
 - **Internationalization (i18n)**: Full i18n support for UI elements using `i18next` and locale files in `public/locales/`.
-- **PWA Support**: Progressive Web App features for mobile installation using `@serwist/next`.
+- **PWA Support**: Progressive Web App features (e.g., installability) are enabled via `@serwist/next`, relying on browser/device native installation prompts.
 - **State Management**: Uses `zustand` for lightweight global state management.
 - **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
 - **Testing**:

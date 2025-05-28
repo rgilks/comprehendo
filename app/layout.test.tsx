@@ -50,13 +50,12 @@ describe('RootLayout', () => {
     expect(document.documentElement).toHaveAttribute('lang', 'fr');
   });
 
-  it('renders AuthProvider and PWAInstall components', async () => {
+  it('renders AuthProvider', async () => {
     render(
       await RootLayout({
         children: <div>Child</div>,
       })
     );
     expect(screen.getByTestId('auth-provider')).toBeInTheDocument();
-    expect(screen.getByTestId('pwa-install')).toBeInTheDocument();
   });
 });

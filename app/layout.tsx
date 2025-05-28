@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
-import PWAInstall from '@/components/PWAInstall';
 import { type Language } from '@/lib/domain/language';
 import { cookies } from 'next/headers';
 
@@ -63,10 +62,7 @@ const RootLayout = async ({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={poppins.className}>
-        <AuthProvider>
-          {children}
-          <PWAInstall />
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

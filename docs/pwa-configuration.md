@@ -39,6 +39,7 @@ Serwist is a collection of JavaScript libraries for progressive web apps, forked
 
 - The service worker (`app/sw.ts`) handles basic PWA functionalities like precaching, runtime caching, and message/push event handling.
 - The `register: true` option in `next.config.js` ensures that Serwist automatically generates the necessary code to register the service worker in the client-side application.
+- The application relies on the browser or device's native UI to prompt the user for PWA installation. No custom installation UI is implemented.
 - Customizations to caching strategies, push notification handling, or other advanced PWA features can be further developed within `app/sw.ts`.
 
 Refer to the [Serwist documentation](https://serwist.pages.dev/) for more in-depth information on its capabilities and configuration options.
