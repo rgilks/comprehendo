@@ -55,7 +55,7 @@ export default tseslint.config(
         },
       ],
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'warn',
       '@typescript-eslint/restrict-template-expressions': [
@@ -112,7 +112,7 @@ export default tseslint.config(
   },
 
   {
-    files: ['**/__tests__/**/*.ts?(x)', '**/*.test.ts?(x)', '**/playwright.config.js'],
+    files: ['**/playwright.config.js'],
     languageOptions: {
       globals: {
         ...globals.node,

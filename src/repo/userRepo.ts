@@ -1,4 +1,4 @@
-import db from '../db';
+import db from '../lib/db';
 import { z } from 'zod';
 import { type Account, type User } from 'next-auth';
 import { type AdapterUser } from 'next-auth/adapters';

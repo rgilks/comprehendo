@@ -9,14 +9,14 @@ import {
   SessionUserSchema,
   SessionUser,
 } from '@/domain/schemas';
-import { findQuizById } from '@/lib/repositories/quizRepository';
+import { findQuizById } from '@/repo/quizRepo';
 import {
   getProgress as findUserProgress,
   initializeProgress,
   updateProgress as updateProgressRepository,
   STREAK_THRESHOLD_FOR_LEVEL_UP,
-} from '@/lib/repositories/progressRepository';
-import { createFeedback } from '@/lib/repositories/feedbackRepository';
+} from '@/repo/progressRepo';
+import { createFeedback } from '@/repo/feedbackRepo';
 import { CEFR_LEVELS, ProgressUpdateResult } from '@/domain/progress';
 import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/domain/language-guidance';
 import { extractZodErrors } from '@/lib/utils/errorUtils';

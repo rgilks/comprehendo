@@ -32,7 +32,7 @@ import {
   incrementRateLimit,
   resetRateLimit,
   createRateLimit,
-} from '@/lib/repositories/rateLimitRepository';
+} from '@/repo/rateLimitRepo';
 import { z } from 'zod';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
 

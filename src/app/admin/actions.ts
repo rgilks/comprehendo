@@ -6,7 +6,7 @@ import {
   getAllTableNames as repoGetAllTableNames,
   getTableData as repoGetTableData,
   type PaginatedTableData,
-} from '@/lib/repositories/adminRepository';
+} from '@/repo/adminRepo';
 
 const ensureAdmin = async (): Promise<void> => {
   const session = await getServerSession(authOptions);
