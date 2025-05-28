@@ -68,8 +68,9 @@ export const getTableData = (
     })();
   } catch (error) {
     console.error(`[AdminRepository] Error fetching paginated data for table ${tableName}:`, error);
-    throw new Error(
-      `Failed to fetch table data for ${tableName}: ${error instanceof Error ? error.message : String(error)}`
-    );
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error('Failed to fetch table data');
   }
 };

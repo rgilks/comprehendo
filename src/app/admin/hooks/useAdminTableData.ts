@@ -70,10 +70,11 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
 
   const refreshData = useCallback(async () => {
     if (selectedTable) {
-      setCurrentPage(1);
-      await fetchDataForTable(selectedTable, 1, rowsPerPage);
+      await selectAndFetchTable(selectedTable);
     }
-  }, [selectedTable, fetchDataForTable, rowsPerPage]);
+  }, [selectedTable, selectAndFetchTable]);
+
+  const totalPages = Math.ceil(totalRows / rowsPerPage);
 
   const goToPreviousPage = useCallback(async () => {
     if (selectedTable && currentPage > 1) {
@@ -82,12 +83,10 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
   }, [selectedTable, currentPage, fetchDataForTable, rowsPerPage]);
 
   const goToNextPage = useCallback(async () => {
-    if (selectedTable && currentPage < Math.ceil(totalRows / rowsPerPage)) {
+    if (selectedTable && currentPage < totalPages) {
       await fetchDataForTable(selectedTable, currentPage + 1, rowsPerPage);
     }
-  }, [selectedTable, currentPage, totalRows, rowsPerPage, fetchDataForTable]);
-
-  const totalPages = Math.ceil(totalRows / rowsPerPage);
+  }, [selectedTable, currentPage, totalPages, fetchDataForTable, rowsPerPage]);
 
   return {
     tableNames,
