@@ -1,8 +1,8 @@
 import { User, Account, Session } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { JWT } from 'next-auth/jwt';
-import { validatedAuthEnv } from '../config/authEnv';
-import { upsertUserOnSignIn, findUserByProvider } from '../repositories/userRepository';
+import { validatedAuthEnv } from '@/lib/config/authEnv';
+import { upsertUserOnSignIn, findUserByProvider } from '@/lib/repositories/userRepository';
 
 export interface UserWithEmail extends User {
   email?: string | null;

@@ -6,7 +6,7 @@ import {
   SPEECH_LANGUAGES,
   getTextDirection,
 } from '@/lib/domain/language';
-import i18n from '../i18n.client';
+import i18n from '@/app/i18n.client';
 import type { TextGeneratorState } from './textGeneratorStore';
 
 export interface LanguageSlice {

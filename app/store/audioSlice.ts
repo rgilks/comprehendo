@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import { type Language, SPEECH_LANGUAGES } from '@/lib/domain/language';
 import type { TextGeneratorState } from './textGeneratorStore';
-import { translateWordWithGoogle } from '../actions/translate';
+import { translateWordWithGoogle } from '@/app/actions/translate';
 import type { VoiceInfo } from '@/lib/domain/schemas';
 import { filterAndFormatVoices } from '@/lib/utils/speech';
 

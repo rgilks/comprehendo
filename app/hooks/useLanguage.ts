@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import useTextGeneratorStore from '../store/textGeneratorStore';
+import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { getTextDirection, SPEECH_LANGUAGES } from '@/lib/domain/language';
 import type { Language } from '@/lib/domain/language';
 

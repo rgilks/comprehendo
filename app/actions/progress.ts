@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
-import { calculateAndUpdateProgress } from '../../lib/progressUtils';
+import { calculateAndUpdateProgress } from '@/lib/progressUtils';
 import { getAuthenticatedSessionUser } from './authUtils';
 import { findQuizById } from '@/lib/repositories/quizRepository';
 import { getProgress as findUserProgress } from '@/lib/repositories/progressRepository';

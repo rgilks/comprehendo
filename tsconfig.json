@@ -34,7 +34,7 @@
       "@/contexts/*": ["app/contexts/*"],
       "@/config/*": ["app/config/*"],
       "@/utils/*": ["app/utils/*"],
-      "@/lib/*": ["lib/*"],
+      "@/lib/*": ["src/lib/*"],
       "@/hooks/*": ["app/hooks/*"],
       "@/types/*": ["types/*"]
     },
