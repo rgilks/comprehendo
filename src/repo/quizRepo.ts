@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import db from '@/lib/db';
+import db from '@/repo/db';
 
 export const QuizContentSchema = z.object({
   paragraph: z.string(),

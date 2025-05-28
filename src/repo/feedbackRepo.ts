@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import db from '@/lib/db';
+import db from '@/repo/db';
 
 export const FeedbackInputSchema = z.object({
   quiz_id: z.number().int(),

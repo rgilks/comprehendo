@@ -1,4 +1,4 @@
-import db from '@/lib/db';
+import db from '@/repo/db';
 import { z } from 'zod';
 
 const RateLimitRowSchema = z.object({

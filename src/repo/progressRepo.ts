@@ -1,4 +1,4 @@
-import db from '@/lib/db';
+import db from '@/repo/db';
 import { Progress, ProgressSchema } from '@/domain/progress';
 import { CEFRLevel } from '@/domain/language-guidance';
 

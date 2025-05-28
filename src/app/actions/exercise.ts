@@ -1,9 +1,9 @@
 'use server';
 
-import { getServerSession, type Session } from 'next-auth';
+import { getServerSession } from 'next-auth';
 import { headers } from 'next/headers';
 import { authOptions } from '@/lib/authOptions';
-import { getDbUserIdFromSession } from '@/lib/authUtils';
+import { findUserIdByProvider } from '@/repo/userRepo';
 import {
   ExerciseRequestParamsSchema,
   type GenerateExerciseResult,
@@ -38,6 +38,33 @@ import {
 } from '@/repo/quizRepo';
 import { z } from 'zod';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
+
+const getDbUserIdFromSession = (
+  session: { user: { id?: string | null; provider?: string | null } } | null
+): number | null => {
+  if (!session || !session.user.id || !session.user.provider) {
+    if (session) {
+      console.warn(
+        `[getDbUserIdFromSession] Cannot perform direct lookup: Missing session.user.id (${session.user.id}) or session.user.provider (${session.user.provider})`
+      );
+    }
+    return null;
+  }
+
+  try {
+    const userId = findUserIdByProvider(session.user.id, session.user.provider);
+    if (userId === undefined) {
+      console.warn(
+        `[getDbUserIdFromSession] Direct lookup failed: Could not find user for providerId: ${session.user.id}, provider: ${session.user.provider}`
+      );
+      return null;
+    }
+    return userId;
+  } catch (dbError) {
+    console.error('[getDbUserIdFromSession] Direct lookup DB error:', dbError);
+    return null;
+  }
+};
 
 const getValidatedExerciseFromCache = (
   passageLanguage: string,
@@ -127,16 +154,15 @@ const checkRateLimit = (ip: string): boolean => {
   }
 };
 
-const DEFAULT_EMPTY_QUIZ_DATA = {
+const DEFAULT_ERROR_PARTIAL_QUIZ_DATA: PartialQuizData = {
   paragraph: '',
   question: '',
   options: { A: '', B: '', C: '', D: '' },
-  language: null,
-  topic: null,
+  topic: '',
 };
 
 const createErrorResponse = (error: string, details?: unknown): GenerateExerciseResult => ({
-  quizData: DEFAULT_EMPTY_QUIZ_DATA,
+  quizData: DEFAULT_ERROR_PARTIAL_QUIZ_DATA,
   quizId: -1,
   error: `${error}${details ? `: ${JSON.stringify(details)}` : ''}`,
   cached: false,
@@ -256,7 +282,7 @@ const getOrGenerateExercise = async (
 const getRequestContext = async () => {
   const headersList = await headers();
   const ip = headersList.get('x-forwarded-for') || 'unknown';
-  const session: Session | null = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
   const userId = getDbUserIdFromSession(session);
   return { ip, userId };
 };
