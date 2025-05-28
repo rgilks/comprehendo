@@ -62,7 +62,6 @@ console.log(`[NextAuth] Configured ${providers.length} authentication providers`
 export const authOptions: NextAuthOptions = {
   providers,
   secret: validatedAuthEnv.AUTH_SECRET,
-  debug: (validatedAuthEnv.NODE_ENV ?? process.env.NODE_ENV) !== 'production',
   session: {
     strategy: 'jwt' as const,
   },

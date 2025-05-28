@@ -2,13 +2,73 @@
 
 import { z } from 'zod';
 import { QuizDataSchema, SubmitAnswerResultSchema } from '@/lib/domain/schemas';
-import { calculateAndUpdateProgress } from '@/lib/progressUtils';
 import { getAuthenticatedSessionUser } from './authUtils';
 import { findQuizById } from '@/lib/repositories/quizRepository';
-import { getProgress as findUserProgress } from '@/lib/repositories/progressRepository';
+import {
+  getProgress as findUserProgress,
+  initializeProgress,
+  updateProgress as updateProgressRepository,
+  STREAK_THRESHOLD_FOR_LEVEL_UP,
+} from '@/lib/repositories/progressRepository';
 import { createFeedback } from '@/lib/repositories/feedbackRepository';
+import { CEFR_LEVELS, ProgressUpdateResult } from '@/lib/domain/progress';
+import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
 
 const DEFAULT_CEFR_LEVEL = 'A1';
+
+const calculateNextProgress = (
+  currentLevel: CEFRLevel,
+  currentStreak: number,
+  isCorrect: boolean
+) => {
+  let nextLevel = currentLevel;
+  let nextStreak = currentStreak;
+  let leveledUp = false;
+
+  if (isCorrect) {
+    nextStreak++;
+    if (nextStreak >= STREAK_THRESHOLD_FOR_LEVEL_UP) {
+      const currentLevelIndex = CEFR_LEVEL_INDICES[currentLevel];
+      if (currentLevelIndex < CEFR_LEVELS.length - 1) {
+        nextLevel = CEFR_LEVELS[currentLevelIndex + 1];
+        nextStreak = 0;
+        leveledUp = true;
+      } else {
+        nextStreak = 0;
+      }
+    }
+  } else {
+    nextStreak = 0;
+  }
+
+  return { nextLevel, nextStreak, leveledUp };
+};
+
+const getOrInitProgress = (userId: number, languageCode: string) => {
+  const currentProgress = findUserProgress(userId, languageCode);
+  return currentProgress || initializeProgress(userId, languageCode);
+};
+
+// This function is not a Server Action, it's a utility function called by Server Actions
+const calculateAndUpdateProgress = (
+  userId: number,
+  language: string,
+  isCorrect: boolean
+): ProgressUpdateResult => {
+  const languageCode = language.toLowerCase().slice(0, 2);
+  const currentProgress = getOrInitProgress(userId, languageCode);
+  const { nextLevel, nextStreak, leveledUp } = calculateNextProgress(
+    currentProgress.cefr_level,
+    currentProgress.correct_streak,
+    isCorrect
+  );
+  updateProgressRepository(userId, languageCode, nextLevel, nextStreak);
+  return {
+    currentLevel: nextLevel,
+    currentStreak: nextStreak,
+    leveledUp,
+  };
+};
 
 const updateProgressSchema = z.object({
   isCorrect: z.boolean(),
@@ -107,6 +167,7 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
   if (!parsedBody.success)
     return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Invalid parameters' };
   const { isCorrect, language } = parsedBody.data;
+  // calculateAndUpdateProgress is synchronous
   const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
   return {
     currentLevel: progressResult.currentLevel,
@@ -150,6 +211,7 @@ export const submitAnswer = async (
     feedback: feedbackData,
   };
   if (userId !== null) {
+    // calculateAndUpdateProgress is synchronous
     const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
     responsePayload.currentLevel = progressUpdate.currentLevel;
     responsePayload.currentStreak = progressUpdate.currentStreak;
