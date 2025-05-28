@@ -19,15 +19,7 @@ import {
 import { createFeedback } from '@/lib/repositories/feedbackRepository';
 import { CEFR_LEVELS, ProgressUpdateResult } from '@/lib/domain/progress';
 import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
-
-// export const SessionUserSchema = z.object({
-//   dbId: z.number(),
-//   name: z.string().optional(),
-//   email: z.string().optional(),
-//   image: z.string().optional(),
-// });
-
-// export type SessionUser = z.infer<typeof SessionUserSchema>;
+import { extractZodErrors } from '@/lib/utils/errorUtils';
 
 export const getAuthenticatedSessionUser = async (): Promise<SessionUser | null> => {
   const session = await getServerSession(authOptions);
@@ -44,27 +36,27 @@ const calculateNextProgress = (
   currentStreak: number,
   isCorrect: boolean
 ) => {
-  let nextLevel = currentLevel;
-  let nextStreak = currentStreak;
-  let leveledUp = false;
-
-  if (isCorrect) {
-    nextStreak++;
-    if (nextStreak >= STREAK_THRESHOLD_FOR_LEVEL_UP) {
-      const currentLevelIndex = CEFR_LEVEL_INDICES[currentLevel];
-      if (currentLevelIndex < CEFR_LEVELS.length - 1) {
-        nextLevel = CEFR_LEVELS[currentLevelIndex + 1];
-        nextStreak = 0;
-        leveledUp = true;
-      } else {
-        nextStreak = 0;
-      }
-    }
-  } else {
-    nextStreak = 0;
+  if (!isCorrect) {
+    return { nextLevel: currentLevel, nextStreak: 0, leveledUp: false };
   }
 
-  return { nextLevel, nextStreak, leveledUp };
+  const newStreak = currentStreak + 1;
+
+  if (newStreak >= STREAK_THRESHOLD_FOR_LEVEL_UP) {
+    const currentLevelIndex = CEFR_LEVEL_INDICES[currentLevel];
+    if (currentLevelIndex < CEFR_LEVELS.length - 1) {
+      return {
+        nextLevel: CEFR_LEVELS[currentLevelIndex + 1],
+        nextStreak: 0, // Reset streak on level up
+        leveledUp: true,
+      };
+    }
+    // At max level, but met streak threshold - reset streak as per original behavior
+    return { nextLevel: currentLevel, nextStreak: 0, leveledUp: false };
+  }
+
+  // Correct, but not enough streak to level up (or attempt was for max level)
+  return { nextLevel: currentLevel, nextStreak: newStreak, leveledUp: false };
 };
 
 const getOrInitProgress = (userId: number, languageCode: string) => {
@@ -87,21 +79,17 @@ const calculateAndUpdateProgress = (
       isCorrect
     );
     updateProgressRepository(userId, languageCode, nextLevel, nextStreak);
-    return {
-      currentLevel: nextLevel,
-      currentStreak: nextStreak,
-      leveledUp,
-    };
+    return { currentLevel: nextLevel, currentStreak: nextStreak, leveledUp };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     console.error(
       `[calculateAndUpdateProgress] Error for user ${userId}, lang ${language}, isCorrect ${isCorrect}: ${message}`
     );
     return {
-      currentLevel: DEFAULT_CEFR_LEVEL, // Or fetch last known good state if critical
+      currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       leveledUp: false,
-      error: `Error updating progress for user ${userId}.`,
+      error: `Error updating progress for user ${userId}. Details: ${message}`,
     };
   }
 };
@@ -119,7 +107,7 @@ const submitAnswerSchema = z.object({
   ans: z.string().length(1).optional(),
   learn: z.string().min(2).max(5),
   lang: z.string().min(2).max(5),
-  id: z.number().int().positive().optional(),
+  id: z.number().int().positive(),
   cefrLevel: z.string().optional(),
 });
 
@@ -206,8 +194,13 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
   if (userId === null)
     return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Unauthorized' };
   const parsedBody = updateProgressSchema.safeParse(params);
-  if (!parsedBody.success)
-    return { currentLevel: DEFAULT_CEFR_LEVEL, currentStreak: 0, error: 'Invalid parameters' };
+  if (!parsedBody.success) {
+    return {
+      currentLevel: DEFAULT_CEFR_LEVEL,
+      currentStreak: 0,
+      error: `Invalid parameters: ${extractZodErrors(parsedBody.error)}`,
+    };
+  }
   const { isCorrect, language } = parsedBody.data;
   // calculateAndUpdateProgress is synchronous
   const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
@@ -224,43 +217,48 @@ export const submitAnswer = async (
 ): Promise<ProgressResponse> => {
   const sessionUser = await getAuthenticatedSessionUser();
   const userId = sessionUser?.dbId ?? null;
+
   const parsedBody = submitAnswerSchema.safeParse(params);
-  if (!parsedBody.success)
+  if (!parsedBody.success) {
     return {
       currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
-      error: 'Invalid request parameters.',
+      error: `Invalid request parameters: ${extractZodErrors(parsedBody.error)}`,
     };
+  }
+
   const { ans, id, learn, cefrLevel: requestCefrLevel } = parsedBody.data;
-  if (typeof id !== 'number')
-    return {
-      currentLevel: DEFAULT_CEFR_LEVEL,
-      currentStreak: 0,
-      error: 'Missing or invalid quiz ID.',
-    };
+
   const { data: fullQuizData, error: quizError } = getParsedQuizData(id);
-  if (quizError || !fullQuizData)
+  if (quizError || !fullQuizData) {
     return {
-      currentLevel: DEFAULT_CEFR_LEVEL,
+      currentLevel: requestCefrLevel || DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       error: quizError || `Quiz data unavailable for ID ${id}.`,
     };
+  }
+
   const { isCorrect, feedbackData } = generateFeedback(fullQuizData, ans);
-  const responsePayload: ProgressResponse = {
+
+  const baseResponse: ProgressResponse = {
     currentLevel: requestCefrLevel || DEFAULT_CEFR_LEVEL,
     currentStreak: 0,
     leveledUp: false,
     feedback: feedbackData,
   };
-  if (userId !== null) {
-    // calculateAndUpdateProgress is synchronous
-    const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
-    responsePayload.currentLevel = progressUpdate.currentLevel;
-    responsePayload.currentStreak = progressUpdate.currentStreak;
-    responsePayload.leveledUp = progressUpdate.leveledUp;
-    if (progressUpdate.error) responsePayload.error = progressUpdate.error;
+
+  if (userId === null) {
+    return baseResponse; // Return with feedback but no progress update for unauthenticated users
   }
-  return responsePayload;
+
+  const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
+  return {
+    ...baseResponse,
+    currentLevel: progressUpdate.currentLevel,
+    currentStreak: progressUpdate.currentStreak,
+    leveledUp: progressUpdate.leveledUp,
+    ...(progressUpdate.error && { error: progressUpdate.error }), // Override base error if progress update fails
+  };
 };
 
 export const getProgress = async (params: GetProgressParams): Promise<ProgressResponse> => {
@@ -288,13 +286,20 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
     if (progressRecord) {
       currentLevel = progressRecord.cefr_level;
       currentStreak = progressRecord.correct_streak;
+    } else {
+      // If no record, implies new user for this language or reset, defaults are fine.
+      // Optionally, could initialize progress here if desired behavior is to always have a record.
     }
   } catch (error: unknown) {
+    console.error(
+      `[getProgress] Repository error for user ${userId}, lang ${languageCode}:`,
+      error
+    );
     return {
       currentLevel: DEFAULT_CEFR_LEVEL,
       currentStreak: 0,
       leveledUp: false,
-      error: `Repository error fetching progress: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: `Error fetching progress: ${error instanceof Error ? error.message : 'Unknown repository error'}`,
     };
   }
   return { currentLevel, currentStreak, leveledUp: false };
@@ -327,7 +332,14 @@ export const submitFeedback = async (
     };
     createFeedback(feedbackData);
     return { success: true };
-  } catch {
-    return { success: false, error: `Repository error saving feedback.` };
+  } catch (error) {
+    console.error(
+      `[submitFeedback] Repository error for quizId ${quizId}, userId ${userId}:`,
+      error
+    );
+    return {
+      success: false,
+      error: `Repository error while saving feedback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
   }
 };

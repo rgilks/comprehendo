@@ -27,9 +27,49 @@ import { type Result, type ActionError, success, failure } from '@/lib/utils/res
 import { getRandomTopicForLevel } from '@/lib/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
 import { LANGUAGES } from '@/lib/domain/language';
-import { checkRateLimit } from '@/app/actions/rate-limiter';
+import {
+  getRateLimit,
+  incrementRateLimit,
+  resetRateLimit,
+  createRateLimit,
+} from '@/lib/repositories/rateLimitRepository';
 import { z } from 'zod';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
+
+const MAX_REQUESTS_PER_HOUR = parseInt(
+  process.env['RATE_LIMIT_MAX_REQUESTS_PER_HOUR'] || '100',
+  10
+);
+const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10); // 1 hour in milliseconds
+
+const checkRateLimit = (ip: string): boolean => {
+  try {
+    const now = Date.now();
+    const rateLimitRow = getRateLimit(ip);
+
+    if (!rateLimitRow) {
+      createRateLimit(ip, new Date(now).toISOString());
+      return true;
+    }
+
+    const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
+    const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
+
+    if (isWithinWindow) {
+      if (rateLimitRow.request_count >= MAX_REQUESTS_PER_HOUR) {
+        return false;
+      }
+      incrementRateLimit(ip);
+      return true;
+    }
+
+    resetRateLimit(ip, new Date(now).toISOString());
+    return true;
+  } catch (error) {
+    console.error('[RateLimiter] Error checking rate limit:', error);
+    return false; // Default to allowing request if rate limiter fails
+  }
+};
 
 const DEFAULT_EMPTY_QUIZ_DATA = {
   paragraph: '',
@@ -85,18 +125,12 @@ const tryGenerateAndCacheExercise = async (
       userId
     );
     if (exerciseId === undefined) {
-      return failure<{ content: ExerciseContent; id: number }, ActionError>({
-        error: 'Exercise generated but failed to save to cache (undefined ID).',
-      });
+      return failure({ error: 'Exercise generated but failed to save to cache (undefined ID).' });
     }
-    return success<{ content: ExerciseContent; id: number }, ActionError>({
-      content: generatedExercise,
-      id: exerciseId,
-    });
+    return success({ content: generatedExercise, id: exerciseId });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return failure<{ content: ExerciseContent; id: number }, ActionError>({
-      error: `Error during AI generation/processing: ${errorMessage}`,
+    return failure({
+      error: `Error during AI generation/processing: ${error instanceof Error ? error.message : String(error)}`,
     });
   }
 };
@@ -132,24 +166,45 @@ const getOrGenerateExercise = async (
     questionLanguage: genParams.questionLanguage,
     cefrLevel: genParams.level,
   };
-  const tryGenerate = () =>
+
+  const attemptGeneration = () =>
     tryGenerateAndCacheExercise(genParams, genParams.passageLanguage, userId);
-  const tryCache = () => tryGetCachedExercise(requestParams, userId);
+  const attemptCache = () => tryGetCachedExercise(requestParams, userId);
+
   const preferGenerate = cachedCount < CACHE_GENERATION_THRESHOLD;
+  let generationError: ActionError | null = null;
 
   if (preferGenerate) {
-    const generationResult = await tryGenerate();
-    if (generationResult.success) return createSuccessResult(generationResult.data, false);
-    const cachedResult = tryCache();
-    if (cachedResult) return cachedResult;
-    return createErrorResponse(generationResult.error.error);
+    const genResult = await attemptGeneration();
+    if (genResult.success) {
+      return createSuccessResult(genResult.data, false);
+    }
+    generationError = genResult.error;
+
+    const cachedResult = attemptCache();
+    if (cachedResult) {
+      return cachedResult;
+    }
+    // If both generation and cache fail, use the error from the generation attempt.
+    return createErrorResponse(
+      generationError.error || 'Generation preferred but failed, and no cached version available.'
+    );
   }
 
-  const cachedResult = tryCache();
-  if (cachedResult) return cachedResult;
-  const generationResult = await tryGenerate();
-  if (generationResult.success) return createSuccessResult(generationResult.data, false);
-  return createErrorResponse(generationResult.error.error);
+  // Prefer cache
+  const cachedResult = attemptCache();
+  if (cachedResult) {
+    return cachedResult;
+  }
+
+  const genResult = await attemptGeneration();
+  if (genResult.success) {
+    return createSuccessResult(genResult.data, false);
+  }
+  // If cache misses and generation fails, use the error from the generation attempt.
+  return createErrorResponse(
+    genResult.error.error || 'Cache miss and subsequent generation failed.'
+  );
 };
 
 const getRequestContext = async () => {
@@ -185,18 +240,6 @@ const buildGenParams = (
   vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
 });
 
-const getExerciseWithCacheFallback = async (
-  genParams: ExerciseGenerationParams,
-  userId: number | null,
-  cachedCount: number
-): Promise<GenerateExerciseResult> => {
-  const result = await getOrGenerateExercise(genParams, userId, cachedCount);
-  if (result.quizId === -1 && result.error == null) {
-    throw new Error('Internal Error: Failed to generate or retrieve exercise.');
-  }
-  return result;
-};
-
 export const generateExerciseResponse = async (
   requestParams: unknown
 ): Promise<GenerateExerciseResult> => {
@@ -218,12 +261,12 @@ export const generateExerciseResponse = async (
   );
 
   try {
-    return await getExerciseWithCacheFallback(genParams, userId, cachedCountValue);
+    return await getOrGenerateExercise(genParams, userId, cachedCountValue);
   } catch (error) {
     console.error('Error in generateExerciseResponse:', error);
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error during exercise generation process';
-    return createErrorResponse(errorMessage);
+    return createErrorResponse(
+      error instanceof Error ? error.message : 'Unknown error during exercise generation process'
+    );
   }
 };
 
@@ -241,21 +284,26 @@ export const generateInitialExercisePair = async (
 
   try {
     const [res1, res2] = await Promise.all([
-      getExerciseWithCacheFallback(genParams1, userId, 0),
-      getExerciseWithCacheFallback(genParams2, userId, 0),
+      getOrGenerateExercise(genParams1, userId, 0),
+      getOrGenerateExercise(genParams2, userId, 0),
     ]);
-    if ([res1, res2].every((r) => r.error === null && r.quizId !== -1)) {
-      const validatedResults = z.array(GenerateExerciseResultSchema).safeParse([res1, res2]);
-      if (validatedResults.success) {
-        return {
-          quizzes: validatedResults.data as [GenerateExerciseResult, GenerateExerciseResult],
-          error: null,
-        };
-      }
-      return { quizzes: [], error: 'Internal error processing generated results.' };
+
+    const errors = [res1, res2].map((r) => r.error).filter(Boolean);
+    if (errors.length > 0) {
+      return { quizzes: [], error: `Failed to generate exercise pair: ${errors.join('; ')}` };
     }
-    const errors = [res1, res2].map((r) => r.error).filter((e) => e !== null);
-    return { quizzes: [], error: `Failed to generate exercise pair: ${errors.join('; ')}` };
+
+    const validatedResults = z.array(GenerateExerciseResultSchema).safeParse([res1, res2]);
+    if (validatedResults.success) {
+      return {
+        quizzes: validatedResults.data as [GenerateExerciseResult, GenerateExerciseResult],
+        error: null,
+      };
+    }
+    return {
+      quizzes: [],
+      error: 'Internal error processing generated results after successful generation.',
+    };
   } catch (error) {
     console.error('Error in generateInitialExercisePair:', error);
     const message = error instanceof Error ? error.message : 'Unknown generation error';
