@@ -1,6 +1,6 @@
 'use server';
 
-import { TranslationResultSchema } from '@/lib/domain/translation';
+import { TranslationResultSchema } from '@/domain/translation';
 import { z } from 'zod';
 
 const GoogleTranslateResponseSchema = z.object({

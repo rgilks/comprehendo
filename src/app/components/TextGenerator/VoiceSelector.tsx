@@ -1,6 +1,6 @@
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 import React from 'react';
-import type { VoiceInfo } from '@/lib/domain/schemas';
+import type { VoiceInfo } from '@/domain/schemas';
 
 type VoiceSelectorProps = {
   availableVoices: VoiceInfo[];

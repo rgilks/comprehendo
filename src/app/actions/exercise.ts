@@ -12,7 +12,7 @@ import {
   PartialQuizDataSchema,
   type InitialExercisePairResult,
   GenerateExerciseResultSchema,
-} from '@/lib/domain/schemas';
+} from '@/domain/schemas';
 import {
   saveExerciseToCache,
   getValidatedExerciseFromCache,
@@ -22,11 +22,11 @@ import {
   generateAndValidateExercise,
   type ExerciseGenerationOptions,
 } from '@/lib/ai/exercise-generator';
-import { type ExerciseGenerationParams } from '@/lib/domain/ai';
+import { type ExerciseGenerationParams } from '@/domain/ai';
 import { type Result, type ActionError, success, failure } from '@/lib/utils/result-types';
-import { getRandomTopicForLevel } from '@/lib/domain/topics';
-import { getGrammarGuidance, getVocabularyGuidance } from '@/lib/domain/language-guidance';
-import { LANGUAGES } from '@/lib/domain/language';
+import { getRandomTopicForLevel } from '@/domain/topics';
+import { getGrammarGuidance, getVocabularyGuidance } from '@/domain/language-guidance';
+import { LANGUAGES } from '@/domain/language';
 import {
   getRateLimit,
   incrementRateLimit,

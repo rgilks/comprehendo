@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand';
 import { getProgress } from '@/actions/progress';
 import { getSession } from 'next-auth/react';
 import type { TextGeneratorState } from './textGeneratorStore';
-import { ProgressUpdateResultSchema } from '@/lib/domain/progress';
+import { ProgressUpdateResultSchema } from '@/domain/progress';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
 

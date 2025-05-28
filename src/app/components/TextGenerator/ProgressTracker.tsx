@@ -4,8 +4,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { useSession } from 'next-auth/react';
-import type { CEFRLevel } from '@/lib/domain/language-guidance';
-import { CEFR_LEVELS, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
+import type { CEFRLevel } from '@/domain/language-guidance';
+import { CEFR_LEVELS, CEFR_LEVEL_INDICES } from '@/domain/language-guidance';
 
 const getStreakMessage = (userStreak: number, t: (key: string) => string) => {
   if (userStreak === 0) return t('practice.startStreak');

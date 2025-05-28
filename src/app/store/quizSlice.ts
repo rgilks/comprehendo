@@ -2,14 +2,14 @@ import type { StateCreator } from 'zustand';
 import { submitAnswer, submitFeedback } from '@/actions/progress';
 import { generateExerciseResponse, generateInitialExercisePair } from '@/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
-import type { CEFRLevel } from '@/lib/domain/language-guidance';
+import type { CEFRLevel } from '@/domain/language-guidance';
 import {} from '@/hooks/useLanguage';
 import {
   PartialQuizData,
   GenerateExerciseResultSchema,
   SubmitAnswerResultSchema,
   InitialExercisePairResultSchema,
-} from '@/lib/domain/schemas';
+} from '@/domain/schemas';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';
 

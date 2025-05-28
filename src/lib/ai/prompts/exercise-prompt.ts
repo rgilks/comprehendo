@@ -1,4 +1,4 @@
-import type { ExerciseGenerationParams } from '@/lib/domain/ai';
+import type { ExerciseGenerationParams } from '@/domain/ai';
 
 export const generateExercisePrompt = (params: ExerciseGenerationParams): string => {
   const {

@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { getTextDirection, useLanguage } from '@/hooks/useLanguage';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
-import type { QuizData } from '@/lib/domain/schemas';
-import type { Language } from '@/lib/domain/language';
-import { LanguageSchema } from '@/lib/domain/language';
+import type { QuizData } from '@/domain/schemas';
+import type { Language } from '@/domain/language';
+import { LanguageSchema } from '@/domain/language';
 
 interface QuizOptionButtonProps {
   optionKey: keyof QuizData['options'];

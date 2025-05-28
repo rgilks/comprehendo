@@ -1,8 +1,8 @@
 import { createInstance, type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next/initReactI18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
-import { type Language } from '@/lib/domain/language';
-import { i18nConfig } from '@/lib/domain/i18nConfig';
+import { type Language } from '@/domain/language';
+import { i18nConfig } from '@/domain/i18nConfig';
 
 export const initServerI18n = async (
   language: Language,

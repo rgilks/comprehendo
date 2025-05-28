@@ -1,11 +1,6 @@
 import type { StateCreator } from 'zustand';
 import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
-import {
-  type Language,
-  UI_LANGUAGES,
-  SPEECH_LANGUAGES,
-  getTextDirection,
-} from '@/lib/domain/language';
+import { type Language, UI_LANGUAGES, SPEECH_LANGUAGES, getTextDirection } from '@/domain/language';
 import i18n from 'src/app/i18n.client';
 import type { TextGeneratorState } from './textGeneratorStore';
 

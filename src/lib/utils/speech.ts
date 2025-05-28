@@ -1,6 +1,6 @@
-import { SPEECH_LANGUAGES } from '@/lib/domain/language';
-import type { Language } from '@/lib/domain/language';
-import type { VoiceInfo } from '@/lib/domain/schemas';
+import { SPEECH_LANGUAGES } from '@/domain/language';
+import type { Language } from '@/domain/language';
+import type { VoiceInfo } from '@/domain/schemas';
 
 export const getPlatformInfo = () => {
   const ua = navigator.userAgent;

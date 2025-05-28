@@ -9,12 +9,12 @@ import { type QuizSlice, createQuizSlice } from './quizSlice';
 import { type AudioSlice, createAudioSlice } from './audioSlice';
 import { type ProgressSlice, createProgressSlice } from './progressSlice';
 import { type LanguageSlice, createLanguageSlice } from './languageSlice';
-import { type QuizData } from '@/lib/domain/schemas';
+import { type QuizData } from '@/domain/schemas';
 
-export type { CEFRLevel } from '@/lib/domain/language-guidance';
-export { CEFRLevelSchema } from '@/lib/domain/language-guidance';
-export type { Language } from '@/lib/domain/language';
-export { LanguageSchema } from '@/lib/domain/language';
+export type { CEFRLevel } from '@/domain/language-guidance';
+export { CEFRLevelSchema } from '@/domain/language-guidance';
+export type { Language } from '@/domain/language';
+export { LanguageSchema } from '@/domain/language';
 
 export type { QuizData };
 

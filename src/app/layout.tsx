@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
-import { type Language } from '@/lib/domain/language';
+import { type Language } from '@/domain/language';
 import { cookies } from 'next/headers';
 
 const poppins = Poppins({

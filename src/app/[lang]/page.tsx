@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 import { initServerI18n } from 'src/app/i18n';
 import PageClientContent from 'src/app/[lang]/PageClientContent';
-import type { Language } from '@/lib/domain/language';
-import { LANGUAGES } from '@/lib/domain/language';
+import type { Language } from '@/domain/language';
+import { LANGUAGES } from '@/domain/language';
 import { notFound } from 'next/navigation';
 
 export const generateMetadata = (): Metadata => {

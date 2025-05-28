@@ -8,7 +8,7 @@ import {
   SubmitAnswerResultSchema,
   SessionUserSchema,
   SessionUser,
-} from '@/lib/domain/schemas';
+} from '@/domain/schemas';
 import { findQuizById } from '@/lib/repositories/quizRepository';
 import {
   getProgress as findUserProgress,
@@ -17,8 +17,8 @@ import {
   STREAK_THRESHOLD_FOR_LEVEL_UP,
 } from '@/lib/repositories/progressRepository';
 import { createFeedback } from '@/lib/repositories/feedbackRepository';
-import { CEFR_LEVELS, ProgressUpdateResult } from '@/lib/domain/progress';
-import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/lib/domain/language-guidance';
+import { CEFR_LEVELS, ProgressUpdateResult } from '@/domain/progress';
+import { CEFRLevel, CEFR_LEVEL_INDICES } from '@/domain/language-guidance';
 import { extractZodErrors } from '@/lib/utils/errorUtils';
 
 export const getAuthenticatedSessionUser = async (): Promise<SessionUser | null> => {

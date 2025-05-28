@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { LANGUAGES, type Language } from '@/lib/domain/language';
-import type { CEFRLevel } from '@/lib/domain/language-guidance';
+import { LANGUAGES, type Language } from '@/domain/language';
+import type { CEFRLevel } from '@/domain/language-guidance';
 
 const validCefrLevels: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const languageKeys = Object.keys(LANGUAGES) as Language[];

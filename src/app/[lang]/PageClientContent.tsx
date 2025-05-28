@@ -1,7 +1,7 @@
 'use client';
 
 import { I18nextProvider, useTranslation } from 'react-i18next';
-import { type Language } from '@/lib/domain/language';
+import { type Language } from '@/domain/language';
 import HomeContent from 'src/app/[lang]/HomeContent';
 import { Suspense, useEffect } from 'react';
 import i18n from 'src/app/i18n.client';

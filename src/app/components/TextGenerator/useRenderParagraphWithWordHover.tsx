@@ -1,6 +1,6 @@
 import React from 'react';
 import TranslatableWord from './TranslatableWord';
-import { type Language } from '@/lib/domain/language';
+import { type Language } from '@/domain/language';
 
 type Params = {
   currentWordIndex: number | null;

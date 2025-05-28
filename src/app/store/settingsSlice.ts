@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand';
-import { type LearningLanguage } from '@/lib/domain/language';
-import { type CEFRLevel } from '@/lib/domain/language-guidance';
+import { type LearningLanguage } from '@/domain/language';
+import { type CEFRLevel } from '@/domain/language-guidance';
 import type { Language, TextGeneratorState } from './textGeneratorStore';
 import type { BaseSlice } from './baseSlice';
 import { createBaseSlice } from './baseSlice';

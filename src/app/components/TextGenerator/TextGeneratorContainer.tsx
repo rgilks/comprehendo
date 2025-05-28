@@ -4,7 +4,7 @@ import React, { useRef, useEffect } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useSession } from 'next-auth/react';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
-import { type LearningLanguage } from '@/lib/domain/language';
+import { type LearningLanguage } from '@/domain/language';
 import LanguageSelector from './LanguageSelector';
 import LoginPrompt from './LoginPrompt';
 import ErrorDisplay from './ErrorDisplay';

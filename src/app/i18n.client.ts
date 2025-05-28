@@ -1,6 +1,6 @@
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { i18nConfig } from '@/lib/domain/i18nConfig';
+import { i18nConfig } from '@/domain/i18nConfig';
 
 const i18n = createInstance();
 

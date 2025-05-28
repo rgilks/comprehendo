@@ -1,6 +1,6 @@
 import db from '@/lib/db';
-import { Progress, ProgressSchema } from '@/lib/domain/progress';
-import { CEFRLevel } from '@/lib/domain/language-guidance';
+import { Progress, ProgressSchema } from '@/domain/progress';
+import { CEFRLevel } from '@/domain/language-guidance';
 
 type RawProgress = {
   user_id: number;

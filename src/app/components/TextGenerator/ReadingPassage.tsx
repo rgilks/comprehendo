@@ -3,7 +3,7 @@
 import React from 'react';
 import { BookOpenIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
-import { getTextDirection } from '@/lib/domain/language';
+import { getTextDirection } from '@/domain/language';
 import useTextGeneratorStore from '@/store/textGeneratorStore';
 import AudioControls from './AudioControls';
 import { useLanguage } from '@/hooks/useLanguage';

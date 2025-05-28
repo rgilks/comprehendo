@@ -1,5 +1,5 @@
 import db from '@/lib/db';
-import { QuizDataSchema, type PartialQuizData } from '@/lib/domain/schemas';
+import { QuizDataSchema, type PartialQuizData } from '@/domain/schemas';
 
 export interface QuizRow {
   id: number;

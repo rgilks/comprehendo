@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/hooks/useLanguage';
-import type { UILanguage } from '@/lib/domain/language';
+import type { UILanguage } from '@/domain/language';
 
 const LanguageSelector = () => {
   const { language, setLanguage, languages } = useLanguage();

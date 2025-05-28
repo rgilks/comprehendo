@@ -1,6 +1,6 @@
 import { generateExercisePrompt } from '@/lib/ai/prompts/exercise-prompt';
-import { ExerciseContent, ExerciseContentSchema, type QuizData } from '@/lib/domain/schemas';
-import { type ExerciseGenerationParams } from '@/lib/domain/ai';
+import { ExerciseContent, ExerciseContentSchema, type QuizData } from '@/domain/schemas';
+import { type ExerciseGenerationParams } from '@/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from '@/lib/ai/google-ai-api';
 
 export { AIResponseProcessingError };
