@@ -94,7 +94,6 @@ web_modules/
 
 # Next.js build output
 .next
-.next-validation
 out
 
 # Nuxt.js build / generate output

@@ -22,5 +22,4 @@ screenshots/
 coverage/
 .env.example
 .github/
-.next-validation/
 docs/

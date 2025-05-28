@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": ["dom", "dom.iterable", "esnext", "webworker"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -21,7 +21,7 @@
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": false,
-    "types": ["vitest/globals", "node", "@testing-library/jest-dom"],
+    "types": ["vitest/globals", "node", "@testing-library/jest-dom", "@serwist/next/typings"],
     "plugins": [
       {
         "name": "next"
@@ -43,13 +43,6 @@
     "sourceRoot": "/",
     "jsx": "preserve"
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next-validation/types/**/*.ts",
-    "types/**/*.d.ts"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules"]
 }

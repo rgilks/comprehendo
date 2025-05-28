@@ -1,21 +1,16 @@
-import nextPwa from '@ducanh2912/next-pwa';
+import withSerwistInit from '@serwist/next';
 
-const withPWA = nextPwa({
-  dest: 'public',
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
   register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  runtimeCaching: [],
-  buildExcludes: [/app-build-manifest.json$/],
-  publicExcludes: ['!icons/**/*'],
+  exclude: [(filePath) => /app-build-manifest.json$/.test(filePath)],
 });
 
-/** @type {import('next').NextConfig} */
-const nextConfig = withPWA({
+const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
-  distDir: process.env.NEXT_PREVIEW_BUILD === 'true' ? '.next-validation' : '.next',
   headers: async () => {
     return [
       {
@@ -87,6 +82,6 @@ const nextConfig = withPWA({
     ignoreDuringBuilds: true,
     dirs: ['.', 'app', 'components', 'lib'],
   },
-});
+};
 
-export default nextConfig;
+export default withSerwist(nextConfig);

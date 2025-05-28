@@ -18,7 +18,6 @@ export default tseslint.config(
   {
     ignores: [
       '.next/**',
-      '.next-validation/**',
       'node_modules/**',
       'dist/**',
       'public/**',

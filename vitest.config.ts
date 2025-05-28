@@ -38,7 +38,6 @@ export default defineConfig({
         'public/**',
         'coverage/**',
         '.next/**',
-        '.next-validation/**',
         'playwright-report/**',
         'test-results/**',
 
