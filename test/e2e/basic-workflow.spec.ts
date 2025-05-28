@@ -6,6 +6,7 @@ const TARGET_URL = `${BASE_URL}/en`;
 test.describe('Basic Workflow Test', () => {
   test('should allow changing UI language', async ({ page }: { page: Page }) => {
     await page.goto(TARGET_URL);
+    await page.waitForLoadState('domcontentloaded');
 
     const mainContent = page.locator('main');
     await expect(mainContent, 'Main content area should be visible').toBeVisible();
@@ -38,6 +39,7 @@ test.describe('Basic Workflow Test', () => {
 
   test('should allow changing passage (learning) language', async ({ page }: { page: Page }) => {
     await page.goto(TARGET_URL);
+    await page.waitForLoadState('domcontentloaded');
 
     const passageLangSelect = page.locator('[data-testid="language-select"]');
     await expect(passageLangSelect, 'Passage language selector should be visible').toBeVisible();
@@ -52,6 +54,7 @@ test.describe('Basic Workflow Test', () => {
 
   test('should display the correct default CEFR level', async ({ page }: { page: Page }) => {
     await page.goto(TARGET_URL);
+    await page.waitForLoadState('domcontentloaded');
 
     const mainContent = page.locator('main');
     await expect(mainContent, 'Main content area should be visible').toBeVisible();

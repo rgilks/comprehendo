@@ -37,11 +37,11 @@ export const DataTable = <T extends Record<string, unknown>>({
   const minBodyHeight = rowsPerPage * estimatedRowHeight;
 
   return (
-    <div>
+    <div className="overflow-x-auto shadow-md sm:rounded-lg bg-gray-800">
       {error && (
-        <p className="text-red-500 mb-4">
-          Error loading data for {tableName}: {error}
-        </p>
+        <div className="p-4 mb-4 text-sm text-red-200 bg-red-800 rounded-lg" role="alert">
+          <span className="font-medium">Error!</span> Error loading data for {tableName}: {error}
+        </div>
       )}
 
       <DataTableControls
