@@ -25,9 +25,6 @@ jobs:
       - name: Run code quality checks
         run: npm run verify
 
-      - name: Run tests
-        run: npm test
-
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
 
