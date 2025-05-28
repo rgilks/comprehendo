@@ -69,13 +69,9 @@ export const saveExerciseToCache = (
         RETURNING id
       `
       )
-      .get(
-        passageLanguage,
-        questionLanguage,
-        level,
-        jsonContent,
-        userId // Pass userId as the 5th argument corresponding to the 6th placeholder
-      ) as { id: number } | undefined;
+      .get(passageLanguage, questionLanguage, level, jsonContent, userId) as
+      | { id: number }
+      | undefined;
 
     if (result?.id) {
       return result.id;
@@ -112,7 +108,6 @@ export const countCachedExercises = (
   }
 };
 
-// Helper function to get and validate a cached exercise
 export const getValidatedExerciseFromCache = (
   passageLanguage: string,
   questionLanguage: string,
@@ -138,10 +133,8 @@ export const getValidatedExerciseFromCache = (
           ':',
           validatedCachedData.error.format()
         );
-        // If cache data is invalid, treat it as a cache miss
         return undefined;
       } else {
-        // Type is inferred correctly after successful validation
         const fullData = validatedCachedData.data;
         const partialData: PartialQuizData = {
           paragraph: fullData.paragraph,
@@ -161,11 +154,9 @@ export const getValidatedExerciseFromCache = (
         ':',
         error
       );
-      // If processing fails, treat it as a cache miss
       return undefined;
     }
   }
 
-  // No cached exercise found
   return undefined;
 };

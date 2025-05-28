@@ -3,48 +3,28 @@ import { ExerciseContent, ExerciseContentSchema, type QuizData } from '@/lib/dom
 import { type ExerciseGenerationParams } from '@/lib/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from '@/lib/ai/google-ai-api';
 
-// Re-export the error class if needed downstream, or remove if only used internally
 export { AIResponseProcessingError };
 
 export type ExerciseGenerationOptions = ExerciseGenerationParams & {
   language: string;
 };
 
-// Define the expected structure of the AI's JSON response
-// This is kept internal as the function returns the validated ExerciseContent
-// type AIResponseFormat = {
-//   paragraph: string;
-//   question: string;
-//   options: { [key: string]: string };
-//   correctAnswer: string;
-//   explanation: string; // DEPRECATED: Use allExplanations
-//   allExplanations: { [key: string]: string }; // Explanation for each option
-//   relevantText: string; // Specific text from the paragraph relevant to the question
-//   topic?: string | null; // Optional topic
-// };
-
 export const generateAndValidateExercise = async (
   options: ExerciseGenerationOptions
 ): Promise<ExerciseContent> => {
   const prompt = generateExercisePrompt(options);
-  //  console.log('[AI:generateAndValidateExercise] Generated Prompt:\n', prompt);
 
   let aiResponse: unknown;
   try {
     aiResponse = await callGoogleAI(prompt);
   } catch (error) {
     console.error('[AI:generateAndValidateExercise] Google AI call failed:', error);
-    // Re-throw specific AI processing errors or a generic one
     if (error instanceof AIResponseProcessingError) {
-      throw error; // Rethrow the specific error
+      throw error;
     } else {
       throw new AIResponseProcessingError('AI generation call failed', error);
     }
   }
-
-  // Ensure the response is a string before attempting to parse if callGoogleAI returned a string
-  // If callGoogleAI already parsed it (returning object/unknown), we need to handle that.
-  // Current implementation of callGoogleAI returns Promise<unknown> which is already parsed.
 
   if (typeof aiResponse !== 'object' || aiResponse === null) {
     console.error(
@@ -57,12 +37,9 @@ export const generateAndValidateExercise = async (
     );
   }
 
-  // Now we know it's an object, but need to cast carefully or validate.
-  // For now, let's cast and let Zod handle detailed validation.
   const parsedAiContent = aiResponse as Record<string, unknown>;
 
   try {
-    // Validate the structure of the parsed JSON using Zod
     const validationResult = ExerciseContentSchema.safeParse(parsedAiContent);
 
     if (!validationResult.success) {
@@ -81,11 +58,10 @@ export const generateAndValidateExercise = async (
     }
 
     console.log('[AI:generateAndValidateExercise] AI response successfully parsed and validated.');
-    return validationResult.data; // Return the validated data directly
+    return validationResult.data;
   } catch (error) {
-    // Catch potential errors during validation itself, though safeParse should handle most
     if (error instanceof AIResponseProcessingError) {
-      throw error; // Re-throw if it's already our specific error
+      throw error;
     }
     console.error('[AI:generateAndValidateExercise] Unexpected error during validation:', error);
     throw new AIResponseProcessingError('Unexpected validation error', error);

@@ -33,7 +33,7 @@ export const DataTable = <T extends Record<string, unknown>>({
   onPreviousPage,
   onNextPage,
 }: DataTableProps<T>) => {
-  const estimatedRowHeight = 41; // Adjust as needed
+  const estimatedRowHeight = 41;
   const minBodyHeight = rowsPerPage * estimatedRowHeight;
 
   return (

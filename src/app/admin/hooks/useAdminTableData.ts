@@ -12,7 +12,6 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch Table Names
   useEffect(() => {
     const fetchTableNames = async () => {
       setIsLoadingTables(true);
@@ -34,7 +33,6 @@ export const useAdminTableData = (initialRowsPerPage = 10) => {
     void fetchTableNames();
   }, []);
 
-  // Fetch Data for Selected Table
   const fetchDataForTable = useCallback(async (tableName: string, page: number, limit: number) => {
     setIsLoadingData(true);
     setError(null);

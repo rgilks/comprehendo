@@ -61,6 +61,5 @@ export const FormattedValueDisplay = ({ valueKey: key, value }: FormattedValueDi
     return <JsonObjectDisplay data={value} />;
   }
 
-  // Fallback for other types
   return '[Unsupported Type]';
 };

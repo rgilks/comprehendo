@@ -12,7 +12,6 @@ interface TranslatableWordProps {
   isRelevant: boolean;
 }
 
-// Helper to clean word and generate cache key, consistent with audioSlice
 const getCacheKey = (word: string, sourceLang: string, targetLang: string): string => {
   const cleaningRegex = /[^\p{L}\p{N}\s'-]/gu;
   const cleanedWord = word.replace(cleaningRegex, '').trim().toLowerCase();
@@ -60,14 +59,12 @@ const TranslatableWord = memo(
         setTranslation(null);
         setIsClicked(false);
       }
-      // translationCache itself is a dependency because its contents can change.
     }, [word, fromLang, toLang, shouldTranslate, translationCache]);
 
     const handleTranslationFetch = useCallback(
       async () => {
         if (!shouldTranslate || translation || isLoading) return;
 
-        // Original logic, as 'ended' is not part of HoverProgressionPhase type
         if (hover.progressionPhase === 'initial' || hover.creditsAvailable > 0) {
           setIsLoading(true);
           try {

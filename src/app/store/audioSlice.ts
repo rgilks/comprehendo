@@ -134,7 +134,6 @@ export const createAudioSlice: StateCreator<
       utterance.lang = SPEECH_LANGUAGES[generatedPassageLanguage];
       utterance.volume = volume;
 
-      // Find the full voice object using the stored URI
       const selectedVoiceURI = get().selectedVoiceURI;
       const selectedVoice = selectedVoiceURI
         ? window.speechSynthesis.getVoices().find((v) => v.voiceURI === selectedVoiceURI)
@@ -224,7 +223,7 @@ export const createAudioSlice: StateCreator<
 
   getTranslation: async (word, sourceLang, targetLang): Promise<string | null> => {
     get().setError(null);
-    // Keep Unicode letters, numbers, whitespace, apostrophes, and hyphens
+
     const cleaningRegex = /[^\p{L}\p{N}\s'-]/gu;
     const cleanedWord = word.replace(cleaningRegex, '').trim();
 
@@ -235,24 +234,20 @@ export const createAudioSlice: StateCreator<
       return null;
     }
 
-    // Generate a unique key for the cache
     const cacheKey = `${sourceLang}:${targetLang}:${cleanedWord.toLowerCase()}`;
     const cachedTranslation = get().translationCache.get(cacheKey);
 
-    // Return cached result if it exists
     if (cachedTranslation) {
       return cachedTranslation;
     }
 
     try {
-      // Call API with lowercase cleaned word for consistency
       const translation = await translateWordWithGoogle(
-        cleanedWord.toLowerCase(), // Use lowercase
+        cleanedWord.toLowerCase(),
         targetLang,
         sourceLang
       );
 
-      // Store the successful translation in the cache
       if (translation) {
         set((state) => {
           state.translationCache.set(cacheKey, translation.translation);

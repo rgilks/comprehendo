@@ -15,10 +15,9 @@ export const getDbUserIdFromSession = (session: Session | null): number | null =
       return userId;
     } catch (dbError) {
       console.error('[getDbUserIdFromSession] Direct lookup DB error:', dbError);
-      return null; // Return null on DB error
+      return null;
     }
   } else {
-    // Log less verbosely if session or required user fields are just missing
     if (session) {
       console.warn(
         `[getDbUserIdFromSession] Cannot perform direct lookup: Missing session.user.id (${session.user.id}) or session.user.provider (${session.user.provider})`

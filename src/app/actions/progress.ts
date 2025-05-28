@@ -244,7 +244,7 @@ export const submitAnswer = async (
   };
 
   if (userId === null) {
-    return baseResponse; // Return with feedback but no progress update for unauthenticated users
+    return baseResponse;
   }
 
   const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
@@ -253,7 +253,7 @@ export const submitAnswer = async (
     currentLevel: progressUpdate.currentLevel,
     currentStreak: progressUpdate.currentStreak,
     leveledUp: progressUpdate.leveledUp,
-    ...(progressUpdate.error && { error: progressUpdate.error }), // Override base error if progress update fails
+    ...(progressUpdate.error && { error: progressUpdate.error }),
   };
 };
 
@@ -282,9 +282,6 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
     if (progressRecord) {
       currentLevel = progressRecord.cefr_level;
       currentStreak = progressRecord.correct_streak;
-    } else {
-      // If no record, implies new user for this language or reset, defaults are fine.
-      // Optionally, could initialize progress here if desired behavior is to always have a record.
     }
   } catch (error: unknown) {
     console.error(

@@ -28,7 +28,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
   }
 
   if (tableNames.length === 0) {
-    return <p>No tables found.</p>; // Or some other placeholder
+    return <p>No tables found.</p>;
   }
 
   return (

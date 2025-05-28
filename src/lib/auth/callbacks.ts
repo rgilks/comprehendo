@@ -18,26 +18,19 @@ export const signInCallback = ({
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (account && user) {
     try {
-      // Rely solely on the repository function for upsert logic and error handling.
       upsertUserOnSignIn(user, account);
-      return true; // Sign-in allowed if upsert succeeds
+      return true;
     } catch (error) {
       console.error(
         '[AUTH SignIn Callback] Error during sign in process (upsertUserOnSignIn failed):',
         error
       );
-      // Prevent sign-in if the database operation fails
       return false;
     }
   } else {
-    // Log if essential account or user info is missing for the upsert operation.
-    // Depending on the provider flow, this might indicate an issue or be expected.
     console.warn('[AUTH SignIn Callback] Missing account or user object. Skipping DB upsert.');
-    // Allow sign-in even if we skipped the DB operation?
-    // Or return false? Returning true for now, assuming sign-in should proceed.
     return true;
   }
-  // Original direct DB logic removed.
 };
 
 export const jwtCallback = ({
@@ -62,7 +55,6 @@ export const jwtCallback = ({
         console.error(
           `[AUTH JWT Callback] CRITICAL: Could not find user in DB during JWT creation for provider_id=${user.id}, provider=${account.provider}. dbId will be missing!`
         );
-        // Potentially throw an error here if dbId is strictly required
       }
     } catch (error) {
       console.error('[AUTH JWT Callback] CRITICAL: Error resolving user DB ID for token:', error);
@@ -81,13 +73,12 @@ export const jwtCallback = ({
 
 export const sessionCallback = ({ session, token }: { session: Session; token: JWT }): Session => {
   if (token.sub) {
-    session.user.id = token.sub; // The user id from the provider
+    session.user.id = token.sub;
   }
   if (typeof token.dbId === 'number') {
-    session.user.dbId = token.dbId; // Our internal DB id
+    session.user.dbId = token.dbId;
   } else {
     console.warn('[AUTH Session Callback] dbId missing from token. Cannot assign to session.');
-    // Potentially fetch from DB here if critical, but adds latency
   }
   if (typeof token.isAdmin === 'boolean') {
     session.user.isAdmin = token.isAdmin;

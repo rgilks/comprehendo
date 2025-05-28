@@ -2,21 +2,12 @@ import {} from /* User, Account */ 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import Discord from 'next-auth/providers/discord';
-// import { JWT } from 'next-auth/jwt';
-// import { Session } from 'next-auth';
-// import db from './db'; // db likely not needed directly here anymore
-// import { AdapterUser } from 'next-auth/adapters';
 import type { NextAuthOptions } from 'next-auth';
 import { validatedAuthEnv } from './config/authEnv';
 import { signInCallback, jwtCallback, sessionCallback } from './auth/callbacks';
 
-// interface UserWithEmail extends User { // Define UserWithEmail in callbacks.ts if needed there
-//   email?: string | null;
-// }
-
 const providers = [];
 
-// validatedAuthEnv is guaranteed to be an object here (throws if AUTH_SECRET missing)
 if (validatedAuthEnv.GITHUB_ID && validatedAuthEnv.GITHUB_SECRET) {
   console.log('[NextAuth] GitHub OAuth credentials found, adding provider');
   providers.push(
