@@ -4,6 +4,7 @@ const withSerwist = withSerwistInit({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
   register: true,
+  disable: process.env.NODE_ENV !== 'production',
   exclude: [(filePath) => /app-build-manifest.json$/.test(filePath)],
 });
 
