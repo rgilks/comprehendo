@@ -5,6 +5,7 @@ import reactPlugin from 'eslint-plugin-react';
 import hooksPlugin from 'eslint-plugin-react-hooks';
 import prettierConfig from 'eslint-config-prettier';
 import immerPlugin from 'eslint-plugin-immer';
+import preferArrowPlugin from 'eslint-plugin-prefer-arrow';
 import globals from 'globals';
 
 const nodeGlobals = {
@@ -73,6 +74,9 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    plugins: {
+      'prefer-arrow': preferArrowPlugin,
+    },
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'warn',
@@ -98,6 +102,14 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-redundant-type-constituents': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',
+      'prefer-arrow/prefer-arrow-functions': [
+        'warn',
+        {
+          disallowPrototype: true,
+          singleReturnOnly: false,
+          classPropertiesAllowed: false,
+        },
+      ],
     },
   },
   {

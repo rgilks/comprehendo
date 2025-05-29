@@ -9,37 +9,41 @@ import {
 import i18n from 'app/i18n.client';
 import type { TextGeneratorState } from './textGeneratorStore';
 
-export interface LanguageSlice {
+interface LanguageState {
   language: Language;
+  languages: typeof UI_LANGUAGES;
+  languageGuidingText: string;
+}
+
+export interface LanguageSlice extends LanguageState {
   setLanguage: (
     lang: Language,
     router: AppRouterInstance,
     pathname: string,
     search: string
   ) => Promise<void>;
-  languages: typeof UI_LANGUAGES;
-  languageGuidingText: string;
   setLanguageGuidingText: (guidingText: string) => void;
 }
 
-function isRouter(obj: unknown): obj is { push: (path: string) => void } {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'push' in obj &&
-    typeof (obj as { push?: unknown }).push === 'function'
-  );
-}
+const isRouter = (obj: unknown): obj is { push: (path: string) => void } =>
+  typeof obj === 'object' &&
+  obj !== null &&
+  'push' in obj &&
+  typeof (obj as { push?: unknown }).push === 'function';
+
+export const initialLanguageState = (): LanguageState => ({
+  language: 'en',
+  languages: UI_LANGUAGES,
+  languageGuidingText: '',
+});
 
 export const createLanguageSlice: StateCreator<
   TextGeneratorState,
   [['zustand/immer', never]],
   [],
   LanguageSlice
-> = (set) => ({
-  language: 'en',
-  languages: UI_LANGUAGES,
-  languageGuidingText: '',
+> = (set, _get) => ({
+  ...initialLanguageState(),
   setLanguage: async (lang, router, pathname, search) => {
     let prevLang: Language | undefined;
     set((state) => {
