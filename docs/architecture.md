@@ -136,3 +136,80 @@ This section details how Comprehendo is deployed and how its Progressive Web App
     *   Comprehendo is enhanced with PWA capabilities using `@serwist/next`, a library that simplifies PWA integration with Next.js applications. This allows users to "install" the application on their devices for a more native-like experience. [Serwist for Next.js Documentation](https://serwist.pages.dev/docs/next/getting-started)
     *   A service worker, configured via `next.config.js` and typically located at `app/sw.ts` (or potentially `public/sw.js` if using older configurations), is crucial for PWA functionality. It handles caching of static assets and application shells, enabling offline access to previously visited content and improving performance by serving cached resources.
     *   The Web App Manifest, located at `public/manifest.json`, provides metadata about the application, such as its name, icons, start URL, and display mode. This information is used by browsers when a user adds the application to their home screen. [Web App Manifest Documentation](https://developer.mozilla.org/en-US/docs/Web/Manifest)
+
+## Application Flow Example: Generating and Attempting an Exercise
+
+This section describes a typical flow within Comprehendo, from a user requesting an exercise to submitting their answers.
+
+1.  **User Input (Frontend):**
+    *   The user, interacting with a client component (likely within `app/components/TextGenerator/`), selects their desired target language, CEFR proficiency level, and a specific topic. Alternatively, they might request a random topic.
+2.  **Trigger Server Action:**
+    *   The client component takes these parameters and invokes a Server Action, for example, `generateExerciseResponse`, which is defined in `app/actions/exercise.ts`.
+3.  **Server Action Processing (Backend):**
+    *   The `generateExerciseResponse` Server Action first validates the incoming parameters (language, level, topic).
+    *   It then checks if the user is subject to rate limiting for exercise generation (using logic likely involving `app/repo/rateLimitRepo.ts`).
+    *   The action may then attempt to retrieve a relevant, previously generated exercise from the SQLite database cache via `app/repo/quizRepo.ts` to save on AI API calls and improve response time.
+4.  **Conditional AI Generation Call:**
+    *   If no suitable cached exercise is found, or if the caching strategy determines a fresh exercise is needed (e.g., based on time or user request), the Server Action proceeds to call the AI exercise generation logic located in `app/lib/ai/exercise-generator.ts`.
+5.  **Prompt Crafting:**
+    *   The `exercise-generator` module constructs a detailed prompt for the AI. This prompt includes:
+        *   The selected target language, CEFR level, and topic.
+        *   Specific grammar structures and vocabulary themes appropriate for the level, potentially drawing from `app/domain/language-guidance.ts` (which might contain CEFR-specific linguistic targets) and `app/domain/topics.ts` (for topic-related vocabulary).
+6.  **AI API Interaction:**
+    *   The crafted prompt is sent to the Google AI API (e.g., Gemini) using the client configured in `app/lib/ai/client.ts`.
+7.  **AI Response Reception:**
+    *   The Google AI model processes the prompt and returns a response containing a generated reading passage and a set of comprehension questions.
+8.  **Validation and Formatting:**
+    *   The `exercise-generator` receives the AI's raw response. It then validates this response against predefined Zod schemas (from `app/domain/schemas.ts`) to ensure the data structure is correct and the content is appropriate (e.g., checking for required fields, text length, or potential harmful content if filters are applied). The data is then formatted into the application's standard exercise structure.
+9.  **Cache New Exercise:**
+    *   The newly validated and formatted exercise is saved to the SQLite database using `app/repo/quizRepo.ts`, making it available for future requests.
+10. **Return to Client:**
+    *   The Server Action (`generateExerciseResponse`) returns the exercise data (or an error object if any step failed) as a Promise to the calling client component.
+11. **Frontend Display:**
+    *   The client component receives the exercise data. It then uses various components from `app/components/TextGenerator/` (e.g., `ReadingPassage.tsx`, `QuizSection.tsx`) to render the passage and questions for the user.
+12. **User Interaction and Submission:**
+    *   The user reads the passage and attempts the questions.
+    *   Upon submitting their answers, another Server Action (e.g., a function in `app/actions/progress.ts`) might be triggered. This action would record the user's performance (e.g., score, completed questions) in the `user_language_progress` table via `app/repo/progressRepo.ts`.
+    *   Optionally, if the user provides feedback on a question or the exercise, this feedback could be saved to the `question_feedback` table via `app/repo/feedbackRepo.ts`.
+
+## Key Concepts and Design Decisions
+
+This section outlines some of the core architectural patterns and key technology choices that shape Comprehendo.
+
+*   **Architectural Patterns:**
+    *   **Next.js App Router Model:** Comprehendo leverages the Next.js App Router, which employs React Server Components (RSC) by default for most components. This means components are primarily rendered on the server, reducing the amount of JavaScript sent to the client, leading to faster initial page loads and improved performance. Interactive UI elements that require browser-side JavaScript are explicitly designated as Client Components (using the `"use client"` directive). This hybrid approach optimizes for both server rendering benefits and rich client-side interactivity where needed.
+        *   Reference: [Next.js Server and Client Components](https://nextjs.org/docs/app/building-your-application/rendering/server-components)
+    *   **Server Actions:** As mentioned previously, Server Actions are a key pattern. They allow client components to directly invoke server-side functions as if they were local. This simplifies data mutations and backend logic by co-locating these operations with the UI elements that trigger them, reducing the need for manually creating and managing separate API endpoints for many common operations.
+*   **Key Design Choices:**
+    *   **Next.js (App Router):** Next.js was chosen as the foundational framework due to its comprehensive feature set for building full-stack applications. The App Router, in particular, offers robust routing, excellent performance optimizations (Server-Side Rendering, Static Site Generation, and RSCs), and a powerful data fetching model. Its large ecosystem and strong community support also contribute to its suitability for a project like Comprehendo.
+    *   **SQLite (`better-sqlite3`):** For data persistence, SQLite (via `better-sqlite3`) was selected primarily for its simplicity and ease of use. Being an embedded database, it requires no separate server setup, which simplifies development, testing, and deployment, especially for smaller to medium-scale applications. The performance is adequate for Comprehendo's current data needs, which include storing user data, generated content, and progress.
+    *   **Zustand:** Zustand was chosen for client-side state management because of its lightweight nature and minimalistic API. It provides a simple and effective way to manage global state with React hooks without the complexity and boilerplate often associated with libraries like Redux. This makes it a good fit for managing UI state, user preferences, and other client-specific data in Comprehendo.
+        *   Reference: [Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction)
+    *   **Google AI SDK (Gemini):** The decision to use the Google AI SDK (specifically for Gemini models) was driven by the need for powerful and flexible generative AI capabilities. The SDK offers a straightforward way to integrate these models into a Node.js backend. The available models are well-suited for Comprehendo's core tasks of generating educational text and comprehension exercises.
+
+## Future Improvements
+
+This section suggests potential areas for architectural enhancement as Comprehendo evolves.
+
+*   **Database Scaling:**
+    *   As user load and data volume grow, migrating from SQLite to a more scalable database solution like PostgreSQL or a managed cloud database (e.g., AWS RDS, Google Cloud SQL, Supabase) may become necessary. This would provide better concurrency, fault tolerance, and overall performance for a larger user base.
+*   **Microservices:**
+    *   For enhanced scalability and maintainability, specific, computationally intensive, or independently deployable features could be extracted into microservices. Potential candidates include:
+        *   **AI Processing Service:** A dedicated service for managing interactions with the Google AI SDK, handling prompt engineering, and processing AI-generated content. This could be scaled independently based on AI workload.
+        *   **Analytics Service:** A separate service for collecting and processing user interaction data for learning analytics, which could operate asynchronously without impacting core application performance.
+*   **Advanced AI Model Integration:**
+    *   **Fine-tuning:** Investigate fine-tuning AI models on Comprehendo's specific data (e.g., high-quality exercises, user feedback) to create models that are more tailored to the application's language learning context and can generate even more relevant and effective content.
+    *   **Model Exploration:** Continuously evaluate and explore different or newer AI model providers and architectures as they become available to leverage the latest advancements in AI.
+    *   **Prompt Engineering:** Implement more sophisticated prompt engineering and management strategies, possibly including a dedicated system for versioning, testing, and optimizing prompts for various scenarios and languages.
+*   **Caching Strategies:**
+    *   With potential multi-instance deployments in the future, implementing a distributed cache (e.g., Redis) would be beneficial. This could be used for:
+        *   **Session Management:** Storing NextAuth.js sessions in a distributed cache to maintain user sessions across multiple server instances.
+        *   **API Response Caching:** Caching responses from internal or external APIs to reduce latency and load on backend services.
+        *   **Database Query Caching:** Caching results of frequently accessed database queries to alleviate database load.
+*   **Enhanced Observability:**
+    *   Integrate more comprehensive observability tools to gain deeper insights into system behavior and quickly diagnose issues in a production environment. This could include:
+        *   **Distributed Tracing:** Tools like OpenTelemetry to trace requests across different services (especially if microservices are introduced).
+        *   **Advanced Logging:** Structured logging solutions that can be easily searched and analyzed.
+        *   **Monitoring and Alerting:** Platforms like Sentry or Datadog for real-time error tracking, performance monitoring, and alerting on critical issues.
+*   **Real-time Features:**
+    *   For future interactive features, such as collaborative learning exercises or live feedback mechanisms, consider incorporating technologies like WebSockets. This would enable bidirectional communication between the client and server for a more dynamic user experience.
