@@ -20,7 +20,7 @@ type AuthUser = User | AdapterUser;
 
 const DEFAULT_LANGUAGE = 'en';
 
-export const upsertUserOnSignIn = (user: AuthUser, account: Account): void => {
+export const upsertUserOnSignIn = async (user: AuthUser, account: Account): Promise<void> => {
   if (!user.id || !user.email) {
     console.warn(
       `[UserRepository] Missing user id or email for provider ${account.provider}. Skipping DB upsert.`
@@ -28,24 +28,26 @@ export const upsertUserOnSignIn = (user: AuthUser, account: Account): void => {
     return;
   }
   try {
-    db.prepare(
-      `
+    await db
+      .prepare(
+        `
       INSERT INTO users (provider_id, provider, name, email, image, last_login, language)
       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
       ON CONFLICT(provider_id, provider)
       DO UPDATE SET name = ?, email = ?, image = ?, last_login = CURRENT_TIMESTAMP
     `
-    ).run(
-      user.id,
-      account.provider,
-      user.name ?? null,
-      user.email ?? null,
-      user.image ?? null,
-      DEFAULT_LANGUAGE,
-      user.name ?? null,
-      user.email ?? null,
-      user.image ?? null
-    );
+      )
+      .run(
+        user.id,
+        account.provider,
+        user.name ?? null,
+        user.email ?? null,
+        user.image ?? null,
+        DEFAULT_LANGUAGE,
+        user.name ?? null,
+        user.email ?? null,
+        user.image ?? null
+      );
     console.log(`[UserRepository] Upserted user for provider ${account.provider}, id ${user.id}`);
   } catch (error) {
     console.error('[UserRepository] Error upserting user data:', error);
@@ -55,13 +57,13 @@ export const upsertUserOnSignIn = (user: AuthUser, account: Account): void => {
   }
 };
 
-export const findUserByProvider = (
+export const findUserByProvider = async (
   providerId: string,
   provider: string
-): Pick<DbUser, 'id'> | null => {
+): Promise<Pick<DbUser, 'id'> | null> => {
   try {
-    const userRecord = db
-      .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
+    const userRecord = await db
+      .prepare<{ id: number }>('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
       .get(providerId, provider);
 
     const result = z.object({ id: z.number() }).safeParse(userRecord);
@@ -85,11 +87,14 @@ export const findUserByProvider = (
   }
 };
 
-export const findUserIdByProvider = (providerId: string, provider: string): number | undefined => {
+export const findUserIdByProvider = async (
+  providerId: string,
+  provider: string
+): Promise<number | undefined> => {
   try {
-    const result = db
-      .prepare('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
-      .get(providerId, provider) as { id: number } | undefined;
+    const result = (await db
+      .prepare<{ id: number }>('SELECT id FROM users WHERE provider_id = ? AND provider = ?')
+      .get(providerId, provider)) as { id: number } | undefined;
     return result?.id;
   } catch (error) {
     console.error('[UserRepo] Error finding user ID by provider:', error);

@@ -11,7 +11,7 @@ export const FeedbackInputSchema = z.object({
 
 export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
 
-export const createFeedback = (feedbackData: FeedbackInput): number | bigint => {
+export const createFeedback = async (feedbackData: FeedbackInput): Promise<number | null> => {
   const validation = FeedbackInputSchema.safeParse(feedbackData);
   if (!validation.success) {
     console.error('[FeedbackRepository] Invalid input data for create:', validation.error);
@@ -23,34 +23,36 @@ export const createFeedback = (feedbackData: FeedbackInput): number | bigint => 
   const { quiz_id, user_id, is_good, user_answer, is_correct } = validation.data;
 
   try {
-    const result = db
-      .prepare(
-        'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
+    const result = await db
+      .prepare<{
+        id: number;
+      }>(
+        'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?) RETURNING id'
       )
-      .run(
+      .get(
         quiz_id,
         user_id,
         is_good ? 1 : 0,
         user_answer ?? null,
         is_correct === undefined ? null : is_correct ? 1 : 0
       );
-    return result.lastInsertRowid;
+    return result?.id ?? null;
   } catch (error) {
     console.error('[FeedbackRepository] Error creating question feedback:', error);
     throw error;
   }
 };
 
-export const findFeedbackByUserIdAndQuizId = (
+export const findFeedbackByUserIdAndQuizId = async (
   userId: number,
   quizId: number
-): FeedbackInput | null => {
+): Promise<FeedbackInput | null> => {
   try {
-    const row = db
+    const row = (await db
       .prepare(
         'SELECT quiz_id, user_id, is_good, user_answer, is_correct FROM question_feedback WHERE user_id = ? AND quiz_id = ?'
       )
-      .get(userId, quizId) as
+      .get(userId, quizId)) as
       | {
           quiz_id: number;
           user_id: number;

@@ -12,13 +12,16 @@ type RawProgress = {
 
 const STREAK_THRESHOLD_FOR_LEVEL_UP = 5;
 
-export const getProgress = (userId: number, languageCode: string): Progress | null => {
+export const getProgress = async (
+  userId: number,
+  languageCode: string
+): Promise<Progress | null> => {
   try {
-    const row = db
-      .prepare(
+    const row = await db
+      .prepare<RawProgress>(
         'SELECT user_id, language_code, cefr_level, correct_streak, last_practiced FROM user_language_progress WHERE user_id = ? AND language_code = ?'
       )
-      .get(userId, languageCode) as RawProgress | undefined;
+      .get(userId, languageCode);
     if (!row) return null;
     const parseResult = ProgressSchema.safeParse({
       ...row,
@@ -39,16 +42,21 @@ export const getProgress = (userId: number, languageCode: string): Progress | nu
   }
 };
 
-export const initializeProgress = (userId: number, languageCode: string): Progress => {
+export const initializeProgress = async (
+  userId: number,
+  languageCode: string
+): Promise<Progress> => {
   const initialProgress: Omit<Progress, 'user_id' | 'language_code' | 'last_practiced'> = {
     cefr_level: 'A1',
     correct_streak: 0,
   };
 
   try {
-    db.prepare(
-      'INSERT INTO user_language_progress (user_id, language_code, cefr_level, correct_streak) VALUES (?, ?, ?, ?)'
-    ).run(userId, languageCode, initialProgress.cefr_level, initialProgress.correct_streak);
+    await db
+      .prepare(
+        'INSERT INTO user_language_progress (user_id, language_code, cefr_level, correct_streak) VALUES (?, ?, ?, ?)'
+      )
+      .run(userId, languageCode, initialProgress.cefr_level, initialProgress.correct_streak);
 
     return {
       ...initialProgress,
@@ -67,14 +75,14 @@ export const initializeProgress = (userId: number, languageCode: string): Progre
   }
 };
 
-export const updateProgress = (
+export const updateProgress = async (
   userId: number,
   languageCode: string,
   newLevel: CEFRLevel,
   newStreak: number
-): void => {
+): Promise<void> => {
   try {
-    const result = db
+    const result = await db
       .prepare(
         'UPDATE user_language_progress SET cefr_level = ?, correct_streak = ?, last_practiced = CURRENT_TIMESTAMP WHERE user_id = ? AND language_code = ?'
       )

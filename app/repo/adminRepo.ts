@@ -15,12 +15,13 @@ export interface PaginatedTableData {
   limit: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
 export const getAllTableNames = async (): Promise<string[]> => {
   try {
-    const tables = db
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
-      .all() as TableNameResult[];
+    const tables = await db
+      .prepare<TableNameResult>(
+        `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`
+      )
+      .all();
     return tables.map((table) => table.name);
   } catch (error) {
     console.error('[AdminRepository] Error fetching table names:', error);
@@ -53,21 +54,20 @@ export const getTableData = async (
   await validateTableName(tableName);
   const orderByClause = getOrderByClause(tableName);
   try {
-    const result = db.transaction(() => {
-      const countResult = db.prepare(`SELECT COUNT(*) as totalRows FROM "${tableName}"`).get() as
-        | CountResult
-        | undefined;
-      const totalRows = countResult?.totalRows ?? 0;
-      const query = `SELECT * FROM "${tableName}" ${orderByClause} LIMIT ? OFFSET ?`;
-      const paginatedData = db.prepare(query).all(safeLimit, offset);
-      return {
-        data: paginatedData as Record<string, unknown>[],
-        totalRows,
-        page: safePage,
-        limit: safeLimit,
-      };
-    })();
-    return result;
+    const countResult = await db
+      .prepare<CountResult>(`SELECT COUNT(*) as totalRows FROM "${tableName}"`)
+      .get();
+    const totalRows = countResult?.totalRows ?? 0;
+    const query = `SELECT * FROM "${tableName}" ${orderByClause} LIMIT ? OFFSET ?`;
+    const paginatedData = (await db
+      .prepare<Record<string, unknown>>(query)
+      .all(safeLimit, offset)) as Record<string, unknown>[] | undefined;
+    return {
+      data: paginatedData ?? [],
+      totalRows,
+      page: safePage,
+      limit: safeLimit,
+    };
   } catch (error) {
     console.error(`[AdminRepository] Error fetching paginated data for table ${tableName}:`, error);
     if (error instanceof Error) {

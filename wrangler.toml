@@ -1,0 +1,19 @@
+name = "comprehendo"
+main = ".open-next/worker/index.mjs"
+compatibility_date = "2025-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+
+[assets]
+directory = ".open-next/static"
+binding = "ASSETS"
+
+[vars]
+NEXT_TELEMETRY_DISABLED = "1"
+
+[[d1_databases]]
+binding = "COMPREHENDO_DB"
+database_name = "comprehendo"
+database_id = "00000000-0000-0000-0000-000000000000"

@@ -8,10 +8,12 @@ const RateLimitRowSchema = z.object({
 
 export type RateLimit = z.infer<typeof RateLimitRowSchema>;
 
-export const getRateLimit = (ip: string): RateLimit | null => {
+export const getRateLimit = async (ip: string): Promise<RateLimit | null> => {
   try {
-    const row = db
-      .prepare('SELECT request_count, window_start_time FROM rate_limits WHERE ip_address = ?')
+    const row = await db
+      .prepare<RateLimit>(
+        'SELECT request_count, window_start_time FROM rate_limits WHERE ip_address = ?'
+      )
       .get(ip);
 
     if (!row) {
@@ -35,9 +37,9 @@ export const getRateLimit = (ip: string): RateLimit | null => {
   }
 };
 
-export const incrementRateLimit = (ip: string): void => {
+export const incrementRateLimit = async (ip: string): Promise<void> => {
   try {
-    const result = db
+    const result = await db
       .prepare('UPDATE rate_limits SET request_count = request_count + 1 WHERE ip_address = ?')
       .run(ip);
 
@@ -52,9 +54,9 @@ export const incrementRateLimit = (ip: string): void => {
   }
 };
 
-export const resetRateLimit = (ip: string, windowStartTimeISO: string): void => {
+export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    const result = db
+    const result = await db
       .prepare(
         'UPDATE rate_limits SET request_count = 1, window_start_time = ? WHERE ip_address = ?'
       )
@@ -69,11 +71,13 @@ export const resetRateLimit = (ip: string, windowStartTimeISO: string): void => 
   }
 };
 
-export const createRateLimit = (ip: string, windowStartTimeISO: string): void => {
+export const createRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    db.prepare(
-      'INSERT INTO rate_limits (ip_address, request_count, window_start_time) VALUES (?, 1, ?)'
-    ).run(ip, windowStartTimeISO);
+    await db
+      .prepare(
+        'INSERT INTO rate_limits (ip_address, request_count, window_start_time) VALUES (?, 1, ?)'
+      )
+      .run(ip, windowStartTimeISO);
   } catch (dbError) {
     if (
       dbError instanceof Error &&

@@ -85,4 +85,30 @@ const nextConfig = {
   },
 };
 
-export default withSerwist(nextConfig);
+let withCloudflare = (config) => config;
+
+const adapterSpecifiers = [
+  '@opennextjs/cloudflare/next-config',
+  '@opennextjs/cloudflare',
+  '@cloudflare/next-on-pages/next-config',
+];
+
+for (const specifier of adapterSpecifiers) {
+  try {
+    const module = await import(specifier);
+    const candidate = module?.withCloudflare ?? module?.default?.withCloudflare;
+    if (typeof candidate === 'function') {
+      withCloudflare = candidate;
+      break;
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        `[next.config.js] Unable to load Cloudflare adapter from "${specifier}". Install @opennextjs/cloudflare to enable Cloudflare-specific optimisations.`,
+        error
+      );
+    }
+  }
+}
+
+export default withCloudflare(withSerwist(nextConfig));

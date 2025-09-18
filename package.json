@@ -7,8 +7,8 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "clear && next dev --turbopack",
-    "build": "next build",
+    "dev": "clear && npx --yes @opennextjs/cloudflare@latest dev",
+    "build": "npx --yes @opennextjs/cloudflare@latest build",
     "start": "next start",
     "verify": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit",
     "check": "clear && npm run verify && npx playwright test --reporter=list",
@@ -16,13 +16,13 @@
     "deps": "npx npm-check-updates",
     "deps:update": "npx npm-check-updates -u && npm run nuke",
     "test:e2e": "npx playwright test --reporter=list",
-    "test:e2e:watch": "playwright test --watch"
+    "test:e2e:watch": "playwright test --watch",
+    "cf:preview": "wrangler dev --persist-to=.wrangler/state"
   },
   "dependencies": {
     "@google/genai": "^1.1.0",
     "@heroicons/react": "^2.2.0",
     "@serwist/next": "^9.0.14",
-    "better-sqlite3": "^11.10.0",
     "i18next": "^25.2.1",
     "i18next-resources-to-backend": "^1.2.1",
     "immer": "^10.1.1",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4.1.7",
-    "@types/better-sqlite3": "^7.6.13",
+    "@cloudflare/workers-types": "^4.20250129.0",
     "@types/node": "^22.15.23",
     "@types/react": "19.1.6",
     "@types/react-dom": "19.1.5",
@@ -47,7 +47,8 @@
     "eslint-config-next": "15.3.2",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-immer": "^0.0.1",
-    "eslint-plugin-prefer-arrow": "^1.2.3",
+    "typescript-eslint": "^8.33.0",
+    "wrangler": "^3.101.0"
     "npm-check-updates": "^18.0.1",
     "playwright": "^1.52.0",
     "postcss": "^8.5.3",

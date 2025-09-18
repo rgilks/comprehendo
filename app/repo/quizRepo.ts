@@ -39,9 +39,9 @@ export const QuizSchema = QuizRowSchema.extend({
 
 export type Quiz = z.infer<typeof QuizSchema>;
 
-export const findQuizById = (id: number): Quiz | null => {
+export const findQuizById = async (id: number): Promise<Quiz | null> => {
   try {
-    const row = db.prepare('SELECT * FROM quiz WHERE id = ?').get(id) as QuizRow | undefined;
+    const row = await db.prepare<QuizRow>('SELECT * FROM quiz WHERE id = ?').get(id);
     if (!row) {
       return null;
     }
@@ -80,40 +80,44 @@ export const findQuizById = (id: number): Quiz | null => {
   }
 };
 
-export const createQuiz = (
+export const createQuiz = async (
   language: string,
   level: string,
   questionLanguage: string | null,
   content: object,
   userId?: number | null
-): number | bigint => {
+): Promise<number | null> => {
   try {
     const contentJson = JSON.stringify(content);
-    const result = db
-      .prepare(
-        'INSERT INTO quiz (language, level, question_language, content, user_id) VALUES (?, ?, ?, ?, ?)'
+    const result = await db
+      .prepare<{
+        id: number;
+      }>(
+        'INSERT INTO quiz (language, level, question_language, content, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id'
       )
-      .run(language, level, questionLanguage ?? null, contentJson, userId ?? null);
-    return result.lastInsertRowid;
+      .get(language, level, questionLanguage ?? null, contentJson, userId ?? null);
+    return result?.id ?? null;
   } catch (error) {
     console.error('[QuizRepository] Error creating quiz:', error);
     throw error;
   }
 };
 
-export const saveExercise = (
+export const saveExercise = async (
   passageLanguage: string,
   questionLanguage: string | null,
   level: string,
   contentJson: string,
   userId: number | null
-): number | undefined => {
+): Promise<number | undefined> => {
   try {
-    const result = db
-      .prepare(
+    const result = (await db
+      .prepare<{
+        id: number;
+      }>(
         'INSERT INTO quiz (language, level, content, question_language, user_id, created_at) VALUES (?, ?, ?, ?, ?, datetime("now")) RETURNING id'
       )
-      .get(passageLanguage, level, contentJson, questionLanguage, userId) as
+      .get(passageLanguage, level, contentJson, questionLanguage, userId)) as
       | { id: number }
       | undefined;
     return result?.id;
@@ -123,12 +127,12 @@ export const saveExercise = (
   }
 };
 
-export const getCachedExerciseToAttempt = (
+export const getCachedExerciseToAttempt = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   userId: number | null
-): QuizRow | undefined => {
+): Promise<QuizRow | undefined> => {
   try {
     let stmt;
     let row: QuizRow | undefined;
@@ -148,16 +152,16 @@ export const getCachedExerciseToAttempt = (
          ORDER BY 
            q.created_at DESC 
          LIMIT 1`;
-      stmt = db.prepare<[number, string, string, string]>(sql);
-      row = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      stmt = db.prepare<QuizRow>(sql);
+      row = await stmt.get(userId, passageLanguage, questionLanguage, level);
     } else {
       const sql = `SELECT id, language, level, content, created_at, question_language, user_id
          FROM quiz
          WHERE language = ? AND question_language = ? AND level = ?
-         ORDER BY created_at DESC 
+         ORDER BY created_at DESC
          LIMIT 1`;
-      stmt = db.prepare<[string, string, string]>(sql);
-      row = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      stmt = db.prepare<QuizRow>(sql);
+      row = await stmt.get(passageLanguage, questionLanguage, level);
     }
 
     if (!row) {
@@ -170,16 +174,16 @@ export const getCachedExerciseToAttempt = (
   }
 };
 
-export const countCachedExercisesInRepo = (
+export const countCachedExercisesInRepo = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string
-): number => {
+): Promise<number> => {
   try {
-    const stmt = db.prepare<[string, string, string], { count: number }>(
+    const stmt = db.prepare<{ count: number }>(
       'SELECT COUNT(*) as count FROM quiz WHERE language = ? AND question_language = ? AND level = ?'
     );
-    const result = stmt.get(passageLanguage, questionLanguage, level);
+    const result = await stmt.get(passageLanguage, questionLanguage, level);
     return result?.count ?? 0;
   } catch (error) {
     console.error('[QuizRepository] Error counting exercises:', error);

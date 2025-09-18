@@ -2,7 +2,7 @@
 
 A multi-language reading comprehension practice tool powered by Next.js and Google Gemini.
 
-[![CI/CD](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml/badge.svg)](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml)
+[![CI/CD](https://github.com/rgilks/comprehendo/actions/workflows/cloudflare-workers.yml/badge.svg)](https://github.com/rgilks/comprehendo/actions/workflows/cloudflare-workers.yml)
 
 ![Comprehendo Screenshot](public/screenshot.png)
 
@@ -27,58 +27,55 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Word Translation**: Hover over any word to see its translation (powered by Google Translate API - requires `GOOGLE_TRANSLATE_API_KEY`).
 - **Text-to-Speech**: Listen to passages and individual words using your browser/OS built-in capabilities (Web Speech API).
 - **User Authentication**: Secure login via GitHub, Google, and Discord OAuth (providers enabled based on configured credentials).
-- **Data Persistence**: Store user preferences and usage statistics in an SQLite database.
+- **Data Persistence**: Store user preferences and usage statistics in a Cloudflare D1 database (managed SQLite with global replication).
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 - **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback using Tailwind CSS.
 - **Cost-Control System**: IP-based rate limiting and database caching to manage API costs.
 - **Robust Validation**: Uses Zod for request validation on API routes and environment variables.
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions.
-- **Continuous Deployment**: Automatic deployment to Fly.io via GitHub Actions when code is pushed to the `main` branch.
+- **Cloudflare-Native Deployment**: Automatic deployment to Cloudflare Workers with D1 migrations applied via GitHub Actions when code is pushed to the `main` branch.
 - **Admin Panel**: A secure area for administrators to view application data (users, quizzes, feedback).
 - **Internationalization (i18n)**: Full i18n support for UI elements using `i18next` and locale files in `public/locales/`.
-- **PWA Support**: Progressive Web App features (e.g., installability) are enabled via `@serwist/next`, using `app/sw.ts` as the service worker and `public/manifest.json` for the manifest.
-- **State Management**: Uses `zustand` for lightweight global state management.
-- **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
-- **Testing**:
-  - End-to-end tests with Playwright.
-- **Code Quality**:
-  - ESLint and Prettier for linting and formatting.
+- **Cloudflare D1**: Managed SQLite storage used for caching, rate limiting, and progress tracking
+  - Uses a fixed-window counter based on IP address, stored in the `rate_limits` Cloudflare D1 table.
+  - Successful AI-generated exercises (passage, question, choices, explanation) are stored in the `quiz` Cloudflare D1 table.
+    - **Cloudflare Account** with access to Workers and D1 (Workers Paid plan or higher for production usage).
+    - **Wrangler CLI:** install globally (`npm install -g wrangler`) or run via `npx` for managing D1 and local dev.
+    npx wrangler d1 migrations apply comprehendo --local
+    The dev command runs the OpenNext Cloudflare adapter, wiring up Workers bindings (including the `COMPREHENDO_DB` D1 database) locally.
+### Deploying to Cloudflare Workers
+Automated deployments run via `.github/workflows/cloudflare-workers.yml`. Every push to `main` runs the quality checks, builds the OpenNext Cloudflare worker bundle, applies pending D1 migrations, and publishes to Cloudflare Workers.
 
-* **State Diagram**: Visual representation of the text generation process. [View State Diagram](docs/text_generator_state_diagram.md)
+High-level production setup (see [`docs/cloudflare-deployment.md`](docs/cloudflare-deployment.md) for detailed guidance):
 
-## Terminology
+1.  **Create a D1 database**:
+    ```bash
+    npx wrangler d1 create comprehendo
+    ```
+    Note the generated `database_id` and update `wrangler.toml`'s placeholder.
+2.  **Run migrations:**
+    ```bash
+    npx wrangler d1 migrations apply comprehendo --remote
+    ```
+3.  **Configure the Worker deployment:**
+    - Update `wrangler.toml` with the real D1 `database_id` and (optionally) production-specific variables.
+    - In the Cloudflare dashboard, create a Workers project that uses the script name defined in `wrangler.toml` (defaults to `comprehendo`).
+    - Add a D1 binding named `COMPREHENDO_DB` pointing to the database created above.
+    - Set required environment variables/secrets on the Worker (auth provider keys, `AUTH_SECRET`, `ADMIN_EMAILS`, AI keys, etc.).
+4.  **Set GitHub secrets/variables for CI:**
+    - Secrets: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`
+    - Repository variable: `CLOUDFLARE_D1_NAME` (e.g., `comprehendo`).
+Once configured, merge to `main` to deploy, or trigger the workflow manually from the Actions tab.
 
-- **Exercise**: The general term used in the codebase for any learning activity generated for the user. This could include various formats in the future.
-- **Quiz**: The specific type of exercise currently implemented, consisting of a reading passage, a multiple-choice question, and four answer options. User-facing text may refer to these as "Practices" for a friendlier tone.
-- **Practice**: The user-facing term for an Exercise/Quiz, used in UI elements.
+# Run dev server with Cloudflare bindings (D1, Workers APIs)
+# Start production server locally (Node fallback)
+- **Scaling**: Cloudflare Workers automatically scale globally. Consider enabling Smart Placement for latency-sensitive workloads and tune caching/edge TTLs via Cloudflare rules if needed.
+- **Database Backups**: Use `wrangler d1 backup` (or regular exports) to snapshot the Cloudflare D1 database and store backups securely.
+├── migrations/               # Cloudflare D1 SQL migrations
+├── wrangler.toml             # Cloudflare Workers & D1 configuration
+├── Dockerfile                # (Optional) container build for local experimentation
 
-## Technology Stack
-
-- **Next.js**: ^15.x (`package.json` has exact version)
-- **React**: ^19.x (`package.json` has exact version)
-- **Tailwind CSS**: Utility-first CSS framework
-- **TypeScript**: Strong typing for code quality
-- **next-auth**: Authentication (GitHub, Google, Discord)
-- **Google Generative AI SDK**: Gemini 2.0 Flash-Lite integration
-- **SQLite**: `better-sqlite3` for database storage
-- **Zod**: Schema validation
-- **i18next / react-i18next**: Internationalization
-- **@serwist/next**: PWA features (service worker at `app/sw.ts`, manifest at `public/manifest.json`)
-- **zustand**: State management. [See documentation for details](docs/state-management.md)
-- **Playwright**: End-to-end testing
-- **ESLint / Prettier**: Linting & Formatting
-- **Turbopack**: (Optional, used with `npm run dev`)
-
-## How It Works
-
-1.  **Sign in**: Use GitHub, Google, or Discord authentication.
-2.  **Select Settings**: Choose CEFR level (A1-C2) and target language.
-3.  **Generate Exercise**: Request an AI-generated reading passage and question.
-4.  **Comprehension Test**: Answer the multiple-choice question.
-5.  **Feedback & Review**: Receive instant feedback, explanations, and highlighting.
-6.  **Repeat or New**: Practice more or generate a new exercise.
-
-## API Cost Management
+- Set `ADMIN_EMAILS` environment variable locally (`.env.local`) and in deployment (Cloudflare Worker environment variables), comma-separated.
 
 Comprehendo implements strategies to manage AI API costs:
 
@@ -363,21 +360,25 @@ Once both files are correctly populated, `npm run test:e2e` should now be able t
 
 ## Database
 
-Uses SQLite via `better-sqlite3`. The database file is `data/comprehendo.sqlite` locally, and stored on a persistent volume (`/data/comprehendo.sqlite`) in production (Fly.io).
+Comprehendo uses **Cloudflare D1**, a globally distributed SQLite database available through Cloudflare Workers bindings. SQL migrations live in [`migrations/`](migrations/) and are applied via Wrangler (locally) or the deployment workflow.
 
-### SQLite Command Line (Local)
+### Managing the database locally
 
 ```bash
-# Navigate to project root
-sqlite3 data/comprehendo.sqlite
-```
+# Apply migrations to the local in-memory D1 instance
+npx wrangler d1 migrations apply comprehendo --local
 
-Useful commands: `.tables`, `SELECT * FROM users LIMIT 5;`, `.schema quiz`, `.quit`.
+# Open an interactive shell (Ctrl+D to exit)
+npx wrangler d1 shell comprehendo --local
+
+# Run a one-off query
+npx wrangler d1 execute comprehendo --local --command "SELECT COUNT(*) FROM quiz;"
+```
 
 ### Database Schema
 
 ```sql
--- From lib/db.ts initialization logic
+-- From migrations/0001_initial.sql
 
 CREATE TABLE IF NOT EXISTS quiz (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -440,12 +441,12 @@ CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (u
 
 ## Troubleshooting
 
-- **Database Connection:** Ensure `data/` dir exists locally. On Fly, check volume mount (`fly.toml`) and status (`fly status`).
-- **Auth Errors:** Verify `.env.local` / Fly secrets (`AUTH_SECRET`, provider IDs/secrets, `NEXTAUTH_URL`). Ensure OAuth callback URLs match exactly in provider settings (e.g., `http://localhost:3000/api/auth/callback/github` or `https://<your-app-name>.fly.dev/api/auth/callback/github`). Check the `next-auth` documentation for provider-specific setup.
+- **Database Connection:** Ensure D1 migrations have been applied (`npx wrangler d1 migrations apply comprehendo --local` for local dev, `--remote` for production). Inspect data with `npx wrangler d1 execute` or the Admin panel.
+- **Auth Errors:** Verify `.env.local` and Cloudflare Worker environment variables (`AUTH_SECRET`, provider IDs/secrets, `NEXTAUTH_URL`). Ensure OAuth callback URLs match exactly in provider settings (e.g., `http://localhost:3000/api/auth/callback/github` or your Cloudflare Worker domain).
 - **API Key Errors:** Check AI provider keys in env/secrets. Ensure billing is enabled if required by the provider (e.g., Google Cloud Platform for Translate API).
-- **Rate Limit Errors:** Wait for the hour window to reset. Check `rate_limits` table via SQLite or Admin Panel if needed. Consider increasing `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts` if appropriate.
-- **Admin Access Denied:** Confirm logged-in user's email is EXACTLY in `ADMIN_EMAILS` (case-sensitive, no extra spaces). Check Fly secrets value. Ensure you've logged in with the correct account.
-- **Deployment Issues:** Examine GitHub Actions logs (`Actions` tab on GitHub) and `fly logs --app <your-app-name>`. Check `fly status` for volume and machine health.
+- **Rate Limit Errors:** Wait for the hour window to reset. Check the `rate_limits` D1 table (CLI or Admin Panel). Consider increasing `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts` if appropriate.
+- **Admin Access Denied:** Confirm logged-in user's email is EXACTLY in `ADMIN_EMAILS` (case-sensitive, no extra spaces). Check the Cloudflare Worker environment variable value and ensure you've logged in with the correct account.
+- **Deployment Issues:** Examine GitHub Actions logs (`Actions` tab) and Cloudflare Worker deploy logs. Confirm the Worker configuration (bindings, vars) and that GitHub secrets/variables are set correctly.
 - **PWA Issues:** Check `next.config.js` PWA settings and browser dev tools (Application -> Service Workers/Manifest).
 
 ## License

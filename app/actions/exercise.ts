@@ -39,9 +39,9 @@ import {
 import { z } from 'zod';
 import { extractZodErrors } from 'app/lib/utils/errorUtils';
 
-const getDbUserIdFromSession = (
+const getDbUserIdFromSession = async (
   session: { user: { id?: string | null; provider?: string | null } } | null
-): number | null => {
+): Promise<number | null> => {
   if (!session || !session.user.id || !session.user.provider) {
     if (session) {
       console.warn(
@@ -52,7 +52,7 @@ const getDbUserIdFromSession = (
   }
 
   try {
-    const userId = findUserIdByProvider(session.user.id, session.user.provider);
+    const userId = await findUserIdByProvider(session.user.id, session.user.provider);
     if (userId === undefined) {
       console.warn(
         `[getDbUserIdFromSession] Direct lookup failed: Could not find user for providerId: ${session.user.id}, provider: ${session.user.provider}`
@@ -66,13 +66,13 @@ const getDbUserIdFromSession = (
   }
 };
 
-const getValidatedExerciseFromCache = (
+const getValidatedExerciseFromCache = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   userId: number | null
-): { quizData: PartialQuizData; quizId: number } | undefined => {
-  const cachedExercise: QuizRow | undefined = getCachedExercise(
+): Promise<{ quizData: PartialQuizData; quizId: number } | undefined> => {
+  const cachedExercise: QuizRow | undefined = await getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
@@ -125,13 +125,13 @@ const MAX_REQUESTS_PER_HOUR = parseInt(
 );
 const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
 
-const checkRateLimit = (ip: string): boolean => {
+const checkRateLimit = async (ip: string): Promise<boolean> => {
   try {
     const now = Date.now();
-    const rateLimitRow = getRateLimit(ip);
+    const rateLimitRow = await getRateLimit(ip);
 
     if (!rateLimitRow) {
-      createRateLimit(ip, new Date(now).toISOString());
+      await createRateLimit(ip, new Date(now).toISOString());
       return true;
     }
 
@@ -142,11 +142,11 @@ const checkRateLimit = (ip: string): boolean => {
       if (rateLimitRow.request_count >= MAX_REQUESTS_PER_HOUR) {
         return false;
       }
-      incrementRateLimit(ip);
+      await incrementRateLimit(ip);
       return true;
     }
 
-    resetRateLimit(ip, new Date(now).toISOString());
+    await resetRateLimit(ip, new Date(now).toISOString());
     return true;
   } catch (error) {
     console.error('[RateLimiter] Error checking rate limit:', error);
@@ -195,7 +195,7 @@ const tryGenerateAndCacheExercise = async (
   try {
     const options: ExerciseGenerationOptions = { ...params, language: params.passageLanguage };
     const generatedExercise = await generateAndValidateExercise(options);
-    const exerciseId = saveExerciseToCache(
+    const exerciseId = await saveExerciseToCache(
       params.passageLanguage,
       params.questionLanguage,
       params.level,
@@ -236,7 +236,7 @@ const getOrGenerateExercise = async (
     }
     generationError = genResult.error;
 
-    const validatedCacheResultPreferGen = getValidatedExerciseFromCache(
+    const validatedCacheResultPreferGen = await getValidatedExerciseFromCache(
       requestParams.passageLanguage,
       requestParams.questionLanguage,
       requestParams.cefrLevel,
@@ -255,7 +255,7 @@ const getOrGenerateExercise = async (
     );
   }
 
-  const validatedCacheResultOtherwise = getValidatedExerciseFromCache(
+  const validatedCacheResultOtherwise = await getValidatedExerciseFromCache(
     requestParams.passageLanguage,
     requestParams.questionLanguage,
     requestParams.cefrLevel,
@@ -283,7 +283,7 @@ const getRequestContext = async () => {
   const headersList = await headers();
   const ip = headersList.get('x-forwarded-for') || 'unknown';
   const session = await getServerSession(authOptions);
-  const userId = getDbUserIdFromSession(session);
+  const userId = await getDbUserIdFromSession(session);
   return { ip, userId };
 };
 
@@ -319,8 +319,8 @@ export const generateExerciseResponse = async (
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
   if (!validParams) return createErrorResponse(errorMsg);
 
-  if (!checkRateLimit(ip)) {
-    const validatedCacheResultRateLimit = getValidatedExerciseFromCache(
+  if (!(await checkRateLimit(ip))) {
+    const validatedCacheResultRateLimit = await getValidatedExerciseFromCache(
       validParams.passageLanguage,
       validParams.questionLanguage,
       validParams.cefrLevel,
@@ -338,7 +338,7 @@ export const generateExerciseResponse = async (
   }
 
   const genParams = buildGenParams(validParams);
-  const cachedCountValue = countCachedExercises(
+  const cachedCountValue = await countCachedExercises(
     genParams.passageLanguage,
     genParams.questionLanguage,
     genParams.level
@@ -361,7 +361,7 @@ export const generateInitialExercisePair = async (
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
   if (!validParams) return { quizzes: [], error: errorMsg };
 
-  if (!checkRateLimit(ip)) return { quizzes: [], error: 'Rate limit exceeded.' };
+  if (!(await checkRateLimit(ip))) return { quizzes: [], error: 'Rate limit exceeded.' };
 
   const genParams1 = buildGenParams(validParams);
   const genParams2 = buildGenParams(validParams, getRandomTopicForLevel(validParams.cefrLevel));
