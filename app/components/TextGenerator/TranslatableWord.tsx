@@ -160,13 +160,11 @@ const TranslatableWord = memo(
     }, [translation]);
 
     const handleMouseLeave = useCallback(() => {
-      // Hide popup after a short delay to allow clicking
+      // Hide popup after a short delay
       setTimeout(() => {
-        if (!isClicked) {
-          setShowPopup(false);
-        }
+        setShowPopup(false);
       }, 200);
-    }, [isClicked]);
+    }, []);
 
     let combinedClassName =
       'cursor-pointer transition-all duration-300 px-1 -mx-1 relative group rounded';
