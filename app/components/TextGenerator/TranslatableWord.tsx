@@ -160,8 +160,6 @@ const TranslatableWord = memo(
       combinedClassName += ' bg-blue-500 text-white';
     } else if (isSpeaking) {
       combinedClassName += ' bg-green-500 text-white animate-pulse';
-    } else if (isClicked) {
-      combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
       if (hover.progressionPhase !== 'credits' || hover.creditsAvailable > 0) {
         combinedClassName += ' hover:underline';
