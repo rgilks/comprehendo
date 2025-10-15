@@ -154,7 +154,7 @@ const generateFeedback = (
   fullQuizData: z.infer<typeof QuizDataSchema>,
   userAnswer: string | undefined
 ) => {
-  const correctAnswerKey = fullQuizData.correctAnswer as keyof typeof fullQuizData.options | null;
+  const correctAnswerKey = fullQuizData.correctAnswer;
   const allExplanations = fullQuizData.allExplanations;
   const options = fullQuizData.options;
 
@@ -169,11 +169,13 @@ const generateFeedback = (
     allExplanationsExists: !!allExplanations,
   });
 
+  // Check if we have all required data
   if (
     typeof userAnswer === 'string' &&
     userAnswer in options &&
     correctAnswerKey &&
-    allExplanations
+    allExplanations &&
+    correctAnswerKey in allExplanations
   ) {
     const chosenAnswerKey = userAnswer as keyof typeof options;
     const isCorrect = chosenAnswerKey === correctAnswerKey;
