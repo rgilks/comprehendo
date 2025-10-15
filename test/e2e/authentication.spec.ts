@@ -8,10 +8,6 @@ test.describe('Authentication Flow', () => {
     await page.waitForTimeout(2000);
 
     // Look for auth buttons - they should be present but might not be visible due to CSP issues
-    const _authButtons = page.locator(
-      'button[title*="Sign in"], button[title*="Google"], button[title*="GitHub"]'
-    );
-
     // If auth buttons are not visible due to missing env vars, that's expected
     // We'll just verify the page loads without errors
     await expect(page.getByRole('heading', { name: 'Comprehendo' })).toBeVisible();
