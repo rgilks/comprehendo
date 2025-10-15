@@ -2,11 +2,6 @@ import { generateExercisePrompt } from 'app/lib/ai/prompts/exercise-prompt';
 import { ExerciseContent, ExerciseContentSchema, type QuizData } from 'app/domain/schemas';
 import { type ExerciseGenerationParams } from 'app/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from 'app/lib/ai/google-ai-api';
-import {
-  validateQuestionQuality,
-  logQualityMetrics,
-  debugValidationFailure,
-} from 'app/lib/ai/question-validator';
 
 export { AIResponseProcessingError };
 
@@ -16,7 +11,7 @@ export type ExerciseGenerationOptions = ExerciseGenerationParams & {
 
 export const generateAndValidateExercise = async (
   options: ExerciseGenerationOptions,
-  maxRetries: number = 5
+  maxRetries: number = 2
 ): Promise<ExerciseContent> => {
   let lastError: Error | null = null;
 
@@ -81,35 +76,11 @@ export const generateAndValidateExercise = async (
 
       const exerciseContent = validationResult.data;
 
-      // Now validate question quality
-      const qualityValidation = validateQuestionQuality(exerciseContent, options.level);
-      logQualityMetrics(qualityValidation.metrics, options.level, options.language);
-
-      if (qualityValidation.isValid || attempt === maxRetries) {
-        if (qualityValidation.isValid) {
-          console.log(
-            `[AI:generateAndValidateExercise] Quality validation passed on attempt ${attempt + 1}`
-          );
-        } else {
-          console.warn(
-            `[AI:generateAndValidateExercise] Quality validation failed on final attempt ${attempt + 1}: ${qualityValidation.reason}`
-          );
-          // Debug the validation failure
-          debugValidationFailure(exerciseContent, qualityValidation.reason);
-        }
-        return exerciseContent;
-      } else {
-        console.warn(
-          `[AI:generateAndValidateExercise] Quality validation failed on attempt ${attempt + 1}: ${qualityValidation.reason}. Retrying...`
-        );
-        // Debug the validation failure for retry attempts
-        debugValidationFailure(exerciseContent, qualityValidation.reason);
-        lastError = new AIResponseProcessingError(
-          `Quality validation failed: ${qualityValidation.reason}`,
-          qualityValidation.metrics
-        );
-        // Continue to next attempt
-      }
+      // Skip quality validation - trust the AI and let users give feedback
+      console.log(
+        `[AI:generateAndValidateExercise] Content generated successfully on attempt ${attempt + 1}`
+      );
+      return exerciseContent;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`[AI:generateAndValidateExercise] Attempt ${attempt + 1} failed:`, lastError);
