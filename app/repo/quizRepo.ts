@@ -152,10 +152,12 @@ export const getCachedExerciseToAttempt = (
          ORDER BY 
            q.created_at DESC 
          LIMIT 1`;
-      
+
       if (excludeQuizId) {
         stmt = db.prepare<[number, string, string, string, number]>(sql);
-        row = stmt.get(userId, passageLanguage, questionLanguage, level, excludeQuizId) as QuizRow | undefined;
+        row = stmt.get(userId, passageLanguage, questionLanguage, level, excludeQuizId) as
+          | QuizRow
+          | undefined;
       } else {
         stmt = db.prepare<[number, string, string, string]>(sql);
         row = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
@@ -169,10 +171,12 @@ export const getCachedExerciseToAttempt = (
          ${excludeIdClause}
          ORDER BY created_at DESC 
          LIMIT 1`;
-      
+
       if (excludeQuizId) {
         stmt = db.prepare<[string, string, string, number]>(sql);
-        row = stmt.get(passageLanguage, questionLanguage, level, excludeQuizId) as QuizRow | undefined;
+        row = stmt.get(passageLanguage, questionLanguage, level, excludeQuizId) as
+          | QuizRow
+          | undefined;
       } else {
         stmt = db.prepare<[string, string, string]>(sql);
         row = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
