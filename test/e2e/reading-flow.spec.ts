@@ -30,7 +30,7 @@ test.describe('Core Reading Comprehension Flow', () => {
     });
   });
 
-  test.skip('should display passage, question, options, and handle answers', async ({ page }) => {
+  test('should display passage, question, options, and handle answers', async ({ page }) => {
     const textGeneratorContainer = page.locator('[data-testid="text-generator-container"]');
     const readingPassageContainer = textGeneratorContainer.locator(
       '[data-testid="reading-passage"]'

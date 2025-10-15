@@ -35,6 +35,9 @@ export interface QuizSlice extends BaseSlice {
   };
   nextQuizAvailable: NextQuizInfo | null;
   feedbackSubmitted: boolean;
+  isSubmittingAnswer: boolean;
+  isSubmittingFeedback: boolean;
+  isPrefetching: boolean;
   hover: {
     progressionPhase: HoverProgressionPhase;
     correctAnswersInPhase: number;
@@ -75,6 +78,9 @@ const getInitialQuizState = () => ({
   },
   nextQuizAvailable: null,
   feedbackSubmitted: false,
+  isSubmittingAnswer: false,
+  isSubmittingFeedback: false,
+  isPrefetching: false,
   hover: {
     progressionPhase: 'credits' as HoverProgressionPhase,
     correctAnswersInPhase: 0,
@@ -98,6 +104,9 @@ const resetQuizCoreState = (state: QuizSlice) => {
   resetFeedbackState(state);
   state.nextQuizAvailable = null;
   state.feedbackSubmitted = false;
+  state.isSubmittingAnswer = false;
+  state.isSubmittingFeedback = false;
+  state.isPrefetching = false;
   state.hover.creditsUsed = 0;
 };
 
@@ -216,7 +225,7 @@ export const createQuizSlice: StateCreator<
       get().loadNextQuiz();
       return;
     }
-    set({ loading: !isPrefetch, error: null });
+    set({ loading: !isPrefetch, error: null, isPrefetching: isPrefetch });
     if (!isPrefetch) {
       get().stopPassageSpeech();
       set((state) => {
@@ -256,7 +265,7 @@ export const createQuizSlice: StateCreator<
       const quizData: PartialQuizData = validatedResponse.quizData;
       if (!quizData.language) quizData.language = get().passageLanguage;
       if (isPrefetch) {
-        set({ nextQuizAvailable: { quizData, quizId: validatedResponse.quizId }, loading: false });
+        set({ nextQuizAvailable: { quizData, quizId: validatedResponse.quizId }, loading: false, isPrefetching: false });
       } else {
         get().resetQuizWithNewData(quizData, validatedResponse.quizId);
       }
@@ -265,17 +274,19 @@ export const createQuizSlice: StateCreator<
       if (!isPrefetch) {
         get().setError(errorMessage);
         get().setShowContent(false);
-        set({ loading: false });
+        set({ loading: false, isPrefetching: false });
       } else {
-        set({ loading: false, nextQuizAvailable: null });
+        set({ loading: false, nextQuizAvailable: null, isPrefetching: false });
       }
     }
   },
   handleAnswerSelect: async (answer): Promise<void> => {
-    if (get().isAnswered) return;
+    if (get().isAnswered || get().isSubmittingAnswer) return;
+    
     set((state) => {
       state.selectedAnswer = answer;
       state.isAnswered = true;
+      state.isSubmittingAnswer = true;
     });
     get().setShowExplanation(true);
 
@@ -284,6 +295,7 @@ export const createQuizSlice: StateCreator<
       set((state) => {
         state.isAnswered = false;
         state.selectedAnswer = null;
+        state.isSubmittingAnswer = false;
       });
       get().setError('Cannot submit answer: Invalid quiz ID.');
       return;
@@ -344,8 +356,12 @@ export const createQuizSlice: StateCreator<
         } else if (state.hover.progressionPhase === 'initial') {
           state.hover.correctAnswersInPhase = 0;
         }
+        state.isSubmittingAnswer = false;
       });
     } catch (error: unknown) {
+      set((state) => {
+        state.isSubmittingAnswer = false;
+      });
       get().setError(error instanceof Error ? error.message : 'Failed to submit answer.');
     }
   },
@@ -367,18 +383,18 @@ export const createQuizSlice: StateCreator<
     const quizId = currentQuizId;
     if (typeof quizId !== 'number') {
       get().setError('Cannot submit feedback: Invalid quiz ID.');
-      set({ loading: false, feedbackSubmitted: false });
+      set({ loading: false, feedbackSubmitted: false, isSubmittingFeedback: false });
       return;
     }
     if (!passageLanguage || !generatedQuestionLanguage || !cefrLevel) {
       get().setError(
         'Cannot submit feedback: Missing required state (language/level). Please refresh.'
       );
-      set({ loading: false, feedbackSubmitted: false });
+      set({ loading: false, feedbackSubmitted: false, isSubmittingFeedback: false });
       return;
     }
     get().setError(null);
-    set({ loading: true });
+    set({ loading: true, isSubmittingFeedback: true });
     try {
       const payload = {
         quizId: quizId,
@@ -394,7 +410,7 @@ export const createQuizSlice: StateCreator<
         const errorMessage = result.error || 'Failed to submit feedback via API.';
         throw new Error(errorMessage);
       }
-      set({ feedbackSubmitted: true, loading: false });
+      set({ feedbackSubmitted: true, loading: false, isSubmittingFeedback: false });
       const nextQuiz = get().nextQuizAvailable;
       if (nextQuiz) {
         get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
@@ -411,7 +427,7 @@ export const createQuizSlice: StateCreator<
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       get().setError(`Failed to submit feedback: ${message}`);
-      set({ loading: false, feedbackSubmitted: false });
+      set({ loading: false, feedbackSubmitted: false, isSubmittingFeedback: false });
     }
   },
   useHoverCredit: () => {

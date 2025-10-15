@@ -24,6 +24,7 @@ interface QuizOptionButtonProps {
   };
   showExplanation: boolean;
   questionLanguage: string;
+  isSubmittingAnswer: boolean;
   handleAsyncClick: (answer: string) => (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
@@ -36,12 +37,13 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
   feedback,
   showExplanation,
   questionLanguage,
+  isSubmittingAnswer,
   handleAsyncClick,
 }) => (
   <button
     key={optionKey}
     onClick={handleAsyncClick(optionKey)}
-    disabled={isAnswered}
+    disabled={isAnswered || isSubmittingAnswer}
     className={`w-full text-left p-3 rounded-md border transition-colors relative ${
       isAnswered && feedback.correctAnswer
         ? optionKey === feedback.correctAnswer
@@ -52,10 +54,15 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
         : selectedAnswer === optionKey
           ? 'bg-blue-900/50 border-blue-700 text-blue-100'
           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700/50'
-    }`}
+    } ${isSubmittingAnswer ? 'opacity-75 cursor-not-allowed' : ''}`}
     data-testid={`answer-option-${index}`}
   >
     {value}
+    {isSubmittingAnswer && selectedAnswer === optionKey && (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-md">
+        <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+      </div>
+    )}
     {isAnswered &&
       showExplanation &&
       !feedback.isCorrect &&
@@ -152,6 +159,8 @@ const QuizSection = () => {
     handleAnswerSelect,
     feedback,
     generatedPassageLanguage,
+    isSubmittingAnswer,
+    isSubmittingFeedback,
   } = useTextGeneratorStore();
   const questionLanguage = contextQuestionLanguage;
   const handleAsyncClick = useCallback(
@@ -185,6 +194,7 @@ const QuizSection = () => {
             feedback={feedback}
             showExplanation={showExplanation}
             questionLanguage={questionLanguage}
+            isSubmittingAnswer={isSubmittingAnswer}
             handleAsyncClick={handleAsyncClick}
           />
         ))}
@@ -197,6 +207,14 @@ const QuizSection = () => {
         questionLanguage={questionLanguage}
         generatedPassageLanguage={generatedPassageLanguage}
       />
+      {isSubmittingFeedback && (
+        <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="animate-spin h-5 w-5 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+            <span className="text-gray-300">{t('practice.loadingNextQuestion') || 'Loading next question...'}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

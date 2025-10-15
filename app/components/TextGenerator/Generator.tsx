@@ -18,6 +18,8 @@ const Generator = () => {
     submitFeedback,
     loadNextQuiz,
     fetchInitialPair,
+    isSubmittingFeedback,
+    isPrefetching,
   } = useTextGeneratorStore();
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
@@ -35,9 +37,9 @@ const Generator = () => {
   );
 
   const showFeedbackPrompt =
-    isAnswered && !feedbackSubmitted && !loading && status === 'authenticated';
+    isAnswered && !feedbackSubmitted && !loading && !isSubmittingFeedback && status === 'authenticated';
   const showFeedbackLoading =
-    isAnswered && !feedbackSubmitted && loading && status === 'authenticated';
+    isAnswered && !feedbackSubmitted && (loading || isSubmittingFeedback) && status === 'authenticated';
   const shouldOfferGeneration =
     !quizData || (isAnswered && (feedbackSubmitted || status !== 'authenticated'));
 
@@ -51,8 +53,8 @@ const Generator = () => {
               onClick={() => {
                 handleFeedbackSubmit(true);
               }}
-              disabled={loading}
-              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30`}
+              disabled={loading || isSubmittingFeedback}
+              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30 ${loading || isSubmittingFeedback ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Good question"
               data-testid="feedback-good-button"
             >
@@ -63,8 +65,8 @@ const Generator = () => {
               onClick={() => {
                 handleFeedbackSubmit(false);
               }}
-              disabled={loading}
-              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30`}
+              disabled={loading || isSubmittingFeedback}
+              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30 ${loading || isSubmittingFeedback ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Bad question"
               data-testid="feedback-bad-button"
             >
@@ -92,7 +94,7 @@ const Generator = () => {
           }}
           disabled={loading}
           data-testid="generate-button"
-          className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-green-600 hover:from-blue-700 hover:via-indigo-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+          className={`w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-green-600 hover:from-blue-700 hover:via-indigo-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-cyan-500 transition duration-150 ease-in-out flex items-center justify-center ${loading ? 'opacity-75 cursor-not-allowed' : ''} ${isPrefetching ? 'ring-2 ring-blue-400 ring-opacity-50' : ''}`}
         >
           {loading ? (
             <>
@@ -121,7 +123,12 @@ const Generator = () => {
               {t('common.generating')}
             </>
           ) : (
-            t('practice.generateNewText')
+            <>
+              {t('practice.generateNewText')}
+              {isPrefetching && (
+                <div className="ml-2 h-2 w-2 bg-blue-400 rounded-full animate-pulse" title="Preparing next question..."></div>
+              )}
+            </>
           )}
         </button>
       )}
