@@ -23,6 +23,7 @@ export type HoverProgressionPhase = 'initial' | 'credits';
 export interface QuizSlice extends BaseSlice {
   quizData: PartialQuizData | null;
   currentQuizId: number | null;
+  lastShownQuizId: number | null;
   selectedAnswer: string | null;
   isAnswered: boolean;
   relevantTextRange: { start: number; end: number } | null;
@@ -66,6 +67,7 @@ export const INITIAL_HOVER_CREDITS = 7;
 const getInitialQuizState = () => ({
   quizData: null,
   currentQuizId: null,
+  lastShownQuizId: null,
   selectedAnswer: null,
   isAnswered: false,
   relevantTextRange: null,
@@ -153,11 +155,15 @@ export const createQuizSlice: StateCreator<
     });
   },
   resetQuizWithNewData: (newQuizData: PartialQuizData, quizId: number) => {
+    console.log('[Quiz] Loading quiz ID:', quizId, 'Previous quiz ID:', get().lastShownQuizId);
+    
     get().stopPassageSpeech();
     get().resetQuizState();
     set((state) => {
       state.quizData = newQuizData;
       state.currentQuizId = quizId;
+      state.lastShownQuizId = quizId; // Track the last shown quiz
+      state.nextQuizAvailable = null; // Clear any stale prefetched quiz
       state.loading = false;
       state.error = null;
       const currentPassageLanguage = get().passageLanguage;
@@ -166,13 +172,28 @@ export const createQuizSlice: StateCreator<
     get().setShowQuestionSection(true);
     get().setShowExplanation(false);
     get().setShowContent(true);
+    
+    // Prefetch the next quiz in the background for smooth transitions
+    console.log('[Quiz] Starting prefetch for next quiz...');
     void get().generateText(true);
   },
   loadNextQuiz: () => {
     const nextQuiz = get().nextQuizAvailable;
+    const lastShownId = get().lastShownQuizId;
+    
+    console.log('[Quiz] loadNextQuiz called. Next quiz available:', !!nextQuiz, 'Next quiz ID:', nextQuiz?.quizId, 'Last shown ID:', lastShownId);
+    
     if (nextQuiz) {
-      get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
+      // Check if the prefetched quiz is the same as the one we just showed
+      if (nextQuiz.quizId === lastShownId) {
+        console.warn('[Quiz] Prefetched quiz is the same as last shown! Generating new quiz instead.');
+        void get().generateText(); // Generate a fresh quiz instead
+      } else {
+        console.log('[Quiz] Using prefetched quiz:', nextQuiz.quizId);
+        get().resetQuizWithNewData(nextQuiz.quizData, nextQuiz.quizId);
+      }
     } else {
+      console.log('[Quiz] No prefetched quiz available, generating new quiz...');
       void get().generateText();
     }
   },
@@ -221,7 +242,11 @@ export const createQuizSlice: StateCreator<
     }
   },
   generateText: async (isPrefetch = false): Promise<void> => {
+    const lastShownId = get().lastShownQuizId;
+    console.log('[Quiz] generateText called. isPrefetch:', isPrefetch, 'lastShownId:', lastShownId);
+    
     if (!isPrefetch && get().nextQuizAvailable) {
+      console.log('[Quiz] Using loadNextQuiz flow (nextQuizAvailable exists)');
       get().loadNextQuiz();
       return;
     }
@@ -234,6 +259,7 @@ export const createQuizSlice: StateCreator<
       get().setShowExplanation(false);
     }
     try {
+      console.log('[Quiz] Calling generateExerciseResponse...');
       const response = await generateExerciseResponse({
         passageLanguage: get().passageLanguage,
         questionLanguage: get().generatedQuestionLanguage,
@@ -263,15 +289,27 @@ export const createQuizSlice: StateCreator<
       }
       const validatedResponse = parseResult.data;
       const quizData: PartialQuizData = validatedResponse.quizData;
+      const newQuizId = validatedResponse.quizId;
+      
       if (!quizData.language) quizData.language = get().passageLanguage;
+      
+      console.log('[Quiz] Generated quiz ID:', newQuizId, 'isPrefetch:', isPrefetch);
+      
+      // Check if we accidentally got the same quiz as last shown
+      if (newQuizId === lastShownId) {
+        console.warn('[Quiz] WARNING: Generated quiz has same ID as last shown quiz!', newQuizId);
+      }
+      
       if (isPrefetch) {
+        console.log('[Quiz] Storing prefetched quiz:', newQuizId);
         set({
-          nextQuizAvailable: { quizData, quizId: validatedResponse.quizId },
+          nextQuizAvailable: { quizData, quizId: newQuizId },
           loading: false,
           isPrefetching: false,
         });
       } else {
-        get().resetQuizWithNewData(quizData, validatedResponse.quizId);
+        console.log('[Quiz] Loading quiz immediately:', newQuizId);
+        get().resetQuizWithNewData(quizData, newQuizId);
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Unknown error during generation';
