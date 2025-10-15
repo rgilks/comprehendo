@@ -37,7 +37,9 @@ test.describe('Quiz Flow Debug', () => {
 
     // Print console logs
     console.log('\n=== Console Logs ===');
-    consoleLogs.forEach((log) => console.log(log));
+    consoleLogs.forEach((log) => {
+      console.log(log);
+    });
 
     // Check if they're different
     if (firstPassage === secondPassage) {

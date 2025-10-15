@@ -60,8 +60,10 @@ const Generator = () => {
               onClick={() => {
                 handleFeedbackSubmit(true);
               }}
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               disabled={Boolean(loading || isSubmittingFeedback)}
-              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30 ${Boolean(loading || isSubmittingFeedback) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30 ${loading || isSubmittingFeedback ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Good question"
               data-testid="feedback-good-button"
             >
@@ -72,8 +74,10 @@ const Generator = () => {
               onClick={() => {
                 handleFeedbackSubmit(false);
               }}
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               disabled={Boolean(loading || isSubmittingFeedback)}
-              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30 ${Boolean(loading || isSubmittingFeedback) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+              className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30 ${loading || isSubmittingFeedback ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Bad question"
               data-testid="feedback-bad-button"
             >

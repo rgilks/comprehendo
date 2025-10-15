@@ -16,7 +16,14 @@
     "deps": "npx npm-check-updates",
     "deps:update": "npx npm-check-updates -u && npm run nuke",
     "test:e2e": "npx playwright test --reporter=list",
-    "test:e2e:watch": "playwright test --watch"
+    "test:e2e:watch": "playwright test --watch",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@google/genai": "^1.1.0",
@@ -47,6 +54,8 @@
     "eslint-config-next": "15.3.2",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-immer": "^0.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4",
     "npm-check-updates": "^18.0.1",
     "playwright": "^1.52.0",
     "postcss": "^8.5.3",
