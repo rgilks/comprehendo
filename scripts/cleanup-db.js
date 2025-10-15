@@ -15,9 +15,9 @@
  *   node scripts/cleanup-db.js --dry-run
  */
 
-import { cleanupOldRateLimits } from '../app/repo/rateLimitRepo.js';
-import { cleanupOldTranslations } from '../app/repo/translationCacheRepo.js';
-import { cleanupOldUsageRecords } from '../app/repo/aiApiUsageRepo.js';
+import { cleanupOldRateLimits } from '../app/repo/rateLimitRepo.ts';
+import { cleanupOldTranslations } from '../app/repo/translationCacheRepo.ts';
+import { cleanupOldUsageRecords } from '../app/repo/aiApiUsageRepo.ts';
 
 const isDryRun = process.argv.includes('--dry-run');
 

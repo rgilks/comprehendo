@@ -7,9 +7,14 @@ const config = defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  timeout: 30000, // 30 seconds timeout for each test
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
+    // Take screenshot on failure
+    screenshot: 'only-on-failure',
+    // Record video on failure
+    video: 'retain-on-failure',
   },
 
   projects: [
@@ -17,6 +22,15 @@ const config = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // Uncomment to test on other browsers
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
   ],
 
   webServer: process.env.CI
@@ -25,6 +39,7 @@ const config = defineConfig({
         command: 'npm run dev',
         url: 'http://localhost:3000',
         reuseExistingServer: true,
+        timeout: 120000, // 2 minutes to start server
       },
 });
 
