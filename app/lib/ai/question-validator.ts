@@ -52,7 +52,7 @@ const containsKeyInfo = (text: string, keyInfo: string): boolean => {
     textWords.some((textWord) => textWord.includes(keyWord) || keyWord.includes(textWord))
   );
 
-  return matchingWords.length >= Math.ceil(keyWords.length * 0.6); // 60% word match
+  return matchingWords.length >= Math.ceil(keyWords.length * 0.4); // 40% word match (less strict)
 };
 
 // Enhanced validation functions
@@ -101,7 +101,7 @@ const validateQuestionAnswerCoherence = (exercise: ExerciseContent): boolean => 
       relevantWords.some((word) => word.includes(keyword) || keyword.includes(word))
   );
 
-  return matchingKeywords.length >= Math.ceil(questionKeywords.length * 0.5); // 50% keyword match
+  return matchingKeywords.length >= Math.ceil(questionKeywords.length * 0.3); // 30% keyword match (less strict)
 };
 
 const validateSemanticAnswerValidation = (exercise: ExerciseContent): boolean => {

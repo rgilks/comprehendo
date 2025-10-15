@@ -16,7 +16,7 @@ export type ExerciseGenerationOptions = ExerciseGenerationParams & {
 
 export const generateAndValidateExercise = async (
   options: ExerciseGenerationOptions,
-  maxRetries: number = 2
+  maxRetries: number = 5
 ): Promise<ExerciseContent> => {
   let lastError: Error | null = null;
 
