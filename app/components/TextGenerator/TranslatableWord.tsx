@@ -20,11 +20,10 @@ const getCacheKey = (word: string, sourceLang: string, targetLang: string): stri
 
 const TranslatableWord = memo(
   ({ word, fromLang, toLang, isCurrentWord, isRelevant }: TranslatableWordProps) => {
-    const [isClicked, setIsClicked] = useState(false);
+    const [isHovering, setIsHovering] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
-    const [showPopup, setShowPopup] = useState(false);
 
     const {
       speakText,
@@ -48,21 +47,14 @@ const TranslatableWord = memo(
           if (sourceLangIso && targetLangIso) {
             const cacheKey = getCacheKey(word, sourceLangIso, targetLangIso);
             if (translationCache.has(cacheKey)) {
-              const cachedTranslation = translationCache.get(cacheKey) ?? null;
-              setTranslation(cachedTranslation);
-              setIsClicked(true);
-              setShowPopup(true);
+              setTranslation(translationCache.get(cacheKey) ?? null);
             } else {
               setTranslation(null);
-              setIsClicked(false);
-              setShowPopup(false);
             }
           }
         }
       } else {
         setTranslation(null);
-        setIsClicked(false);
-        setShowPopup(false);
       }
     }, [word, fromLang, toLang, shouldTranslate, translationCache]);
 
@@ -132,13 +124,11 @@ const TranslatableWord = memo(
         setIsSpeaking(false);
       }, 1000);
 
-      if (!isClicked && shouldTranslate) {
+      if (shouldTranslate && !translation) {
         const canAttemptTranslation =
           hover.progressionPhase === 'initial' || hover.creditsAvailable > 0;
 
         if (canAttemptTranslation) {
-          setIsClicked(true);
-          setShowPopup(true);
           void handleTranslationFetch();
         }
       }
@@ -146,24 +136,19 @@ const TranslatableWord = memo(
       speakText,
       word,
       fromLang,
-      isClicked,
       shouldTranslate,
+      translation,
       hover.progressionPhase,
       hover.creditsAvailable,
       handleTranslationFetch,
     ]);
 
     const handleMouseEnter = useCallback(() => {
-      if (translation) {
-        setShowPopup(true);
-      }
-    }, [translation]);
+      setIsHovering(true);
+    }, []);
 
     const handleMouseLeave = useCallback(() => {
-      // Hide popup after a short delay
-      setTimeout(() => {
-        setShowPopup(false);
-      }, 200);
+      setIsHovering(false);
     }, []);
 
     let combinedClassName =
@@ -183,7 +168,8 @@ const TranslatableWord = memo(
       }
     }
 
-    const showTranslationPopup = showPopup && shouldTranslate && !isLoading && translation !== null;
+    const showTranslationPopup =
+      isHovering && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 
