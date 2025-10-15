@@ -86,19 +86,17 @@ const TextGeneratorContainer = () => {
               data-testid="generated-content"
               ref={generatedContentRef}
             >
-              <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
+              <div className="flex flex-col gap-6">
                 <motion.div
-                  className="lg:w-2/5 lg:sticky lg:top-4 lg:self-start lg:max-h-screen lg:overflow-y-auto"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 }}
                 >
                   <ReadingPassage />
                 </motion.div>
                 <motion.div
-                  className="lg:w-3/5 lg:pl-4 lg:min-h-0"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
                   <QuizSection />

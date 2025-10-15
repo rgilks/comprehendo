@@ -38,7 +38,7 @@ const ReadingPassage = () => {
 
   return (
     <div data-testid="reading-passage" className="mb-6 lg:mb-0">
-      <div className="lg:sticky lg:top-4 lg:z-10">
+      <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center text-blue-400">
             <BookOpenIcon className="w-5 h-5 mr-2 hidden sm:inline-flex" />
