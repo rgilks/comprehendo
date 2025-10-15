@@ -70,13 +70,15 @@ const getValidatedExerciseFromCache = (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
-  userId: number | null
+  userId: number | null,
+  excludeQuizId?: number | null
 ): { quizData: PartialQuizData; quizId: number } | undefined => {
   const cachedExercise: QuizRow | undefined = getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
-    userId
+    userId,
+    excludeQuizId
   );
 
   if (cachedExercise) {
@@ -216,12 +218,14 @@ const tryGenerateAndCacheExercise = async (
 const getOrGenerateExercise = async (
   genParams: ExerciseGenerationParams,
   userId: number | null,
-  cachedCount: number
+  cachedCount: number,
+  excludeQuizId?: number | null
 ): Promise<GenerateExerciseResult> => {
   const requestParams: ExerciseRequestParams = {
     passageLanguage: genParams.passageLanguage,
     questionLanguage: genParams.questionLanguage,
     cefrLevel: genParams.level,
+    excludeQuizId,
   };
 
   const attemptGeneration = () => tryGenerateAndCacheExercise(genParams, userId);
@@ -240,7 +244,8 @@ const getOrGenerateExercise = async (
       requestParams.passageLanguage,
       requestParams.questionLanguage,
       requestParams.cefrLevel,
-      userId
+      userId,
+      excludeQuizId
     );
     if (validatedCacheResultPreferGen) {
       return {
@@ -259,7 +264,8 @@ const getOrGenerateExercise = async (
     requestParams.passageLanguage,
     requestParams.questionLanguage,
     requestParams.cefrLevel,
-    userId
+    userId,
+    excludeQuizId
   );
   if (validatedCacheResultOtherwise) {
     return {
@@ -319,12 +325,15 @@ export const generateExerciseResponse = async (
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
   if (!validParams) return createErrorResponse(errorMsg);
 
+  const excludeQuizId = validParams.excludeQuizId ?? null;
+
   if (!checkRateLimit(ip)) {
     const validatedCacheResultRateLimit = getValidatedExerciseFromCache(
       validParams.passageLanguage,
       validParams.questionLanguage,
       validParams.cefrLevel,
-      userId
+      userId,
+      excludeQuizId
     );
     if (validatedCacheResultRateLimit) {
       return {
@@ -345,7 +354,7 @@ export const generateExerciseResponse = async (
   );
 
   try {
-    return await getOrGenerateExercise(genParams, userId, cachedCountValue);
+    return await getOrGenerateExercise(genParams, userId, cachedCountValue, excludeQuizId);
   } catch (error) {
     console.error('Error in generateExerciseResponse:', error);
     return createErrorResponse(

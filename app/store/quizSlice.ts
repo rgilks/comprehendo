@@ -186,7 +186,9 @@ export const createQuizSlice: StateCreator<
     if (nextQuiz) {
       // Check if the prefetched quiz is the same as the one we just showed
       if (nextQuiz.quizId === lastShownId) {
-        console.warn('[Quiz] Prefetched quiz is the same as last shown! Generating new quiz instead.');
+        console.warn('[Quiz] Prefetched quiz is the same as last shown! Clearing it and generating new quiz.');
+        // Clear the duplicate prefetched quiz to prevent infinite loop
+        set({ nextQuizAvailable: null });
         void get().generateText(); // Generate a fresh quiz instead
       } else {
         console.log('[Quiz] Using prefetched quiz:', nextQuiz.quizId);
@@ -259,11 +261,12 @@ export const createQuizSlice: StateCreator<
       get().setShowExplanation(false);
     }
     try {
-      console.log('[Quiz] Calling generateExerciseResponse...');
+      console.log('[Quiz] Calling generateExerciseResponse...', 'excludeQuizId:', lastShownId);
       const response = await generateExerciseResponse({
         passageLanguage: get().passageLanguage,
         questionLanguage: get().generatedQuestionLanguage,
         cefrLevel: get().cefrLevel,
+        excludeQuizId: lastShownId,
       });
       if ('error' in response && response.error) {
         if (!isPrefetch) {

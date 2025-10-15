@@ -21,6 +21,7 @@ export const ExerciseRequestParamsSchema = z.object({
     .refine((val): val is CEFRLevel => validCefrLevels.includes(val as CEFRLevel), {
       message: 'Invalid CEFR level',
     }),
+  excludeQuizId: z.number().optional().nullable(),
 });
 
 export type ExerciseRequestParams = z.infer<typeof ExerciseRequestParamsSchema>;

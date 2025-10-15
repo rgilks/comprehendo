@@ -127,13 +127,16 @@ export const getCachedExerciseToAttempt = (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
-  userId: number | null
+  userId: number | null,
+  excludeQuizId?: number | null
 ): QuizRow | undefined => {
   try {
     let stmt;
     let row: QuizRow | undefined;
 
     if (userId !== null) {
+      // For logged-in users, exclude quizzes they've already given feedback on
+      const excludeIdClause = excludeQuizId ? 'AND q.id != ?' : '';
       const sql = `SELECT 
            q.id, q.language, q.level, q.content, q.created_at, q.question_language, q.user_id
          FROM 
@@ -145,19 +148,35 @@ export const getCachedExerciseToAttempt = (
            AND q.question_language = ? 
            AND q.level = ?
            AND qf.user_id IS NULL
+           ${excludeIdClause}
          ORDER BY 
            q.created_at DESC 
          LIMIT 1`;
-      stmt = db.prepare<[number, string, string, string]>(sql);
-      row = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      
+      if (excludeQuizId) {
+        stmt = db.prepare<[number, string, string, string, number]>(sql);
+        row = stmt.get(userId, passageLanguage, questionLanguage, level, excludeQuizId) as QuizRow | undefined;
+      } else {
+        stmt = db.prepare<[number, string, string, string]>(sql);
+        row = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      }
     } else {
+      // For anonymous users, exclude the last shown quiz ID to prevent repeats
+      const excludeIdClause = excludeQuizId ? 'AND id != ?' : '';
       const sql = `SELECT id, language, level, content, created_at, question_language, user_id
          FROM quiz
          WHERE language = ? AND question_language = ? AND level = ?
+         ${excludeIdClause}
          ORDER BY created_at DESC 
          LIMIT 1`;
-      stmt = db.prepare<[string, string, string]>(sql);
-      row = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      
+      if (excludeQuizId) {
+        stmt = db.prepare<[string, string, string, number]>(sql);
+        row = stmt.get(passageLanguage, questionLanguage, level, excludeQuizId) as QuizRow | undefined;
+      } else {
+        stmt = db.prepare<[string, string, string]>(sql);
+        row = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      }
     }
 
     if (!row) {
