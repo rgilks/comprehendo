@@ -12,7 +12,7 @@ const LanguageSelector = () => {
     useTextGeneratorStore();
 
   return (
-    <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 border border-gray-700 shadow-lg mb-8">
+    <div className="bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900 rounded-2xl p-6 md:p-8 border border-gray-700 shadow-xl mb-6">
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         <label
           htmlFor="passage-language-select"

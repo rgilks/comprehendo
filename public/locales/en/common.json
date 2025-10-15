@@ -82,6 +82,10 @@
     "relevantText": "Relevant Text",
     "showExplanation": "Show Explanation",
     "hideExplanation": "Hide Explanation",
+    "readingInstruction": "Read the passage carefully to answer the question below",
+    "questionPrompt": "Based on the passage above, answer this question:",
+    "readComplete": "Passage read",
+    "reading": "Reading...",
     "progressionFeedback": {
       "correct": "Correct! Streak: {{streak}}/5",
       "incorrect": "Streak reset. Try again!",

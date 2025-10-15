@@ -81,6 +81,11 @@
     "hoverCreditsTooltip": "単語にカーソルを合わせるかクリックすると翻訳します。クレジットは制限されています。",
     "relevantText": "関連テキスト",
     "showExplanation": "説明を表示",
+    "startStreak": "正解を答えて連続を開始してください！",
+    "readingInstruction": "以下の質問に答えるため、文章を注意深く読んでください",
+    "questionPrompt": "上記の文章に基づいて、この質問に答えてください：",
+    "readComplete": "文章を読了",
+    "reading": "読んでいます...",
     "progressionFeedback": {
       "correct": "正解！連続：{{streak}}/5",
       "incorrect": "連続がリセットされました。再試行してください！",
@@ -92,8 +97,7 @@
       "keepLearning": "その調子で頑張ってください！",
       "signInToTrack": "ログインして進捗を追跡し、プログレッションをアンロックしてください！",
       "signInCta": "今すぐログイン"
-    },
-    "startStreak": "正解を答えて連続を開始してください！"
+    }
   },
   "languages": {
     "learning": {

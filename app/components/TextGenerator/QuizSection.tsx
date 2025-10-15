@@ -1,10 +1,15 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getTextDirection, useLanguage } from 'app/hooks/useLanguage';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
-import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import {
+  InformationCircleIcon,
+  QuestionMarkCircleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline';
 import type { QuizData } from 'app/domain/schemas';
 import type { Language } from 'app/domain/language';
 import { LanguageSchema } from 'app/domain/language';
@@ -45,7 +50,9 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
     key={optionKey}
     onClick={handleAsyncClick(optionKey)}
     disabled={isAnswered || isSubmittingAnswer}
-    className={`w-full text-left p-3 rounded-md border transition-colors relative ${
+    className={`w-full text-left min-h-[44px] p-4 md:p-5 rounded-lg border-2 transition-all duration-200 transform relative text-base md:text-lg touch-manipulation ${
+      !isAnswered && !isSubmittingAnswer ? 'hover:scale-[1.02] hover:shadow-lg' : ''
+    } ${
       isAnswered && feedback.correctAnswer
         ? optionKey === feedback.correctAnswer
           ? 'bg-green-900/50 border-green-700 text-green-100'
@@ -164,6 +171,16 @@ const QuizSection = () => {
     isSubmittingFeedback,
   } = useTextGeneratorStore();
   const questionLanguage = contextQuestionLanguage;
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+
+  useEffect(() => {
+    if (isAnswered) {
+      const timer = setTimeout(() => { setShowCorrectAnswer(true); }, 2000);
+      return () => { clearTimeout(timer); };
+    } else {
+      setShowCorrectAnswer(false);
+    }
+  }, [isAnswered]);
   const handleAsyncClick = useCallback(
     (answer: string) => (event: React.MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -175,9 +192,18 @@ const QuizSection = () => {
     return null;
   }
   return (
-    <div className="mt-6 space-y-4" data-testid="quiz-section">
+    <div
+      className="pt-6 mt-6 border-t border-gray-700 lg:border-0 lg:pt-0 lg:mt-0 space-y-4"
+      data-testid="quiz-section"
+    >
+      <div className="mb-4 p-3 bg-purple-900/20 border border-purple-700/50 rounded-lg">
+        <p className="text-sm text-purple-200 flex items-center gap-2">
+          <QuestionMarkCircleIcon className="w-4 h-4" />
+          {t('practice.questionPrompt')}
+        </p>
+      </div>
       <h3
-        className="text-lg font-semibold text-white"
+        className="text-lg md:text-xl lg:text-2xl font-semibold text-white"
         data-testid="question-text"
         dir={getTextDirection(questionLanguage)}
       >
@@ -200,14 +226,37 @@ const QuizSection = () => {
           />
         ))}
       </div>
-      <FeedbackExplanation
-        isAnswered={isAnswered}
-        showExplanation={showExplanation}
-        feedback={feedback}
-        t={t}
-        questionLanguage={questionLanguage}
-        generatedPassageLanguage={generatedPassageLanguage}
-      />
+      {isAnswered && (
+        <div className="mt-6 space-y-4">
+          {/* Immediate result indicator */}
+          <div
+            className={`p-4 rounded-lg border-2 ${feedback.isCorrect ? 'bg-green-900/30 border-green-600' : 'bg-red-900/30 border-red-600'}`}
+          >
+            <div className="flex items-center gap-3">
+              {feedback.isCorrect ? (
+                <CheckCircleIcon className="w-6 h-6 text-green-400" />
+              ) : (
+                <XCircleIcon className="w-6 h-6 text-red-400" />
+              )}
+              <span className="text-lg font-semibold text-white">
+                {feedback.isCorrect ? t('practice.correct') : t('practice.incorrect')}
+              </span>
+            </div>
+          </div>
+
+          {/* Detailed explanation (shows after delay) */}
+          {showCorrectAnswer && (
+            <FeedbackExplanation
+              isAnswered={isAnswered}
+              showExplanation={showExplanation}
+              feedback={feedback}
+              t={t}
+              questionLanguage={questionLanguage}
+              generatedPassageLanguage={generatedPassageLanguage}
+            />
+          )}
+        </div>
+      )}
       <ProgressionFeedback />
       {isSubmittingFeedback && (
         <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">

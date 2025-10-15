@@ -81,6 +81,11 @@
     "hoverCreditsTooltip": "悬停或点击单词进行翻译。积分有限。",
     "relevantText": "相关文本",
     "showExplanation": "显示解释",
+    "startStreak": "通过正确回答开始您的连续！",
+    "readingInstruction": "仔细阅读文章以回答下面的问题",
+    "questionPrompt": "根据上面的文章，回答这个问题：",
+    "readComplete": "文章已读",
+    "reading": "阅读中...",
     "progressionFeedback": {
       "correct": "正确！连续：{{streak}}/5",
       "incorrect": "连续已重置。请重试！",
@@ -92,8 +97,7 @@
       "keepLearning": "继续努力！",
       "signInToTrack": "登录以跟踪您的进度并解锁进度！",
       "signInCta": "立即登录"
-    },
-    "startStreak": "通过正确回答开始您的连续！"
+    }
   },
   "languages": {
     "learning": {

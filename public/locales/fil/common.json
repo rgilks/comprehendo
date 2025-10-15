@@ -81,6 +81,11 @@
     "hoverCreditsTooltip": "Mag-hover o mag-click sa mga salita para sa pagsasalin. Limitado ang mga kredito.",
     "relevantText": "Kaugnay na Teksto",
     "showExplanation": "Ipakita ang Paliwanag",
+    "startStreak": "Simulan ang serye mo sa pamamagitan ng pagsagot nang tama!",
+    "readingInstruction": "Basahin nang mabuti ang talata upang masagot ang tanong sa ibaba",
+    "questionPrompt": "Batay sa talata sa itaas, sagutin ang tanong na ito:",
+    "readComplete": "Nabasa na ang talata",
+    "reading": "Nagbabasa...",
     "progressionFeedback": {
       "correct": "Tama! Serye: {{streak}}/5",
       "incorrect": "Na-reset ang serye. Subukan ulit!",
@@ -92,8 +97,7 @@
       "keepLearning": "Magpatuloy sa mahusay na trabaho!",
       "signInToTrack": "Mag-sign in para i-track ang progress at i-unlock ang progression!",
       "signInCta": "Mag-sign in ngayon"
-    },
-    "startStreak": "Simulan ang serye mo sa pamamagitan ng pagsagot nang tama!"
+    }
   },
   "languages": {
     "learning": {

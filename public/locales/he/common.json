@@ -80,6 +80,11 @@
     "hoverCreditsTooltip": "רחף מעל מילים או לחץ עליהן לתרגום. הזיכויים מוגבלים.",
     "relevantText": "טקסט רלוונטי",
     "showExplanation": "הצג הסבר",
+    "startStreak": "התחל את הרצף שלך על ידי מענה נכון!",
+    "readingInstruction": "קרא את הקטע בעיון כדי לענות על השאלה למטה",
+    "questionPrompt": "בהתבסס על הקטע לעיל, ענה על השאלה הזו:",
+    "readComplete": "הקטע נקרא",
+    "reading": "קורא...",
     "progressionFeedback": {
       "correct": "נכון! רצף: {{streak}}/5",
       "incorrect": "הרצף אופס. נסה שוב!",
@@ -91,8 +96,7 @@
       "keepLearning": "המשך בעבודה מצוינת!",
       "signInToTrack": "התחבר כדי לעקוב אחר ההתקדמות ולפתוח את ההתקדמות!",
       "signInCta": "התחבר עכשיו"
-    },
-    "startStreak": "התחל את הרצף שלך על ידי מענה נכון!"
+    }
   },
   "languages": {
     "learning": {

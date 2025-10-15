@@ -81,6 +81,11 @@
     "hoverCreditsTooltip": "Najedź kursorem lub kliknij słowa, aby je przetłumaczyć. Kredyty są ograniczone.",
     "relevantText": "Tekst powiązany",
     "showExplanation": "Pokaż wyjaśnienie",
+    "startStreak": "Rozpocznij swoją serię, odpowiadając poprawnie!",
+    "readingInstruction": "Przeczytaj uważnie fragment, aby odpowiedzieć na pytanie poniżej",
+    "questionPrompt": "Na podstawie powyższego fragmentu, odpowiedz na to pytanie:",
+    "readComplete": "Fragment przeczytany",
+    "reading": "Czytanie...",
     "progressionFeedback": {
       "correct": "Poprawnie! Seria: {{streak}}/5",
       "incorrect": "Seria zresetowana. Spróbuj ponownie!",
@@ -92,8 +97,7 @@
       "keepLearning": "Kontynuuj świetną robotę!",
       "signInToTrack": "Zaloguj się, aby śledzić postęp i odblokować progresję!",
       "signInCta": "Zaloguj się teraz"
-    },
-    "startStreak": "Rozpocznij swoją serię, odpowiadając poprawnie!"
+    }
   },
   "languages": {
     "learning": {

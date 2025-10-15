@@ -81,6 +81,11 @@
     "hoverCreditsTooltip": "Passe o mouse ou clique nas palavras para tradução. Os créditos são limitados.",
     "relevantText": "Texto Relevante",
     "showExplanation": "Mostrar Explicação",
+    "startStreak": "Comece sua sequência respondendo corretamente!",
+    "readingInstruction": "Leia a passagem cuidadosamente para responder à pergunta abaixo",
+    "questionPrompt": "Com base na passagem acima, responda a esta pergunta:",
+    "readComplete": "Passagem lida",
+    "reading": "Lendo...",
     "progressionFeedback": {
       "correct": "Correto! Sequência: {{streak}}/5",
       "incorrect": "Sequência reiniciada. Tente novamente!",
@@ -92,8 +97,7 @@
       "keepLearning": "Continue com o excelente trabalho!",
       "signInToTrack": "Faça login para rastrear seu progresso e desbloquear a progressão!",
       "signInCta": "Fazer login agora"
-    },
-    "startStreak": "Comece sua sequência respondendo corretamente!"
+    }
   },
   "languages": {
     "learning": {
