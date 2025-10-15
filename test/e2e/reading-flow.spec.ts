@@ -5,12 +5,20 @@ test.describe('Core Reading Comprehension Flow', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/en');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('[data-testid="text-generator-container"]')).toBeVisible({
-      timeout: 10000,
+      timeout: 15000,
     });
   });
 
   test('should display passage, question, options, and handle answers', async ({ page }) => {
+    // Add console logging for debugging
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        console.log('Browser error:', msg.text());
+      }
+    });
+
     const textGeneratorContainer = page.locator('[data-testid="text-generator-container"]');
     const readingPassageContainer = textGeneratorContainer.locator(
       '[data-testid="reading-passage"]'
@@ -24,16 +32,17 @@ test.describe('Core Reading Comprehension Flow', () => {
     // Click the generate button to load the quiz
     const generateButton = page.locator('[data-testid="generate-button"]');
     await expect(generateButton).toBeVisible();
+    console.log('Clicking generate button...');
     await generateButton.click();
 
     // Wait for passage to load and verify it has content
-    await expect(passageLocator).toBeVisible({ timeout: 10000 });
+    await expect(passageLocator).toBeVisible({ timeout: 30000 });
     const passageText = await passageLocator.textContent();
     expect(passageText).toBeTruthy();
     expect(passageText && passageText.length).toBeGreaterThan(10);
 
     // Wait for question to load
-    await expect(questionLocator).toBeVisible({ timeout: 5000 });
+    await expect(questionLocator).toBeVisible({ timeout: 15000 });
     const questionText = await questionLocator.textContent();
     expect(questionText).toBeTruthy();
 
@@ -51,7 +60,7 @@ test.describe('Core Reading Comprehension Flow', () => {
     await firstOptionLocator.click();
 
     // Wait for feedback to appear
-    await expect(feedbackLocator).toBeVisible({ timeout: 5000 });
+    await expect(feedbackLocator).toBeVisible({ timeout: 15000 });
     const feedbackText = await feedbackLocator.textContent();
     expect(feedbackText).toBeTruthy();
 

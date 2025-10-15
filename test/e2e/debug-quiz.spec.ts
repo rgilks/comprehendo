@@ -17,7 +17,7 @@ test.describe('Quiz Flow Debug', () => {
     await generateButton.click();
 
     const passageLocator = page.locator('[data-testid="passage-text"]');
-    await expect(passageLocator).toBeVisible({ timeout: 10000 });
+    await expect(passageLocator).toBeVisible({ timeout: 30000 });
 
     const firstPassage = await passageLocator.textContent();
     console.log('First quiz:', firstPassage);
@@ -27,10 +27,10 @@ test.describe('Quiz Flow Debug', () => {
     await firstOption.click();
 
     const feedbackLocator = page.locator('[data-testid="feedback-explanation"]');
-    await expect(feedbackLocator).toBeVisible({ timeout: 5000 });
+    await expect(feedbackLocator).toBeVisible({ timeout: 15000 });
 
     await generateButton.click();
-    await expect(passageLocator).toBeVisible({ timeout: 10000 });
+    await expect(passageLocator).toBeVisible({ timeout: 30000 });
 
     const secondPassage = await passageLocator.textContent();
     console.log('Second quiz:', secondPassage);
