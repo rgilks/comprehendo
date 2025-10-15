@@ -80,7 +80,20 @@
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "번역하려면 단어 위에 마우스를 올리거나 클릭하세요. 크레딧은 제한되어 있습니다.",
     "relevantText": "관련 텍스트",
-    "showExplanation": "설명 보기"
+    "showExplanation": "설명 보기",
+    "progressionFeedback": {
+      "correct": "정답! 연속: {{streak}}/5",
+      "incorrect": "연속이 리셋되었습니다. 다시 시도하세요!",
+      "levelUp": "🎉 레벨업! {{level}}에 도달했습니다!",
+      "almostThere": "🔥 거의 다 왔습니다! 레벨업까지 {{remaining}}개 더",
+      "remaining": "레벨업까지 {{remaining}}개 정답이 더 필요합니다",
+      "levelUpNext": "레벨업 준비를 하세요!",
+      "keepTrying": "걱정하지 마세요, 계속 연습하세요!",
+      "keepLearning": "훌륭한 작업을 계속하세요!",
+      "signInToTrack": "로그인하여 진행 상황을 추적하고 진행을 잠금 해제하세요!",
+      "signInCta": "지금 로그인"
+    },
+    "startStreak": "정답을 맞춰 연속을 시작하세요!"
   },
   "languages": {
     "learning": {

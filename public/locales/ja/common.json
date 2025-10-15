@@ -80,7 +80,20 @@
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "単語にカーソルを合わせるかクリックすると翻訳します。クレジットは制限されています。",
     "relevantText": "関連テキスト",
-    "showExplanation": "説明を表示"
+    "showExplanation": "説明を表示",
+    "progressionFeedback": {
+      "correct": "正解！連続：{{streak}}/5",
+      "incorrect": "連続がリセットされました。再試行してください！",
+      "levelUp": "🎉 レベルアップ！{{level}}に到達しました！",
+      "almostThere": "🔥 もう少し！レベルアップまで{{remaining}}回",
+      "remaining": "レベルアップまで{{remaining}}回正解が必要",
+      "levelUpNext": "レベルアップの準備をしてください！",
+      "keepTrying": "心配しないで、練習を続けてください！",
+      "keepLearning": "その調子で頑張ってください！",
+      "signInToTrack": "ログインして進捗を追跡し、プログレッションをアンロックしてください！",
+      "signInCta": "今すぐログイン"
+    },
+    "startStreak": "正解を答えて連続を開始してください！"
   },
   "languages": {
     "learning": {

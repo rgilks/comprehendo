@@ -79,7 +79,20 @@
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "רחף מעל מילים או לחץ עליהן לתרגום. הזיכויים מוגבלים.",
     "relevantText": "טקסט רלוונטי",
-    "showExplanation": "הצג הסבר"
+    "showExplanation": "הצג הסבר",
+    "progressionFeedback": {
+      "correct": "נכון! רצף: {{streak}}/5",
+      "incorrect": "הרצף אופס. נסה שוב!",
+      "levelUp": "🎉 עלייה ברמה! הגעת ל-{{level}}!",
+      "almostThere": "🔥 כמעט שם! עוד {{remaining}} לעלייה ברמה",
+      "remaining": "עוד {{remaining}} תשובות נכונות לעלייה ברמה",
+      "levelUpNext": "הכן את עצמך לעלייה ברמה!",
+      "keepTrying": "אל תדאג, המשך להתאמן!",
+      "keepLearning": "המשך בעבודה מצוינת!",
+      "signInToTrack": "התחבר כדי לעקוב אחר ההתקדמות ולפתוח את ההתקדמות!",
+      "signInCta": "התחבר עכשיו"
+    },
+    "startStreak": "התחל את הרצף שלך על ידי מענה נכון!"
   },
   "languages": {
     "learning": {

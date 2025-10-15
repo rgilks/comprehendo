@@ -80,7 +80,20 @@
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "Fahren Sie mit der Maus über Wörter oder klicken Sie darauf, um sie zu übersetzen. Credits sind begrenzt.",
     "relevantText": "Relevanter Text",
-    "showExplanation": "Erklärung anzeigen"
+    "showExplanation": "Erklärung anzeigen",
+    "progressionFeedback": {
+      "correct": "Richtig! Serie: {{streak}}/5",
+      "incorrect": "Serie zurückgesetzt. Versuchen Sie es erneut!",
+      "levelUp": "🎉 Level aufgestiegen! Sie haben {{level}} erreicht!",
+      "almostThere": "🔥 Fast geschafft! {{remaining}} weitere bis zum Levelaufstieg",
+      "remaining": "{{remaining}} weitere richtige Antworten bis zum Levelaufstieg",
+      "levelUpNext": "Bereiten Sie sich auf den Levelaufstieg vor!",
+      "keepTrying": "Keine Sorge, üben Sie weiter!",
+      "keepLearning": "Machen Sie weiter so!",
+      "signInToTrack": "Melden Sie sich an, um Ihren Fortschritt zu verfolgen und Progression freizuschalten!",
+      "signInCta": "Jetzt anmelden"
+    },
+    "startStreak": "Starten Sie Ihre Serie mit richtigen Antworten!"
   },
   "languages": {
     "learning": {

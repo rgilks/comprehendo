@@ -80,7 +80,20 @@
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "Mag-hover o mag-click sa mga salita para sa pagsasalin. Limitado ang mga kredito.",
     "relevantText": "Kaugnay na Teksto",
-    "showExplanation": "Ipakita ang Paliwanag"
+    "showExplanation": "Ipakita ang Paliwanag",
+    "progressionFeedback": {
+      "correct": "Tama! Serye: {{streak}}/5",
+      "incorrect": "Na-reset ang serye. Subukan ulit!",
+      "levelUp": "🎉 Level up! Naabot mo ang {{level}}!",
+      "almostThere": "🔥 Halos na! {{remaining}} pa para sa level up",
+      "remaining": "{{remaining}} tamang sagot pa para sa level up",
+      "levelUpNext": "Maghanda para sa level up!",
+      "keepTrying": "Huwag mag-alala, magpatuloy sa pagsasanay!",
+      "keepLearning": "Magpatuloy sa mahusay na trabaho!",
+      "signInToTrack": "Mag-sign in para i-track ang progress at i-unlock ang progression!",
+      "signInCta": "Mag-sign in ngayon"
+    },
+    "startStreak": "Simulan ang serye mo sa pamamagitan ng pagsagot nang tama!"
   },
   "languages": {
     "learning": {

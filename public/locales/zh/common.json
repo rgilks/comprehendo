@@ -80,7 +80,20 @@
     "hoverCredits": "{{count}}",
     "hoverCreditsTooltip": "悬停或点击单词进行翻译。积分有限。",
     "relevantText": "相关文本",
-    "showExplanation": "显示解释"
+    "showExplanation": "显示解释",
+    "progressionFeedback": {
+      "correct": "正确！连续：{{streak}}/5",
+      "incorrect": "连续已重置。请重试！",
+      "levelUp": "🎉 升级！您已达到{{level}}！",
+      "almostThere": "🔥 快到了！还需{{remaining}}次升级",
+      "remaining": "还需{{remaining}}次正确答案才能升级",
+      "levelUpNext": "准备升级吧！",
+      "keepTrying": "别担心，继续练习！",
+      "keepLearning": "继续努力！",
+      "signInToTrack": "登录以跟踪您的进度并解锁进度！",
+      "signInCta": "立即登录"
+    },
+    "startStreak": "通过正确回答开始您的连续！"
   },
   "languages": {
     "learning": {
