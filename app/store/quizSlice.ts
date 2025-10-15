@@ -219,7 +219,7 @@ export const createQuizSlice: StateCreator<
     try {
       const fetchParams = {
         passageLanguage: get().passageLanguage,
-        questionLanguage: get().generatedQuestionLanguage,
+        questionLanguage: get().passageLanguage, // Use same language for consistency
         cefrLevel: get().cefrLevel,
       };
       const rawResult = await generateInitialExercisePair(fetchParams);
@@ -267,6 +267,7 @@ export const createQuizSlice: StateCreator<
     set({ loading: !isPrefetch, error: null, isPrefetching: isPrefetch });
     if (!isPrefetch) {
       get().stopPassageSpeech();
+      get().clearTranslationCache(); // Clear translations when generating new content
       set((state) => {
         resetQuizCoreState(state);
       });
@@ -280,7 +281,7 @@ export const createQuizSlice: StateCreator<
       );
       const response = await generateExerciseResponse({
         passageLanguage: get().passageLanguage,
-        questionLanguage: get().generatedQuestionLanguage,
+        questionLanguage: get().passageLanguage, // Use same language for consistency
         cefrLevel: get().cefrLevel,
         excludeQuizId: lastShownId || get().currentQuizId,
       });
@@ -463,7 +464,7 @@ export const createQuizSlice: StateCreator<
         userAnswer: selectedAnswer ?? undefined,
         isCorrect: feedbackIsCorrect ?? undefined,
         passageLanguage,
-        questionLanguage: generatedQuestionLanguage,
+        questionLanguage: passageLanguage, // Use same language for consistency
         currentLevel: cefrLevel,
       };
       const result = await submitFeedback(payload);

@@ -60,7 +60,7 @@ const LanguageSelector = () => {
                 className="ml-2 text-xs text-gray-400 animate-pulse"
                 data-testid="loading-indicator"
               >
-                {t('common.loading')}
+                {t('loading')}
               </span>
             )}
           </span>

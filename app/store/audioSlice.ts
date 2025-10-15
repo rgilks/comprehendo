@@ -26,6 +26,7 @@ export interface AudioSlice {
   setIsSpeechSupported: (supported: boolean) => void;
   updateAvailableVoices: (lang: Language) => void;
   setSelectedVoiceURI: (uri: string | null) => void;
+  clearTranslationCache: () => void;
 }
 
 export const createAudioSlice: StateCreator<
@@ -283,5 +284,11 @@ export const createAudioSlice: StateCreator<
     if (get().isSpeakingPassage) {
       get().stopPassageSpeech();
     }
+  },
+
+  clearTranslationCache: () => {
+    set((state) => {
+      state.translationCache.clear();
+    });
   },
 });
