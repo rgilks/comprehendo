@@ -3,6 +3,7 @@
 import React from 'react';
 import { BookOpenIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'motion/react';
 import { getTextDirection } from 'app/domain/language';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import AudioControls from './AudioControls';
@@ -59,12 +60,17 @@ const ReadingPassage = () => {
           </div>
         </div>
 
-        <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+        <motion.div
+          className="mb-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
           <p className="text-sm text-blue-200 flex items-center gap-2">
             <BookOpenIcon className="w-4 h-4" />
             {t('practice.readingInstruction')}
           </p>
-        </div>
+        </motion.div>
 
         <div
           className="prose prose-lg md:prose-xl prose-invert max-w-none text-gray-200 leading-relaxed md:leading-loose tracking-wide"

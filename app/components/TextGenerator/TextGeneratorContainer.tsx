@@ -3,6 +3,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useLanguage } from 'app/hooks/useLanguage';
 import { useSession } from 'next-auth/react';
+import { motion, AnimatePresence } from 'motion/react';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { type LearningLanguage } from 'app/domain/language';
 import LanguageSelector from './LanguageSelector';
@@ -74,22 +75,38 @@ const TextGeneratorContainer = () => {
 
         {loading && !quizData && <QuizSkeleton />}
 
-        {isContentVisible && (
-          <div
-            className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 md:p-6 lg:p-8 border border-gray-700 shadow-2xl mt-6"
-            data-testid="generated-content"
-            ref={generatedContentRef}
-          >
-            <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
-              <div className="lg:w-2/5 lg:sticky lg:top-4 lg:self-start">
-                <ReadingPassage />
+        <AnimatePresence>
+          {isContentVisible && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 md:p-6 lg:p-8 border border-gray-700 shadow-2xl mt-6"
+              data-testid="generated-content"
+              ref={generatedContentRef}
+            >
+              <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
+                <motion.div
+                  className="lg:w-2/5 lg:sticky lg:top-4 lg:self-start"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                  <ReadingPassage />
+                </motion.div>
+                <motion.div
+                  className="lg:w-3/5 lg:pl-4"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <QuizSection />
+                </motion.div>
               </div>
-              <div className="lg:w-3/5 lg:pl-4">
-                <QuizSection />
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {showProgressTracker && <ProgressTracker />}
 
