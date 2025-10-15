@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const mockApiResponse = {
+const _mockApiResponse = {
   passage: 'This is a mock passage about cats. Cats are curious animals.',
   question: 'What are cats?',
   options: ['Dogs', 'Curious animals', 'Birds', 'Fish'],
@@ -34,8 +34,8 @@ test.describe('Core Reading Comprehension Flow', () => {
     const passageLocator = readingPassageContainer.locator('[data-testid="passage-text"]');
     const questionLocator = textGeneratorContainer.locator('[data-testid="question-text"]');
     const feedbackLocator = textGeneratorContainer.locator('[data-testid="feedback-explanation"]');
-    const relevantTextLocator = textGeneratorContainer.locator('[data-testid="relevant-text"]');
-    const nextButtonLocator = textGeneratorContainer.locator(
+    const _relevantTextLocator = textGeneratorContainer.locator('[data-testid="relevant-text"]');
+    const _nextButtonLocator = textGeneratorContainer.locator(
       '[data-testid="next-exercise-button"]'
     );
     const getOptionLocator = (index: number) =>
@@ -50,7 +50,7 @@ test.describe('Core Reading Comprehension Flow', () => {
     await expect(passageLocator).toBeVisible({ timeout: 10000 });
     const passageText = await passageLocator.textContent();
     expect(passageText).toBeTruthy();
-    expect(passageText!.length).toBeGreaterThan(10);
+    expect(passageText && passageText.length).toBeGreaterThan(10);
 
     // Wait for question to load
     await expect(questionLocator).toBeVisible({ timeout: 5000 });
