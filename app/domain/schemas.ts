@@ -85,7 +85,7 @@ export const ExerciseContentSchema = z.object({
   paragraph: z.string(),
   question: z.string(),
   options: z.object({ A: z.string(), B: z.string(), C: z.string(), D: z.string() }),
-  correctAnswer: z.enum(['A', 'B', 'C', 'D']),
+  correctAnswer: z.string(), // Temporarily relaxed to debug AI output
   allExplanations: z.object({
     A: z.string(),
     B: z.string(),
