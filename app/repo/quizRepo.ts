@@ -11,7 +11,7 @@ export const QuizContentSchema = z.object({
     C: z.string(),
     D: z.string(),
   }),
-  correctAnswer: z.enum(['A', 'B', 'C', 'D']),
+  correctAnswer: z.string(), // Keep as string - AI generates valid keys
   allExplanations: z.object({
     A: z.string(),
     B: z.string(),

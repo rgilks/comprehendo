@@ -158,18 +158,7 @@ const generateFeedback = (
   const allExplanations = fullQuizData.allExplanations;
   const options = fullQuizData.options;
 
-  // Debug logging to identify the issue
-  console.log('[generateFeedback] Debug info:', {
-    userAnswer,
-    correctAnswerKey,
-    options,
-    allExplanations: allExplanations ? Object.keys(allExplanations) : null,
-    userAnswerInOptions: typeof userAnswer === 'string' ? userAnswer in options : false,
-    correctAnswerKeyExists: !!correctAnswerKey,
-    allExplanationsExists: !!allExplanations,
-  });
-
-  // Check if we have all required data
+  // Simple validation - check if we have the required data
   if (
     typeof userAnswer === 'string' &&
     userAnswer in options &&
@@ -180,18 +169,11 @@ const generateFeedback = (
     const chosenAnswerKey = userAnswer as keyof typeof options;
     const isCorrect = chosenAnswerKey === correctAnswerKey;
 
-    console.log('[generateFeedback] Comparison:', {
-      chosenAnswerKey,
-      correctAnswerKey,
-      isCorrect,
-      chosenAnswerText: options[chosenAnswerKey],
-      correctAnswerText: options[correctAnswerKey],
-    });
-
     const correctExplanation = allExplanations[correctAnswerKey];
     const relevantText = fullQuizData.relevantText;
     let chosenIncorrectExplanation: string | undefined | null = null;
     if (!isCorrect) chosenIncorrectExplanation = allExplanations[chosenAnswerKey];
+
     if (correctExplanation && relevantText) {
       return {
         isCorrect,
