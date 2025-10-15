@@ -59,7 +59,8 @@ const containsKeyInfo = (text: string, keyInfo: string): boolean => {
 const validateAnswerConsistency = (exercise: ExerciseContent): boolean => {
   const { correctAnswer, options, relevantText } = exercise;
 
-  if (!correctAnswer || !options[correctAnswer as keyof typeof options]) {
+  // correctAnswer is guaranteed to be one of ['A', 'B', 'C', 'D'] by schema
+  if (!options[correctAnswer as keyof typeof options]) {
     return false;
   }
 
@@ -72,7 +73,7 @@ const validateAnswerConsistency = (exercise: ExerciseContent): boolean => {
 const validateExplanationConsistency = (exercise: ExerciseContent): boolean => {
   const { correctAnswer, allExplanations, options } = exercise;
 
-  if (!correctAnswer) return false;
+  // correctAnswer is guaranteed to be one of ['A', 'B', 'C', 'D'] by schema
 
   const correctAnswerText = options[correctAnswer as keyof typeof options];
   const correctExplanation = allExplanations[correctAnswer as keyof typeof allExplanations];
@@ -107,7 +108,8 @@ const validateQuestionAnswerCoherence = (exercise: ExerciseContent): boolean => 
 const validateSemanticAnswerValidation = (exercise: ExerciseContent): boolean => {
   const { correctAnswer, options, relevantText, paragraph } = exercise;
 
-  if (!correctAnswer || !options[correctAnswer as keyof typeof options]) {
+  // correctAnswer is guaranteed to be one of ['A', 'B', 'C', 'D'] by schema
+  if (!options[correctAnswer as keyof typeof options]) {
     return false;
   }
 
@@ -136,8 +138,7 @@ export const validateQuestionQuality = (
     ),
     optionsLength: Object.values(exercise.options).map((opt) => opt.length),
     relevantTextLength: exercise.relevantText.length,
-    hasCorrectAnswer:
-      !!exercise.correctAnswer && ['A', 'B', 'C', 'D'].includes(exercise.correctAnswer),
+    hasCorrectAnswer: ['A', 'B', 'C', 'D'].includes(exercise.correctAnswer),
     allExplanationsPresent:
       Object.keys(exercise.allExplanations).length === 4 &&
       Object.values(exercise.allExplanations).every((exp) => exp.length > 0),
@@ -255,10 +256,8 @@ export const debugValidationFailure = (exercise: ExerciseContent, reason: string
   });
 
   // Show what the correct answer should be based on the text
-  if (
-    exercise.correctAnswer &&
-    exercise.options[exercise.correctAnswer as keyof typeof exercise.options]
-  ) {
+  // correctAnswer is guaranteed to be one of ['A', 'B', 'C', 'D'] by schema
+  if (exercise.options[exercise.correctAnswer as keyof typeof exercise.options]) {
     const correctAnswerText =
       exercise.options[exercise.correctAnswer as keyof typeof exercise.options];
     console.error(`[ValidationDebug] Correct answer text: "${correctAnswerText}"`);
