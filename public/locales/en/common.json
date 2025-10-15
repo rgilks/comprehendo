@@ -81,7 +81,20 @@
     "hoverCreditsTooltip": "Hover or click on words for translation. Credits are limited.",
     "relevantText": "Relevant Text",
     "showExplanation": "Show Explanation",
-    "hideExplanation": "Hide Explanation"
+    "hideExplanation": "Hide Explanation",
+    "progressionFeedback": {
+      "correct": "Correct! Streak: {{streak}}/5",
+      "incorrect": "Streak reset. Try again!",
+      "levelUp": "🎉 Level Up! You reached {{level}}!",
+      "almostThere": "🔥 Almost there! {{remaining}} more to level up",
+      "remaining": "{{remaining}} more correct answers to level up",
+      "levelUpNext": "Get ready to level up!",
+      "keepTrying": "Don't worry, keep practicing!",
+      "keepLearning": "Keep up the great work!",
+      "signInToTrack": "Sign in to track your progress and unlock progression!",
+      "signInCta": "Sign in now"
+    },
+    "startStreak": "Start your streak by answering correctly!"
   },
   "languages": {
     "learning": {

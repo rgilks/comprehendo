@@ -8,6 +8,7 @@ import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import type { QuizData } from 'app/domain/schemas';
 import type { Language } from 'app/domain/language';
 import { LanguageSchema } from 'app/domain/language';
+import ProgressionFeedback from './ProgressionFeedback';
 
 interface QuizOptionButtonProps {
   optionKey: keyof QuizData['options'];
@@ -207,6 +208,7 @@ const QuizSection = () => {
         questionLanguage={questionLanguage}
         generatedPassageLanguage={generatedPassageLanguage}
       />
+      <ProgressionFeedback />
       {isSubmittingFeedback && (
         <div className="mt-4 p-4 bg-gray-700/50 border border-gray-600 rounded-lg shadow">
           <div className="flex items-center justify-center space-x-3">
