@@ -25,6 +25,7 @@ const TranslatableWord = memo(
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [showPopup, setShowPopup] = useState(false);
 
     const {
       speakText,
@@ -48,17 +49,21 @@ const TranslatableWord = memo(
           if (sourceLangIso && targetLangIso) {
             const cacheKey = getCacheKey(word, sourceLangIso, targetLangIso);
             if (translationCache.has(cacheKey)) {
-              setTranslation(translationCache.get(cacheKey) ?? null);
+              const cachedTranslation = translationCache.get(cacheKey) ?? null;
+              setTranslation(cachedTranslation);
               setIsClicked(true);
+              setShowPopup(true);
             } else {
               setTranslation(null);
               setIsClicked(false);
+              setShowPopup(false);
             }
           }
         }
       } else {
         setTranslation(null);
         setIsClicked(false);
+        setShowPopup(false);
       }
     }, [word, fromLang, toLang, shouldTranslate, translationCache]);
 
@@ -134,6 +139,7 @@ const TranslatableWord = memo(
 
         if (canAttemptTranslation) {
           setIsClicked(true);
+          setShowPopup(true);
           void handleTranslationFetch();
         }
       }
@@ -150,11 +156,20 @@ const TranslatableWord = memo(
 
     const handleMouseEnter = useCallback(() => {
       setIsHovering(true);
-    }, []);
+      if (translation) {
+        setShowPopup(true);
+      }
+    }, [translation]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovering(false);
-    }, []);
+      // Hide popup after a short delay to allow clicking
+      setTimeout(() => {
+        if (!isClicked) {
+          setShowPopup(false);
+        }
+      }, 200);
+    }, [isClicked]);
 
     let combinedClassName =
       'cursor-pointer transition-all duration-300 px-1 -mx-1 relative group rounded';
@@ -174,7 +189,7 @@ const TranslatableWord = memo(
     }
 
     const showTranslationPopup =
-      (isClicked || isHovering) && shouldTranslate && !isLoading && translation !== null;
+      showPopup && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 
