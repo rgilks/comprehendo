@@ -5,7 +5,7 @@ test.describe('Admin Panel Basic Navigation', () => {
 
   test.beforeEach(async ({ page }: { page: Page }) => {
     await page.goto('/admin');
-    await expect(page.locator('h1')).toContainText(/Comprehendo admin/i);
+    await expect(page.locator('h1')).toContainText(/Comprehendo Admin/i);
   });
 
   const checkTableLoads = async (page: Page, tableName: string, expectedHeader: string) => {

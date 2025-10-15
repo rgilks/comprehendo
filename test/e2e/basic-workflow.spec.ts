@@ -108,7 +108,7 @@ test.describe('Basic Workflow Test', () => {
     const adminUrl = `${BASE_URL}/admin`;
     await page.goto(adminUrl);
 
-    const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
+    const adminHeading = page.getByRole('heading', { name: /Comprehendo Admin/i });
     await expect(adminHeading, 'Admin page heading should be visible').toBeVisible();
 
     const unauthorizedMessage = page.locator(
@@ -143,7 +143,7 @@ test.describe('Basic Workflow Test', () => {
 
     await expect(page, 'URL should be the main target URL after redirect').toHaveURL(TARGET_URL);
 
-    const adminHeading = page.getByRole('heading', { name: /Comprehendo admin/i });
+    const adminHeading = page.getByRole('heading', { name: /Comprehendo Admin/i });
     await expect(
       adminHeading,
       'Admin heading should not be visible for non-admin'
