@@ -9,6 +9,11 @@ export interface QualityMetrics {
   hasCorrectAnswer: boolean;
   allExplanationsPresent: boolean;
   relevantTextInParagraph: boolean;
+  // Enhanced validation metrics
+  answerConsistency: boolean;
+  explanationConsistency: boolean;
+  questionAnswerCoherence: boolean;
+  semanticAnswerValidation: boolean;
   // Add more metrics as needed
 }
 
@@ -22,10 +27,107 @@ const MIN_QUESTION_LENGTH = 10;
 const MIN_EXPLANATION_LENGTH = 20;
 const MIN_OPTION_LENGTH = 3;
 
+// Helper function to normalize text for comparison
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+};
+
+// Helper function to check if text contains key information
+const containsKeyInfo = (text: string, keyInfo: string): boolean => {
+  const normalizedText = normalizeText(text);
+  const normalizedKeyInfo = normalizeText(keyInfo);
+
+  // Check for exact match or key words
+  if (normalizedText.includes(normalizedKeyInfo)) return true;
+
+  // Check for semantic similarity (simple keyword matching)
+  const keyWords = normalizedKeyInfo.split(' ').filter((word) => word.length > 2);
+  const textWords = normalizedText.split(' ');
+
+  const matchingWords = keyWords.filter((keyWord) =>
+    textWords.some((textWord) => textWord.includes(keyWord) || keyWord.includes(textWord))
+  );
+
+  return matchingWords.length >= Math.ceil(keyWords.length * 0.6); // 60% word match
+};
+
+// Enhanced validation functions
+const validateAnswerConsistency = (exercise: ExerciseContent): boolean => {
+  const { correctAnswer, options, relevantText } = exercise;
+
+  if (!correctAnswer || !options[correctAnswer as keyof typeof options]) {
+    return false;
+  }
+
+  const correctAnswerText = options[correctAnswer as keyof typeof options];
+
+  // Check if the correct answer text is supported by the relevant text
+  return containsKeyInfo(relevantText, correctAnswerText);
+};
+
+const validateExplanationConsistency = (exercise: ExerciseContent): boolean => {
+  const { correctAnswer, allExplanations, options } = exercise;
+
+  if (!correctAnswer) return false;
+
+  const correctAnswerText = options[correctAnswer as keyof typeof options];
+  const correctExplanation = allExplanations[correctAnswer as keyof typeof allExplanations];
+
+  // Check if the correct explanation mentions the correct answer
+  return containsKeyInfo(correctExplanation, correctAnswerText);
+};
+
+const validateQuestionAnswerCoherence = (exercise: ExerciseContent): boolean => {
+  const { question, paragraph, relevantText } = exercise;
+
+  // Check if the question can be answered from the paragraph
+  const questionKeywords = normalizeText(question)
+    .split(' ')
+    .filter(
+      (word) => word.length > 3 && !['what', 'where', 'when', 'who', 'how', 'why'].includes(word)
+    );
+
+  const paragraphWords = normalizeText(paragraph).split(' ');
+  const relevantWords = normalizeText(relevantText).split(' ');
+
+  // Check if question keywords appear in the paragraph or relevant text
+  const matchingKeywords = questionKeywords.filter(
+    (keyword) =>
+      paragraphWords.some((word) => word.includes(keyword) || keyword.includes(word)) ||
+      relevantWords.some((word) => word.includes(keyword) || keyword.includes(word))
+  );
+
+  return matchingKeywords.length >= Math.ceil(questionKeywords.length * 0.5); // 50% keyword match
+};
+
+const validateSemanticAnswerValidation = (exercise: ExerciseContent): boolean => {
+  const { correctAnswer, options, relevantText, paragraph } = exercise;
+
+  if (!correctAnswer || !options[correctAnswer as keyof typeof options]) {
+    return false;
+  }
+
+  const correctAnswerText = options[correctAnswer as keyof typeof options];
+
+  // Check if the correct answer is semantically supported by the passage
+  const passageText = `${paragraph} ${relevantText}`;
+  return containsKeyInfo(passageText, correctAnswerText);
+};
+
 export const validateQuestionQuality = (
   exercise: ExerciseContent,
   _level: CEFRLevel
 ): ValidationResult => {
+  // Calculate enhanced validation metrics
+  const answerConsistency = validateAnswerConsistency(exercise);
+  const explanationConsistency = validateExplanationConsistency(exercise);
+  const questionAnswerCoherence = validateQuestionAnswerCoherence(exercise);
+  const semanticAnswerValidation = validateSemanticAnswerValidation(exercise);
+
   const metrics: QualityMetrics = {
     questionLength: exercise.question.length,
     explanationLength: Object.values(exercise.allExplanations).reduce(
@@ -40,6 +142,11 @@ export const validateQuestionQuality = (
       Object.keys(exercise.allExplanations).length === 4 &&
       Object.values(exercise.allExplanations).every((exp) => exp.length > 0),
     relevantTextInParagraph: exercise.paragraph.includes(exercise.relevantText),
+    // Enhanced validation metrics
+    answerConsistency,
+    explanationConsistency,
+    questionAnswerCoherence,
+    semanticAnswerValidation,
   };
 
   if (!metrics.hasCorrectAnswer) {
@@ -70,6 +177,39 @@ export const validateQuestionQuality = (
     return { isValid: false, reason: 'One or more options are too short.', metrics };
   }
 
+  // Enhanced validation checks
+  if (!metrics.answerConsistency) {
+    return {
+      isValid: false,
+      reason: 'Correct answer is not supported by the relevant text.',
+      metrics,
+    };
+  }
+
+  if (!metrics.explanationConsistency) {
+    return {
+      isValid: false,
+      reason: 'Correct explanation does not match the correct answer.',
+      metrics,
+    };
+  }
+
+  if (!metrics.questionAnswerCoherence) {
+    return {
+      isValid: false,
+      reason: 'Question cannot be answered from the provided passage.',
+      metrics,
+    };
+  }
+
+  if (!metrics.semanticAnswerValidation) {
+    return {
+      isValid: false,
+      reason: 'Correct answer is not semantically supported by the passage.',
+      metrics,
+    };
+  }
+
   // Add more sophisticated checks based on CEFR level if needed
   // For example, checking vocabulary complexity, sentence structure complexity, etc.
   // This would likely require external NLP libraries or more advanced AI calls.
@@ -86,4 +226,45 @@ export const logQualityMetrics = (metrics: QualityMetrics, level: CEFRLevel, lan
   console.log(`  Has Correct Answer: ${metrics.hasCorrectAnswer}`);
   console.log(`  All Explanations Present: ${metrics.allExplanationsPresent}`);
   console.log(`  Relevant Text In Paragraph: ${metrics.relevantTextInParagraph}`);
+  console.log(`  Answer Consistency: ${metrics.answerConsistency}`);
+  console.log(`  Explanation Consistency: ${metrics.explanationConsistency}`);
+  console.log(`  Question-Answer Coherence: ${metrics.questionAnswerCoherence}`);
+  console.log(`  Semantic Answer Validation: ${metrics.semanticAnswerValidation}`);
+};
+
+// Debug function to help identify validation issues
+export const debugValidationFailure = (exercise: ExerciseContent, reason: string) => {
+  console.error(`[ValidationDebug] Question validation failed: ${reason}`);
+  console.error(`[ValidationDebug] Exercise data:`, {
+    question: exercise.question,
+    correctAnswer: exercise.correctAnswer,
+    options: exercise.options,
+    relevantText: exercise.relevantText,
+    paragraph: exercise.paragraph.substring(0, 200) + '...',
+  });
+
+  // Check specific validation issues
+  const answerConsistency = validateAnswerConsistency(exercise);
+  const explanationConsistency = validateExplanationConsistency(exercise);
+  const questionAnswerCoherence = validateQuestionAnswerCoherence(exercise);
+  const semanticAnswerValidation = validateSemanticAnswerValidation(exercise);
+
+  console.error(`[ValidationDebug] Individual checks:`, {
+    answerConsistency,
+    explanationConsistency,
+    questionAnswerCoherence,
+    semanticAnswerValidation,
+  });
+
+  // Show what the correct answer should be based on the text
+  if (
+    exercise.correctAnswer &&
+    exercise.options[exercise.correctAnswer as keyof typeof exercise.options]
+  ) {
+    const correctAnswerText =
+      exercise.options[exercise.correctAnswer as keyof typeof exercise.options];
+    console.error(`[ValidationDebug] Correct answer text: "${correctAnswerText}"`);
+    console.error(`[ValidationDebug] Relevant text: "${exercise.relevantText}"`);
+    console.error(`[ValidationDebug] Answer supported by relevant text: ${answerConsistency}`);
+  }
 };

@@ -2,7 +2,11 @@ import { generateExercisePrompt } from 'app/lib/ai/prompts/exercise-prompt';
 import { ExerciseContent, ExerciseContentSchema, type QuizData } from 'app/domain/schemas';
 import { type ExerciseGenerationParams } from 'app/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from 'app/lib/ai/google-ai-api';
-import { validateQuestionQuality, logQualityMetrics } from 'app/lib/ai/question-validator';
+import {
+  validateQuestionQuality,
+  logQualityMetrics,
+  debugValidationFailure,
+} from 'app/lib/ai/question-validator';
 
 export { AIResponseProcessingError };
 
@@ -90,12 +94,16 @@ export const generateAndValidateExercise = async (
           console.warn(
             `[AI:generateAndValidateExercise] Quality validation failed on final attempt ${attempt + 1}: ${qualityValidation.reason}`
           );
+          // Debug the validation failure
+          debugValidationFailure(exerciseContent, qualityValidation.reason);
         }
         return exerciseContent;
       } else {
         console.warn(
           `[AI:generateAndValidateExercise] Quality validation failed on attempt ${attempt + 1}: ${qualityValidation.reason}. Retrying...`
         );
+        // Debug the validation failure for retry attempts
+        debugValidationFailure(exerciseContent, qualityValidation.reason);
         lastError = new AIResponseProcessingError(
           `Quality validation failed: ${qualityValidation.reason}`,
           qualityValidation.metrics
