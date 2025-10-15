@@ -174,7 +174,7 @@ const TranslatableWord = memo(
     }
 
     const showTranslationPopup =
-      isClicked && isHovering && shouldTranslate && !isLoading && translation !== null;
+      (isClicked || isHovering) && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 
