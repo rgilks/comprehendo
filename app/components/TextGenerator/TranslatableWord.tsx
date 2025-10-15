@@ -21,7 +21,6 @@ const getCacheKey = (word: string, sourceLang: string, targetLang: string): stri
 const TranslatableWord = memo(
   ({ word, fromLang, toLang, isCurrentWord, isRelevant }: TranslatableWordProps) => {
     const [isClicked, setIsClicked] = useState(false);
-    const [isHovering, setIsHovering] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -155,14 +154,12 @@ const TranslatableWord = memo(
     ]);
 
     const handleMouseEnter = useCallback(() => {
-      setIsHovering(true);
       if (translation) {
         setShowPopup(true);
       }
     }, [translation]);
 
     const handleMouseLeave = useCallback(() => {
-      setIsHovering(false);
       // Hide popup after a short delay to allow clicking
       setTimeout(() => {
         if (!isClicked) {
@@ -188,8 +185,7 @@ const TranslatableWord = memo(
       }
     }
 
-    const showTranslationPopup =
-      showPopup && shouldTranslate && !isLoading && translation !== null;
+    const showTranslationPopup = showPopup && shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 
