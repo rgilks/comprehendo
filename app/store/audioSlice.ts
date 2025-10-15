@@ -194,7 +194,10 @@ export const createAudioSlice: StateCreator<
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = SPEECH_LANGUAGES[lang];
-    utterance.volume = volume;
+    // Increase volume for individual words to make them more audible
+    utterance.volume = Math.min(volume + 0.2, 1.0);
+    // Slightly slower rate for individual words to make them clearer
+    utterance.rate = 0.8;
 
     const selectedVoiceURI = get().selectedVoiceURI;
     const selectedVoice = selectedVoiceURI

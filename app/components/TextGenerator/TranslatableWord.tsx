@@ -24,6 +24,7 @@ const TranslatableWord = memo(
     const [isHovering, setIsHovering] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
 
     const {
       speakText,
@@ -119,7 +120,13 @@ const TranslatableWord = memo(
     );
 
     const handleClick = useCallback(() => {
+      setIsSpeaking(true);
       speakText(word, fromLang);
+
+      // Reset speaking state after a short delay
+      setTimeout(() => {
+        setIsSpeaking(false);
+      }, 1000);
 
       if (!isClicked && shouldTranslate) {
         const canAttemptTranslation =
@@ -156,6 +163,8 @@ const TranslatableWord = memo(
       combinedClassName += ' bg-yellow-300 text-black';
     } else if (isCurrentWord) {
       combinedClassName += ' bg-blue-500 text-white';
+    } else if (isSpeaking) {
+      combinedClassName += ' bg-green-500 text-white animate-pulse';
     } else if (isClicked) {
       combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
