@@ -119,7 +119,7 @@ export const saveExercise = (
 
     const result = db
       .prepare(
-        'INSERT INTO quiz (language, level, content, question_language, user_id, created_at) VALUES (?, ?, ?, ?, ?, datetime("now")) RETURNING id'
+        "INSERT INTO quiz (language, level, content, question_language, user_id, created_at) VALUES (?, ?, ?, ?, ?, datetime('now')) RETURNING id"
       )
       .get(passageLanguage, level, contentJson, questionLanguage, userId) as
       | { id: number }
