@@ -36,6 +36,7 @@ import {
   countCachedExercisesInRepo as countCachedExercises,
   type QuizRow,
 } from 'app/repo/quizRepo';
+import { incrementTodayUsage } from 'app/repo/aiApiUsageRepo';
 import { z } from 'zod';
 import { extractZodErrors } from 'app/lib/utils/errorUtils';
 
@@ -195,6 +196,13 @@ const tryGenerateAndCacheExercise = async (
   userId: number | null
 ): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
   try {
+    // Check daily AI API budget before making expensive API calls
+    if (!incrementTodayUsage()) {
+      return failure({
+        error: 'Daily AI API request limit exceeded. Please try again tomorrow.',
+      });
+    }
+
     console.log('[Exercise] Starting generation for:', {
       passageLanguage: params.passageLanguage,
       questionLanguage: params.questionLanguage,
@@ -304,7 +312,7 @@ const getOrGenerateExercise = async (
 
 const getRequestContext = async () => {
   const headersList = await headers();
-  const ip = headersList.get('x-forwarded-for') || 'unknown';
+  const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
   const session = await getServerSession(authOptions);
   const userId = getDbUserIdFromSession(session);
   return { ip, userId };

@@ -2,6 +2,14 @@
 
 import { TranslationResultSchema } from 'app/domain/translation';
 import { z } from 'zod';
+import { headers } from 'next/headers';
+import {
+  getRateLimit,
+  incrementRateLimit,
+  resetRateLimit,
+  createRateLimit,
+} from 'app/repo/rateLimitRepo';
+import { getCachedTranslation, saveTranslationToCache } from 'app/repo/translationCacheRepo';
 
 const GoogleTranslateResponseSchema = z.object({
   data: z.object({
@@ -13,6 +21,41 @@ const GoogleTranslateResponseSchema = z.object({
   }),
 });
 
+const MAX_TRANSLATION_REQUESTS_PER_HOUR = parseInt(
+  process.env['RATE_LIMIT_MAX_TRANSLATION_REQUESTS_PER_HOUR'] || '200',
+  10
+);
+const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
+
+const checkTranslationRateLimit = (ip: string): boolean => {
+  try {
+    const now = Date.now();
+    const rateLimitRow = getRateLimit(ip);
+
+    if (!rateLimitRow) {
+      createRateLimit(ip, new Date(now).toISOString());
+      return true;
+    }
+
+    const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
+    const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
+
+    if (isWithinWindow) {
+      if (rateLimitRow.request_count >= MAX_TRANSLATION_REQUESTS_PER_HOUR) {
+        return false;
+      }
+      incrementRateLimit(ip);
+      return true;
+    }
+
+    resetRateLimit(ip, new Date(now).toISOString());
+    return true;
+  } catch (error) {
+    console.error('[Translation RateLimiter] Error checking rate limit:', error);
+    return false;
+  }
+};
+
 export const translateWordWithGoogle = async (
   word: string,
   targetLang: string,
@@ -22,6 +65,22 @@ export const translateWordWithGoogle = async (
 
   if (!word || !targetLang || !sourceLang || !googleApiKey) {
     console.error('translateWordWithGoogle: Missing required parameters or API key.');
+    return null;
+  }
+
+  // Check cache first
+  const cachedTranslation = getCachedTranslation(word, sourceLang, targetLang);
+  if (cachedTranslation) {
+    console.log(`[Translation] Cache hit for "${word}" (${sourceLang} -> ${targetLang})`);
+    return TranslationResultSchema.parse({ translation: cachedTranslation, romanization: '' });
+  }
+
+  // Check rate limit for translation requests
+  const headersList = await headers();
+  const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
+
+  if (!checkTranslationRateLimit(ip)) {
+    console.warn(`[Translation] Rate limit exceeded for IP: ${ip}`);
     return null;
   }
 
@@ -60,6 +119,10 @@ export const translateWordWithGoogle = async (
       console.error('translateWordWithGoogle: No translated text found in API response.');
       return null;
     }
+
+    // Save to cache for future use
+    saveTranslationToCache(word, sourceLang, targetLang, translatedText);
+    console.log(`[Translation] Cached translation for "${word}" (${sourceLang} -> ${targetLang})`);
 
     return TranslationResultSchema.parse({ translation: translatedText, romanization: '' });
   } catch (error) {

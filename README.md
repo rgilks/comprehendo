@@ -30,7 +30,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Data Persistence**: Store user preferences and usage statistics in an SQLite database.
 - **Responsive Design**: Optimized for both desktop and mobile devices.
 - **Modern UI**: Clean, intuitive interface with smooth animations and visual feedback using Tailwind CSS.
-- **Cost-Control System**: IP-based rate limiting and database caching to manage API costs.
+- **Cost-Control System**: IP-based rate limiting, translation caching, daily AI API budgets, and database caching to manage API costs.
 - **Robust Validation**: Uses Zod for request validation on API routes and environment variables.
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions.
 - **Continuous Deployment**: Automatic deployment to Fly.io via GitHub Actions when code is pushed to the `main` branch.
@@ -38,7 +38,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Internationalization (i18n)**: Full i18n support for UI elements using `i18next` and locale files in `public/locales/`.
 - **PWA Support**: Progressive Web App features (e.g., installability) are enabled via `@serwist/next`, relying on browser/device native installation prompts.
 - **State Management**: Uses `zustand` for lightweight global state management.
-- **Database Caching**: SQLite database (`quiz` table) for caching generated exercises.
+- **Database Caching**: SQLite database (`quiz` table) for caching generated exercises and (`translation_cache` table) for caching word translations.
 - **Testing**:
   - End-to-end tests with Playwright.
 - **Code Quality**:
@@ -145,7 +145,9 @@ Comprehendo implements strategies to manage AI API costs:
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
       - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
       - `RATE_LIMIT_MAX_REQUESTS_PER_HOUR`: (Optional, default 100) Max exercise generation requests per IP per hour.
+      - `RATE_LIMIT_MAX_TRANSLATION_REQUESTS_PER_HOUR`: (Optional, default 200) Max translation requests per IP per hour.
       - `RATE_LIMIT_WINDOW_MS`: (Optional, default 3600000) The window for rate limiting in milliseconds (1 hour).
+      - `MAX_DAILY_AI_REQUESTS`: (Optional, default 1000) Maximum AI API requests per day across all users.
     - Ensure at least one AI provider and one Auth provider (if desired) are configured.
 
 4.  **Run Dev Server:**
@@ -218,6 +220,12 @@ npm run deps
 
 # Remove node_modules, lockfile, build artifacts
 npm run nuke
+
+# Clean up old database entries (production maintenance)
+npm run cleanup-db
+
+# Preview database cleanup without making changes
+npm run cleanup-db:dry-run
 ```
 
 ### Testing Strategy
@@ -228,7 +236,8 @@ npm run nuke
 ## Production Considerations
 
 - **API Monitoring**: Monitor AI provider dashboards for usage and costs.
-- **Rate Limits**: Adjust `MAX_REQUESTS_PER_HOUR` based on traffic and budget.
+- **Rate Limits**: Adjust `MAX_REQUESTS_PER_HOUR`, `MAX_TRANSLATION_REQUESTS_PER_HOUR`, and `MAX_DAILY_AI_REQUESTS` based on traffic and budget.
+- **Database Maintenance**: Run `npm run cleanup-db` periodically to clean up old rate limits, translations, and usage records.
 - **Security**: Review CORS, consider stricter input validation if needed.
 - **Scaling**: Adjust Fly.io machine specs/count in `fly.toml`.
 - **Database Backups**: Implement a backup strategy for the SQLite volume on Fly.io (e.g., using `litestream` or manual snapshots).
@@ -430,12 +439,32 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   window_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Start time of the rate limit window
 );
 
+CREATE TABLE IF NOT EXISTS translation_cache (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_word TEXT NOT NULL,          -- Word to translate
+  source_language TEXT NOT NULL,      -- Source language code
+  target_language TEXT NOT NULL,      -- Target language code
+  translated_text TEXT NOT NULL,      -- Cached translation
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(source_word, source_language, target_language)
+);
+
+CREATE TABLE IF NOT EXISTS ai_api_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,                 -- Date in YYYY-MM-DD format
+  request_count INTEGER NOT NULL DEFAULT 0, -- Number of AI requests on this date
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(date)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_quiz_created_at ON quiz(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
 CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
 CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
 CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
+CREATE INDEX IF NOT EXISTS idx_translation_cache_lookup ON translation_cache(source_word, source_language, target_language);
+CREATE INDEX IF NOT EXISTS idx_ai_api_usage_date ON ai_api_usage(date);
 ```
 
 ## Troubleshooting

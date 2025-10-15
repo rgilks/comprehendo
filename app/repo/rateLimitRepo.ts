@@ -88,3 +88,18 @@ export const createRateLimit = (ip: string, windowStartTimeISO: string): void =>
     }
   }
 };
+
+export const cleanupOldRateLimits = (maxAgeHours: number = 24): void => {
+  try {
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - maxAgeHours);
+
+    const result = db
+      .prepare('DELETE FROM rate_limits WHERE window_start_time < ?')
+      .run(cutoffTime.toISOString());
+
+    console.log(`[RateLimitRepository] Cleaned up ${result.changes} old rate limit entries`);
+  } catch (error) {
+    console.error('[RateLimitRepository] Error cleaning up old rate limits:', error);
+  }
+};

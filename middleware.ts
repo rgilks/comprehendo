@@ -98,11 +98,22 @@ const middleware = async (req: NextRequest) => {
     const ip = req.headers.get('fly-client-ip') || req.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
     const pathname = req.nextUrl.pathname;
-    console.log(
-      `[Middleware] Request: ${req.method} ${pathname} - IP: ${ip} - User-Agent: ${userAgent}`
-    );
-    console.log(`[Middleware] isAdmin check result: ${isAdmin}`);
-    console.log(`[Middleware] Allowing access to ${pathname}`);
+
+    // Reduce logging verbosity in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        `[Middleware] Request: ${req.method} ${pathname} - IP: ${ip} - User-Agent: ${userAgent}`
+      );
+      console.log(`[Middleware] isAdmin check result: ${isAdmin}`);
+      console.log(`[Middleware] Allowing access to ${pathname}`);
+    } else {
+      // Only log errors and admin access attempts in production
+      if (pathname.startsWith('/admin')) {
+        console.log(
+          `[Middleware] Admin access attempt: ${req.method} ${pathname} - IP: ${ip} - Admin: ${isAdmin}`
+        );
+      }
+    }
 
     return NextResponse.next();
   } catch {

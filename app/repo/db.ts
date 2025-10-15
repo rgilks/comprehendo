@@ -90,11 +90,31 @@ const initializeDatabase = (): Database.Database => {
         window_start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS translation_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_word TEXT NOT NULL,
+        source_language TEXT NOT NULL,
+        target_language TEXT NOT NULL,
+        translated_text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(source_word, source_language, target_language)
+      );
+
+      CREATE TABLE IF NOT EXISTS ai_api_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        request_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(date)
+      );
+
       CREATE INDEX IF NOT EXISTS idx_quiz_created_at ON quiz(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC);
       CREATE INDEX IF NOT EXISTS idx_user_language_progress_last_practiced ON user_language_progress(last_practiced DESC);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_quiz_id ON question_feedback (quiz_id);
       CREATE INDEX IF NOT EXISTS idx_question_feedback_user_id ON question_feedback (user_id);
+      CREATE INDEX IF NOT EXISTS idx_translation_cache_lookup ON translation_cache(source_word, source_language, target_language);
+      CREATE INDEX IF NOT EXISTS idx_ai_api_usage_date ON ai_api_usage(date);
     `);
 
     console.log('[DB] Schema initialization/verification complete');
@@ -107,11 +127,10 @@ const initializeDatabase = (): Database.Database => {
   } catch (error) {
     console.error('Error creating database or migrating:', error);
     if (process.env.NODE_ENV === 'production' && !isBuildPhase) {
-      console.warn('[DB] CRITICAL: Falling back to in-memory database due to error!');
-      db = new Database(':memory:');
-      dbProxyInstance = db;
-      isInitialized = true;
-      return dbProxyInstance;
+      console.error('[DB] CRITICAL: Database initialization failed in production!');
+      throw new Error(
+        `Database initialization failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
     throw error;
   }

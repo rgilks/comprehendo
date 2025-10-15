@@ -17,6 +17,8 @@
     "deps:update": "npx npm-check-updates -u && npm run nuke",
     "test:e2e": "npx playwright test --reporter=list",
     "test:e2e:watch": "playwright test --watch",
+    "cleanup-db": "node scripts/cleanup-db.js",
+    "cleanup-db:dry-run": "node scripts/cleanup-db.js --dry-run",
     "prepare": "husky"
   },
   "lint-staged": {
