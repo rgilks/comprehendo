@@ -109,6 +109,14 @@ export const saveExercise = (
   userId: number | null
 ): number | undefined => {
   try {
+    console.log('[QuizRepository] Attempting to save exercise:', {
+      passageLanguage,
+      questionLanguage,
+      level,
+      contentLength: contentJson.length,
+      userId,
+    });
+
     const result = db
       .prepare(
         'INSERT INTO quiz (language, level, content, question_language, user_id, created_at) VALUES (?, ?, ?, ?, ?, datetime("now")) RETURNING id'
@@ -116,9 +124,20 @@ export const saveExercise = (
       .get(passageLanguage, level, contentJson, questionLanguage, userId) as
       | { id: number }
       | undefined;
-    return result?.id;
+
+    if (!result || typeof result.id !== 'number') {
+      console.error('[QuizRepository] Failed to get ID from database insert:', result);
+      return undefined;
+    }
+
+    console.log('[QuizRepository] Successfully saved exercise with ID:', result.id);
+    return result.id;
   } catch (error) {
     console.error('[QuizRepository] Error saving exercise:', error);
+    console.error('[QuizRepository] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return undefined;
   }
 };

@@ -195,8 +195,18 @@ const tryGenerateAndCacheExercise = async (
   userId: number | null
 ): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
   try {
+    console.log('[Exercise] Starting generation for:', {
+      passageLanguage: params.passageLanguage,
+      questionLanguage: params.questionLanguage,
+      level: params.level,
+      userId,
+    });
+
     const options: ExerciseGenerationOptions = { ...params, language: params.passageLanguage };
     const generatedExercise = await generateAndValidateExercise(options);
+
+    console.log('[Exercise] AI generation successful, attempting to save to cache...');
+
     const exerciseId = saveExerciseToCache(
       params.passageLanguage,
       params.questionLanguage,
@@ -204,11 +214,18 @@ const tryGenerateAndCacheExercise = async (
       JSON.stringify(generatedExercise),
       userId
     );
+
     if (typeof exerciseId !== 'number') {
-      return failure({ error: 'Exercise generated but failed to save to cache (undefined ID).' });
+      console.error('[Exercise] Failed to save to cache - exerciseId is not a number:', exerciseId);
+      return failure({
+        error: `Exercise generated but failed to save to cache (undefined ID). Generated exercise: ${JSON.stringify(generatedExercise).substring(0, 100)}...`,
+      });
     }
+
+    console.log('[Exercise] Successfully saved exercise with ID:', exerciseId);
     return success({ content: generatedExercise, id: exerciseId });
   } catch (error) {
+    console.error('[Exercise] Error during generation:', error);
     return failure({
       error: `Error during AI generation/processing: ${error instanceof Error ? error.message : String(error)}`,
     });
