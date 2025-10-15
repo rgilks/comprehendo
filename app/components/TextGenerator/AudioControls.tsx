@@ -25,7 +25,7 @@ const AudioControls = () => {
   if (availableVoices.length === 0) return null;
 
   return (
-    <div className="flex items-center space-x-3">
+    <div className="flex items-center space-x-3 relative z-[90]">
       <PlayPauseButton
         isSpeakingPassage={isSpeakingPassage}
         isPaused={isPaused}

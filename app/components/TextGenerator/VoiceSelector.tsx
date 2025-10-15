@@ -27,14 +27,14 @@ const VoiceSelector = ({
     );
   }
   return (
-    <div className="relative">
+    <div className="relative z-[100]">
       <select
         data-testid="voice-select"
         value={selectedVoiceURI || ''}
         onChange={(e) => {
           setSelectedVoiceURI(e.target.value);
         }}
-        className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-gray-600 focus:border-gray-500 text-sm cursor-pointer max-w-[150px] truncate"
+        className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-gray-600 focus:border-gray-500 text-sm cursor-pointer max-w-[150px] truncate relative z-[100]"
         title={t('common.selectVoice')}
       >
         {availableVoices.map((voice) => (
@@ -43,7 +43,7 @@ const VoiceSelector = ({
           </option>
         ))}
       </select>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400 z-[100]">
         <ChevronDownIcon className="w-4 h-4" />
       </div>
     </div>

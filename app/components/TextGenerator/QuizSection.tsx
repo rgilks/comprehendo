@@ -222,7 +222,7 @@ const QuizSection = () => {
   }
   return (
     <div
-      className="pt-6 mt-6 border-t border-gray-700 lg:border-0 lg:pt-0 lg:mt-0 space-y-4"
+      className="pt-6 mt-6 border-t border-gray-700 lg:border-0 lg:pt-0 lg:mt-0 space-y-4 relative z-10"
       data-testid="quiz-section"
     >
       <div className="mb-6">
