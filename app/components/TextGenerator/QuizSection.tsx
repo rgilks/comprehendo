@@ -4,12 +4,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getTextDirection, useLanguage } from 'app/hooks/useLanguage';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
-import {
-  InformationCircleIcon,
-  QuestionMarkCircleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-} from '@heroicons/react/24/outline';
+import { InformationCircleIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { QuizData } from 'app/domain/schemas';
 import type { Language } from 'app/domain/language';
 import { LanguageSchema } from 'app/domain/language';
@@ -50,8 +45,8 @@ const QuizOptionButton: React.FC<QuizOptionButtonProps> = ({
     key={optionKey}
     onClick={handleAsyncClick(optionKey)}
     disabled={isAnswered || isSubmittingAnswer}
-    className={`w-full text-left min-h-[44px] p-4 md:p-5 rounded-lg border-2 transition-all duration-200 transform relative text-base md:text-lg touch-manipulation ${
-      !isAnswered && !isSubmittingAnswer ? 'hover:scale-[1.02] hover:shadow-lg' : ''
+    className={`w-full text-left min-h-[48px] p-4 md:p-5 rounded-xl border-2 transition-all duration-200 transform relative text-base md:text-lg touch-manipulation ${
+      !isAnswered && !isSubmittingAnswer ? 'hover:scale-[1.01] hover:shadow-md' : ''
     } ${
       isAnswered && feedback.correctAnswer
         ? optionKey === feedback.correctAnswer
@@ -201,20 +196,17 @@ const QuizSection = () => {
       className="pt-6 mt-6 border-t border-gray-700 lg:border-0 lg:pt-0 lg:mt-0 space-y-4"
       data-testid="quiz-section"
     >
-      <div className="mb-4 p-3 bg-purple-900/20 border border-purple-700/50 rounded-lg">
-        <p className="text-sm text-purple-200 flex items-center gap-2">
-          <QuestionMarkCircleIcon className="w-4 h-4" />
-          {t('practice.questionPrompt')}
-        </p>
+      <div className="mb-6">
+        <h3
+          className="text-lg md:text-xl lg:text-2xl font-semibold text-white mb-2"
+          data-testid="question-text"
+          dir={getTextDirection(questionLanguage)}
+        >
+          {quizData.question}
+        </h3>
+        <p className="text-sm text-gray-400">{t('practice.questionPrompt')}</p>
       </div>
-      <h3
-        className="text-lg md:text-xl lg:text-2xl font-semibold text-white"
-        data-testid="question-text"
-        dir={getTextDirection(questionLanguage)}
-      >
-        {quizData.question}
-      </h3>
-      <div className="space-y-2" data-testid="quiz-options">
+      <div className="space-y-3" data-testid="quiz-options">
         {Object.entries(quizData.options).map(([key, value], index) => (
           <QuizOptionButton
             key={key}

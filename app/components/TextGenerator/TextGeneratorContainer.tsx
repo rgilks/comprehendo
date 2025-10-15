@@ -76,15 +76,15 @@ const TextGeneratorContainer = () => {
 
         {isContentVisible && (
           <div
-            className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 md:p-8 border border-gray-700 shadow-2xl mt-6"
+            className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-4 md:p-6 lg:p-8 border border-gray-700 shadow-2xl mt-6"
             data-testid="generated-content"
             ref={generatedContentRef}
           >
-            <div className="flex flex-col lg:flex-row lg:gap-6 lg:items-start">
+            <div className="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
               <div className="lg:w-2/5 lg:sticky lg:top-4 lg:self-start">
                 <ReadingPassage />
               </div>
-              <div className="lg:w-3/5">
+              <div className="lg:w-3/5 lg:pl-4">
                 <QuizSection />
               </div>
             </div>

@@ -37,7 +37,7 @@ const ReadingPassage = () => {
 
   return (
     <div data-testid="reading-passage" className="mb-6 lg:mb-0">
-      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-sm lg:relative lg:bg-transparent lg:backdrop-blur-none pb-4 mb-4 border-b border-gray-700 lg:border-0">
+      <div className="lg:sticky lg:top-4 lg:z-10">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center text-blue-400">
             <BookOpenIcon className="w-5 h-5 mr-2 hidden sm:inline-flex" />
@@ -58,21 +58,21 @@ const ReadingPassage = () => {
             <AudioControls />
           </div>
         </div>
-      </div>
 
-      <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
-        <p className="text-sm text-blue-200 flex items-center gap-2">
-          <BookOpenIcon className="w-4 h-4" />
-          {t('practice.readingInstruction')}
-        </p>
-      </div>
+        <div className="mb-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+          <p className="text-sm text-blue-200 flex items-center gap-2">
+            <BookOpenIcon className="w-4 h-4" />
+            {t('practice.readingInstruction')}
+          </p>
+        </div>
 
-      <div
-        className="prose prose-lg md:prose-xl prose-invert max-w-none text-gray-200 leading-relaxed md:leading-loose tracking-wide"
-        data-testid="passage-text"
-      >
-        <div dir={getTextDirection(generatedPassageLanguage)}>
-          {renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)}
+        <div
+          className="prose prose-lg md:prose-xl prose-invert max-w-none text-gray-200 leading-relaxed md:leading-loose tracking-wide"
+          data-testid="passage-text"
+        >
+          <div dir={getTextDirection(generatedPassageLanguage)}>
+            {renderParagraphWithWordHover(quizData.paragraph, generatedPassageLanguage)}
+          </div>
         </div>
       </div>
 
