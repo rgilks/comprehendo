@@ -59,7 +59,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Tailwind CSS**: Utility-first CSS framework
 - **TypeScript**: Strong typing for code quality
 - **next-auth**: Authentication (GitHub, Google, Discord)
-- **Google Generative AI SDK**: Gemini 2.0 Flash-Lite integration
+- **Google Generative AI SDK**: Gemini 2.5 Flash integration
 - **SQLite**: `better-sqlite3` for database storage
 - **Zod**: Schema validation
 - **i18next / react-i18next**: Internationalization
@@ -136,7 +136,7 @@ Comprehendo implements strategies to manage AI API costs:
     - Copy `.env.example` to `.env.local`: `cp .env.example .env.local`
     - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
       - `GOOGLE_AI_API_KEY` (optional, if using Google AI)
-      - `GOOGLE_AI_GENERATION_MODEL`: (Optional) The specific Google AI model to use for exercise generation (e.g., `gemini-2.5-flash-preview-04-17`). Defaults to a recommended flash model if not set.
+      - `GOOGLE_AI_GENERATION_MODEL`: (Optional) The specific Google AI model to use for exercise generation (e.g., `gemini-2.5-flash`). Defaults to `gemini-2.5-flash` if not set.
       - `GITHUB_ID`, `GITHUB_SECRET` (optional, if enabling GitHub login)
       - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
       - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (optional, if enabling Discord login)
