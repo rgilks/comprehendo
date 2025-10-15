@@ -37,9 +37,16 @@ const Generator = () => {
   );
 
   const showFeedbackPrompt =
-    isAnswered && !feedbackSubmitted && !loading && !isSubmittingFeedback && status === 'authenticated';
+    isAnswered &&
+    !feedbackSubmitted &&
+    !loading &&
+    !isSubmittingFeedback &&
+    status === 'authenticated';
   const showFeedbackLoading =
-    isAnswered && !feedbackSubmitted && (loading || isSubmittingFeedback) && status === 'authenticated';
+    isAnswered &&
+    !feedbackSubmitted &&
+    (loading || isSubmittingFeedback) &&
+    status === 'authenticated';
   const shouldOfferGeneration =
     !quizData || (isAnswered && (feedbackSubmitted || status !== 'authenticated'));
 
@@ -126,7 +133,10 @@ const Generator = () => {
             <>
               {t('practice.generateNewText')}
               {isPrefetching && (
-                <div className="ml-2 h-2 w-2 bg-blue-400 rounded-full animate-pulse" title="Preparing next question..."></div>
+                <div
+                  className="ml-2 h-2 w-2 bg-blue-400 rounded-full animate-pulse"
+                  title="Preparing next question..."
+                ></div>
               )}
             </>
           )}

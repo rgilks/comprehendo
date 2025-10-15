@@ -265,7 +265,11 @@ export const createQuizSlice: StateCreator<
       const quizData: PartialQuizData = validatedResponse.quizData;
       if (!quizData.language) quizData.language = get().passageLanguage;
       if (isPrefetch) {
-        set({ nextQuizAvailable: { quizData, quizId: validatedResponse.quizId }, loading: false, isPrefetching: false });
+        set({
+          nextQuizAvailable: { quizData, quizId: validatedResponse.quizId },
+          loading: false,
+          isPrefetching: false,
+        });
       } else {
         get().resetQuizWithNewData(quizData, validatedResponse.quizId);
       }
@@ -282,7 +286,7 @@ export const createQuizSlice: StateCreator<
   },
   handleAnswerSelect: async (answer): Promise<void> => {
     if (get().isAnswered || get().isSubmittingAnswer) return;
-    
+
     set((state) => {
       state.selectedAnswer = answer;
       state.isAnswered = true;
