@@ -149,7 +149,7 @@ export const apiResponseSchema = z.object({
 export type ApiResponse = z.infer<typeof apiResponseSchema>;
 
 export const InitialExercisePairResultSchema = z.object({
-  quizzes: z.array(GenerateExerciseResultSchema).length(2),
+  quizzes: z.array(GenerateExerciseResultSchema).min(0).max(2),
   error: z.string().nullable(),
 });
 
