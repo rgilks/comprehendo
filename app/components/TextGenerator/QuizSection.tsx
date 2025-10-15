@@ -175,10 +175,15 @@ const QuizSection = () => {
 
   useEffect(() => {
     if (isAnswered) {
-      const timer = setTimeout(() => { setShowCorrectAnswer(true); }, 2000);
-      return () => { clearTimeout(timer); };
+      const timer = setTimeout(() => {
+        setShowCorrectAnswer(true);
+      }, 2000);
+      return () => {
+        clearTimeout(timer);
+      };
     } else {
       setShowCorrectAnswer(false);
+      return undefined;
     }
   }, [isAnswered]);
   const handleAsyncClick = useCallback(
