@@ -97,3 +97,61 @@ export const mockAuthSession = async (
     });
   });
 };
+
+export const mockProgressData = async (
+  page: Page,
+  progress: {
+    totalExercises: number;
+    correctAnswers: number;
+    streak: number;
+  }
+) => {
+  await page.route('**/api/progress', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(progress),
+    });
+  });
+};
+
+export const mockFeedbackSubmission = async (page: Page) => {
+  await page.route('**/api/feedback', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true }),
+    });
+  });
+};
+
+export const mockTranslationAPI = async (page: Page) => {
+  await page.route('**/api/translate', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        translatedText: 'Sample translation',
+        detectedLanguage: 'en',
+      }),
+    });
+  });
+};
+
+export const waitForContentLoad = async (page: Page, timeout = 5000) => {
+  try {
+    await page.waitForSelector('[data-testid="passage-text"]', { timeout });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const waitForQuizLoad = async (page: Page, timeout = 5000) => {
+  try {
+    await page.waitForSelector('[data-testid="question-text"]', { timeout });
+    return true;
+  } catch {
+    return false;
+  }
+};
