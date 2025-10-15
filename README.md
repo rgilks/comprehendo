@@ -12,12 +12,12 @@ A multi-language reading comprehension practice tool powered by Next.js and Goog
 
 ## Overview
 
-Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding. Word translations are powered by the MyMemory Translation API (if integrated, otherwise specify).
+Comprehendo is an AI-powered language learning application designed to help users improve their reading comprehension skills in multiple languages. The application generates customized reading passages based on the user's selected language and proficiency level (CEFR), then provides multiple-choice questions to test understanding. Word translations are powered by the Google Translate API.
 
 ## Features
 
 - **Multi-language Support**:
-  - Practice reading comprehension in various languages including English, Spanish, French, German, Italian, Portuguese, Russian, Hindi, Hebrew, Filipino, Latin, Greek, and Polish (defined in `app/config/languages.ts`).
+  - Practice reading comprehension in 16 languages including English, Spanish, French, German, Italian, Portuguese, Russian, Hindi, Hebrew, Filipino, Chinese, Japanese, Korean, Thai, Greek, and Polish (defined in `app/domain/language.ts`).
   - The user interface is available in numerous languages (detected via available JSON files in `public/locales/`).
 - **CEFR Level Selection**: Choose from six proficiency levels (A1-C2) to match your current language skills.
 - **AI-Generated Content**: Fresh, unique reading passages generated for each practice session.
@@ -44,7 +44,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Code Quality**:
   - ESLint and Prettier for linting and formatting.
 
-* **State Diagram**: Visual representation of the text generation process. [View State Diagram](docs/text_generator_state_diagram.md)
+* **State Management**: Comprehensive state management using Zustand with Immer. [View State Management Documentation](docs/state-management.md)
 
 ## Terminology
 
@@ -86,9 +86,9 @@ Comprehendo implements strategies to manage AI API costs:
   - Uses a fixed-window counter based on IP address, stored in the `rate_limits` SQLite table.
   - Default limit: **100 requests per hour** per IP to the exercise generation endpoint (`POST /api/exercise`).
   - Applies to all users (anonymous and logged-in).
-  - Implemented in `app/actions/exercise.ts` via the `checkRateLimit` function (which uses logic from `lib/rate-limiter.ts`).
+  - Implemented in `app/actions/exercise.ts` via the `checkRateLimit` function (which uses logic from `app/repo/rateLimitRepo.ts`).
   - Exceeding the limit logs blocks the request.
-  - Adjust `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts`.
+  - Adjust `MAX_REQUESTS_PER_HOUR` in `app/repo/rateLimitRepo.ts`.
 - **Database Caching**:
   - Successful AI-generated exercises (passage, question, choices, explanation) are stored in the `quiz` SQLite table.
   - Before calling the AI, the system checks for a suitable cached exercise based on language, level, and user interaction history (via `question_feedback` table) using the `getCachedExercise` function in `app/actions/exercise.ts`.
@@ -108,7 +108,7 @@ Comprehendo implements strategies to manage AI API costs:
 
 ### Prerequisites
 
-1.  **Node.js:** Version 18 or higher (Recommend setting this in `package.json` `engines` field).
+1.  **Node.js:** Version 22 or higher (as specified in `package.json` `engines` field).
 2.  **npm:** Package manager (Scripts configured for npm).
 3.  **Git:** For cloning.
 4.  **API Keys & Credentials:**
@@ -133,7 +133,7 @@ Comprehendo implements strategies to manage AI API costs:
     ```
 3.  **Configure Environment:**
 
-    - Copy `.env.example` to `.env.local`: `cp .env.example .env.local`
+    - Create `.env.local` file in the project root
     - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
       - `GOOGLE_AI_API_KEY` (optional, if using Google AI)
       - `GOOGLE_AI_GENERATION_MODEL`: (Optional) The specific Google AI model to use for exercise generation (e.g., `gemini-2.5-flash`). Defaults to `gemini-2.5-flash` if not set.
@@ -230,8 +230,8 @@ npm run cleanup-db:dry-run
 
 ### Testing Strategy
 
-- **Co-location**: Test files (`*.test.ts`, `*.test.tsx`) live alongside the source files they test.
-- **End-to-End**: Playwright (`npm run test:e2e`) checks full user flows. See E2E Authentication Setup below.
+- **End-to-End Testing**: Playwright (`npm run test:e2e`) checks full user flows with tests located in `test/e2e/` directory.
+- **Test Coverage**: Comprehensive E2E tests covering authentication, admin panel access, language switching, and core reading comprehension workflows.
 
 ## Production Considerations
 
@@ -244,12 +244,12 @@ npm run cleanup-db:dry-run
 
 ## Customization
 
-- **Languages**: Extend `LANGUAGES` in `app/config/languages.ts`.
+- **Languages**: Extend `LANGUAGES` in `app/domain/language.ts`.
 - **Styling**: Modify Tailwind classes in components (`app/components`).
-- **AI Prompts**: Adjust prompts in `app/actions/exercise.ts`.
-- **Rate Limits**: Modify `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts`.
+- **AI Prompts**: Adjust prompts in `app/lib/ai/prompts/exercise-prompt.ts`.
+- **Rate Limits**: Modify `MAX_REQUESTS_PER_HOUR` in `app/repo/rateLimitRepo.ts`.
 - **Cache Behavior**: Modify database queries in `app/actions/exercise.ts`.
-- **Auth Providers**: Add/remove providers in `lib/authOptions.ts` and update environment variables.
+- **Auth Providers**: Add/remove providers in `app/lib/authOptions.ts` and update environment variables.
 
 ## Code Structure
 
@@ -271,10 +271,14 @@ npm run cleanup-db:dry-run
 │   ├── globals.css           # Global styles
 │   ├── i18n.ts / i18n.client.ts # i18next config
 │   └── ...
-├── lib/                      # Shared libraries/utilities
-│   ├── db.ts                 # Database connection & schema setup
-│   ├── authOptions.ts        # NextAuth configuration
-│   ├── modelConfig.ts        # AI model configuration
+├── app/                      # Next.js App Router
+│   ├── repo/                 # Database repositories
+│   │   ├── db.ts             # Database connection & schema setup
+│   │   └── ...
+│   ├── lib/                  # Shared libraries/utilities
+│   │   ├── authOptions.ts    # NextAuth configuration
+│   │   ├── ai/               # AI integration modules
+│   │   └── ...
 │   ├── domain/               # Domain schemas (Zod)
 │   └── ...
 ├── public/                   # Static assets (images, locales, manifest.json)
@@ -282,11 +286,11 @@ npm run cleanup-db:dry-run
 │   └── ...
 ├── data/                     # SQLite database file (local development)
 ├── docs/                     # Documentation files
-│   └── text_generator_state_diagram.md # State diagram
+│   └── state-management.md     # State management documentation
 ├── scripts/                  # Utility scripts (e.g., db schema export)
 ├── test/                     # Test configurations and utilities
 │   └── e2e/                  # Playwright E2E tests & auth state
-├── .env.example              # Example environment variables
+├── .env.local                # Environment variables (create from scratch)
 ├── next.config.js            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind CSS configuration
 ├── tsconfig.json             # TypeScript configuration
@@ -386,7 +390,7 @@ Useful commands: `.tables`, `SELECT * FROM users LIMIT 5;`, `.schema quiz`, `.qu
 ### Database Schema
 
 ```sql
--- From lib/db.ts initialization logic
+-- From app/repo/db.ts initialization logic
 
 CREATE TABLE IF NOT EXISTS quiz (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -472,7 +476,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_api_usage_date ON ai_api_usage(date);
 - **Database Connection:** Ensure `data/` dir exists locally. On Fly, check volume mount (`fly.toml`) and status (`fly status`).
 - **Auth Errors:** Verify `.env.local` / Fly secrets (`AUTH_SECRET`, provider IDs/secrets, `NEXTAUTH_URL`). Ensure OAuth callback URLs match exactly in provider settings (e.g., `http://localhost:3000/api/auth/callback/github` or `https://<your-app-name>.fly.dev/api/auth/callback/github`). Check the `next-auth` documentation for provider-specific setup.
 - **API Key Errors:** Check AI provider keys in env/secrets. Ensure billing is enabled if required by the provider (e.g., Google Cloud Platform for Translate API).
-- **Rate Limit Errors:** Wait for the hour window to reset. Check `rate_limits` table via SQLite or Admin Panel if needed. Consider increasing `MAX_REQUESTS_PER_HOUR` in `lib/rate-limiter.ts` if appropriate.
+- **Rate Limit Errors:** Wait for the hour window to reset. Check `rate_limits` table via SQLite or Admin Panel if needed. Consider increasing `MAX_REQUESTS_PER_HOUR` in `app/repo/rateLimitRepo.ts` if appropriate.
 - **Admin Access Denied:** Confirm logged-in user's email is EXACTLY in `ADMIN_EMAILS` (case-sensitive, no extra spaces). Check Fly secrets value. Ensure you've logged in with the correct account.
 - **Deployment Issues:** Examine GitHub Actions logs (`Actions` tab on GitHub) and `fly logs --app <your-app-name>`. Check `fly status` for volume and machine health.
 - **PWA Issues:** Check `next.config.js` PWA settings and browser dev tools (Application -> Service Workers/Manifest).
