@@ -17,15 +17,15 @@ const LoginPrompt = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-700/70 rounded-lg p-4 mb-6 flex flex-col items-start gap-4 shadow-md relative">
-      <p className="text-sm text-blue-100 flex-grow text-left w-full">
+    <div className="bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-700/70 rounded-lg p-4 mb-6 flex flex-col items-center gap-4 shadow-md relative">
+      <p className="text-sm text-blue-100 text-center w-full">
         {t('practice.signInPrompt.message')}
       </p>
       <div className="flex items-center justify-center gap-3 w-full">
-        <div className="flex md:hidden items-center justify-center gap-3 w-full">
+        <div className="flex md:hidden items-center justify-center gap-3">
           <AuthButton variant="icon-only" />
         </div>
-        <div className="hidden md:flex items-center justify-center gap-3 w-full">
+        <div className="hidden md:flex items-center justify-center gap-3">
           <AuthButton variant="short" />
         </div>
       </div>
