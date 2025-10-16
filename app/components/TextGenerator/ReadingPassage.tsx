@@ -119,22 +119,6 @@ const ReadingPassage = () => {
                     {hover.creditsAvailable}
                   </motion.span>
                 </motion.div>
-                {hover.creditsAvailable <= 2 && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 300,
-                      damping: 20,
-                      delay: 0.2,
-                    }}
-                    className="text-xs text-orange-300 hidden sm:inline"
-                  >
-                    {t('practice.lowCredits')}
-                  </motion.span>
-                )}
 
                 {showCreditsInfo && (
                   <motion.div
