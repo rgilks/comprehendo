@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpenIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { getTextDirection } from 'app/domain/language';
@@ -50,20 +50,16 @@ const ReadingPassage = () => {
             {hover.progressionPhase === 'credits' && (
               <div className="flex items-center space-x-2">
                 <div
-                  className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                  className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium cursor-help transition-all duration-200 hover:scale-105 ${
                     hover.creditsAvailable <= 2 
-                      ? 'text-orange-400 bg-orange-900/30' 
-                      : 'text-yellow-400 bg-gray-700/50'
+                      ? 'text-orange-400 bg-orange-900/30 hover:bg-orange-900/50' 
+                      : 'text-yellow-400 bg-gray-700/50 hover:bg-gray-700/70'
                   }`}
                   data-testid="hover-credits-display"
-                  title={t('practice.hoverCreditsTooltip') || 'Hover Credits'}
+                  title={t('practice.hoverCreditsTooltip') || 'Translation Credits Info'}
                 >
                   <span>{hover.creditsAvailable}</span>
                 </div>
-                <InformationCircleIcon 
-                  className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help transition-colors"
-                  title={t('practice.hoverCreditsTooltip') || 'Translation Credits Info'}
-                />
                 {hover.creditsAvailable <= 2 && (
                   <span className="text-xs text-orange-300 hidden sm:inline">
                     {t('practice.lowCredits')}
