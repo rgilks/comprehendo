@@ -35,8 +35,10 @@ const ReadingPassage = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showCreditsInfo) {
         const target = event.target as HTMLElement;
-        if (!target.closest('[data-testid="hover-credits-display"]') && 
-            !target.closest('.credits-info-panel')) {
+        if (
+          !target.closest('[data-testid="hover-credits-display"]') &&
+          !target.closest('.credits-info-panel')
+        ) {
           setShowCreditsInfo(false);
         }
       }
@@ -70,24 +72,63 @@ const ReadingPassage = () => {
           <div className="flex items-center space-x-4">
             {hover.progressionPhase === 'credits' && (
               <div className="flex items-center space-x-2 relative">
-                <div
-                  className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium cursor-pointer transition-all duration-200 hover:scale-105 ${
-                    hover.creditsAvailable <= 2 
-                      ? 'text-orange-400 bg-orange-900/30 hover:bg-orange-900/50' 
-                      : 'text-yellow-400 bg-gray-700/50 hover:bg-gray-700/70'
-                  }`}
+                <motion.div
+                  key={hover.creditsAvailable} // Triggers animation when credits change
+                  initial={{ scale: 0.8, opacity: 0.7 }}
+                  animate={{ 
+                    scale: 1, 
+                    opacity: 1,
+                    backgroundColor: hover.creditsAvailable <= 2 
+                      ? 'rgba(251, 146, 60, 0.3)' // orange-900/30
+                      : 'rgba(55, 65, 81, 0.5)', // gray-700/50
+                    color: hover.creditsAvailable <= 2 
+                      ? 'rgb(251, 146, 60)' // orange-400
+                      : 'rgb(250, 204, 21)' // yellow-400
+                  }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 20,
+                    duration: 0.3
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium cursor-pointer transition-all duration-200"
                   data-testid="hover-credits-display"
                   title={t('practice.hoverCreditsTooltip') || 'Translation Credits Info'}
                   onClick={handleCreditsClick}
                 >
-                  <span>{hover.creditsAvailable}</span>
-                </div>
+                  <motion.span
+                    key={`credit-${hover.creditsAvailable}`}
+                    initial={{ y: -10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 400, 
+                      damping: 25,
+                      delay: 0.1
+                    }}
+                  >
+                    {hover.creditsAvailable}
+                  </motion.span>
+                </motion.div>
                 {hover.creditsAvailable <= 2 && (
-                  <span className="text-xs text-orange-300 hidden sm:inline">
+                  <motion.span 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 300, 
+                      damping: 20,
+                      delay: 0.2
+                    }}
+                    className="text-xs text-orange-300 hidden sm:inline"
+                  >
                     {t('practice.lowCredits')}
-                  </span>
+                  </motion.span>
                 )}
-                
+
                 {showCreditsInfo && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
