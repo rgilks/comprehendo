@@ -183,7 +183,7 @@ const ReadingPassage = () => {
         )}
 
         <div
-          className="prose prose-lg md:prose-xl prose-invert max-w-none text-gray-200 leading-relaxed md:leading-loose tracking-wide"
+          className="prose prose-xl md:prose-2xl prose-invert max-w-none text-gray-100 leading-relaxed md:leading-loose tracking-wide font-medium"
           data-testid="passage-text"
         >
           <div dir={getTextDirection(generatedPassageLanguage)}>
