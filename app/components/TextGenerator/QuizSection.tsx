@@ -227,7 +227,7 @@ const QuizSection = () => {
     >
       <div className="mb-6">
         <h3
-          className="text-lg md:text-xl lg:text-2xl font-semibold text-white mb-2"
+          className="text-base md:text-lg font-medium text-gray-200 mb-2"
           data-testid="question-text"
           dir={getTextDirection(questionLanguage)}
         >

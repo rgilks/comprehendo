@@ -50,7 +50,9 @@ const ReadingPassage = () => {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [showCreditsInfo]);
 
   const renderParagraphWithWordHover = useRenderParagraphWithWordHover({
@@ -167,7 +169,7 @@ const ReadingPassage = () => {
         )}
 
         <div
-          className="prose prose-xl md:prose-2xl prose-invert max-w-none text-gray-100 leading-relaxed md:leading-loose tracking-wide font-medium"
+          className="prose prose-2xl md:prose-3xl prose-invert max-w-none text-gray-100 leading-relaxed md:leading-loose tracking-wide font-medium"
           data-testid="passage-text"
         >
           <div dir={getTextDirection(generatedPassageLanguage)}>
