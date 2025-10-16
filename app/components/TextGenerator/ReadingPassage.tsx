@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpenIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { getTextDirection } from 'app/domain/language';
@@ -48,12 +48,27 @@ const ReadingPassage = () => {
           </div>
           <div className="flex items-center space-x-4">
             {hover.progressionPhase === 'credits' && (
-              <div
-                className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium text-yellow-400 bg-gray-700/50"
-                data-testid="hover-credits-display"
-                title={t('practice.hoverCreditsTooltip') || 'Hover Credits'}
-              >
-                <span>{hover.creditsAvailable}</span>
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                    hover.creditsAvailable <= 2 
+                      ? 'text-orange-400 bg-orange-900/30' 
+                      : 'text-yellow-400 bg-gray-700/50'
+                  }`}
+                  data-testid="hover-credits-display"
+                  title={t('practice.hoverCreditsTooltip') || 'Hover Credits'}
+                >
+                  <span>{hover.creditsAvailable}</span>
+                </div>
+                <InformationCircleIcon 
+                  className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help transition-colors"
+                  title={t('practice.hoverCreditsTooltip') || 'Translation Credits Info'}
+                />
+                {hover.creditsAvailable <= 2 && (
+                  <span className="text-xs text-orange-300 hidden sm:inline">
+                    {t('practice.lowCredits')}
+                  </span>
+                )}
               </div>
             )}
             <AudioControls />
