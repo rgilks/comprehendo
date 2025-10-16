@@ -44,6 +44,9 @@ export const useTextGeneratorStore = create<TextGeneratorState>()(
           if (value instanceof Map) {
             return { __type: 'Map', value: Array.from(value.entries()) };
           }
+          if (value instanceof Set) {
+            return { __type: 'Set', value: Array.from(value) };
+          }
           return value;
         },
         reviver: (_key, value) => {
@@ -52,6 +55,10 @@ export const useTextGeneratorStore = create<TextGeneratorState>()(
           if (typeof val === 'object' && val !== null && val.__type === 'Map') {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             return new Map(val.value);
+          }
+          if (typeof val === 'object' && val !== null && val.__type === 'Set') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            return new Set(val.value);
           }
           return value;
         },
