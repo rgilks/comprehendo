@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BookOpenIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { getTextDirection } from 'app/domain/language';
@@ -14,6 +14,7 @@ const ReadingPassage = () => {
   const { t } = useTranslation('common');
   const { language: questionLanguage } = useLanguage();
   const [showCreditsInfo, setShowCreditsInfo] = useState(false);
+  const [showInstruction, setShowInstruction] = useState(true);
   const {
     quizData,
     showQuestionSection,
@@ -28,6 +29,10 @@ const ReadingPassage = () => {
 
   const handleCreditsClick = () => {
     setShowCreditsInfo(!showCreditsInfo);
+  };
+
+  const handleCloseInstruction = () => {
+    setShowInstruction(false);
   };
 
   // Close credits info when clicking outside
@@ -75,21 +80,23 @@ const ReadingPassage = () => {
                 <motion.div
                   key={hover.creditsAvailable} // Triggers animation when credits change
                   initial={{ scale: 0.8, opacity: 0.7 }}
-                  animate={{ 
-                    scale: 1, 
+                  animate={{
+                    scale: 1,
                     opacity: 1,
-                    backgroundColor: hover.creditsAvailable <= 2 
-                      ? 'rgba(251, 146, 60, 0.3)' // orange-900/30
-                      : 'rgba(55, 65, 81, 0.5)', // gray-700/50
-                    color: hover.creditsAvailable <= 2 
-                      ? 'rgb(251, 146, 60)' // orange-400
-                      : 'rgb(250, 204, 21)' // yellow-400
+                    backgroundColor:
+                      hover.creditsAvailable <= 2
+                        ? 'rgba(251, 146, 60, 0.3)' // orange-900/30
+                        : 'rgba(55, 65, 81, 0.5)', // gray-700/50
+                    color:
+                      hover.creditsAvailable <= 2
+                        ? 'rgb(251, 146, 60)' // orange-400
+                        : 'rgb(250, 204, 21)', // yellow-400
                   }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 300, 
+                  transition={{
+                    type: 'spring',
+                    stiffness: 300,
                     damping: 20,
-                    duration: 0.3
+                    duration: 0.3,
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -102,26 +109,26 @@ const ReadingPassage = () => {
                     key={`credit-${hover.creditsAvailable}`}
                     initial={{ y: -10, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    transition={{ 
-                      type: "spring", 
-                      stiffness: 400, 
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
                       damping: 25,
-                      delay: 0.1
+                      delay: 0.1,
                     }}
                   >
                     {hover.creditsAvailable}
                   </motion.span>
                 </motion.div>
                 {hover.creditsAvailable <= 2 && (
-                  <motion.span 
+                  <motion.span
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
-                    transition={{ 
-                      type: "spring", 
-                      stiffness: 300, 
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
                       damping: 20,
-                      delay: 0.2
+                      delay: 0.2,
                     }}
                     className="text-xs text-orange-300 hidden sm:inline"
                   >
@@ -153,17 +160,27 @@ const ReadingPassage = () => {
           </div>
         </div>
 
-        <motion.div
-          className="mb-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <p className="text-sm text-blue-200 flex items-center gap-2">
-            <BookOpenIcon className="w-4 h-4" />
-            {t('practice.readingInstruction')}
-          </p>
-        </motion.div>
+        {showInstruction && (
+          <motion.div
+            className="mb-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg relative"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <button
+              onClick={handleCloseInstruction}
+              className="absolute top-2 right-2 text-blue-300 hover:text-blue-100 transition-colors duration-200"
+              aria-label="Close instruction"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+            <p className="text-sm text-blue-200 flex items-center gap-2 pr-6">
+              <BookOpenIcon className="w-4 h-4" />
+              {t('practice.readingInstruction')}
+            </p>
+          </motion.div>
+        )}
 
         <div
           className="prose prose-lg md:prose-xl prose-invert max-w-none text-gray-200 leading-relaxed md:leading-loose tracking-wide"
