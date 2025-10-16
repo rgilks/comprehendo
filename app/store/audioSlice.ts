@@ -16,6 +16,7 @@ export interface AudioSlice {
   availableVoices: VoiceInfo[];
   selectedVoiceURI: string | null;
   translationCache: Map<string, string>;
+  translatedWords: Set<string>;
 
   setVolumeLevel: (volume: number) => void;
   stopPassageSpeech: () => void;
@@ -27,6 +28,8 @@ export interface AudioSlice {
   updateAvailableVoices: (lang: Language) => void;
   setSelectedVoiceURI: (uri: string | null) => void;
   clearTranslationCache: () => void;
+  markWordAsTranslated: (word: string) => void;
+  isWordTranslated: (word: string) => boolean;
 }
 
 export const createAudioSlice: StateCreator<
@@ -45,6 +48,7 @@ export const createAudioSlice: StateCreator<
   availableVoices: [],
   selectedVoiceURI: null,
   translationCache: new Map<string, string>(),
+  translatedWords: new Set<string>(),
 
   setIsSpeechSupported: (supported) => {
     set((state) => {
@@ -292,6 +296,17 @@ export const createAudioSlice: StateCreator<
   clearTranslationCache: () => {
     set((state) => {
       state.translationCache.clear();
+      state.translatedWords.clear();
     });
+  },
+
+  markWordAsTranslated: (word) => {
+    set((state) => {
+      state.translatedWords.add(word);
+    });
+  },
+
+  isWordTranslated: (word) => {
+    return get().translatedWords.has(word);
   },
 });

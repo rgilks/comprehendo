@@ -24,7 +24,6 @@ const TranslatableWord = memo(
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
-    const [hasBeenTranslated, setHasBeenTranslated] = useState(false);
 
     const {
       speakText,
@@ -32,6 +31,8 @@ const TranslatableWord = memo(
       useHoverCredit: decrementHoverCredit,
       hover,
       translationCache,
+      markWordAsTranslated,
+      isWordTranslated,
     } = useTextGeneratorStore();
 
     const shouldTranslate = fromLang !== toLang;
@@ -126,7 +127,7 @@ const TranslatableWord = memo(
       }, 1000);
 
       // Mark as translated when clicked
-      setHasBeenTranslated(true);
+      markWordAsTranslated(word);
 
       if (shouldTranslate && !translation) {
         const canAttemptTranslation =
@@ -145,6 +146,7 @@ const TranslatableWord = memo(
       hover.progressionPhase,
       hover.creditsAvailable,
       handleTranslationFetch,
+      markWordAsTranslated,
     ]);
 
     const handleMouseEnter = useCallback(() => {
@@ -162,7 +164,7 @@ const TranslatableWord = memo(
       combinedClassName += ' bg-yellow-300 text-black';
     } else if (isCurrentWord) {
       combinedClassName += ' bg-blue-500 text-white';
-    } else if (hasBeenTranslated) {
+    } else if (isWordTranslated(word)) {
       combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
       if (hover.progressionPhase !== 'credits' || hover.creditsAvailable > 0) {
