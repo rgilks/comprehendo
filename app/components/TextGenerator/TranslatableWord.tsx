@@ -162,8 +162,6 @@ const TranslatableWord = memo(
       combinedClassName += ' bg-yellow-300 text-black';
     } else if (isCurrentWord) {
       combinedClassName += ' bg-blue-500 text-white';
-    } else if (isSpeaking) {
-      combinedClassName += ' bg-green-500 text-white animate-pulse';
     } else if (hasBeenTranslated) {
       combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
