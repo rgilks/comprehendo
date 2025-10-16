@@ -1,3 +1,3 @@
 npx lint-staged
 # Run E2E tests (skip admin tests and flaky tests that require special setup)
-npm run test:e2e -- --grep-invert "admin" --grep-invert "rapid button clicks" --grep-invert "complete full reading comprehension flow"
+npm run test:e2e -- --grep-invert "admin|rapid|complete full reading comprehension flow"

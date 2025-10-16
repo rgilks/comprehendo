@@ -123,7 +123,8 @@ const getValidatedExerciseFromCache = (
 };
 
 const MAX_REQUESTS_PER_HOUR = parseInt(
-  process.env['RATE_LIMIT_MAX_REQUESTS_PER_HOUR'] || '100',
+  process.env['RATE_LIMIT_MAX_REQUESTS_PER_HOUR'] ||
+    (process.env.NODE_ENV === 'development' ? '1000' : '100'),
   10
 );
 const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
@@ -353,6 +354,7 @@ export const generateExerciseResponse = async (
   const excludeQuizId = validParams.excludeQuizId ?? null;
 
   if (!checkRateLimit(ip)) {
+    // Try to find cached questions for the exact parameters first
     const validatedCacheResultRateLimit = getValidatedExerciseFromCache(
       validParams.passageLanguage,
       validParams.questionLanguage,
@@ -368,7 +370,27 @@ export const generateExerciseResponse = async (
         error: null,
       };
     }
-    return createErrorResponse('Rate limit exceeded and no cached question available.');
+
+    // If no exact match, try to find any cached questions for this language
+    const fallbackCacheResult = getValidatedExerciseFromCache(
+      validParams.passageLanguage,
+      validParams.questionLanguage,
+      'A1', // Try with A1 level as fallback
+      userId,
+      excludeQuizId
+    );
+    if (fallbackCacheResult) {
+      return {
+        quizData: fallbackCacheResult.quizData,
+        quizId: fallbackCacheResult.quizId,
+        cached: true,
+        error: null,
+      };
+    }
+
+    return createErrorResponse(
+      'Rate limit exceeded. Please wait a moment and try again, or try a different language/level combination.'
+    );
   }
 
   const genParams = buildGenParams(validParams);
