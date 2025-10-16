@@ -158,6 +158,7 @@ export const createQuizSlice: StateCreator<
     console.log('[Quiz] Loading quiz ID:', quizId, 'Previous quiz ID:', get().lastShownQuizId);
 
     get().stopPassageSpeech();
+    get().clearTranslationCache(); // Clear translations when loading new content
     get().resetQuizState();
     set((state) => {
       state.quizData = newQuizData;
