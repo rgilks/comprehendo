@@ -119,14 +119,13 @@ const TranslatableWord = memo(
     const handleClick = useCallback(() => {
       speakText(word, fromLang);
 
-      // Mark as translated when clicked
-      markWordAsTranslated(word);
-
       if (shouldTranslate && !translation) {
         const canAttemptTranslation =
           hover.progressionPhase === 'initial' || hover.creditsAvailable > 0;
 
         if (canAttemptTranslation) {
+          // Only mark as translated if we actually attempt translation
+          markWordAsTranslated(word);
           void handleTranslationFetch();
         }
       }
@@ -158,10 +157,8 @@ const TranslatableWord = memo(
     } else if (isCurrentWord) {
       combinedClassName += ' bg-blue-500 text-white';
     } else if (isWordTranslated(word)) {
-      // Only underline if we still have credits or are in initial phase
-      if (hover.progressionPhase !== 'credits' || hover.creditsAvailable > 0) {
-        combinedClassName += ' border-b border-dotted border-blue-400';
-      }
+      // Always underline words that have been translated (regardless of current credits)
+      combinedClassName += ' border-b border-dotted border-blue-400';
     } else {
       if (hover.progressionPhase !== 'credits' || hover.creditsAvailable > 0) {
         combinedClassName += ' hover:underline';
