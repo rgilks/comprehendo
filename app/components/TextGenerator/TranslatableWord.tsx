@@ -23,7 +23,6 @@ const TranslatableWord = memo(
     const [isHovering, setIsHovering] = useState(false);
     const [translation, setTranslation] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isSpeaking, setIsSpeaking] = useState(false);
 
     const {
       speakText,
@@ -118,13 +117,7 @@ const TranslatableWord = memo(
     );
 
     const handleClick = useCallback(() => {
-      setIsSpeaking(true);
       speakText(word, fromLang);
-
-      // Reset speaking state after a short delay
-      setTimeout(() => {
-        setIsSpeaking(false);
-      }, 1000);
 
       // Mark as translated when clicked
       markWordAsTranslated(word);
