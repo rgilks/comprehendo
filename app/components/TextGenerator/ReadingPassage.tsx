@@ -132,7 +132,7 @@ const ReadingPassage = () => {
                       <div className="space-y-1 text-xs">
                         <div>• Hover or click words for translations</div>
                         <div>• Credits reset each question</div>
-                        <div>• Underlined words show you've translated them</div>
+                        <div>• Underlined words show you&apos;ve translated them</div>
                         <div>• Audio plays when you click words</div>
                       </div>
                     </div>
