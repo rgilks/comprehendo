@@ -220,7 +220,7 @@ export const createQuizSlice: StateCreator<
     try {
       const fetchParams = {
         passageLanguage: get().passageLanguage,
-        questionLanguage: get().passageLanguage, // Use same language for consistency
+        questionLanguage: get().language, // Use user's UI language for questions
         cefrLevel: get().cefrLevel,
       };
       const rawResult = await generateInitialExercisePair(fetchParams);
@@ -282,7 +282,7 @@ export const createQuizSlice: StateCreator<
       );
       const response = await generateExerciseResponse({
         passageLanguage: get().passageLanguage,
-        questionLanguage: get().passageLanguage, // Use same language for consistency
+        questionLanguage: get().language, // Use user's UI language for questions
         cefrLevel: get().cefrLevel,
         excludeQuizId: lastShownId || get().currentQuizId,
       });
@@ -465,7 +465,7 @@ export const createQuizSlice: StateCreator<
         userAnswer: selectedAnswer ?? undefined,
         isCorrect: feedbackIsCorrect ?? undefined,
         passageLanguage,
-        questionLanguage: passageLanguage, // Use same language for consistency
+        questionLanguage: generatedQuestionLanguage, // Use the generated question language
         currentLevel: cefrLevel,
       };
       const result = await submitFeedback(payload);
