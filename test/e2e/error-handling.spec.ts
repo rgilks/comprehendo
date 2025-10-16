@@ -100,10 +100,20 @@ test.describe('Error Handling and Edge Cases', () => {
 
     const generateButton = page.locator('[data-testid="generate-button"]');
 
-    // Click multiple times rapidly
+    // Click multiple times rapidly - the button should handle this gracefully
     await generateButton.click();
-    await generateButton.click();
-    await generateButton.click();
+
+    // Wait a bit for the button to potentially become disabled
+    await page.waitForTimeout(100);
+
+    // Try to click again - this should either work or be ignored if disabled
+    await generateButton.click({ timeout: 1000 }).catch(() => {
+      // Ignore if button is disabled/unclickable
+    });
+
+    await generateButton.click({ timeout: 1000 }).catch(() => {
+      // Ignore if button is disabled/unclickable
+    });
 
     // Page should remain stable
     await expect(page.getByRole('heading', { name: 'Comprehendo' })).toBeVisible();

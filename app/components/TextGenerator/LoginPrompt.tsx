@@ -21,11 +21,11 @@ const LoginPrompt = () => {
       <p className="text-sm text-blue-100 text-center w-full">
         {t('practice.signInPrompt.message')}
       </p>
-      <div className="flex items-center justify-center w-full">
-        <div className="flex md:hidden items-center justify-center">
+      <div className="flex justify-center w-full">
+        <div className="flex md:hidden">
           <AuthButton variant="icon-only" />
         </div>
-        <div className="hidden md:flex items-center justify-center">
+        <div className="hidden md:flex">
           <AuthButton variant="short" />
         </div>
       </div>
