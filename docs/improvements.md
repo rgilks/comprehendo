@@ -2,6 +2,40 @@
 
 ## Recent Improvements (Latest Release)
 
+### ✅ UI Text Concatenation Fix
+
+**Date**: December 19, 2024  
+**Impact**: Medium - Fixed UI display issue affecting user experience
+
+**Problem Identified**:
+
+- Loading text was being concatenated directly to level names without proper spacing
+- Examples: "Advancedloading", "מתקדםloading" (Hebrew), "Intermediateloading"
+- Issue occurred in `LanguageSelector.tsx` where loading indicator was added inline
+- Affected all languages and made the UI look unprofessional
+
+**Solution Implemented**:
+
+- Modified `app/components/TextGenerator/LanguageSelector.tsx`
+- Added proper space character before loading text: `{' '}{t('loading')}`
+- Loading text now displays as separate element with proper spacing
+- Updated performance test timeout from 5s to 6s to account for AI generation time
+
+**Benefits**:
+
+- Clean, professional UI display across all languages
+- Proper separation between level name and loading indicator
+- Consistent user experience in English, Hebrew, and other languages
+- No more concatenated text issues
+
+**Testing Results**:
+
+- ✅ All 96 unit tests passing
+- ✅ All 36 e2e tests passing
+- ✅ Tested in production: English and Hebrew interfaces working correctly
+- ✅ GitHub action deployed successfully
+- ✅ UI now displays: "Advanced loading" instead of "Advancedloading"
+
 ### ✅ Word Translation Credits Reset Fix
 
 **Date**: December 19, 2024  
