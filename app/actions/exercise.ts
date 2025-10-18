@@ -35,6 +35,7 @@ import {
   getCachedExerciseToAttempt as getCachedExercise,
   saveExercise as saveExerciseToCache,
   countCachedExercisesInRepo as countCachedExercises,
+  getRandomGoodQuestion,
   type QuizRow,
 } from 'app/repo/quizRepo';
 import { incrementTodayUsage } from 'app/repo/aiApiUsageRepo';
@@ -113,6 +114,61 @@ const getValidatedExerciseFromCache = (
       console.error(
         '[Action:getValidated] Error processing cached exercise ID',
         cachedExercise.id,
+        ':',
+        error
+      );
+      return undefined;
+    }
+  }
+
+  return undefined;
+};
+
+const getValidatedRandomGoodQuestion = (
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  userId: number | null,
+  excludeQuizId?: number | null
+): { quizData: PartialQuizData; quizId: number } | undefined => {
+  const randomGoodQuestion: QuizRow | undefined = getRandomGoodQuestion(
+    passageLanguage,
+    questionLanguage,
+    level,
+    userId,
+    excludeQuizId
+  );
+
+  if (randomGoodQuestion) {
+    try {
+      const parsedContent: unknown = JSON.parse(randomGoodQuestion.content);
+      const validatedData = QuizDataSchema.safeParse(parsedContent);
+
+      if (!validatedData.success) {
+        console.error(
+          '[Action:getValidatedRandomGood] Invalid data found for good question ID',
+          randomGoodQuestion.id,
+          ':',
+          validatedData.error
+        );
+        return undefined;
+      } else {
+        const fullData = validatedData.data;
+        const partialData: PartialQuizData = {
+          paragraph: fullData.paragraph,
+          question: fullData.question,
+          options: fullData.options,
+          topic: fullData.topic,
+        };
+        return {
+          quizData: partialData,
+          quizId: randomGoodQuestion.id,
+        };
+      }
+    } catch (error) {
+      console.error(
+        '[Action:getValidatedRandomGood] Error processing good question ID',
+        randomGoodQuestion.id,
         ':',
         error
       );
@@ -449,5 +505,51 @@ export const generateInitialExercisePair = async (
     console.error('Error in generateInitialExercisePair:', error);
     const message = error instanceof Error ? error.message : 'Unknown generation error';
     return { quizzes: [], error: `Server error during generation: ${message}` };
+  }
+};
+
+export const getRandomGoodQuestionResponse = async (
+  requestParams: unknown
+): Promise<GenerateExerciseResult> => {
+  const { userId } = await getRequestContext();
+  const { validParams, errorMsg } = validateAndExtractParams(requestParams);
+  if (!validParams) return createErrorResponse(errorMsg);
+
+  const excludeQuizId = validParams.excludeQuizId ?? null;
+
+  console.log('[RandomGoodQuestion] Attempting to fetch random good question:', {
+    passageLanguage: validParams.passageLanguage,
+    questionLanguage: validParams.questionLanguage,
+    level: validParams.cefrLevel,
+    userId,
+    excludeQuizId,
+  });
+
+  try {
+    const randomGoodResult = getValidatedRandomGoodQuestion(
+      validParams.passageLanguage,
+      validParams.questionLanguage,
+      validParams.cefrLevel,
+      userId,
+      excludeQuizId
+    );
+
+    if (randomGoodResult) {
+      console.log('[RandomGoodQuestion] Found good question with ID:', randomGoodResult.quizId);
+      return {
+        quizData: randomGoodResult.quizData,
+        quizId: randomGoodResult.quizId,
+        error: null,
+        cached: true,
+      };
+    }
+
+    console.log('[RandomGoodQuestion] No good questions found, falling back to regular generation');
+    return await generateExerciseResponse(requestParams);
+  } catch (error) {
+    console.error('[RandomGoodQuestion] Error fetching random good question:', error);
+    return createErrorResponse(
+      error instanceof Error ? error.message : 'Unknown error fetching random good question'
+    );
   }
 };

@@ -17,7 +17,7 @@ const Generator = () => {
     feedbackSubmitted,
     submitFeedback,
     loadNextQuiz,
-    fetchInitialPair,
+    fetchRandomGoodQuestion,
     isSubmittingFeedback,
     isPrefetching,
   } = useTextGeneratorStore();
@@ -98,7 +98,7 @@ const Generator = () => {
         <button
           onClick={() => {
             if (!quizData) {
-              void fetchInitialPair();
+              void fetchRandomGoodQuestion();
             } else {
               loadNextQuiz();
             }

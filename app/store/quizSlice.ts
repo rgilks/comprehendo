@@ -1,6 +1,10 @@
 import type { StateCreator } from 'zustand';
 import { submitAnswer, submitFeedback } from 'app/actions/progress';
-import { generateExerciseResponse, generateInitialExercisePair } from 'app/actions/exercise';
+import {
+  generateExerciseResponse,
+  generateInitialExercisePair,
+  getRandomGoodQuestionResponse,
+} from 'app/actions/exercise';
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from 'app/domain/language-guidance';
 import {} from 'app/hooks/useLanguage';
@@ -58,6 +62,7 @@ export interface QuizSlice extends BaseSlice {
   setNextQuizAvailable: (info: NextQuizInfo | null) => void;
   loadNextQuiz: () => void;
   fetchInitialPair: () => Promise<void>;
+  fetchRandomGoodQuestion: () => Promise<void>;
   useHoverCredit: () => boolean;
 }
 
@@ -255,6 +260,72 @@ export const createQuizSlice: StateCreator<
       get().setError(errorMessage);
       get().setShowContent(false);
       set({ loading: false, nextQuizAvailable: null });
+    }
+  },
+  fetchRandomGoodQuestion: async (): Promise<void> => {
+    set({ loading: true, error: null });
+    get().setShowContent(false);
+    get().stopPassageSpeech();
+    get().resetQuizState();
+    try {
+      const fetchParams = {
+        passageLanguage: get().passageLanguage,
+        questionLanguage: get().language, // Use user's UI language for questions
+        cefrLevel: get().cefrLevel,
+      };
+      console.log('[Store] Fetching random good question for initial load:', fetchParams);
+      const response = await getRandomGoodQuestionResponse(fetchParams);
+
+      if ('error' in response && response.error) {
+        throw new Error(response.error);
+      }
+
+      const parseResult = GenerateExerciseResultSchema.safeParse(response as unknown);
+      if (!parseResult.success) {
+        console.error(
+          '[Store] Zod validation error (fetchRandomGoodQuestion):',
+          z.treeifyError(parseResult.error)
+        );
+        throw new Error(`Invalid API response structure: ${parseResult.error.message}`);
+      }
+
+      const validatedResponse = parseResult.data;
+      const quizData: PartialQuizData = validatedResponse.quizData;
+      const quizId = validatedResponse.quizId;
+
+      if (!quizData.language) quizData.language = get().passageLanguage;
+
+      console.log(
+        '[Store] Loaded random good question with ID:',
+        quizId,
+        'cached:',
+        validatedResponse.cached
+      );
+
+      set((state) => {
+        state.quizData = quizData;
+        state.currentQuizId = quizId;
+        state.generatedPassageLanguage = fetchParams.passageLanguage;
+        state.feedbackSubmitted = false;
+        state.hover.creditsUsed = 0;
+        state.loading = false;
+        state.error = null;
+      });
+
+      get().setShowExplanation(false);
+      get().setShowQuestionSection(true);
+      get().setShowContent(true);
+
+      // Prefetch the next quiz in the background for smooth transitions
+      console.log('[Store] Starting prefetch for next quiz...');
+      void get().generateText(true);
+    } catch (e) {
+      const errorMessage =
+        e instanceof Error ? e.message : 'Unknown error fetching random good question';
+      console.error('[Store] Error in fetchRandomGoodQuestion:', errorMessage);
+      get().setError(errorMessage);
+      get().setShowContent(false);
+      set({ loading: false });
     }
   },
   generateText: async (isPrefetch = false): Promise<void> => {

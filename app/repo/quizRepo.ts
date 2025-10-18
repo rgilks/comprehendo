@@ -228,3 +228,78 @@ export const countCachedExercisesInRepo = (
     throw error;
   }
 };
+
+export const getRandomGoodQuestion = (
+  passageLanguage: string,
+  questionLanguage: string,
+  level: string,
+  userId: number | null,
+  excludeQuizId?: number | null
+): QuizRow | undefined => {
+  try {
+    let stmt;
+    let row: QuizRow | undefined;
+
+    if (userId !== null) {
+      // For logged-in users, exclude quizzes they've already given feedback on
+      const excludeIdClause = excludeQuizId ? 'AND q.id != ?' : '';
+      const sql = `SELECT 
+           q.id, q.language, q.level, q.content, q.created_at, q.question_language, q.user_id
+         FROM 
+           quiz q
+         INNER JOIN 
+           question_feedback qf ON q.id = qf.quiz_id
+         LEFT JOIN 
+           question_feedback user_feedback ON q.id = user_feedback.quiz_id AND user_feedback.user_id = ?
+         WHERE 
+           q.language = ? 
+           AND q.question_language = ? 
+           AND q.level = ?
+           AND qf.is_good = 1
+           AND user_feedback.user_id IS NULL
+           ${excludeIdClause}
+         ORDER BY 
+           RANDOM()
+         LIMIT 1`;
+
+      if (excludeQuizId) {
+        stmt = db.prepare<[number, string, string, string, number]>(sql);
+        row = stmt.get(userId, passageLanguage, questionLanguage, level, excludeQuizId) as
+          | QuizRow
+          | undefined;
+      } else {
+        stmt = db.prepare<[number, string, string, string]>(sql);
+        row = stmt.get(userId, passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      }
+    } else {
+      // For anonymous users, exclude the last shown quiz ID to prevent repeats
+      const excludeIdClause = excludeQuizId ? 'AND q.id != ?' : '';
+      const sql = `SELECT q.id, q.language, q.level, q.content, q.created_at, q.question_language, q.user_id
+         FROM quiz q
+         INNER JOIN question_feedback qf ON q.id = qf.quiz_id
+         WHERE q.language = ? AND q.question_language = ? AND q.level = ?
+         AND qf.is_good = 1
+         ${excludeIdClause}
+         ORDER BY RANDOM() 
+         LIMIT 1`;
+
+      if (excludeQuizId) {
+        stmt = db.prepare<[string, string, string, number]>(sql);
+        row = stmt.get(passageLanguage, questionLanguage, level, excludeQuizId) as
+          | QuizRow
+          | undefined;
+      } else {
+        stmt = db.prepare<[string, string, string]>(sql);
+        row = stmt.get(passageLanguage, questionLanguage, level) as QuizRow | undefined;
+      }
+    }
+
+    if (!row) {
+      return undefined;
+    }
+    return QuizRowSchema.parse(row);
+  } catch (error) {
+    console.error('[QuizRepository] Error finding random good question:', error);
+    return undefined;
+  }
+};
