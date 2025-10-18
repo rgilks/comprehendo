@@ -20,12 +20,10 @@ export const getAllTableNames = async (): Promise<string[]> => {
   try {
     const db = await getDb();
 
-    const tables = (
-      await db.run(sql`
+    const tables = (await db.execute(sql`
       SELECT name FROM sqlite_master 
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
-    `)
-    ).rows as unknown as TableNameResult[];
+    `)) as TableNameResult[];
 
     return tables.map((table) => table.name);
   } catch (error) {
@@ -62,19 +60,19 @@ export const getTableData = async (
   try {
     const db = await getDb();
 
-    const totalRowsResult = await db.run(
+    const totalRowsResult = await db.execute(
       sql`SELECT COUNT(*) as totalRows FROM ${sql.identifier(tableName)}`
     );
-    const totalRows = (totalRowsResult.rows[0] as unknown as CountResult).totalRows;
+    const totalRows = (totalRowsResult[0] as CountResult).totalRows;
 
-    const dataResult = await db.run(sql`
+    const dataResult = await db.execute(sql`
       SELECT * FROM ${sql.identifier(tableName)} 
       ORDER BY ${getOrderByClause(tableName)} 
       LIMIT ${safeLimit} OFFSET ${offset}
     `);
 
     return {
-      data: dataResult.rows as Record<string, unknown>[],
+      data: dataResult as Record<string, unknown>[],
       totalRows,
       page: safePage,
       limit: safeLimit,

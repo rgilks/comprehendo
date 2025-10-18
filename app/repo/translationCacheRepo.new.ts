@@ -88,7 +88,7 @@ export const cleanupOldTranslations = async (maxAgeDays: number = 30): Promise<v
       .delete(schema.translationCache)
       .where(lt(schema.translationCache.createdAt, cutoffDate.toISOString()));
 
-    console.log(`[TranslationCache] Cleaned up ${result.rowsAffected} old translation entries`);
+    console.log(`[TranslationCache] Cleaned up ${result.changes} old translation entries`);
   } catch (error) {
     console.error('[TranslationCache] Error cleaning up old translations:', error);
   }

@@ -28,7 +28,7 @@ export type Quiz = typeof schema.quiz.$inferSelect & {
   content: QuizContent;
 };
 
-export const findQuizById = async (id: number): Promise<typeof schema.quiz.$inferSelect | null> => {
+export const findQuizById = async (id: number): Promise<Quiz | null> => {
   try {
     const db = await getDb();
     const row = await db.select().from(schema.quiz).where(eq(schema.quiz.id, id)).limit(1);
@@ -38,8 +38,28 @@ export const findQuizById = async (id: number): Promise<typeof schema.quiz.$infe
     }
 
     const quizRow = row[0];
+    let parsedContent: unknown;
 
-    return quizRow;
+    try {
+      parsedContent = JSON.parse(quizRow.content);
+    } catch (jsonError) {
+      console.error(`[QuizRepository] Failed to parse quiz content JSON for ID ${id}:`, jsonError);
+      return null;
+    }
+
+    const contentParseResult = QuizContentSchema.safeParse(parsedContent);
+    if (!contentParseResult.success) {
+      console.error(
+        `[QuizRepository] Invalid quiz content JSON for ID ${id}:`,
+        contentParseResult.error
+      );
+      return null;
+    }
+
+    return {
+      ...quizRow,
+      content: contentParseResult.data,
+    };
   } catch (error) {
     console.error(`[QuizRepository] Error fetching quiz by ID ${id}:`, error);
     throw error;
@@ -239,6 +259,13 @@ export const getRandomGoodQuestion = async (
         })
         .from(schema.quiz)
         .innerJoin(schema.questionFeedback, eq(schema.questionFeedback.quizId, schema.quiz.id))
+        .leftJoin(
+          schema.questionFeedback,
+          and(
+            eq(schema.questionFeedback.quizId, schema.quiz.id),
+            eq(schema.questionFeedback.userId, userId)
+          )
+        )
         .where(
           and(
             eq(schema.quiz.language, passageLanguage),
@@ -255,15 +282,7 @@ export const getRandomGoodQuestion = async (
       const excludeCondition = excludeQuizId ? and(eq(schema.quiz.id, excludeQuizId)) : undefined;
 
       result = await db
-        .select({
-          id: schema.quiz.id,
-          language: schema.quiz.language,
-          level: schema.quiz.level,
-          content: schema.quiz.content,
-          createdAt: schema.quiz.createdAt,
-          questionLanguage: schema.quiz.questionLanguage,
-          userId: schema.quiz.userId,
-        })
+        .select()
         .from(schema.quiz)
         .innerJoin(schema.questionFeedback, eq(schema.questionFeedback.quizId, schema.quiz.id))
         .where(

@@ -8,17 +8,17 @@ export interface UserWithEmail extends User {
   email?: string | null;
 }
 
-export const signInCallback = ({
+export const signInCallback = async ({
   user,
   account,
 }: {
   user: User | AdapterUser;
   account: Account | null;
-}): boolean => {
+}): Promise<boolean> => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (account && user) {
     try {
-      upsertUserOnSignIn(user, account);
+      await upsertUserOnSignIn(user, account);
       return true;
     } catch (error) {
       console.error(
@@ -33,7 +33,7 @@ export const signInCallback = ({
   }
 };
 
-export const jwtCallback = ({
+export const jwtCallback = async ({
   token,
   user,
   account,
@@ -41,13 +41,13 @@ export const jwtCallback = ({
   token: JWT;
   user?: UserWithEmail;
   account?: Account | null;
-}): JWT => {
+}): Promise<JWT> => {
   if (account && user?.id && user.email) {
     token.provider = account.provider;
     token.email = user.email;
 
     try {
-      const userRecord = findUserByProvider(user.id, account.provider);
+      const userRecord = await findUserByProvider(user.id, account.provider);
 
       if (userRecord) {
         token.dbId = userRecord.id;

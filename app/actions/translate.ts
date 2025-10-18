@@ -27,28 +27,28 @@ const MAX_TRANSLATION_REQUESTS_PER_HOUR = parseInt(
 );
 const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
 
-const checkTranslationRateLimit = (ip: string): boolean => {
+const checkTranslationRateLimit = async (ip: string): Promise<boolean> => {
   try {
     const now = Date.now();
-    const rateLimitRow = getRateLimit(ip);
+    const rateLimitRow = await getRateLimit(ip);
 
     if (!rateLimitRow) {
-      createRateLimit(ip, new Date(now).toISOString());
+      await createRateLimit(ip, new Date(now).toISOString());
       return true;
     }
 
-    const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
+    const windowStartTime = new Date(rateLimitRow.windowStartTime).getTime();
     const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
 
     if (isWithinWindow) {
-      if (rateLimitRow.request_count >= MAX_TRANSLATION_REQUESTS_PER_HOUR) {
+      if (rateLimitRow.requestCount >= MAX_TRANSLATION_REQUESTS_PER_HOUR) {
         return false;
       }
-      incrementRateLimit(ip);
+      await incrementRateLimit(ip);
       return true;
     }
 
-    resetRateLimit(ip, new Date(now).toISOString());
+    await resetRateLimit(ip, new Date(now).toISOString());
     return true;
   } catch (error) {
     console.error('[Translation RateLimiter] Error checking rate limit:', error);
@@ -69,7 +69,7 @@ export const translateWordWithGoogle = async (
   }
 
   // Check cache first
-  const cachedTranslation = getCachedTranslation(word, sourceLang, targetLang);
+  const cachedTranslation = await getCachedTranslation(word, sourceLang, targetLang);
   if (cachedTranslation) {
     console.log(`[Translation] Cache hit for "${word}" (${sourceLang} -> ${targetLang})`);
     return TranslationResultSchema.parse({ translation: cachedTranslation, romanization: '' });
@@ -79,7 +79,7 @@ export const translateWordWithGoogle = async (
   const headersList = await headers();
   const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
 
-  if (!checkTranslationRateLimit(ip)) {
+  if (!(await checkTranslationRateLimit(ip))) {
     console.warn(`[Translation] Rate limit exceeded for IP: ${ip}`);
     return null;
   }
@@ -121,7 +121,7 @@ export const translateWordWithGoogle = async (
     }
 
     // Save to cache for future use
-    saveTranslationToCache(word, sourceLang, targetLang, translatedText);
+    await saveTranslationToCache(word, sourceLang, targetLang, translatedText);
     console.log(`[Translation] Cached translation for "${word}" (${sourceLang} -> ${targetLang})`);
 
     return TranslationResultSchema.parse({ translation: translatedText, romanization: '' });

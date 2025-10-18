@@ -108,7 +108,7 @@ export const updateProgress = async (
         )
       );
 
-    if (result.rowsAffected === 0) {
+    if (result.changes === 0) {
       console.warn(
         `[updateProgress] No rows updated for user ${userId}, lang ${languageCode}. Progress might not have been initialized.`
       );

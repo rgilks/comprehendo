@@ -375,7 +375,9 @@ Once both files are correctly populated, `npm run test:e2e` should now be able t
 
 ## Database
 
-Uses SQLite via `better-sqlite3`. The database file is `data/comprehendo.sqlite` locally, and stored on a persistent volume (`/data/comprehendo.sqlite`) in production (Fly.io).
+Uses SQLite via Drizzle ORM with `@libsql/client`. The database file is `data/comprehendo.sqlite` locally, and stored on a persistent volume (`/data/comprehendo.sqlite`) in production (Fly.io).
+
+The migration to Drizzle ORM makes it easy to switch to Cloudflare D1 in the future by simply changing the database connection configuration.
 
 ### SQLite Command Line (Local)
 
@@ -389,7 +391,7 @@ Useful commands: `.tables`, `SELECT * FROM users LIMIT 5;`, `.schema quiz`, `.qu
 ### Database Schema
 
 ```sql
--- From app/repo/db.ts initialization logic
+-- From app/lib/db/migrations.ts initialization logic
 
 CREATE TABLE IF NOT EXISTS quiz (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

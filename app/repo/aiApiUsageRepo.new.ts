@@ -74,7 +74,7 @@ export const cleanupOldUsageRecords = async (maxAgeDays: number = 30): Promise<v
       .delete(schema.aiApiUsage)
       .where(lt(schema.aiApiUsage.date, cutoffDate.toISOString().split('T')[0]));
 
-    console.log(`[AIApiUsage] Cleaned up ${result.rowsAffected} old usage records`);
+    console.log(`[AIApiUsage] Cleaned up ${result.changes} old usage records`);
   } catch (error) {
     console.error('[AIApiUsage] Error cleaning up old usage records:', error);
   }

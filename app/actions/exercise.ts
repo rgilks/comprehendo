@@ -36,15 +36,14 @@ import {
   saveExercise as saveExerciseToCache,
   countCachedExercisesInRepo as countCachedExercises,
   getRandomGoodQuestion,
-  type QuizRow,
 } from 'app/repo/quizRepo';
 import { incrementTodayUsage } from 'app/repo/aiApiUsageRepo';
 import { z } from 'zod';
 import { extractZodErrors } from 'app/lib/utils/errorUtils';
 
-const getDbUserIdFromSession = (
+const getDbUserIdFromSession = async (
   session: { user: { id?: string | null; provider?: string | null } } | null
-): number | null => {
+): Promise<number | null> => {
   if (!session || !session.user.id || !session.user.provider) {
     if (session) {
       console.warn(
@@ -55,7 +54,7 @@ const getDbUserIdFromSession = (
   }
 
   try {
-    const userId = findUserIdByProvider(session.user.id, session.user.provider);
+    const userId = await findUserIdByProvider(session.user.id, session.user.provider);
     if (userId === undefined) {
       console.warn(
         `[getDbUserIdFromSession] Direct lookup failed: Could not find user for providerId: ${session.user.id}, provider: ${session.user.provider}`
@@ -69,14 +68,14 @@ const getDbUserIdFromSession = (
   }
 };
 
-const getValidatedExerciseFromCache = (
+const getValidatedExerciseFromCache = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   userId: number | null,
   excludeQuizId?: number | null
-): { quizData: PartialQuizData; quizId: number } | undefined => {
-  const cachedExercise: QuizRow | undefined = getCachedExercise(
+): Promise<{ quizData: PartialQuizData; quizId: number } | undefined> => {
+  const cachedExercise = await getCachedExercise(
     passageLanguage,
     questionLanguage,
     level,
@@ -124,14 +123,14 @@ const getValidatedExerciseFromCache = (
   return undefined;
 };
 
-const getValidatedRandomGoodQuestion = (
+const getValidatedRandomGoodQuestion = async (
   passageLanguage: string,
   questionLanguage: string,
   level: string,
   userId: number | null,
   excludeQuizId?: number | null
-): { quizData: PartialQuizData; quizId: number } | undefined => {
-  const randomGoodQuestion: QuizRow | undefined = getRandomGoodQuestion(
+): Promise<{ quizData: PartialQuizData; quizId: number } | undefined> => {
+  const randomGoodQuestion = await getRandomGoodQuestion(
     passageLanguage,
     questionLanguage,
     level,
@@ -186,28 +185,28 @@ const MAX_REQUESTS_PER_HOUR = parseInt(
 );
 const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
 
-const checkRateLimit = (ip: string): boolean => {
+const checkRateLimit = async (ip: string): Promise<boolean> => {
   try {
     const now = Date.now();
-    const rateLimitRow = getRateLimit(ip);
+    const rateLimitRow = await getRateLimit(ip);
 
     if (!rateLimitRow) {
-      createRateLimit(ip, new Date(now).toISOString());
+      await createRateLimit(ip, new Date(now).toISOString());
       return true;
     }
 
-    const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
+    const windowStartTime = new Date(rateLimitRow.windowStartTime).getTime();
     const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
 
     if (isWithinWindow) {
-      if (rateLimitRow.request_count >= MAX_REQUESTS_PER_HOUR) {
+      if (rateLimitRow.requestCount >= MAX_REQUESTS_PER_HOUR) {
         return false;
       }
-      incrementRateLimit(ip);
+      await incrementRateLimit(ip);
       return true;
     }
 
-    resetRateLimit(ip, new Date(now).toISOString());
+    await resetRateLimit(ip, new Date(now).toISOString());
     return true;
   } catch (error) {
     console.error('[RateLimiter] Error checking rate limit:', error);
@@ -255,7 +254,7 @@ const tryGenerateAndCacheExercise = async (
 ): Promise<Result<{ content: ExerciseContent; id: number }, ActionError>> => {
   try {
     // Check daily AI API budget before making expensive API calls
-    if (!incrementTodayUsage()) {
+    if (!(await incrementTodayUsage())) {
       return failure({
         error: 'Daily AI API request limit exceeded. Please try again tomorrow.',
       });
@@ -273,7 +272,7 @@ const tryGenerateAndCacheExercise = async (
 
     console.log('[Exercise] AI generation successful, attempting to save to cache...');
 
-    const exerciseId = saveExerciseToCache(
+    const exerciseId = await saveExerciseToCache(
       params.passageLanguage,
       params.questionLanguage,
       params.level,
@@ -323,7 +322,7 @@ const getOrGenerateExercise = async (
     }
     generationError = genResult.error;
 
-    const validatedCacheResultPreferGen = getValidatedExerciseFromCache(
+    const validatedCacheResultPreferGen = await getValidatedExerciseFromCache(
       requestParams.passageLanguage,
       requestParams.questionLanguage,
       requestParams.cefrLevel,
@@ -343,7 +342,7 @@ const getOrGenerateExercise = async (
     );
   }
 
-  const validatedCacheResultOtherwise = getValidatedExerciseFromCache(
+  const validatedCacheResultOtherwise = await getValidatedExerciseFromCache(
     requestParams.passageLanguage,
     requestParams.questionLanguage,
     requestParams.cefrLevel,
@@ -372,7 +371,7 @@ const getRequestContext = async () => {
   const headersList = await headers();
   const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
   const session = await getServerSession(authOptions);
-  const userId = getDbUserIdFromSession(session);
+  const userId = await getDbUserIdFromSession(session);
   return { ip, userId };
 };
 
@@ -410,9 +409,9 @@ export const generateExerciseResponse = async (
 
   const excludeQuizId = validParams.excludeQuizId ?? null;
 
-  if (!checkRateLimit(ip)) {
+  if (!(await checkRateLimit(ip))) {
     // Try to find cached questions for the exact parameters first
-    const validatedCacheResultRateLimit = getValidatedExerciseFromCache(
+    const validatedCacheResultRateLimit = await getValidatedExerciseFromCache(
       validParams.passageLanguage,
       validParams.questionLanguage,
       validParams.cefrLevel,
@@ -429,7 +428,7 @@ export const generateExerciseResponse = async (
     }
 
     // If no exact match, try to find any cached questions for this language
-    const fallbackCacheResult = getValidatedExerciseFromCache(
+    const fallbackCacheResult = await getValidatedExerciseFromCache(
       validParams.passageLanguage,
       validParams.questionLanguage,
       'A1', // Try with A1 level as fallback
@@ -451,7 +450,7 @@ export const generateExerciseResponse = async (
   }
 
   const genParams = buildGenParams(validParams);
-  const cachedCountValue = countCachedExercises(
+  const cachedCountValue = await countCachedExercises(
     genParams.passageLanguage,
     genParams.questionLanguage,
     genParams.level
@@ -474,7 +473,7 @@ export const generateInitialExercisePair = async (
   const { validParams, errorMsg } = validateAndExtractParams(requestParams);
   if (!validParams) return { quizzes: [], error: errorMsg };
 
-  if (!checkRateLimit(ip)) return { quizzes: [], error: 'Rate limit exceeded.' };
+  if (!(await checkRateLimit(ip))) return { quizzes: [], error: 'Rate limit exceeded.' };
 
   const genParams1 = buildGenParams(validParams);
   const genParams2 = buildGenParams(validParams, getRandomTopicForLevel(validParams.cefrLevel));
@@ -526,7 +525,7 @@ export const getRandomGoodQuestionResponse = async (
   });
 
   try {
-    const randomGoodResult = getValidatedRandomGoodQuestion(
+    const randomGoodResult = await getValidatedRandomGoodQuestion(
       validParams.passageLanguage,
       validParams.questionLanguage,
       validParams.cefrLevel,

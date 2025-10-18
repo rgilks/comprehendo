@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { eq, lt, sql } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import getDb, { schema } from 'app/lib/db';
 
 const RateLimitRowSchema = z.object({
@@ -52,7 +52,7 @@ export const incrementRateLimit = async (ip: string): Promise<void> => {
       .set({ requestCount: sql`${schema.rateLimits.requestCount} + 1` })
       .where(eq(schema.rateLimits.ipAddress, ip));
 
-    if (result.rowsAffected === 0) {
+    if (result.changes === 0) {
       console.warn(
         `[RateLimitRepository] Increment failed: No rate limit record found for IP ${ip}.`
       );
@@ -75,7 +75,7 @@ export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Pr
       })
       .where(eq(schema.rateLimits.ipAddress, ip));
 
-    if (result.rowsAffected === 0) {
+    if (result.changes === 0) {
       console.warn(`[RateLimitRepository] Reset failed: No rate limit record found for IP ${ip}.`);
     }
   } catch (dbError) {
@@ -119,7 +119,7 @@ export const cleanupOldRateLimits = async (maxAgeHours: number = 24): Promise<vo
       .delete(schema.rateLimits)
       .where(lt(schema.rateLimits.windowStartTime, cutoffTime.toISOString()));
 
-    console.log(`[RateLimitRepository] Cleaned up ${result.rowsAffected} old rate limit entries`);
+    console.log(`[RateLimitRepository] Cleaned up ${result.changes} old rate limit entries`);
   } catch (error) {
     console.error('[RateLimitRepository] Error cleaning up old rate limits:', error);
   }
