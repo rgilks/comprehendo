@@ -116,6 +116,7 @@ const resetQuizCoreState = (state: QuizSlice) => {
   state.isSubmittingFeedback = false;
   state.isPrefetching = false;
   state.hover.creditsUsed = 0;
+  state.hover.creditsAvailable = INITIAL_HOVER_CREDITS;
 };
 
 export const createQuizSlice: StateCreator<

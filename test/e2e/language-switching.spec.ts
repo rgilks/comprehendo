@@ -71,4 +71,41 @@ test.describe('Language Switching', () => {
     // Language selector should show German
     await expect(langButton).toContainText('Deutsch');
   });
+
+  test('should reset translation credits when generating new content', async ({ page }) => {
+    await page.goto('/en');
+
+    // Generate initial content
+    const generateButton = page.locator('[data-testid="generate-button"]');
+    await generateButton.click();
+
+    // Wait for content to load
+    await expect(page.locator('[data-testid="passage-text"]')).toBeVisible();
+
+    // Check initial credits
+    const creditsDisplay = page.locator('[data-testid="hover-credits-display"]');
+    await expect(creditsDisplay).toContainText('7');
+
+    // Click on a word to use a credit
+    const passageText = page.locator('[data-testid="passage-text"]');
+    const firstWord = passageText.locator('span').first();
+    await firstWord.click();
+
+    // Credits should decrease
+    await expect(creditsDisplay).toContainText('6');
+
+    // Answer the question to proceed to next quiz
+    const answerOption = page.locator('[data-testid="answer-option-0"]');
+    await answerOption.click();
+
+    // Wait for feedback and then generate new content
+    await expect(page.locator('text=Correct!').or(page.locator('text=Incorrect'))).toBeVisible();
+    await generateButton.click();
+
+    // Wait for new content to load
+    await expect(page.locator('[data-testid="passage-text"]')).toBeVisible();
+
+    // Credits should reset to 7
+    await expect(creditsDisplay).toContainText('7');
+  });
 });
