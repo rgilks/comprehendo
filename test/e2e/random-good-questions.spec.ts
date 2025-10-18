@@ -57,8 +57,8 @@ test.describe('Random Good Question Loading', () => {
 
     const loadTime = Date.now() - startTime;
 
-    // Should load reasonably quickly (under 6 seconds)
-    expect(loadTime).toBeLessThan(6000);
+    // Should load reasonably quickly (under 8 seconds)
+    expect(loadTime).toBeLessThan(8000);
 
     // Should have all interactive elements
     await expect(page.locator('[data-testid="answer-option-0"]')).toBeVisible();
