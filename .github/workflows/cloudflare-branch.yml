@@ -50,12 +50,12 @@ jobs:
       - name: Build with OpenNext
         run: npm run build:cf
 
-             - name: Deploy to Cloudflare Workers (Preview)
-               uses: cloudflare/wrangler-action@v3
-               with:
-                 apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-                 accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-                 command: deploy --env preview --minify
+      - name: Deploy to Cloudflare Workers (Preview)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env preview --minify
         env:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -83,12 +83,12 @@ jobs:
       - name: Build with OpenNext
         run: npm run build:cf
 
-             - name: Deploy to Cloudflare Workers (Production)
-               uses: cloudflare/wrangler-action@v3
-               with:
-                 apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-                 accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-                 command: deploy --minify
+      - name: Deploy to Cloudflare Workers (Production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --minify
         env:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
