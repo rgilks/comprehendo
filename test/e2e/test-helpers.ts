@@ -1,11 +1,9 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 export const mockQuizGeneration = async (page: Page) => {
-  // Mock the exercise generation by intercepting fetch calls to server actions
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
 
-    // Mock exercise generation endpoints
     if (url.includes('exercise') || url.includes('generate')) {
       const mockQuizData = {
         quizData: {
@@ -34,11 +32,9 @@ export const mockQuizGeneration = async (page: Page) => {
       return;
     }
 
-    // Let other requests pass through
     await route.continue();
   });
 
-  // Also mock any fetch calls that might be made directly
   await page.addInitScript(() => {
     const originalFetch = window.fetch;
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -150,6 +146,47 @@ export const waitForContentLoad = async (page: Page, timeout = 5000) => {
 export const waitForQuizLoad = async (page: Page, timeout = 5000) => {
   try {
     await page.waitForSelector('[data-testid="question-text"]', { timeout });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const waitForElementToBeVisible = async (page: Page, selector: string, timeout = 5000) => {
+  try {
+    await page.waitForSelector(selector, { state: 'visible', timeout });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const waitForElementToBeEnabled = async (page: Page, selector: string, timeout = 5000) => {
+  try {
+    await page.waitForFunction(
+      (sel) => {
+        const element = document.querySelector(sel);
+        return element && !element.hasAttribute('disabled');
+      },
+      selector,
+      { timeout }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const safeClick = async (page: Page, selector: string, timeout = 5000) => {
+  const element = page.locator(selector);
+  await expect(element).toBeVisible({ timeout });
+  await expect(element).toBeEnabled({ timeout });
+  await element.click();
+};
+
+export const waitForNetworkIdle = async (page: Page, timeout = 5000) => {
+  try {
+    await page.waitForLoadState('networkidle', { timeout });
     return true;
   } catch {
     return false;
