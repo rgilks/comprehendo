@@ -1,0 +1,56 @@
+---
+description: Workspace coding standards and best practices
+globs: ['**/*']
+alwaysApply: true
+---
+
+# Code Quality & Style
+
+- Code should be as simple, concise and elegant as possible
+- Use blank lines to make code easier to read
+- REMOVE ALL COMMENTS! unless they are really important
+- Make sure we can elegantly handle errors, but don't overcomplicate error handling
+
+# Linting & Type Safety
+
+- NEVER ignore linting rules! fix the problems
+- Always look for opportunities to strengthen the linting rules
+- Always try and improve the type checking
+- Try and avoid duplication between types
+- Consolidate domain types in one location so we have a strong domain model
+- Be rigorous in fixing warnings and errors
+
+# State Management & Architecture
+
+- Use Zustand to manage state in React
+- Use immer in TypeScript where possible to avoid mutation
+- Try to keep the state machine simple, consolidated and easy to understand
+- When reviewing a file, should it be broken up? can it be improved? is this functionality in the right location within the project?
+
+# Testing Strategy
+
+- Keep the test coverage high
+- We are using vitest for unit testing
+- We are using playwright for end to end testing
+- Don't write unit tests for UI components
+- Add data-testid to all UI components for e2e testing
+- Extract logic from UI components into the lib folder so it can be unit tested
+
+# Logging & Debugging
+
+- Don't add a logging facility, the console is fine
+- Logging should be sufficient to diagnose problems at all levels but not overdone
+
+# Documentation & Maintenance
+
+- Please ALWAYS! keep the README file up to date
+- Keep up to date documentation in the docs folder
+- Try to keep documents concise and to the point, consolidate information where possible
+- Keep the .gitignore file up to date
+- Keep the .cursorignore file up to date - it should ignore large model files and build artifacts that slow down indexing
+
+# Workflow Commands
+
+- When I just type 'rcp' that means "review all changes in each file, remove pointless comments, make sure changes have automated tests, run 'npm run check' fix any issues and analyse the results. Then test the application locally in the web browser as if you were an expert QA tester, I have logged in for you. If there are no issues or causes for concern, update relevant documentation and then 'git add -A' and commit and push all changed files."
+- When I just type 'p' that means "proceed"
+- Dont give me a list of options to choose, devise the best plan you can and proceed with it.

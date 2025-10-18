@@ -132,7 +132,6 @@ Comprehendo implements strategies to manage AI API costs:
     # or yarn install
     ```
 3.  **Configure Environment:**
-
     - Create `.env.local` file in the project root
     - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
       - `GOOGLE_AI_API_KEY` (optional, if using Google AI)

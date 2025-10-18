@@ -32,7 +32,7 @@ test.describe('Complete User Journey', () => {
       try {
         await learningSelect.selectOption('es');
         await expect(learningSelect).toHaveValue('es');
-      } catch (error) {
+      } catch {
         console.log('Language selector not available, continuing with default language');
       }
     }

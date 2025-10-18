@@ -14,7 +14,7 @@ export const useLanguage = () => {
   const languages = useTextGeneratorStore((state) => state.languages);
 
   const handleSetLanguage = async (lang: Language) => {
-    const currentSearch = '' + searchParams.toString();
+    const currentSearch = searchParams.toString();
     await setLanguage(lang, router, pathname, currentSearch ? `?${currentSearch}` : '');
   };
 

@@ -47,7 +47,7 @@ export const createProgressSlice: StateCreator<
           state.isProgressLoading = false;
           state.userStreak = null;
           state.error = validatedProgress.success
-            ? String(validatedProgress.data.error || 'Unknown error')
+            ? validatedProgress.data.error || 'Unknown error'
             : 'Invalid API response structure';
           state.showError = true;
         });

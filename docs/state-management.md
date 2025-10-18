@@ -84,7 +84,6 @@ Each `create[SliceName]Slice` function is a Zustand `StateCreator` that defines 
       },
       ```
 3.  **Accessing Other Slices' State or Actions:**
-
     - Use the `get()` function (the second argument to the slice creator `(set, get) => ({...})`) to access the entire store's state or other actions:
 
       ```typescript

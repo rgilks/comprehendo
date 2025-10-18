@@ -92,7 +92,7 @@ const getValidatedExerciseFromCache = (
           '[Action:getValidated] Invalid data found in cache for ID',
           cachedExercise.id,
           ':',
-          validatedCachedData.error.format()
+          validatedCachedData.error
         );
         return undefined;
       } else {
