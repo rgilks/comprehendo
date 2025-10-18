@@ -2,6 +2,39 @@
 
 ## Recent Improvements (Latest Release)
 
+### ✅ Language State Synchronization Fix
+
+**Date**: December 19, 2024  
+**Impact**: High - Fixed critical UX issue with language switching
+
+**Problem Identified**:
+
+- Language selector sometimes showed previous language while page content was in new language
+- Occured when navigating directly to URLs like `/he` or `/fr`
+- Created confusing mismatch between UI selector and actual page language
+- Root cause: No synchronization between URL parameter and persisted store state
+
+**Solution Implemented**:
+
+- Modified `app/hooks/useLanguage.ts` to sync store with URL language
+- Added `useEffect` to update store when URL language differs from store language
+- Used URL language as source of truth for language display
+- Added comprehensive e2e test for URL synchronization
+
+**Benefits**:
+
+- Language selector always reflects actual page language
+- Seamless direct URL navigation across all supported languages
+- Improved user experience with consistent language state
+- Enhanced reliability for language switching functionality
+
+**Testing Results**:
+
+- All 35 e2e tests passing (including new synchronization test)
+- Verified across multiple languages: English, French, German, Hebrew, Spanish
+- Direct URL navigation works perfectly
+- Language switching functionality remains intact
+
 ### ✅ RCP Workflow Completion & Production Readiness
 
 **Date**: December 2024  

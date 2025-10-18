@@ -50,4 +50,25 @@ test.describe('Language Switching', () => {
     await expect(learningSelect).toBeVisible();
     await expect(learningSelect).toHaveValue(currentValue);
   });
+
+  test('should sync language selector with URL parameter', async ({ page }) => {
+    // Navigate directly to Hebrew URL
+    await page.goto('/he');
+
+    // Language selector should show Hebrew
+    const langButton = page.locator('#language-select-button');
+    await expect(langButton).toContainText('עברית');
+
+    // Navigate directly to French URL
+    await page.goto('/fr');
+
+    // Language selector should show French
+    await expect(langButton).toContainText('Français');
+
+    // Navigate directly to German URL
+    await page.goto('/de');
+
+    // Language selector should show German
+    await expect(langButton).toContainText('Deutsch');
+  });
 });
