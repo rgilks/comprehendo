@@ -18,6 +18,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "check-github-action": "./scripts/check-github-action.sh",
     "test:e2e": "npx playwright test --reporter=list",
     "test:e2e:watch": "playwright test --watch",
     "cleanup-db": "node scripts/cleanup-db.js",
