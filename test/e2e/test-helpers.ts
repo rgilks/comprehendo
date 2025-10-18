@@ -1,10 +1,48 @@
 import { Page, expect } from '@playwright/test';
 
 export const mockQuizGeneration = async (page: Page) => {
+  // Mock server actions by intercepting fetch requests to server actions
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
 
     if (url.includes('exercise') || url.includes('generate')) {
+      const mockQuizData = {
+        quizData: {
+          paragraph:
+            'This is a sample reading passage for testing purposes. It contains enough text to demonstrate the functionality of the quiz system. The passage is designed to test reading comprehension skills at the A1 level.',
+          question: 'What is the main purpose of this passage?',
+          options: [
+            'To test reading comprehension',
+            'To demonstrate functionality',
+            'To show sample text',
+            'To test quiz system',
+          ],
+          correctAnswer: 0,
+          explanation: 'The passage is specifically designed to test reading comprehension skills.',
+        },
+        quizId: Math.floor(Math.random() * 1000),
+        cached: false,
+        error: null,
+      };
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuizData),
+      });
+      return;
+    }
+
+    await route.continue();
+  });
+
+  // Mock server actions by intercepting fetch requests
+  await page.route('**', async (route) => {
+    const request = route.request();
+    const url = request.url();
+
+    // Check if this is a server action request
+    if (request.method() === 'POST' && url.includes('actions')) {
       const mockQuizData = {
         quizData: {
           paragraph:

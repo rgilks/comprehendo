@@ -9,6 +9,7 @@ import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import AudioControls from './AudioControls';
 import { useLanguage } from 'app/hooks/useLanguage';
 import useRenderParagraphWithWordHover from './useRenderParagraphWithWordHover';
+import { createUIClickHandlers, shouldCloseCreditsInfo } from 'app/lib/utils/ui';
 
 const ReadingPassage = () => {
   const { t } = useTranslation('common');
@@ -27,25 +28,16 @@ const ReadingPassage = () => {
 
   const actualQuestionLanguage = questionLanguage;
 
-  const handleCreditsClick = () => {
-    setShowCreditsInfo(!showCreditsInfo);
-  };
-
-  const handleCloseInstruction = () => {
-    setShowInstruction(false);
-  };
+  const { handleCreditsClick, handleCloseInstruction } = createUIClickHandlers(
+    setShowCreditsInfo,
+    setShowInstruction
+  );
 
   // Close credits info when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showCreditsInfo) {
-        const target = event.target as HTMLElement;
-        if (
-          !target.closest('[data-testid="hover-credits-display"]') &&
-          !target.closest('.credits-info-panel')
-        ) {
-          setShowCreditsInfo(false);
-        }
+      if (shouldCloseCreditsInfo(event, showCreditsInfo)) {
+        setShowCreditsInfo(false);
       }
     };
 

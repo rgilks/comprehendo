@@ -7,6 +7,23 @@ process.env.NEXTAUTH_URL = 'http://localhost:3000';
 process.env['GOOGLE_CLIENT_ID'] = 'test-client-id';
 process.env['GOOGLE_CLIENT_SECRET'] = 'test-client-secret';
 
+// Mock DOM APIs for tests
+global.MouseEvent = class MouseEvent {
+  constructor(
+    public type: string,
+    public eventInitDict?: MouseEventInit
+  ) {}
+  target: EventTarget | null = null;
+} as never;
+
+global.document = {
+  createElement: vi.fn(() => ({
+    closest: vi.fn(),
+  })),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+} as never;
+
 // Mock better-sqlite3 for tests
 vi.mock('better-sqlite3', () => ({
   default: vi.fn(() => ({

@@ -6,6 +6,12 @@ import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { HandThumbUpIcon, HandThumbDownIcon } from '@heroicons/react/24/solid';
 import { useSession } from 'next-auth/react';
 import QuizSkeleton from './QuizSkeleton';
+import {
+  shouldShowFeedbackPrompt,
+  shouldShowFeedbackLoading,
+  shouldOfferGeneration,
+} from 'app/lib/utils/quiz';
+import { createScrollToContentHandler } from 'app/lib/utils/ui';
 
 const Generator = () => {
   const { t } = useTranslation('common');
@@ -23,32 +29,40 @@ const Generator = () => {
   } = useTextGeneratorStore();
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleFeedbackSubmit = useCallback(
-    (is_good: boolean) => {
-      if (contentContainerRef.current) {
-        contentContainerRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }
-      void submitFeedback(is_good);
-    },
-    [submitFeedback]
+  const scrollToContent = createScrollToContentHandler(
+    contentContainerRef as React.RefObject<HTMLDivElement>
   );
 
-  const showFeedbackPrompt =
-    isAnswered &&
-    !feedbackSubmitted &&
-    !loading &&
-    !isSubmittingFeedback &&
-    status === 'authenticated';
-  const showFeedbackLoading =
-    isAnswered &&
-    !feedbackSubmitted &&
-    (loading || isSubmittingFeedback) &&
-    status === 'authenticated';
-  const shouldOfferGeneration =
-    !quizData || (isAnswered && (feedbackSubmitted || status !== 'authenticated'));
+  const handleFeedbackSubmit = useCallback(
+    (is_good: boolean) => {
+      scrollToContent();
+      void submitFeedback(is_good);
+    },
+    [submitFeedback, scrollToContent]
+  );
+
+  const showFeedbackPrompt = shouldShowFeedbackPrompt(
+    isAnswered,
+    feedbackSubmitted,
+    loading,
+    isSubmittingFeedback,
+    status === 'authenticated'
+  );
+
+  const showFeedbackLoading = shouldShowFeedbackLoading(
+    isAnswered,
+    feedbackSubmitted,
+    loading,
+    isSubmittingFeedback,
+    status === 'authenticated'
+  );
+
+  const shouldOfferGenerationValue = shouldOfferGeneration(
+    quizData,
+    isAnswered,
+    feedbackSubmitted,
+    status === 'authenticated'
+  );
 
   return (
     <div ref={contentContainerRef}>
@@ -60,9 +74,7 @@ const Generator = () => {
               onClick={() => {
                 handleFeedbackSubmit(true);
               }}
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               disabled={loading || isSubmittingFeedback}
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 text-gray-300 hover:text-green-400 hover:bg-green-900/30 ${loading || isSubmittingFeedback ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Good question"
               data-testid="feedback-good-button"
@@ -74,9 +86,7 @@ const Generator = () => {
               onClick={() => {
                 handleFeedbackSubmit(false);
               }}
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               disabled={loading || isSubmittingFeedback}
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               className={`flex flex-col items-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 text-red-400 hover:text-red-400 hover:bg-red-900/30 ${loading || isSubmittingFeedback ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Bad question"
               data-testid="feedback-bad-button"
@@ -94,7 +104,7 @@ const Generator = () => {
         </div>
       )}
 
-      {shouldOfferGeneration && (
+      {shouldOfferGenerationValue && (
         <button
           onClick={() => {
             if (!quizData) {

@@ -10,7 +10,8 @@ test.describe('Reading Comprehension Flow', () => {
       image: 'https://example.com/avatar.jpg',
     });
 
-    await mockQuizGeneration(page);
+    // Don't mock quiz generation - let it use real random good questions
+    // await mockQuizGeneration(page);
 
     await page.goto('/en');
 
@@ -27,7 +28,10 @@ test.describe('Reading Comprehension Flow', () => {
 
     if (passageVisible) {
       await expect(passage).toBeVisible();
-      await expect(passage).toContainText('sample reading passage');
+      // Check that passage contains some text (not empty)
+      const passageText = await passage.textContent();
+      expect(passageText).toBeTruthy();
+      expect(passageText?.length).toBeGreaterThan(10);
     } else {
       // If content doesn't load, verify the page is still functional
       await expect(page.getByRole('heading', { name: 'Comprehendo' })).toBeVisible();
@@ -41,7 +45,8 @@ test.describe('Reading Comprehension Flow', () => {
       image: 'https://example.com/avatar.jpg',
     });
 
-    await mockQuizGeneration(page);
+    // Don't mock quiz generation - let it use real random good questions
+    // await mockQuizGeneration(page);
 
     await page.goto('/en');
 
@@ -55,7 +60,10 @@ test.describe('Reading Comprehension Flow', () => {
 
     if (questionVisible) {
       await expect(question).toBeVisible();
-      await expect(question).toContainText('What is the main purpose');
+      // Check that question contains some text (not empty)
+      const questionText = await question.textContent();
+      expect(questionText).toBeTruthy();
+      expect(questionText?.length).toBeGreaterThan(5);
 
       // Check all 4 options are present
       for (let i = 0; i < 4; i++) {

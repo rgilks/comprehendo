@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useCallback, memo, useEffect } from 'react';
-import { type Language, SPEECH_LANGUAGES } from 'app/domain/language';
+import { type Language } from 'app/domain/language';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
+import { analyzeTranslation, canTranslate } from 'app/lib/utils/translation';
 
 interface TranslatableWordProps {
   word: string;
@@ -11,12 +12,6 @@ interface TranslatableWordProps {
   isCurrentWord: boolean;
   isRelevant: boolean;
 }
-
-const getCacheKey = (word: string, sourceLang: string, targetLang: string): string => {
-  const cleaningRegex = /[^\p{L}\p{N}\s'-]/gu;
-  const cleanedWord = word.replace(cleaningRegex, '').trim().toLowerCase();
-  return `${sourceLang}:${targetLang}:${cleanedWord}`;
-};
 
 const TranslatableWord = memo(
   ({ word, fromLang, toLang, isCurrentWord, isRelevant }: TranslatableWordProps) => {
@@ -34,92 +29,72 @@ const TranslatableWord = memo(
       isWordTranslated,
     } = useTextGeneratorStore();
 
-    const shouldTranslate = fromLang !== toLang;
+    const translationAnalysis = analyzeTranslation({
+      word,
+      fromLang,
+      toLang,
+      translationCache,
+    });
 
     useEffect(() => {
-      if (shouldTranslate) {
-        const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
-        const toLangSpeechCode = SPEECH_LANGUAGES[toLang];
-
-        if (fromLangSpeechCode && toLangSpeechCode) {
-          const sourceLangIso = fromLangSpeechCode.split('-')[0];
-          const targetLangIso = toLangSpeechCode.split('-')[0];
-
-          if (sourceLangIso && targetLangIso) {
-            const cacheKey = getCacheKey(word, sourceLangIso, targetLangIso);
-            if (translationCache.has(cacheKey)) {
-              setTranslation(translationCache.get(cacheKey) ?? null);
-            } else {
-              setTranslation(null);
-            }
-          }
+      if (translationAnalysis.shouldTranslate) {
+        if (translationAnalysis.cachedTranslation) {
+          setTranslation(translationAnalysis.cachedTranslation);
+        } else {
+          setTranslation(null);
         }
       } else {
         setTranslation(null);
       }
-    }, [word, fromLang, toLang, shouldTranslate, translationCache]);
+    }, [translationAnalysis]);
 
-    const handleTranslationFetch = useCallback(
-      async () => {
-        if (!shouldTranslate || translation || isLoading) return;
+    const handleTranslationFetch = useCallback(async () => {
+      if (!canTranslate(hover.progressionPhase, hover.creditsAvailable, isLoading, translation)) {
+        return;
+      }
 
-        if (hover.progressionPhase === 'initial' || hover.creditsAvailable > 0) {
-          setIsLoading(true);
-          try {
-            const fromLangSpeechCode = SPEECH_LANGUAGES[fromLang];
-            const toLangSpeechCode = SPEECH_LANGUAGES[toLang];
+      if (!translationAnalysis.sourceLangIso || !translationAnalysis.targetLangIso) {
+        console.error('Could not determine language codes for translation');
+        return;
+      }
 
-            if (fromLangSpeechCode && toLangSpeechCode) {
-              const sourceLang = fromLangSpeechCode.split('-')[0];
-              const targetLang = toLangSpeechCode.split('-')[0];
+      setIsLoading(true);
+      try {
+        const result = await getTranslation(
+          word,
+          translationAnalysis.sourceLangIso,
+          translationAnalysis.targetLangIso
+        );
 
-              if (sourceLang && targetLang) {
-                const result = await getTranslation(word, sourceLang, targetLang);
-
-                if (result) {
-                  setTranslation(result);
-                  if (hover.progressionPhase === 'credits') {
-                    decrementHoverCredit();
-                  }
-                } else {
-                  console.log('Translation fetch returned no result.');
-                }
-              } else {
-                console.error('Error splitting language codes', {
-                  fromLangSpeechCode,
-                  toLangSpeechCode,
-                });
-              }
-            } else {
-              console.error('Could not find speech codes for languages', { fromLang, toLang });
-            }
-          } catch (error) {
-            console.error('Error fetching translation:', error);
-          } finally {
-            setIsLoading(false);
+        if (result) {
+          setTranslation(result);
+          if (hover.progressionPhase === 'credits') {
+            decrementHoverCredit();
           }
         } else {
-          console.log('Click translation blocked: No credits left.');
+          console.log('Translation fetch returned no result.');
         }
-      },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [
-        shouldTranslate,
-        isLoading,
-        hover.progressionPhase,
-        hover.creditsAvailable,
-        fromLang,
-        toLang,
-        getTranslation,
-        word,
-        decrementHoverCredit,
-      ]
-    );
+      } catch (error) {
+        console.error('Error fetching translation:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }, [
+      hover.progressionPhase,
+      hover.creditsAvailable,
+      isLoading,
+      translation,
+      translationAnalysis.sourceLangIso,
+      translationAnalysis.targetLangIso,
+      getTranslation,
+      word,
+      decrementHoverCredit,
+    ]);
 
     const handleClick = useCallback(() => {
       speakText(word, fromLang);
 
-      if (shouldTranslate && !translation) {
+      if (translationAnalysis.shouldTranslate && !translation) {
         const canAttemptTranslation =
           hover.progressionPhase === 'initial' || hover.creditsAvailable > 0;
 
@@ -133,8 +108,8 @@ const TranslatableWord = memo(
       speakText,
       word,
       fromLang,
-      shouldTranslate,
       translation,
+      translationAnalysis.shouldTranslate,
       hover.progressionPhase,
       hover.creditsAvailable,
       handleTranslationFetch,
@@ -166,7 +141,7 @@ const TranslatableWord = memo(
     }
 
     const showTranslationPopup =
-      isHovering && shouldTranslate && !isLoading && translation !== null;
+      isHovering && translationAnalysis.shouldTranslate && !isLoading && translation !== null;
 
     const dataTestIdProps = isRelevant ? { 'data-testid': 'feedback-highlight' } : {};
 

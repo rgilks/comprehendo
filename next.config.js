@@ -79,6 +79,11 @@ const nextConfig = {
         hostname: 'storage.ko-fi.com',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'example.com',
+        pathname: '**',
+      },
     ],
   },
   eslint: {
