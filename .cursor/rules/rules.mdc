@@ -57,6 +57,11 @@ alwaysApply: true
   1. Review all changes in each file, remove pointless comments
   2. Make sure changes have automated tests
   3. Run 'npm run check' fix any issues and analyse the results
+     - Run: npm run verify (linting, TypeScript, formatting)
+     - Run: npm run test:run -- --coverage (unit tests with coverage)
+     - Run: npx playwright test --reporter=list (e2e tests)
+     - Check coverage report in coverage/index.html
+     - Aim for >80% coverage on business logic (exclude UI components)
   4. If any tests are failing including e2e tests, fix them and run 'npm run check' again. Do not proceed to the next step until all tests are passing.
   5. Test the application locally in the web browser as if you were an expert QA tester:
      - Follow the comprehensive QA testing guide in docs/qa-testing-guide.md
