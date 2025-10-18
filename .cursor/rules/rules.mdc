@@ -71,7 +71,6 @@ alwaysApply: true
   7. Git add, commit and push all changed files
   8. Check the GitHub action has run successfully:
      - Run: npm run check-github-action
-     - Or manually: sleep 180 && curl -s "https://api.github.com/repos/rgilks/comprehendo/actions/runs?per_page=1" | jq '.workflow_runs[0].conclusion'
      - Verify it returns "success" (not "failure" or "null")
      - If still running, wait and check again
   9. Test the production application in the web browser at https://comprehendo.fly.dev/en:

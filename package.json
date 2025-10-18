@@ -18,7 +18,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "check-github-action": "./scripts/check-github-action.sh",
+    "check-github-action": "sleep 180 && curl -s \"https://api.github.com/repos/rgilks/comprehendo/actions/runs?per_page=1\" | jq '.workflow_runs[0].conclusion'",
     "test:e2e": "npx playwright test --reporter=list",
     "test:e2e:watch": "playwright test --watch",
     "cleanup-db": "node scripts/cleanup-db.js",
