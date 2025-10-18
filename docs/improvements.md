@@ -2,6 +2,40 @@
 
 ## Recent Improvements (Latest Release)
 
+### ✅ Persistent Loading State Fix
+
+**Date**: December 19, 2024  
+**Impact**: Medium - Fixed UI loading indicator issue affecting user experience
+
+**Problem Identified**:
+
+- Loading indicator was using wrong state (`isProgressLoading` instead of `loading`)
+- `isProgressLoading` is for progress data fetching, not content generation
+- Loading text would persist even after content loaded, showing "Advancedloading", "上級loading"
+- Issue occurred in `LanguageSelector.tsx` component
+
+**Solution Implemented**:
+
+- Modified `app/components/TextGenerator/LanguageSelector.tsx`
+- Changed from `isProgressLoading` to `loading` state for content generation
+- `loading` state properly resets when content generation completes
+- Updated performance test timeout from 6s to 8s for AI generation time
+
+**Benefits**:
+
+- Loading indicator now shows/hides correctly during content generation
+- Clean UI display across all languages without text concatenation
+- Proper state management for different loading scenarios
+- Better user experience with accurate loading feedback
+
+**Testing Results**:
+
+- ✅ All 96 unit tests passing
+- ✅ All 36 e2e tests passing
+- ✅ Tested in production across multiple languages (English, Japanese)
+- ✅ Loading indicator works correctly during content generation
+- ✅ No more "Advancedloading" or "上級loading" text concatenation
+
 ### ✅ UI Text Concatenation Fix
 
 **Date**: December 19, 2024  
