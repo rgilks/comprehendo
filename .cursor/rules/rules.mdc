@@ -33,8 +33,10 @@ alwaysApply: true
 - We are using vitest for unit testing
 - We are using playwright for end to end testing
 - Don't write unit tests for UI components
+- Do not use react-testing-library for testing
+- Do not put tests in a separate folder, put them in the same folder as the code they are testing. Do not create **tests** folders.
 - Add data-testid to all UI components for e2e testing
-- Extract logic from UI components into the lib folder so it can be unit tested
+- Extract logic from UI components so it can be unit tested
 
 # Logging & Debugging
 

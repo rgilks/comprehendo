@@ -11,10 +11,13 @@
     "build": "next build",
     "start": "next start",
     "verify": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit",
-    "check": "clear && npm run verify && npx playwright test --reporter=list",
+    "check": "clear && npm run verify && npm run test:run && npx playwright test --reporter=list",
     "nuke": "rm -rf node_modules package-lock.json .next && npm install",
     "deps": "npx npm-check-updates",
     "deps:update": "npx npm-check-updates -u && npm run nuke",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
     "test:e2e": "npx playwright test --reporter=list",
     "test:e2e:watch": "playwright test --watch",
     "cleanup-db": "node scripts/cleanup-db.js",
@@ -53,6 +56,7 @@
     "@types/react-dom": "19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^9.38.0",
     "eslint-config-next": "15.5.6",
     "eslint-config-prettier": "^10.1.8",
@@ -65,6 +69,7 @@
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.14",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.1"
+    "typescript-eslint": "^8.46.1",
+    "vitest": "^3.2.4"
   }
 }
