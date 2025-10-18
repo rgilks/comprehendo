@@ -30,7 +30,7 @@ export const upsertUserOnSignIn = async (user: AuthUser, account: Account): Prom
   }
 
   try {
-    const db = await getDb();
+    const db = getDb();
 
     await db
       .insert(schema.users)
@@ -66,7 +66,7 @@ export const findUserByProvider = async (
   provider: string
 ): Promise<Pick<DbUser, 'id'> | null> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select({ id: schema.users.id })
@@ -102,7 +102,7 @@ export const findUserIdByProvider = async (
   provider: string
 ): Promise<number | undefined> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select({ id: schema.users.id })

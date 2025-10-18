@@ -56,14 +56,14 @@ const createAdminAction = <TArgs extends unknown[], TReturn>(
 };
 
 export const getTableNames = createAdminAction(
-  async () => await repoGetAllTableNames(),
+  () => repoGetAllTableNames(),
   'getTableNames',
   'Failed to fetch table names'
 );
 
 export const getTableData = createAdminAction(
-  async (tableName: string, page: number = 1, limit: number = 10): Promise<PaginatedTableData> =>
-    await repoGetTableData(tableName, page, limit),
+  (tableName: string, page: number = 1, limit: number = 10): PaginatedTableData =>
+    repoGetTableData(tableName, page, limit),
   'getTableData',
   'Failed to fetch table data'
 );

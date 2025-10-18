@@ -11,7 +11,7 @@ export type RateLimit = z.infer<typeof RateLimitRowSchema>;
 
 export const getRateLimit = async (ip: string): Promise<RateLimit | null> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select({
@@ -45,14 +45,14 @@ export const getRateLimit = async (ip: string): Promise<RateLimit | null> => {
 
 export const incrementRateLimit = async (ip: string): Promise<void> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .update(schema.rateLimits)
       .set({ requestCount: sql`${schema.rateLimits.requestCount} + 1` })
       .where(eq(schema.rateLimits.ipAddress, ip));
 
-    if (result.rowsAffected === 0) {
+    if (result.changes === 0) {
       console.warn(
         `[RateLimitRepository] Increment failed: No rate limit record found for IP ${ip}.`
       );
@@ -65,7 +65,7 @@ export const incrementRateLimit = async (ip: string): Promise<void> => {
 
 export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .update(schema.rateLimits)
@@ -75,7 +75,7 @@ export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Pr
       })
       .where(eq(schema.rateLimits.ipAddress, ip));
 
-    if (result.rowsAffected === 0) {
+    if (result.changes === 0) {
       console.warn(`[RateLimitRepository] Reset failed: No rate limit record found for IP ${ip}.`);
     }
   } catch (dbError) {
@@ -86,7 +86,7 @@ export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Pr
 
 export const createRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     await db.insert(schema.rateLimits).values({
       ipAddress: ip,
@@ -113,13 +113,13 @@ export const cleanupOldRateLimits = async (maxAgeHours: number = 24): Promise<vo
     const cutoffTime = new Date();
     cutoffTime.setHours(cutoffTime.getHours() - maxAgeHours);
 
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .delete(schema.rateLimits)
       .where(lt(schema.rateLimits.windowStartTime, cutoffTime.toISOString()));
 
-    console.log(`[RateLimitRepository] Cleaned up ${result.rowsAffected} old rate limit entries`);
+    console.log(`[RateLimitRepository] Cleaned up ${result.changes} old rate limit entries`);
   } catch (error) {
     console.error('[RateLimitRepository] Error cleaning up old rate limits:', error);
   }

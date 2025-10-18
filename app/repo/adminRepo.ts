@@ -16,26 +16,25 @@ export interface PaginatedTableData {
   limit: number;
 }
 
-export const getAllTableNames = async (): Promise<string[]> => {
+export const getAllTableNames = (): string[] => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
-    const tables = (
-      await db.run(sql`
+    // Use Drizzle's query method instead of raw SQL
+    const tables = db.all(sql`
       SELECT name FROM sqlite_master 
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
-    `)
-    ).rows as unknown as TableNameResult[];
+    `);
 
-    return tables.map((table) => table.name);
+    return (tables as unknown as TableNameResult[]).map((table) => table.name);
   } catch (error) {
     console.error('[AdminRepository] Error fetching table names:', error);
     throw error;
   }
 };
 
-const validateTableName = async (tableName: string): Promise<void> => {
-  const allowedTableNames = await getAllTableNames();
+const validateTableName = (tableName: string): void => {
+  const allowedTableNames = getAllTableNames();
   if (!allowedTableNames.includes(tableName)) {
     console.error(`[AdminRepository] Attempt to access disallowed table: ${tableName}`);
     throw new Error('Invalid table name');
@@ -48,33 +47,33 @@ const getOrderByClause = (tableName: string) => {
   return desc(sql`ROWID`);
 };
 
-export const getTableData = async (
+export const getTableData = (
   tableName: string,
   page: number,
   limit: number
-): Promise<PaginatedTableData> => {
+): PaginatedTableData => {
   const safePage = Math.max(1, Math.floor(page));
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
   const offset = (safePage - 1) * safeLimit;
 
-  await validateTableName(tableName);
+  validateTableName(tableName);
 
   try {
-    const db = await getDb();
+    const db = getDb();
 
-    const totalRowsResult = await db.run(
+    const totalRowsResult = db.all(
       sql`SELECT COUNT(*) as totalRows FROM ${sql.identifier(tableName)}`
     );
-    const totalRows = (totalRowsResult.rows[0] as unknown as CountResult).totalRows;
+    const totalRows = (totalRowsResult[0] as CountResult).totalRows;
 
-    const dataResult = await db.run(sql`
+    const dataResult = db.all(sql`
       SELECT * FROM ${sql.identifier(tableName)} 
       ORDER BY ${getOrderByClause(tableName)} 
       LIMIT ${safeLimit} OFFSET ${offset}
     `);
 
     return {
-      data: dataResult.rows as Record<string, unknown>[],
+      data: dataResult as Record<string, unknown>[],
       totalRows,
       page: safePage,
       limit: safeLimit,

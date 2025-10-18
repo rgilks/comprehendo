@@ -30,7 +30,7 @@ export type Quiz = typeof schema.quiz.$inferSelect & {
 
 export const findQuizById = async (id: number): Promise<typeof schema.quiz.$inferSelect | null> => {
   try {
-    const db = await getDb();
+    const db = getDb();
     const row = await db.select().from(schema.quiz).where(eq(schema.quiz.id, id)).limit(1);
 
     if (row.length === 0) {
@@ -54,7 +54,7 @@ export const createQuiz = async (
   userId?: number | null
 ): Promise<number> => {
   try {
-    const db = await getDb();
+    const db = getDb();
     const contentJson = JSON.stringify(content);
 
     const result = await db
@@ -91,7 +91,7 @@ export const saveExercise = async (
       userId,
     });
 
-    const db = await getDb();
+    const db = getDb();
     const result = await db
       .insert(schema.quiz)
       .values({
@@ -128,7 +128,7 @@ export const getCachedExerciseToAttempt = async (
   excludeQuizId?: number | null
 ): Promise<typeof schema.quiz.$inferSelect | undefined> => {
   try {
-    const db = await getDb();
+    const db = getDb();
     let result;
 
     if (userId !== null) {
@@ -194,7 +194,7 @@ export const countCachedExercisesInRepo = async (
   level: string
 ): Promise<number> => {
   try {
-    const db = await getDb();
+    const db = getDb();
     const result = await db
       .select({ count: count() })
       .from(schema.quiz)
@@ -221,7 +221,7 @@ export const getRandomGoodQuestion = async (
   excludeQuizId?: number | null
 ): Promise<typeof schema.quiz.$inferSelect | undefined> => {
   try {
-    const db = await getDb();
+    const db = getDb();
     let result;
 
     if (userId !== null) {

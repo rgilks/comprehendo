@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import * as schema from './schema';
@@ -14,7 +14,7 @@ const isBuildPhase =
 let db: ReturnType<typeof drizzle> | null = null;
 let isInitialized = false;
 
-const initializeDatabase = async () => {
+const initializeDatabase = () => {
   if (db && isInitialized) {
     return db;
   }
@@ -22,23 +22,23 @@ const initializeDatabase = async () => {
   console.log('[DB] Starting Drizzle database initialization...');
 
   try {
-    let client;
+    let sqlite;
 
     if (isBuildPhase || !fs.existsSync(process.cwd())) {
-      client = createClient({ url: ':memory:' });
+      sqlite = new Database(':memory:');
       console.log('[DB] Using in-memory database for build phase');
     } else {
       if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
         console.log(`[DB] Created database directory at ${DB_DIR}`);
       }
-      client = createClient({ url: `file:${DB_PATH}` });
+      sqlite = new Database(DB_PATH);
       console.log(`[DB] Connected to database at ${DB_PATH}`);
     }
 
-    db = drizzle(client, { schema });
+    db = drizzle(sqlite, { schema });
 
-    await initializeSchema(db);
+    initializeSchema(db);
 
     console.log('[DB] Drizzle database initialized successfully.');
     isInitialized = true;
@@ -57,9 +57,9 @@ const initializeDatabase = async () => {
 
 let initializedDbInstance: ReturnType<typeof drizzle> | null = null;
 
-export const getDb = async () => {
+export const getDb = () => {
   if (!initializedDbInstance) {
-    initializedDbInstance = await initializeDatabase();
+    initializedDbInstance = initializeDatabase();
   }
   return initializedDbInstance;
 };

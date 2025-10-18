@@ -22,7 +22,7 @@ export const createFeedback = async (feedbackData: FeedbackInput): Promise<numbe
   const { quiz_id, user_id, is_good, user_answer, is_correct } = validation.data;
 
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .insert(schema.questionFeedback)
@@ -47,7 +47,7 @@ export const findFeedbackByUserIdAndQuizId = async (
   quizId: number
 ): Promise<FeedbackInput | null> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select({

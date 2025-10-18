@@ -14,7 +14,7 @@ export type AIApiUsageRow = z.infer<typeof _AIApiUsageRowSchema>;
 export const getTodayUsage = async (): Promise<number> => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select({ requestCount: schema.aiApiUsage.requestCount })
@@ -40,7 +40,7 @@ export const incrementTodayUsage = async (): Promise<boolean> => {
       return false;
     }
 
-    const db = await getDb();
+    const db = getDb();
 
     await db
       .insert(schema.aiApiUsage)
@@ -68,13 +68,13 @@ export const cleanupOldUsageRecords = async (maxAgeDays: number = 30): Promise<v
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
 
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .delete(schema.aiApiUsage)
       .where(lt(schema.aiApiUsage.date, cutoffDate.toISOString().split('T')[0]));
 
-    console.log(`[AIApiUsage] Cleaned up ${result.rowsAffected} old usage records`);
+    console.log(`[AIApiUsage] Cleaned up ${result.changes} old usage records`);
   } catch (error) {
     console.error('[AIApiUsage] Error cleaning up old usage records:', error);
   }

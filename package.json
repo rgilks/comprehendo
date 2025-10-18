@@ -34,8 +34,8 @@
   "dependencies": {
     "@google/genai": "^1.25.0",
     "@heroicons/react": "^2.2.0",
-    "@libsql/client": "^0.15.15",
     "@serwist/next": "^9.2.1",
+    "better-sqlite3": "^12.4.1",
     "drizzle-kit": "^0.31.5",
     "drizzle-orm": "^0.44.6",
     "i18next": "^25.6.0",
@@ -53,6 +53,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4.1.14",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.8.1",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",

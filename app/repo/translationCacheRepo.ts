@@ -19,7 +19,7 @@ export const getCachedTranslation = async (
   targetLanguage: string
 ): Promise<string | null> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select({ translatedText: schema.translationCache.translatedText })
@@ -51,7 +51,7 @@ export const saveTranslationToCache = async (
   translatedText: string
 ): Promise<void> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     await db
       .insert(schema.translationCache)
@@ -82,13 +82,13 @@ export const cleanupOldTranslations = async (maxAgeDays: number = 30): Promise<v
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
 
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .delete(schema.translationCache)
       .where(lt(schema.translationCache.createdAt, cutoffDate.toISOString()));
 
-    console.log(`[TranslationCache] Cleaned up ${result.rowsAffected} old translation entries`);
+    console.log(`[TranslationCache] Cleaned up ${result.changes} old translation entries`);
   } catch (error) {
     console.error('[TranslationCache] Error cleaning up old translations:', error);
   }

@@ -10,7 +10,7 @@ export const getProgress = async (
   languageCode: string
 ): Promise<Progress | null> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .select()
@@ -59,7 +59,7 @@ export const initializeProgress = async (
   };
 
   try {
-    const db = await getDb();
+    const db = getDb();
 
     await db.insert(schema.userLanguageProgress).values({
       userId,
@@ -92,7 +92,7 @@ export const updateProgress = async (
   newStreak: number
 ): Promise<void> => {
   try {
-    const db = await getDb();
+    const db = getDb();
 
     const result = await db
       .update(schema.userLanguageProgress)
@@ -108,7 +108,7 @@ export const updateProgress = async (
         )
       );
 
-    if (result.rowsAffected === 0) {
+    if (result.changes === 0) {
       console.warn(
         `[updateProgress] No rows updated for user ${userId}, lang ${languageCode}. Progress might not have been initialized.`
       );

@@ -1,11 +1,11 @@
 import { sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
-export const initializeSchema = async (db: LibSQLDatabase<Record<string, unknown>>) => {
+export const initializeSchema = (db: BetterSQLite3Database<Record<string, unknown>>) => {
   console.log('[DB] Initializing/verifying database schema...');
 
   try {
-    await db.run(sql`
+    db.run(sql`
       CREATE TABLE IF NOT EXISTS quiz (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         language TEXT NOT NULL,
