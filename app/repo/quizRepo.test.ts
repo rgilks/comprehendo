@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the database
 vi.mock('app/lib/db', () => ({
+  default: vi.fn(),
   getDb: vi.fn(),
   schema: {
     quiz: {
@@ -34,9 +35,7 @@ describe('quizRepo', () => {
       const { getDb } = await import('app/lib/db');
 
       // Mock database error
-      vi.mocked(getDb).mockImplementation(() => {
-        throw new Error('Database error');
-      });
+      vi.mocked(getDb).mockRejectedValue(new Error('Database error'));
 
       const result = await getRandomGoodQuestion('es', 'en', 'A1', 1, null);
 
@@ -56,7 +55,7 @@ describe('quizRepo', () => {
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(getDb).mockResolvedValue(mockDb as unknown as Awaited<ReturnType<typeof getDb>>);
+      vi.mocked(getDb).mockResolvedValue(mockDb as unknown);
 
       const result = await getRandomGoodQuestion('es', 'en', 'A1', 1, null);
 

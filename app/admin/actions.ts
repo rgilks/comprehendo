@@ -27,14 +27,14 @@ const ensureAdmin = async (): Promise<void> => {
 };
 
 const createAdminAction = <TArgs extends unknown[], TReturn>(
-  action: (...args: TArgs) => TReturn,
+  action: (...args: TArgs) => Promise<TReturn>,
   actionNameForLog: string,
   defaultFailureMessage: string
 ) => {
   return async (...args: TArgs): Promise<{ error?: string; data?: TReturn }> => {
     try {
       await ensureAdmin();
-      const data = action(...args);
+      const data = await action(...args);
       return { data };
     } catch (error) {
       let reportableErrorMessage: string;
@@ -56,14 +56,14 @@ const createAdminAction = <TArgs extends unknown[], TReturn>(
 };
 
 export const getTableNames = createAdminAction(
-  () => repoGetAllTableNames(),
+  async () => await repoGetAllTableNames(),
   'getTableNames',
   'Failed to fetch table names'
 );
 
 export const getTableData = createAdminAction(
-  (tableName: string, page: number = 1, limit: number = 10): PaginatedTableData =>
-    repoGetTableData(tableName, page, limit),
+  async (tableName: string, page: number = 1, limit: number = 10): Promise<PaginatedTableData> =>
+    await repoGetTableData(tableName, page, limit),
   'getTableData',
   'Failed to fetch table data'
 );

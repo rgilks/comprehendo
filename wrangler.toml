@@ -1,0 +1,25 @@
+name = "comprehendo"
+main = ".open-next/index.mjs"
+compatibility_date = "2024-01-01"
+
+[env.production]
+name = "comprehendo"
+
+[env.preview]
+name = "comprehendo-preview"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "comprehendo-db"
+database_id = "your-database-id-here"
+
+[env.preview.d1_databases]
+binding = "DB"
+database_name = "comprehendo-db-preview"
+database_id = "your-preview-database-id-here"
+
+[vars]
+NODE_ENV = "production"
+
+[env.preview.vars]
+NODE_ENV = "preview"

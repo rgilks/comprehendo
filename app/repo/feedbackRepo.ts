@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 export const FeedbackInputSchema = z.object({
   quiz_id: z.number().int(),
@@ -22,7 +23,7 @@ export const createFeedback = async (feedbackData: FeedbackInput): Promise<numbe
   const { quiz_id, user_id, is_good, user_answer, is_correct } = validation.data;
 
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .insert(schema.questionFeedback)
@@ -47,7 +48,7 @@ export const findFeedbackByUserIdAndQuizId = async (
   quizId: number
 ): Promise<FeedbackInput | null> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select({

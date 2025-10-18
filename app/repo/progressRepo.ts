@@ -1,7 +1,8 @@
 import { eq, and } from 'drizzle-orm';
 import { Progress, ProgressSchema } from 'app/domain/progress';
 import { CEFRLevel } from 'app/domain/language-guidance';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 const STREAK_THRESHOLD_FOR_LEVEL_UP = 5;
 
@@ -10,7 +11,7 @@ export const getProgress = async (
   languageCode: string
 ): Promise<Progress | null> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select()
@@ -59,7 +60,7 @@ export const initializeProgress = async (
   };
 
   try {
-    const db = getDb();
+    const db = await getDb();
 
     await db.insert(schema.userLanguageProgress).values({
       userId,
@@ -92,7 +93,7 @@ export const updateProgress = async (
   newStreak: number
 ): Promise<void> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .update(schema.userLanguageProgress)

@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { type Account, type User } from 'next-auth';
 import { type AdapterUser } from 'next-auth/adapters';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 const _DbUserSchema = z.object({
   id: z.number(),
@@ -30,7 +31,7 @@ export const upsertUserOnSignIn = async (user: AuthUser, account: Account): Prom
   }
 
   try {
-    const db = getDb();
+    const db = await getDb();
 
     await db
       .insert(schema.users)
@@ -66,7 +67,7 @@ export const findUserByProvider = async (
   provider: string
 ): Promise<Pick<DbUser, 'id'> | null> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select({ id: schema.users.id })
@@ -102,7 +103,7 @@ export const findUserIdByProvider = async (
   provider: string
 ): Promise<number | undefined> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select({ id: schema.users.id })

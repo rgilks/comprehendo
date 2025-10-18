@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { eq, and, lt } from 'drizzle-orm';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 const _TranslationCacheRowSchema = z.object({
   id: z.number(),
@@ -19,7 +20,7 @@ export const getCachedTranslation = async (
   targetLanguage: string
 ): Promise<string | null> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select({ translatedText: schema.translationCache.translatedText })
@@ -51,7 +52,7 @@ export const saveTranslationToCache = async (
   translatedText: string
 ): Promise<void> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     await db
       .insert(schema.translationCache)
@@ -82,7 +83,7 @@ export const cleanupOldTranslations = async (maxAgeDays: number = 30): Promise<v
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
 
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .delete(schema.translationCache)

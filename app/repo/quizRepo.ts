@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { eq, and, isNull, desc, sql, count } from 'drizzle-orm';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 export const QuizContentSchema = z.object({
   paragraph: z.string(),
@@ -30,7 +31,7 @@ export type Quiz = typeof schema.quiz.$inferSelect & {
 
 export const findQuizById = async (id: number): Promise<typeof schema.quiz.$inferSelect | null> => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const row = await db.select().from(schema.quiz).where(eq(schema.quiz.id, id)).limit(1);
 
     if (row.length === 0) {
@@ -54,7 +55,7 @@ export const createQuiz = async (
   userId?: number | null
 ): Promise<number> => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const contentJson = JSON.stringify(content);
 
     const result = await db
@@ -91,7 +92,7 @@ export const saveExercise = async (
       userId,
     });
 
-    const db = getDb();
+    const db = await getDb();
     const result = await db
       .insert(schema.quiz)
       .values({
@@ -128,7 +129,7 @@ export const getCachedExerciseToAttempt = async (
   excludeQuizId?: number | null
 ): Promise<typeof schema.quiz.$inferSelect | undefined> => {
   try {
-    const db = getDb();
+    const db = await getDb();
     let result;
 
     if (userId !== null) {
@@ -194,7 +195,7 @@ export const countCachedExercisesInRepo = async (
   level: string
 ): Promise<number> => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const result = await db
       .select({ count: count() })
       .from(schema.quiz)
@@ -221,7 +222,7 @@ export const getRandomGoodQuestion = async (
   excludeQuizId?: number | null
 ): Promise<typeof schema.quiz.$inferSelect | undefined> => {
   try {
-    const db = getDb();
+    const db = await getDb();
     let result;
 
     if (userId !== null) {

@@ -1,5 +1,6 @@
 import { sql, desc } from 'drizzle-orm';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 interface TableNameResult {
   name: string;
@@ -16,9 +17,9 @@ export interface PaginatedTableData {
   limit: number;
 }
 
-export const getAllTableNames = (): string[] => {
+export const getAllTableNames = async (): Promise<string[]> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     // Use Drizzle's query method instead of raw SQL
     const tables = db.all(sql`
@@ -33,8 +34,8 @@ export const getAllTableNames = (): string[] => {
   }
 };
 
-const validateTableName = (tableName: string): void => {
-  const allowedTableNames = getAllTableNames();
+const validateTableName = async (tableName: string): Promise<void> => {
+  const allowedTableNames = await getAllTableNames();
   if (!allowedTableNames.includes(tableName)) {
     console.error(`[AdminRepository] Attempt to access disallowed table: ${tableName}`);
     throw new Error('Invalid table name');
@@ -47,19 +48,19 @@ const getOrderByClause = (tableName: string) => {
   return desc(sql`ROWID`);
 };
 
-export const getTableData = (
+export const getTableData = async (
   tableName: string,
   page: number,
   limit: number
-): PaginatedTableData => {
+): Promise<PaginatedTableData> => {
   const safePage = Math.max(1, Math.floor(page));
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
   const offset = (safePage - 1) * safeLimit;
 
-  validateTableName(tableName);
+  await validateTableName(tableName);
 
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const totalRowsResult = db.all(
       sql`SELECT COUNT(*) as totalRows FROM ${sql.identifier(tableName)}`

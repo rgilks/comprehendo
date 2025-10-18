@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { eq, lt, sql } from 'drizzle-orm';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 const RateLimitRowSchema = z.object({
   requestCount: z.number().int().positive(),
@@ -11,7 +12,7 @@ export type RateLimit = z.infer<typeof RateLimitRowSchema>;
 
 export const getRateLimit = async (ip: string): Promise<RateLimit | null> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select({
@@ -45,7 +46,7 @@ export const getRateLimit = async (ip: string): Promise<RateLimit | null> => {
 
 export const incrementRateLimit = async (ip: string): Promise<void> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .update(schema.rateLimits)
@@ -65,7 +66,7 @@ export const incrementRateLimit = async (ip: string): Promise<void> => {
 
 export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .update(schema.rateLimits)
@@ -86,7 +87,7 @@ export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Pr
 
 export const createRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    const db = getDb();
+    const db = await getDb();
 
     await db.insert(schema.rateLimits).values({
       ipAddress: ip,
@@ -113,7 +114,7 @@ export const cleanupOldRateLimits = async (maxAgeHours: number = 24): Promise<vo
     const cutoffTime = new Date();
     cutoffTime.setHours(cutoffTime.getHours() - maxAgeHours);
 
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .delete(schema.rateLimits)

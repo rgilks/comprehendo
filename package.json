@@ -9,7 +9,10 @@
   "scripts": {
     "dev": "clear && next dev --turbopack",
     "build": "next build",
+    "build:cf": "opennext build",
     "start": "next start",
+    "deploy": "npm run build:cf && wrangler deploy",
+    "deploy:preview": "npm run build:cf && wrangler deploy --env preview",
     "verify": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit",
     "check": "clear && npm run verify && npm run test:run && npx playwright test --reporter=list",
     "nuke": "rm -rf node_modules package-lock.json .next && npm install",
@@ -34,6 +37,7 @@
   "dependencies": {
     "@google/genai": "^1.25.0",
     "@heroicons/react": "^2.2.0",
+    "@opennextjs/cloudflare": "^1.11.0",
     "@serwist/next": "^9.2.1",
     "better-sqlite3": "^12.4.1",
     "drizzle-kit": "^0.31.5",
@@ -74,6 +78,7 @@
     "tailwindcss": "^4.1.14",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.38.0"
   }
 }

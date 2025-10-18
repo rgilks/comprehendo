@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { eq, lt, sql } from 'drizzle-orm';
-import getDb, { schema } from 'app/lib/db';
+import getDb from 'app/lib/db';
+import { schema } from 'app/lib/db/adapter';
 
 const _AIApiUsageRowSchema = z.object({
   id: z.number(),
@@ -14,7 +15,7 @@ export type AIApiUsageRow = z.infer<typeof _AIApiUsageRowSchema>;
 export const getTodayUsage = async (): Promise<number> => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .select({ requestCount: schema.aiApiUsage.requestCount })
@@ -40,7 +41,7 @@ export const incrementTodayUsage = async (): Promise<boolean> => {
       return false;
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     await db
       .insert(schema.aiApiUsage)
@@ -68,7 +69,7 @@ export const cleanupOldUsageRecords = async (maxAgeDays: number = 30): Promise<v
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
 
-    const db = getDb();
+    const db = await getDb();
 
     const result = await db
       .delete(schema.aiApiUsage)
