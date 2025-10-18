@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { type Account, type User } from 'next-auth';
 import { type AdapterUser } from 'next-auth/adapters';
-import getDb from 'app/lib/db';
+import getDb from 'app/repo/db';
 import { schema } from 'app/lib/db/adapter';
 
 const _DbUserSchema = z.object({

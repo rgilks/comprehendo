@@ -1,5 +1,5 @@
 import { sql, desc } from 'drizzle-orm';
-import getDb from 'app/lib/db';
+import getDb from 'app/repo/db';
 import { schema } from 'app/lib/db/adapter';
 
 interface TableNameResult {

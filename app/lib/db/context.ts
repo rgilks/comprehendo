@@ -1,10 +1,12 @@
-let globalDb: unknown = null;
+import type { DatabaseInstance } from './adapter';
 
-export const setGlobalDb = (db: unknown) => {
+let globalDb: DatabaseInstance | null = null;
+
+export const setGlobalDb = (db: DatabaseInstance) => {
   globalDb = db;
 };
 
-export const getGlobalDb = async () => {
+export const getGlobalDb = async (d1Database?: unknown): Promise<DatabaseInstance> => {
   if (globalDb) {
     return globalDb;
   }
@@ -12,10 +14,10 @@ export const getGlobalDb = async () => {
   // Fallback for development - use the original SQLite database
   if (process.env.NODE_ENV === 'development') {
     const { getDb } = await import('app/lib/db/adapter');
-    const db = getDb();
+    const db = getDb(d1Database);
     globalDb = db;
     return db;
   }
 
-  return globalDb;
+  throw new Error('Database not initialized');
 };

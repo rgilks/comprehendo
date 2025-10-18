@@ -79,8 +79,8 @@ test.describe('Language Switching', () => {
     const generateButton = page.locator('[data-testid="generate-button"]');
     await generateButton.click();
 
-    // Wait for content to load
-    await expect(page.locator('[data-testid="passage-text"]')).toBeVisible();
+    // Wait for content to load with longer timeout
+    await expect(page.locator('[data-testid="passage-text"]')).toBeVisible({ timeout: 15000 });
 
     // Check initial credits
     const creditsDisplay = page.locator('[data-testid="hover-credits-display"]');

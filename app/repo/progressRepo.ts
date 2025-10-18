@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { Progress, ProgressSchema } from 'app/domain/progress';
 import { CEFRLevel } from 'app/domain/language-guidance';
-import getDb from 'app/lib/db';
+import getDb from 'app/repo/db';
 import { schema } from 'app/lib/db/adapter';
 
 const STREAK_THRESHOLD_FOR_LEVEL_UP = 5;

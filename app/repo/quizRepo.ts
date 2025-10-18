@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { eq, and, isNull, desc, sql, count } from 'drizzle-orm';
-import getDb from 'app/lib/db';
+import getDb from 'app/repo/db';
 import { schema } from 'app/lib/db/adapter';
 
 export const QuizContentSchema = z.object({

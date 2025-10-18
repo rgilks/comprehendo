@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { eq, and, lt } from 'drizzle-orm';
-import getDb from 'app/lib/db';
+import getDb from 'app/repo/db';
 import { schema } from 'app/lib/db/adapter';
 
 const _TranslationCacheRowSchema = z.object({
