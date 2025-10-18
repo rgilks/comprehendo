@@ -56,19 +56,22 @@ alwaysApply: true
   2. Make sure changes have automated tests
   3. Run 'npm run check' fix any issues and analyse the results
   4. Test the application locally in the web browser as if you were an expert QA tester:
+     - Follow the comprehensive QA testing guide in docs/qa-testing-guide.md
      - Open http://localhost:3000/en in browser
      - Verify page loads correctly
      - Test language selector functionality
      - Test generate button (click and verify response)
      - Test CEFR level display
      - Test all interactive elements
+     - Perform cross-browser testing if time permits
   5. If there are no issues or causes for concern, update relevant documentation
   6. Git add, commit and push all changed files
   7. Check the GitHub action has run successfully:
-     - Run: curl -s "https://api.github.com/repos/rgilks/comprehendo/actions/runs?per_page=1" | jq '.workflow_runs[0].conclusion'
+     - Run: sleep 160 && curl -s "https://api.github.com/repos/rgilks/comprehendo/actions/runs?per_page=1" | jq '.workflow_runs[0].conclusion'
      - Verify it returns "success" (not "failure" or "null")
      - If still running, wait and check again
   8. Test the production application in the web browser at https://comprehendo.fly.dev/en:
+     - Follow the comprehensive QA testing guide in docs/qa-testing-guide.md
      - Open https://comprehendo.fly.dev/en in browser
      - Verify page loads correctly
      - Test language selector functionality
@@ -76,5 +79,6 @@ alwaysApply: true
      - Test CEFR level display
      - Test all interactive elements
      - Verify production deployment is working correctly
+     - Perform cross-browser testing if time permits
 - When I just type 'p' that means "proceed"
 - Dont give me a list of options to choose, devise the best plan you can and proceed with it.
