@@ -2,6 +2,40 @@
 
 ## Recent Improvements (Latest Release)
 
+### ✅ Word Translation Credits Reset Fix
+
+**Date**: December 19, 2024  
+**Impact**: High - Fixed critical word translation functionality
+
+**Problem Identified**:
+
+- Word translation credits were not resetting between quizzes
+- Users could only translate 7 words total, then functionality stopped working
+- Credits would decrease but never replenish when generating new content
+- Root cause: `resetQuizCoreState` function only reset `creditsUsed` but not `creditsAvailable`
+
+**Solution Implemented**:
+
+- Modified `app/store/quizSlice.ts` in `resetQuizCoreState` function
+- Added `state.hover.creditsAvailable = INITIAL_HOVER_CREDITS;` to reset credits to 7
+- Credits now properly reset when generating new content
+- Added comprehensive e2e test for credit reset functionality
+
+**Benefits**:
+
+- Word translation works consistently across all quizzes
+- Users can translate 7 words per quiz (as intended)
+- Improved language learning experience
+- Proper credit management system
+
+**Testing Results**:
+
+- All 96 unit tests passing
+- All 36 e2e tests passing (including new credit reset test)
+- Word translation verified: credits decrease on use, reset on new content
+- Translation popups and underlined words working correctly
+- Audio functionality remains intact
+
 ### ✅ Language State Synchronization Fix
 
 **Date**: December 19, 2024  
