@@ -13,7 +13,8 @@ const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 const isBuildPhase =
   process.env.NODE_ENV === 'production' && process.env['NEXT_PHASE'] === 'phase-production-build';
 
-export type DatabaseInstance = ReturnType<typeof drizzle> | ReturnType<typeof drizzleSqlite>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type DatabaseInstance = any;
 
 let db: DatabaseInstance | null = null;
 let isInitialized = false;
