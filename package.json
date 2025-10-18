@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "clear && next dev --turbopack",
     "build": "next build",
-    "build:cf": "opennext build",
+    "build:cf": "npx @opennextjs/cloudflare build",
     "start": "next start",
     "deploy": "npm run build:cf && wrangler deploy",
     "deploy:preview": "npm run build:cf && wrangler deploy --env preview",
