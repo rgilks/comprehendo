@@ -34,7 +34,6 @@
   "dependencies": {
     "@google/genai": "^1.25.0",
     "@heroicons/react": "^2.2.0",
-    "@libsql/client": "^0.15.15",
     "@serwist/next": "^9.2.1",
     "better-sqlite3": "^12.4.1",
     "drizzle-kit": "^0.31.5",
