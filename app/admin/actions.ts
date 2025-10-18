@@ -27,14 +27,14 @@ const ensureAdmin = async (): Promise<void> => {
 };
 
 const createAdminAction = <TArgs extends unknown[], TReturn>(
-  action: (...args: TArgs) => Promise<TReturn> | TReturn,
+  action: (...args: TArgs) => TReturn,
   actionNameForLog: string,
   defaultFailureMessage: string
 ) => {
   return async (...args: TArgs): Promise<{ error?: string; data?: TReturn }> => {
     try {
       await ensureAdmin();
-      const data = await action(...args);
+      const data = action(...args);
       return { data };
     } catch (error) {
       let reportableErrorMessage: string;
