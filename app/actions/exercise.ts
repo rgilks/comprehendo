@@ -23,7 +23,8 @@ import { type ExerciseGenerationParams } from 'app/domain/ai';
 import { type Result, type ActionError, success, failure } from 'app/lib/utils/result-types';
 import { getRandomTopicForLevel } from 'app/domain/topics';
 import { getGrammarGuidance, getVocabularyGuidance } from 'app/domain/language-guidance';
-import { LANGUAGES } from 'app/domain/language';
+import { LANGUAGES, type Language } from 'app/domain/language';
+import type { CEFRLevel } from 'app/domain/language-guidance';
 import {
   getRateLimit,
   incrementRateLimit,
@@ -334,14 +335,14 @@ const buildGenParams = (
   validParams: ExerciseRequestParams,
   topic?: string
 ): ExerciseGenerationParams => ({
-  passageLanguage: validParams.passageLanguage,
-  questionLanguage: validParams.questionLanguage,
-  level: validParams.cefrLevel,
-  passageLangName: LANGUAGES[validParams.passageLanguage],
-  questionLangName: LANGUAGES[validParams.questionLanguage],
-  topic: topic || getRandomTopicForLevel(validParams.cefrLevel),
-  grammarGuidance: getGrammarGuidance(validParams.cefrLevel),
-  vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel),
+  passageLanguage: validParams.passageLanguage as Language,
+  questionLanguage: validParams.questionLanguage as Language,
+  level: validParams.cefrLevel as CEFRLevel,
+  passageLangName: LANGUAGES[validParams.passageLanguage as Language],
+  questionLangName: LANGUAGES[validParams.questionLanguage as Language],
+  topic: topic || getRandomTopicForLevel(validParams.cefrLevel as CEFRLevel),
+  grammarGuidance: getGrammarGuidance(validParams.cefrLevel as CEFRLevel),
+  vocabularyGuidance: getVocabularyGuidance(validParams.cefrLevel as CEFRLevel),
 });
 
 export const generateExerciseResponse = async (

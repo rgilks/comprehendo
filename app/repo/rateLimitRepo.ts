@@ -25,7 +25,7 @@ export const getRateLimit = (ip: string): RateLimit | null => {
     } else {
       console.warn(
         `[RateLimitRepository] Invalid rate limit data found for IP ${ip}:`,
-        parseResult.error.errors
+        parseResult.error.issues
       );
       return null;
     }

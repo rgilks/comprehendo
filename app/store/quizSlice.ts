@@ -4,6 +4,7 @@ import { generateExerciseResponse, generateInitialExercisePair } from 'app/actio
 import type { TextGeneratorState } from './textGeneratorStore';
 import type { CEFRLevel } from 'app/domain/language-guidance';
 import {} from 'app/hooks/useLanguage';
+import { z } from 'zod';
 import {
   PartialQuizData,
   GenerateExerciseResultSchema,
@@ -228,7 +229,7 @@ export const createQuizSlice: StateCreator<
       if (!parseResult.success) {
         console.error(
           '[Store] Zod validation error (fetchInitialPair):',
-          parseResult.error.format()
+          z.treeifyError(parseResult.error)
         );
         throw new Error(`Invalid API response structure: ${parseResult.error.message}`);
       }

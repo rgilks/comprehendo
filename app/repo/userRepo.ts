@@ -8,8 +8,8 @@ const _DbUserSchema = z.object({
   provider_id: z.string(),
   provider: z.string(),
   name: z.string().nullable(),
-  email: z.string().email().nullable(),
-  image: z.string().url().nullable(),
+  email: z.string().pipe(z.email()).nullable(),
+  image: z.string().pipe(z.url()).nullable(),
   last_login: z.string(),
   language: z.string(),
 });

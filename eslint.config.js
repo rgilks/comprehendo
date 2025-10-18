@@ -127,6 +127,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['next-env.d.ts'],
+    rules: {
+      '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+  {
     rules: prettierConfig.rules,
   }
 );

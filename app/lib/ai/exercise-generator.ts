@@ -2,6 +2,7 @@ import { generateExercisePrompt } from 'app/lib/ai/prompts/exercise-prompt';
 import { ExerciseContent, ExerciseContentSchema, type QuizData } from 'app/domain/schemas';
 import { type ExerciseGenerationParams } from 'app/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from 'app/lib/ai/google-ai-api';
+import { z } from 'zod';
 
 export { AIResponseProcessingError };
 
@@ -52,7 +53,7 @@ export const generateAndValidateExercise = async (
         if (!validationResult.success) {
           console.error(
             '[AI:generateAndValidateExercise] AI response failed Zod validation:',
-            validationResult.error.format()
+            z.treeifyError(validationResult.error)
           );
           console.log(
             '[AI:generateAndValidateExercise] Failing AI Response Content:',

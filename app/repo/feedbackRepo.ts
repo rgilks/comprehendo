@@ -15,9 +15,7 @@ export const createFeedback = (feedbackData: FeedbackInput): number | bigint => 
   const validation = FeedbackInputSchema.safeParse(feedbackData);
   if (!validation.success) {
     console.error('[FeedbackRepository] Invalid input data for create:', validation.error);
-    throw new Error(
-      `Invalid feedback data: ${JSON.stringify(validation.error.flatten().fieldErrors)}`
-    );
+    throw new Error(`Invalid feedback data: ${JSON.stringify(z.treeifyError(validation.error))}`);
   }
 
   const { quiz_id, user_id, is_good, user_answer, is_correct } = validation.data;

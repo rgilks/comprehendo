@@ -1,4 +1,4 @@
-import { z, ZodIssueCode } from 'zod';
+import { z } from 'zod';
 
 const checkPairedEnvVars = (
   ctx: z.RefinementCtx,
@@ -9,14 +9,14 @@ const checkPairedEnvVars = (
 ) => {
   if (id && !secret) {
     ctx.addIssue({
-      code: ZodIssueCode.custom,
+      code: 'custom',
       message: `${secretName} is required when ${idName} is set`,
       path: [secretName],
     });
   }
   if (!id && secret) {
     ctx.addIssue({
-      code: ZodIssueCode.custom,
+      code: 'custom',
       message: `${idName} is required when ${secretName} is set`,
       path: [idName],
     });
@@ -31,8 +31,8 @@ export const authEnvSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     DISCORD_CLIENT_ID: z.string().optional(),
     DISCORD_CLIENT_SECRET: z.string().optional(),
-    AUTH_SECRET: z.string({ required_error: '[NextAuth] ERROR: AUTH_SECRET is missing!' }),
-    NEXTAUTH_URL: z.string().url().optional(),
+    AUTH_SECRET: z.string({ message: '[NextAuth] ERROR: AUTH_SECRET is missing!' }),
+    NEXTAUTH_URL: z.string().pipe(z.url()).optional(),
     ADMIN_EMAILS: z
       .string()
       .optional()
@@ -67,7 +67,7 @@ export const authEnvSchema = z
 const authEnvVars = authEnvSchema.safeParse(process.env);
 
 if (!authEnvVars.success) {
-  const formattedErrors = JSON.stringify(authEnvVars.error.format(), null, 4);
+  const formattedErrors = JSON.stringify(z.treeifyError(authEnvVars.error), null, 4);
   console.error('❌ Invalid Auth environment variables:', formattedErrors);
 
   if (process.env['NEXT_PHASE'] !== 'phase-production-build') {
