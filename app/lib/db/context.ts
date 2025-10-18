@@ -21,3 +21,8 @@ export const getGlobalDb = async (): Promise<DatabaseInstance> => {
 
   throw new Error('Database not initialized');
 };
+
+// Export a function that matches the expected signature
+export const getDb = async (): Promise<DatabaseInstance> => {
+  return getGlobalDb();
+};
