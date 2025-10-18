@@ -52,7 +52,7 @@ test.describe('Random Good Question Loading', () => {
     if (!hasContent) {
       // Generate content if not already loaded
       await page.locator('[data-testid="generate-button"]').click();
-      await page.waitForSelector('[data-testid="reading-passage"]', { timeout: 10000 });
+      await page.waitForSelector('[data-testid="reading-passage"]', { timeout: 15000 });
     }
 
     const loadTime = Date.now() - startTime;

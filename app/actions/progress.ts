@@ -57,25 +57,25 @@ const calculateNextProgress = (
   return { nextLevel: currentLevel, nextStreak: newStreak, leveledUp: false };
 };
 
-const getOrInitProgress = (userId: number, languageCode: string) => {
-  const currentProgress = findUserProgress(userId, languageCode);
-  return currentProgress || initializeProgress(userId, languageCode);
+const getOrInitProgress = async (userId: number, languageCode: string) => {
+  const currentProgress = await findUserProgress(userId, languageCode);
+  return currentProgress || (await initializeProgress(userId, languageCode));
 };
 
-const calculateAndUpdateProgress = (
+const calculateAndUpdateProgress = async (
   userId: number,
   language: string,
   isCorrect: boolean
-): ProgressUpdateResult => {
+): Promise<ProgressUpdateResult> => {
   try {
     const languageCode = language.toLowerCase().slice(0, 2);
-    const currentProgress = getOrInitProgress(userId, languageCode);
+    const currentProgress = await getOrInitProgress(userId, languageCode);
     const { nextLevel, nextStreak, leveledUp } = calculateNextProgress(
       currentProgress.cefr_level,
       currentProgress.correct_streak,
       isCorrect
     );
-    updateProgressRepository(userId, languageCode, nextLevel, nextStreak);
+    await updateProgressRepository(userId, languageCode, nextLevel, nextStreak);
     return { currentLevel: nextLevel, currentStreak: nextStreak, leveledUp };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unknown error';
@@ -132,9 +132,9 @@ export interface ProgressResponse {
   feedback?: FeedbackType;
 }
 
-const getParsedQuizData = (quizId: number) => {
+const getParsedQuizData = async (quizId: number) => {
   try {
-    const quizRecord = findQuizById(quizId);
+    const quizRecord = await findQuizById(quizId);
     if (!quizRecord) return { data: null, error: `Quiz with ID ${quizId} not found.` };
     const parsedContent = QuizDataSchema.safeParse(quizRecord.content);
     if (!parsedContent.success)
@@ -204,7 +204,7 @@ export const updateProgress = async (params: UpdateProgressParams): Promise<Prog
     };
   }
   const { isCorrect, language } = parsedBody.data;
-  const progressResult = calculateAndUpdateProgress(userId, language, isCorrect);
+  const progressResult = await calculateAndUpdateProgress(userId, language, isCorrect);
   return {
     currentLevel: progressResult.currentLevel,
     currentStreak: progressResult.currentStreak,
@@ -230,7 +230,7 @@ export const submitAnswer = async (
 
   const { ans, id, learn, cefrLevel: requestCefrLevel } = parsedBody.data;
 
-  const { data: fullQuizData, error: quizError } = getParsedQuizData(id);
+  const { data: fullQuizData, error: quizError } = await getParsedQuizData(id);
   if (quizError || !fullQuizData) {
     return {
       currentLevel: requestCefrLevel || DEFAULT_CEFR_LEVEL,
@@ -252,7 +252,7 @@ export const submitAnswer = async (
     return baseResponse;
   }
 
-  const progressUpdate = calculateAndUpdateProgress(userId, learn, isCorrect);
+  const progressUpdate = await calculateAndUpdateProgress(userId, learn, isCorrect);
   return {
     ...baseResponse,
     currentLevel: progressUpdate.currentLevel,
@@ -283,7 +283,7 @@ export const getProgress = async (params: GetProgressParams): Promise<ProgressRe
   let currentStreak = 0;
   const languageCode = language.toLowerCase().slice(0, 2);
   try {
-    const progressRecord = findUserProgress(userId, languageCode);
+    const progressRecord = await findUserProgress(userId, languageCode);
     if (progressRecord) {
       currentLevel = progressRecord.cefr_level;
       currentStreak = progressRecord.correct_streak;
@@ -319,7 +319,7 @@ export const submitFeedback = async (
   if (!parsedBody.success) return { success: false, error: 'Invalid parameters' };
   const { quizId, is_good, userAnswer, isCorrect } = parsedBody.data;
   try {
-    const quizExists = findQuizById(quizId);
+    const quizExists = await findQuizById(quizId);
     if (!quizExists) return { success: false, error: `Quiz not found.` };
     const feedbackData = {
       quiz_id: quizId,
@@ -328,7 +328,7 @@ export const submitFeedback = async (
       user_answer: userAnswer,
       is_correct: isCorrect === undefined ? undefined : isCorrect,
     };
-    createFeedback(feedbackData);
+    await createFeedback(feedbackData);
     return { success: true };
   } catch (error) {
     console.error(

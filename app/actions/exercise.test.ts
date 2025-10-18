@@ -40,8 +40,14 @@ describe('exercise actions', () => {
     });
 
     it('should handle errors gracefully', async () => {
-      const { getRandomGoodQuestionResponse } = await import('app/actions/exercise');
       const { getRandomGoodQuestion } = await import('app/repo/quizRepo');
+
+      // Mock getRandomGoodQuestion to throw an error
+      vi.mocked(getRandomGoodQuestion).mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      const { getRandomGoodQuestionResponse } = await import('app/actions/exercise');
       const { getServerSession } = await import('next-auth');
       const { headers } = await import('next/headers');
       const { findUserIdByProvider } = await import('app/repo/userRepo');
@@ -50,12 +56,7 @@ describe('exercise actions', () => {
         user: { id: '123', provider: 'google' },
       } as never);
       vi.mocked(headers).mockResolvedValue(new Headers());
-      vi.mocked(findUserIdByProvider).mockReturnValue(1);
-
-      // Mock error in getRandomGoodQuestion
-      vi.mocked(getRandomGoodQuestion).mockImplementation(() => {
-        throw new Error('Database error');
-      });
+      vi.mocked(findUserIdByProvider).mockResolvedValue(1);
 
       const result = await getRandomGoodQuestionResponse({
         passageLanguage: 'es',

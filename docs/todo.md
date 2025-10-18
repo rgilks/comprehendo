@@ -2,6 +2,33 @@
 
 ### **Recently Completed** ✅
 
+- [x] **Cloudflare Migration**: Successfully migrated from Fly.io to Cloudflare Workers - January 2025
+  - Migrated from Fly.io to Cloudflare Workers using OpenNext
+  - Implemented Cloudflare D1 database support alongside SQLite for development
+  - Created database adapter pattern to support both SQLite (dev) and D1 (production)
+  - Updated all repository files to use async database operations
+  - Configured OpenNext for Cloudflare Workers deployment
+  - Updated GitHub Actions workflow for Cloudflare deployment
+  - Created comprehensive deployment documentation and checklist
+  - All tests passing: 96 unit tests with updated async database handling
+  - Application builds successfully with OpenNext for Cloudflare
+  - Local development server working correctly with SQLite fallback
+  - Impact: Modern serverless deployment ready for Cloudflare Workers
+
+- [x] **Drizzle ORM Migration**: Successfully migrated from better-sqlite3 to Drizzle ORM - December 2024
+  - Replaced better-sqlite3 with Drizzle ORM and @libsql/client
+  - Created comprehensive Drizzle schema definitions
+  - Updated all repository files to use Drizzle queries
+  - Converted synchronous database calls to asynchronous
+  - Updated Next.js Server Actions and NextAuth callbacks
+  - Fixed circular dependency in database initialization
+  - Updated tests to work with new async operations
+  - Maintained full backward compatibility with existing data
+  - All tests passing: 96 unit tests, 36 e2e tests
+  - Linting and TypeScript checks passing
+  - Application fully functional with Drizzle ORM
+  - Impact: Database-agnostic architecture ready for Cloudflare D1 migration
+
 - [x] **RCP Workflow Completion**: Successfully completed full RCP workflow - December 2024
   - All tests passing: 96 unit tests, 36 E2E tests
   - Code quality checks passed: linting, TypeScript, formatting

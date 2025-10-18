@@ -1,4 +1,6 @@
-import db from 'app/repo/db';
+import { sql, desc } from 'drizzle-orm';
+import getDb from 'app/repo/db';
+import { schema } from 'app/lib/db/adapter';
 
 interface TableNameResult {
   name: string;
@@ -15,13 +17,17 @@ export interface PaginatedTableData {
   limit: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/require-await
 export const getAllTableNames = async (): Promise<string[]> => {
   try {
-    const tables = db
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
-      .all() as TableNameResult[];
-    return tables.map((table) => table.name);
+    const db = await getDb();
+
+    // Use Drizzle's query method instead of raw SQL
+    const tables = db.all(sql`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' AND name NOT LIKE 'sqlite_%'
+    `);
+
+    return (tables as unknown as TableNameResult[]).map((table) => table.name);
   } catch (error) {
     console.error('[AdminRepository] Error fetching table names:', error);
     throw error;
@@ -36,10 +42,10 @@ const validateTableName = async (tableName: string): Promise<void> => {
   }
 };
 
-const getOrderByClause = (tableName: string): string => {
-  if (tableName === 'quiz') return 'ORDER BY created_at DESC';
-  if (tableName === 'users') return 'ORDER BY last_login DESC';
-  return 'ORDER BY ROWID DESC';
+const getOrderByClause = (tableName: string) => {
+  if (tableName === 'quiz') return desc(schema.quiz.createdAt);
+  if (tableName === 'users') return desc(schema.users.lastLogin);
+  return desc(sql`ROWID`);
 };
 
 export const getTableData = async (
@@ -50,24 +56,29 @@ export const getTableData = async (
   const safePage = Math.max(1, Math.floor(page));
   const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
   const offset = (safePage - 1) * safeLimit;
+
   await validateTableName(tableName);
-  const orderByClause = getOrderByClause(tableName);
+
   try {
-    const result = db.transaction(() => {
-      const countResult = db.prepare(`SELECT COUNT(*) as totalRows FROM "${tableName}"`).get() as
-        | CountResult
-        | undefined;
-      const totalRows = countResult?.totalRows ?? 0;
-      const query = `SELECT * FROM "${tableName}" ${orderByClause} LIMIT ? OFFSET ?`;
-      const paginatedData = db.prepare(query).all(safeLimit, offset);
-      return {
-        data: paginatedData as Record<string, unknown>[],
-        totalRows,
-        page: safePage,
-        limit: safeLimit,
-      };
-    })();
-    return result;
+    const db = await getDb();
+
+    const totalRowsResult = db.all(
+      sql`SELECT COUNT(*) as totalRows FROM ${sql.identifier(tableName)}`
+    );
+    const totalRows = (totalRowsResult[0] as CountResult).totalRows;
+
+    const dataResult = db.all(sql`
+      SELECT * FROM ${sql.identifier(tableName)} 
+      ORDER BY ${getOrderByClause(tableName)} 
+      LIMIT ${safeLimit} OFFSET ${offset}
+    `);
+
+    return {
+      data: dataResult as Record<string, unknown>[],
+      totalRows,
+      page: safePage,
+      limit: safeLimit,
+    };
   } catch (error) {
     console.error(`[AdminRepository] Error fetching paginated data for table ${tableName}:`, error);
     if (error instanceof Error) {

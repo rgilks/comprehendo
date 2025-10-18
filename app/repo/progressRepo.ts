@@ -1,29 +1,40 @@
-import db from 'app/repo/db';
+import { eq, and } from 'drizzle-orm';
 import { Progress, ProgressSchema } from 'app/domain/progress';
 import { CEFRLevel } from 'app/domain/language-guidance';
-
-type RawProgress = {
-  user_id: number;
-  language_code: string;
-  cefr_level: CEFRLevel;
-  correct_streak: number;
-  last_practiced: string | null;
-};
+import getDb from 'app/repo/db';
+import { schema } from 'app/lib/db/adapter';
 
 const STREAK_THRESHOLD_FOR_LEVEL_UP = 5;
 
-export const getProgress = (userId: number, languageCode: string): Progress | null => {
+export const getProgress = async (
+  userId: number,
+  languageCode: string
+): Promise<Progress | null> => {
   try {
-    const row = db
-      .prepare(
-        'SELECT user_id, language_code, cefr_level, correct_streak, last_practiced FROM user_language_progress WHERE user_id = ? AND language_code = ?'
+    const db = await getDb();
+
+    const result = await db
+      .select()
+      .from(schema.userLanguageProgress)
+      .where(
+        and(
+          eq(schema.userLanguageProgress.userId, userId),
+          eq(schema.userLanguageProgress.languageCode, languageCode)
+        )
       )
-      .get(userId, languageCode) as RawProgress | undefined;
-    if (!row) return null;
+      .limit(1);
+
+    if (result.length === 0) return null;
+
+    const row = result[0];
     const parseResult = ProgressSchema.safeParse({
-      ...row,
-      last_practiced: row.last_practiced ? new Date(row.last_practiced) : null,
+      user_id: row.userId,
+      language_code: row.languageCode,
+      cefr_level: row.cefrLevel,
+      correct_streak: row.correctStreak,
+      last_practiced: row.lastPracticed ? new Date(row.lastPracticed) : null,
     });
+
     if (!parseResult.success) {
       console.error(
         `[getProgress] Failed to parse progress for user ${userId}, lang ${languageCode}:`,
@@ -39,16 +50,24 @@ export const getProgress = (userId: number, languageCode: string): Progress | nu
   }
 };
 
-export const initializeProgress = (userId: number, languageCode: string): Progress => {
+export const initializeProgress = async (
+  userId: number,
+  languageCode: string
+): Promise<Progress> => {
   const initialProgress: Omit<Progress, 'user_id' | 'language_code' | 'last_practiced'> = {
     cefr_level: 'A1',
     correct_streak: 0,
   };
 
   try {
-    db.prepare(
-      'INSERT INTO user_language_progress (user_id, language_code, cefr_level, correct_streak) VALUES (?, ?, ?, ?)'
-    ).run(userId, languageCode, initialProgress.cefr_level, initialProgress.correct_streak);
+    const db = await getDb();
+
+    await db.insert(schema.userLanguageProgress).values({
+      userId,
+      languageCode,
+      cefrLevel: initialProgress.cefr_level,
+      correctStreak: initialProgress.correct_streak,
+    });
 
     return {
       ...initialProgress,
@@ -67,18 +86,28 @@ export const initializeProgress = (userId: number, languageCode: string): Progre
   }
 };
 
-export const updateProgress = (
+export const updateProgress = async (
   userId: number,
   languageCode: string,
   newLevel: CEFRLevel,
   newStreak: number
-): void => {
+): Promise<void> => {
   try {
-    const result = db
-      .prepare(
-        'UPDATE user_language_progress SET cefr_level = ?, correct_streak = ?, last_practiced = CURRENT_TIMESTAMP WHERE user_id = ? AND language_code = ?'
-      )
-      .run(newLevel, newStreak, userId, languageCode);
+    const db = await getDb();
+
+    const result = await db
+      .update(schema.userLanguageProgress)
+      .set({
+        cefrLevel: newLevel,
+        correctStreak: newStreak,
+        lastPracticed: new Date().toISOString(),
+      })
+      .where(
+        and(
+          eq(schema.userLanguageProgress.userId, userId),
+          eq(schema.userLanguageProgress.languageCode, languageCode)
+        )
+      );
 
     if (result.changes === 0) {
       console.warn(

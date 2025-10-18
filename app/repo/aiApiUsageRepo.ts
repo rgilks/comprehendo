@@ -1,49 +1,60 @@
-import db from 'app/repo/db';
 import { z } from 'zod';
+import { eq, lt, sql } from 'drizzle-orm';
+import getDb from 'app/repo/db';
+import { schema } from 'app/lib/db/adapter';
 
 const _AIApiUsageRowSchema = z.object({
   id: z.number(),
   date: z.string(),
-  request_count: z.number(),
-  created_at: z.string(),
+  requestCount: z.number(),
+  createdAt: z.string(),
 });
 
 export type AIApiUsageRow = z.infer<typeof _AIApiUsageRowSchema>;
 
-export const getTodayUsage = (): number => {
+export const getTodayUsage = async (): Promise<number> => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    const row = db.prepare('SELECT request_count FROM ai_api_usage WHERE date = ?').get(today) as
-      | { request_count: number }
-      | undefined;
+    const today = new Date().toISOString().split('T')[0];
+    const db = await getDb();
 
-    return row?.request_count ?? 0;
+    const result = await db
+      .select({ requestCount: schema.aiApiUsage.requestCount })
+      .from(schema.aiApiUsage)
+      .where(eq(schema.aiApiUsage.date, today))
+      .limit(1);
+
+    return result[0]?.requestCount ?? 0;
   } catch (error) {
     console.error("[AIApiUsage] Error fetching today's usage:", error);
     return 0;
   }
 };
 
-export const incrementTodayUsage = (): boolean => {
+export const incrementTodayUsage = async (): Promise<boolean> => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
     const maxDailyRequests = parseInt(process.env['MAX_DAILY_AI_REQUESTS'] || '1000', 10);
 
-    // Check current usage
-    const currentUsage = getTodayUsage();
+    const currentUsage = await getTodayUsage();
     if (currentUsage >= maxDailyRequests) {
       console.warn(`[AIApiUsage] Daily limit exceeded: ${currentUsage}/${maxDailyRequests}`);
       return false;
     }
 
-    // Increment usage
-    db.prepare(
-      `
-      INSERT INTO ai_api_usage (date, request_count) 
-      VALUES (?, 1) 
-      ON CONFLICT(date) DO UPDATE SET request_count = request_count + 1
-    `
-    ).run(today);
+    const db = await getDb();
+
+    await db
+      .insert(schema.aiApiUsage)
+      .values({
+        date: today,
+        requestCount: 1,
+      })
+      .onConflictDoUpdate({
+        target: schema.aiApiUsage.date,
+        set: {
+          requestCount: sql`${schema.aiApiUsage.requestCount} + 1`,
+        },
+      });
 
     console.log(`[AIApiUsage] Incremented daily usage: ${currentUsage + 1}/${maxDailyRequests}`);
     return true;
@@ -53,14 +64,16 @@ export const incrementTodayUsage = (): boolean => {
   }
 };
 
-export const cleanupOldUsageRecords = (maxAgeDays: number = 30): void => {
+export const cleanupOldUsageRecords = async (maxAgeDays: number = 30): Promise<void> => {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
 
-    const result = db
-      .prepare('DELETE FROM ai_api_usage WHERE date < ?')
-      .run(cutoffDate.toISOString().split('T')[0]);
+    const db = await getDb();
+
+    const result = await db
+      .delete(schema.aiApiUsage)
+      .where(lt(schema.aiApiUsage.date, cutoffDate.toISOString().split('T')[0]));
 
     console.log(`[AIApiUsage] Cleaned up ${result.changes} old usage records`);
   } catch (error) {
