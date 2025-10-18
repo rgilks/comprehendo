@@ -80,5 +80,10 @@ alwaysApply: true
      - Test all interactive elements
      - Verify production deployment is working correctly
      - Perform cross-browser testing if time permits
+  9. Update the application improvements document:
+     - Document any new features, bug fixes, or enhancements made
+     - Record performance improvements, UI/UX changes, or technical debt reduction
+     - Update docs/improvements.md with clear descriptions and impact
+     - Include version information and deployment details
 - When I just type 'p' that means "proceed"
 - Dont give me a list of options to choose, devise the best plan you can and proceed with it.
