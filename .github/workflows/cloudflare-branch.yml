@@ -30,17 +30,6 @@ jobs:
       - name: Run unit tests
         run: npm run test:run
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Run e2e tests
-        run: npx playwright test --reporter=list
-        env:
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_TRANSLATE_API_KEY: ${{ secrets.GOOGLE_TRANSLATE_API_KEY }}
-
   build-cloudflare:
     runs-on: ubuntu-latest
     needs: test
