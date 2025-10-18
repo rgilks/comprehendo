@@ -51,6 +51,6 @@ alwaysApply: true
 
 # Workflow Commands
 
-- When I just type 'rcp' that means "review all changes in each file, remove pointless comments, make sure changes have automated tests, run 'npm run check' fix any issues and analyse the results. Then test the application locally in the web browser as if you were an expert QA tester. If there are no issues or causes for concern, update relevant documentation and then 'git add -A' and commit and push all changed files."
+- When I just type 'rcp' that means "review all changes in each file, remove pointless comments, make sure changes have automated tests, run 'npm run check' fix any issues and analyse the results. Then test the application locally in the web browser as if you were an expert QA tester. If there are no issues or causes for concern, update relevant documentation and then 'git add -A' and commit and push all changed files. After pushing, check the github action has run successfully, it takes about 3 minutes. Then test the application in the web browser as if you were an expert QA tester at https://comprehendo.fly.dev/en"
 - When I just type 'p' that means "proceed"
 - Dont give me a list of options to choose, devise the best plan you can and proceed with it.
