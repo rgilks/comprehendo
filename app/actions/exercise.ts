@@ -369,7 +369,10 @@ const getOrGenerateExercise = async (
 
 const getRequestContext = async () => {
   const headersList = await headers();
-  const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
+  const ip = headersList.get('cf-connecting-ip') || 
+             headersList.get('x-forwarded-for') || 
+             headersList.get('fly-client-ip') || 
+             'unknown';
   const session = await getServerSession(authOptions);
   const userId = await getDbUserIdFromSession(session);
   return { ip, userId };
