@@ -3,6 +3,10 @@ main = ".open-next/worker.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
+# Static assets configuration
+[assets]
+directory = ".open-next/assets"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "comprehendo-db"
