@@ -1,11 +1,12 @@
 name = "comprehendo"
 main = ".open-next/worker.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "comprehendo-db"
-database_id = "your-database-id-here"
+database_id = "a3e39277-f1f5-4c99-bee5-b41a20e01afa"
 
 [vars]
 NODE_ENV = "production"
