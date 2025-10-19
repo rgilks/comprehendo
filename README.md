@@ -202,7 +202,6 @@ The application is configured to deploy to Cloudflare Workers using OpenNext and
 3. **Create D1 Database:**
    ```bash
    wrangler d1 create comprehendo-db
-   wrangler d1 create comprehendo-db-preview
    ```
 4. **Update wrangler.toml:** Replace the database IDs in `wrangler.toml` with your actual database IDs
 5. **Set Production Secrets:**

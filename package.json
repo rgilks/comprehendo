@@ -12,7 +12,6 @@
     "build:cf": "npx @opennextjs/cloudflare build",
     "start": "next start",
     "deploy": "npm run build:cf && wrangler deploy",
-    "deploy:preview": "npm run build:cf && wrangler deploy --env preview",
     "verify": "prettier --write . && next lint --fix --no-cache && npx tsc --noEmit",
     "check": "clear && npm run verify && npm run test:run && npx playwright test --reporter=list",
     "nuke": "rm -rf node_modules package-lock.json .next && npm install",

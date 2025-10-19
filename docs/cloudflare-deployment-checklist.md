@@ -11,8 +11,7 @@
 ### 2. D1 Database Setup
 
 - [ ] Create production database: `wrangler d1 create comprehendo-db`
-- [ ] Create preview database: `wrangler d1 create comprehendo-db-preview`
-- [ ] Update `wrangler.toml` with actual database IDs
+- [ ] Update `wrangler.toml` with actual database ID
 - [ ] Run database migration: `wrangler d1 execute comprehendo-db --file=./scripts/migrate-d1.js`
 
 ### 3. Environment Variables
@@ -54,7 +53,7 @@
 
 ### Common Issues
 
-1. **Database connection errors**: Check D1 database IDs in wrangler.toml
+1. **Database connection errors**: Check D1 database ID in wrangler.toml
 2. **Authentication failures**: Verify OAuth provider settings
 3. **Build failures**: Check OpenNext configuration
 4. **Environment variable issues**: Verify all secrets are set correctly
