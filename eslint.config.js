@@ -134,6 +134,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-deprecated': 'off',
+    },
+  },
+  {
     rules: prettierConfig.rules,
   }
 );

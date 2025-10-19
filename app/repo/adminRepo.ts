@@ -1,13 +1,9 @@
-import { sql, desc } from 'drizzle-orm';
+import { sql, desc, count } from 'drizzle-orm';
 import getDb from 'app/repo/db';
 import { schema } from 'app/lib/db/adapter';
 
 interface TableNameResult {
   name: string;
-}
-
-interface CountResult {
-  totalRows: number;
 }
 
 export interface PaginatedTableData {
@@ -21,7 +17,6 @@ export const getAllTableNames = async (): Promise<string[]> => {
   try {
     const db = await getDb();
 
-    // Use Drizzle's query method instead of raw SQL
     const tables = db.all(sql`
       SELECT name FROM sqlite_master 
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
@@ -42,12 +37,6 @@ const validateTableName = async (tableName: string): Promise<void> => {
   }
 };
 
-const getOrderByClause = (tableName: string) => {
-  if (tableName === 'quiz') return desc(schema.quiz.createdAt);
-  if (tableName === 'users') return desc(schema.users.lastLogin);
-  return desc(sql`ROWID`);
-};
-
 export const getTableData = async (
   tableName: string,
   page: number,
@@ -62,19 +51,82 @@ export const getTableData = async (
   try {
     const db = await getDb();
 
-    const totalRowsResult = db.all(
-      sql`SELECT COUNT(*) as totalRows FROM ${sql.identifier(tableName)}`
-    );
-    const totalRows = (totalRowsResult[0] as CountResult).totalRows;
+    let totalRows = 0;
+    let dataResult: Record<string, unknown>[] = [];
 
-    const dataResult = db.all(sql`
-      SELECT * FROM ${sql.identifier(tableName)} 
-      ORDER BY ${getOrderByClause(tableName)} 
-      LIMIT ${safeLimit} OFFSET ${offset}
-    `);
+    switch (tableName) {
+      case 'users':
+        totalRows = (await db.select({ count: count() }).from(schema.users))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.users)
+          .orderBy(desc(schema.users.lastLogin))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      case 'quiz':
+        totalRows = (await db.select({ count: count() }).from(schema.quiz))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.quiz)
+          .orderBy(desc(schema.quiz.createdAt))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      case 'userLanguageProgress':
+        totalRows =
+          (await db.select({ count: count() }).from(schema.userLanguageProgress))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.userLanguageProgress)
+          .orderBy(desc(schema.userLanguageProgress.lastPracticed))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      case 'questionFeedback':
+        totalRows =
+          (await db.select({ count: count() }).from(schema.questionFeedback))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.questionFeedback)
+          .orderBy(desc(schema.questionFeedback.submittedAt))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      case 'rateLimits':
+        totalRows = (await db.select({ count: count() }).from(schema.rateLimits))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.rateLimits)
+          .orderBy(desc(sql`ROWID`))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      case 'translationCache':
+        totalRows =
+          (await db.select({ count: count() }).from(schema.translationCache))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.translationCache)
+          .orderBy(desc(schema.translationCache.createdAt))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      case 'aiApiUsage':
+        totalRows = (await db.select({ count: count() }).from(schema.aiApiUsage))[0]?.count || 0;
+        dataResult = await db
+          .select()
+          .from(schema.aiApiUsage)
+          .orderBy(desc(schema.aiApiUsage.createdAt))
+          .limit(safeLimit)
+          .offset(offset);
+        break;
+      default:
+        throw new Error('Invalid table name');
+    }
 
     return {
-      data: dataResult as Record<string, unknown>[],
+      data: dataResult,
       totalRows,
       page: safePage,
       limit: safeLimit,

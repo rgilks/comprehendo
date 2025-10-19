@@ -10,6 +10,7 @@ import {
   createRateLimit,
 } from 'app/repo/rateLimitRepo';
 import { getCachedTranslation, saveTranslationToCache } from 'app/repo/translationCacheRepo';
+import { validateAndSanitizeInput } from 'app/lib/utils/sanitization';
 
 const GoogleTranslateResponseSchema = z.object({
   data: z.object({
@@ -61,23 +62,37 @@ export const translateWordWithGoogle = async (
   targetLang: string,
   sourceLang: string
 ) => {
+  // Sanitize input parameters
+  const sanitizedWord = validateAndSanitizeInput(word, 100);
+  const sanitizedTargetLang = validateAndSanitizeInput(targetLang, 10);
+  const sanitizedSourceLang = validateAndSanitizeInput(sourceLang, 10);
+
   const googleApiKey = process.env['GOOGLE_TRANSLATE_API_KEY'];
 
-  if (!word || !targetLang || !sourceLang || !googleApiKey) {
+  if (!sanitizedWord || !sanitizedTargetLang || !sanitizedSourceLang || !googleApiKey) {
     console.error('translateWordWithGoogle: Missing required parameters or API key.');
     return null;
   }
 
   // Check cache first
-  const cachedTranslation = await getCachedTranslation(word, sourceLang, targetLang);
+  const cachedTranslation = await getCachedTranslation(
+    sanitizedWord,
+    sanitizedSourceLang,
+    sanitizedTargetLang
+  );
   if (cachedTranslation) {
-    console.log(`[Translation] Cache hit for "${word}" (${sourceLang} -> ${targetLang})`);
+    console.log(
+      `[Translation] Cache hit for "${sanitizedWord}" (${sanitizedSourceLang} -> ${sanitizedTargetLang})`
+    );
     return TranslationResultSchema.parse({ translation: cachedTranslation, romanization: '' });
   }
 
   // Check rate limit for translation requests
   const headersList = await headers();
-  const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
+  const ip = validateAndSanitizeInput(
+    headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown',
+    45
+  );
 
   if (!(await checkTranslationRateLimit(ip))) {
     console.warn(`[Translation] Rate limit exceeded for IP: ${ip}`);
@@ -87,10 +102,10 @@ export const translateWordWithGoogle = async (
   const apiUrl = `https://translation.googleapis.com/language/translate/v2?key=${googleApiKey}`;
 
   const payload = {
-    q: word,
-    target: targetLang,
+    q: sanitizedWord,
+    target: sanitizedTargetLang,
     format: 'text',
-    source: sourceLang,
+    source: sanitizedSourceLang,
   };
 
   try {
@@ -121,8 +136,15 @@ export const translateWordWithGoogle = async (
     }
 
     // Save to cache for future use
-    await saveTranslationToCache(word, sourceLang, targetLang, translatedText);
-    console.log(`[Translation] Cached translation for "${word}" (${sourceLang} -> ${targetLang})`);
+    await saveTranslationToCache(
+      sanitizedWord,
+      sanitizedSourceLang,
+      sanitizedTargetLang,
+      translatedText
+    );
+    console.log(
+      `[Translation] Cached translation for "${sanitizedWord}" (${sanitizedSourceLang} -> ${sanitizedTargetLang})`
+    );
 
     return TranslationResultSchema.parse({ translation: translatedText, romanization: '' });
   } catch (error) {

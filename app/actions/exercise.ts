@@ -40,6 +40,7 @@ import {
 import { incrementTodayUsage } from 'app/repo/aiApiUsageRepo';
 import { z } from 'zod';
 import { extractZodErrors } from 'app/lib/utils/errorUtils';
+import { validateAndSanitizeInput } from 'app/lib/utils/sanitization';
 
 const getDbUserIdFromSession = async (
   session: { user: { id?: string | null; provider?: string | null } } | null
@@ -369,13 +370,18 @@ const getOrGenerateExercise = async (
 
 const getRequestContext = async () => {
   const headersList = await headers();
-  const ip = headersList.get('cf-connecting-ip') || 
-             headersList.get('x-forwarded-for') || 
-             headersList.get('fly-client-ip') || 
-             'unknown';
+  const ip =
+    headersList.get('cf-connecting-ip') ||
+    headersList.get('x-forwarded-for') ||
+    headersList.get('fly-client-ip') ||
+    'unknown';
+
+  // Sanitize IP address
+  const sanitizedIp = validateAndSanitizeInput(ip, 45); // IPv6 max length
+
   const session = await getServerSession(authOptions);
   const userId = await getDbUserIdFromSession(session);
-  return { ip, userId };
+  return { ip: sanitizedIp, userId };
 };
 
 const validateAndExtractParams = (requestParams: unknown) => {
