@@ -165,3 +165,6 @@ test/e2e/auth/*.storageState.json
 .pnp.*
 .yarn/
 .open-next/
+
+# Cloudflare Wrangler local state
+.wrangler/
