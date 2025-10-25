@@ -10,19 +10,20 @@ export interface PaginatedTableData {
 }
 
 export const getAllTableNames = async (): Promise<string[]> => {
-  // For now, return a hardcoded list of known tables
-  // This avoids the raw SQL issue while maintaining functionality
-  const knownTables = [
-    'users',
-    'quiz',
-    'userLanguageProgress',
-    'questionFeedback',
-    'rateLimits',
-    'translationCache',
-    'aiApiUsage',
-  ];
+  try {
+    const db = await getDb();
 
-  return Promise.resolve(knownTables);
+    // Use Drizzle's sql template to query SQLite system tables
+    const result = await db.all(sql`
+      SELECT name FROM sqlite_master
+      WHERE type='table' AND name NOT LIKE 'sqlite_%'
+    `);
+
+    return result.map((row: { name: string }) => row.name);
+  } catch (error) {
+    console.error('[AdminRepository] Error fetching table names:', error);
+    throw error;
+  }
 };
 
 const validateTableName = async (tableName: string): Promise<void> => {
