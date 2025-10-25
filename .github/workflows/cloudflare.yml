@@ -47,6 +47,9 @@ jobs:
 
       - name: Build for Cloudflare
         run: npm run build:cf
+        env:
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: "https://comprehendo.tre.systems"
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
