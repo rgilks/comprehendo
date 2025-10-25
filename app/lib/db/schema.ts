@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const users = sqliteTable(
@@ -15,7 +15,7 @@ export const users = sqliteTable(
     language: text('language').default('en'),
   },
   (table) => [
-    primaryKey({ columns: [table.providerId, table.provider] }),
+    unique('uq_users_provider').on(table.providerId, table.provider),
     index('idx_users_last_login').on(table.lastLogin),
   ]
 );
@@ -96,7 +96,11 @@ export const translationCache = sqliteTable(
       table.sourceLanguage,
       table.targetLanguage
     ),
-    primaryKey({ columns: [table.sourceWord, table.sourceLanguage, table.targetLanguage] }),
+    unique('uq_translation_cache_source_target').on(
+      table.sourceWord,
+      table.sourceLanguage,
+      table.targetLanguage
+    ),
   ]
 );
 

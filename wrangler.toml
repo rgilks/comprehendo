@@ -10,7 +10,8 @@ directory = ".open-next/assets"
 [[d1_databases]]
 binding = "DB"
 database_name = "comprehendo-db"
-database_id = "a3e39277-f1f5-4c99-bee5-b41a20e01afa"
+# TODO: Replace the placeholder below with your actual database ID after creation
+database_id = "<YOUR_DATABASE_ID_HERE>"
 
 [vars]
 NODE_ENV = "production"
