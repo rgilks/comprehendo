@@ -140,7 +140,7 @@ Comprehendo implements strategies to manage AI API costs:
       - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
       - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (optional, if enabling Discord login)
       - `AUTH_SECRET`: Generate with `openssl rand -base64 32`
-      - `NEXTAUTH_URL`: The canonical URL of your deployment (e.g., `http://localhost:3000` for local development).
+      - `NEXTAUTH_URL`: The canonical URL of your deployment (e.g., `http://localhost:3000` for local development, `https://comprehendo.tre.systems` for production).
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
       - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
       - `RATE_LIMIT_MAX_REQUESTS_PER_HOUR`: (Optional, default 100) Max exercise generation requests per IP per hour.
@@ -207,6 +207,7 @@ The application is configured to deploy to Cloudflare Workers using OpenNext and
 5. **Set Production Secrets:**
    ```bash
    wrangler secret put NEXTAUTH_SECRET
+   wrangler secret put NEXTAUTH_URL
    wrangler secret put GOOGLE_CLIENT_ID
    wrangler secret put GOOGLE_CLIENT_SECRET
    wrangler secret put GOOGLE_TRANSLATE_API_KEY

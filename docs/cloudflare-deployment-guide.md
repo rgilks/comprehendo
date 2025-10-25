@@ -65,15 +65,16 @@ In your GitHub repository:
 
 ### Required Secrets
 
-| Secret Name                | Description                | How to Get                               |
-| -------------------------- | -------------------------- | ---------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`     | Cloudflare API token       | From Step 1                              |
-| `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare Account ID      | From Step 2                              |
-| `NEXTAUTH_SECRET`          | NextAuth.js secret         | Generate with: `openssl rand -base64 32` |
-| `GOOGLE_CLIENT_ID`         | Google OAuth Client ID     | From Google Cloud Console                |
-| `GOOGLE_CLIENT_SECRET`     | Google OAuth Client Secret | From Google Cloud Console                |
-| `GOOGLE_TRANSLATE_API_KEY` | Google Translate API Key   | From Google Cloud Console                |
-| `ADMIN_EMAILS`             | Admin email addresses      | Comma-separated list                     |
+| Secret Name                | Description                | How to Get                                                    |
+| -------------------------- | -------------------------- | ------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`     | Cloudflare API token       | From Step 1                                                   |
+| `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare Account ID      | From Step 2                                                   |
+| `NEXTAUTH_SECRET`          | NextAuth.js secret         | Generate with: `openssl rand -base64 32`                      |
+| `NEXTAUTH_URL`             | NextAuth.js URL            | Your production URL (e.g., `https://comprehendo.tre.systems`) |
+| `GOOGLE_CLIENT_ID`         | Google OAuth Client ID     | From Google Cloud Console                                     |
+| `GOOGLE_CLIENT_SECRET`     | Google OAuth Client Secret | From Google Cloud Console                                     |
+| `GOOGLE_TRANSLATE_API_KEY` | Google Translate API Key   | From Google Cloud Console                                     |
+| `ADMIN_EMAILS`             | Admin email addresses      | Comma-separated list                                          |
 
 ### Generate NextAuth Secret
 
