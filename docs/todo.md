@@ -2,6 +2,15 @@
 
 ### **Recently Completed** ✅
 
+- [x] **NextAuth 500 Error Fix**: Resolved authentication errors on production deployment - January 2025
+  - Added NEXTAUTH_URL environment variable to Cloudflare deployment configuration
+  - Updated GitHub Actions workflows to include NEXTAUTH_URL secret
+  - Updated deployment documentation and README with NEXTAUTH_URL requirement
+  - Verified NextAuth endpoints work correctly in local development
+  - Changes committed and pushed to trigger Cloudflare deployment
+  - Impact: Resolves 500 errors on `/api/auth/session` and `/api/auth/_log` endpoints
+  - **Next Step Required**: Add NEXTAUTH_URL secret to GitHub repository secrets with value `https://comprehendo.tre.systems`
+
 - [x] **CSP Issues Fixed for Cloudflare Workers**: Resolved Content Security Policy violations preventing JavaScript execution - January 2025
   - Added proper CSP headers via `_headers` file in `.open-next/assets/` directory
   - Updated NextAuth configuration to use standard `NEXTAUTH_SECRET` environment variable

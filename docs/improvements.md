@@ -2,6 +2,39 @@
 
 ## Recent Improvements (Latest Release)
 
+### ✅ NextAuth 500 Error Fix - January 2025
+
+**Date**: January 2025  
+**Impact**: High - Resolves authentication errors on production deployment
+
+**Summary**:
+
+- **✅ NEXTAUTH_URL Configuration**: Added NEXTAUTH_URL environment variable to Cloudflare deployment configuration
+- **✅ GitHub Actions Update**: Updated both cloudflare.yml and cloudflare-branch.yml workflows to include NEXTAUTH_URL secret
+- **✅ Documentation Update**: Updated deployment guides and README to include NEXTAUTH_URL requirement
+- **✅ Local Testing**: Verified NextAuth endpoints work correctly in local development
+- **✅ Deployment Ready**: Changes committed and pushed to trigger Cloudflare deployment
+
+**Key Benefits**:
+
+- **Authentication Fix**: Resolves 500 errors on `/api/auth/session` and `/api/auth/_log` endpoints
+- **Production Ready**: NextAuth will initialize properly with correct production URL
+- **Proper Configuration**: Ensures OAuth callbacks and session management work correctly
+- **Documentation**: Clear instructions for setting up NEXTAUTH_URL in GitHub secrets
+
+**Technical Details**:
+
+- Added `NEXTAUTH_URL = "https://comprehendo.tre.systems"` to wrangler.toml
+- Updated GitHub Actions workflows to pass NEXTAUTH_URL from secrets
+- Updated deployment documentation with NEXTAUTH_URL requirement
+- Updated README with NEXTAUTH_URL configuration instructions
+
+**Next Steps Required**:
+
+- Add NEXTAUTH_URL secret to GitHub repository secrets with value `https://comprehendo.tre.systems`
+- Redeploy application to apply the environment variable
+- Verify NextAuth endpoints return 200 instead of 500
+
 ### ✅ CSP Issues Fixed for Cloudflare Workers - January 2025
 
 **Date**: January 2025  
