@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import db from 'app/repo/db';
+import { eq, and } from 'drizzle-orm';
+import getDb from 'app/repo/db';
+import { schema } from 'app/lib/db/adapter';
 
 export const FeedbackInputSchema = z.object({
   quiz_id: z.number().int(),
@@ -11,7 +13,7 @@ export const FeedbackInputSchema = z.object({
 
 export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
 
-export const createFeedback = (feedbackData: FeedbackInput): number | bigint => {
+export const createFeedback = async (feedbackData: FeedbackInput): Promise<number> => {
   const validation = FeedbackInputSchema.safeParse(feedbackData);
   if (!validation.success) {
     console.error('[FeedbackRepository] Invalid input data for create:', validation.error);
@@ -21,53 +23,58 @@ export const createFeedback = (feedbackData: FeedbackInput): number | bigint => 
   const { quiz_id, user_id, is_good, user_answer, is_correct } = validation.data;
 
   try {
-    const result = db
-      .prepare(
-        'INSERT INTO question_feedback (quiz_id, user_id, is_good, user_answer, is_correct) VALUES (?, ?, ?, ?, ?)'
-      )
-      .run(
-        quiz_id,
-        user_id,
-        is_good ? 1 : 0,
-        user_answer ?? null,
-        is_correct === undefined ? null : is_correct ? 1 : 0
-      );
-    return result.lastInsertRowid;
+    const db = await getDb();
+
+    const result = await db
+      .insert(schema.questionFeedback)
+      .values({
+        quizId: quiz_id,
+        userId: user_id,
+        isGood: is_good ? 1 : 0,
+        userAnswer: user_answer ?? null,
+        isCorrect: is_correct === undefined ? null : is_correct ? 1 : 0,
+      })
+      .returning({ id: schema.questionFeedback.id });
+
+    return result[0].id;
   } catch (error) {
     console.error('[FeedbackRepository] Error creating question feedback:', error);
     throw error;
   }
 };
 
-export const findFeedbackByUserIdAndQuizId = (
+export const findFeedbackByUserIdAndQuizId = async (
   userId: number,
   quizId: number
-): FeedbackInput | null => {
+): Promise<FeedbackInput | null> => {
   try {
-    const row = db
-      .prepare(
-        'SELECT quiz_id, user_id, is_good, user_answer, is_correct FROM question_feedback WHERE user_id = ? AND quiz_id = ?'
-      )
-      .get(userId, quizId) as
-      | {
-          quiz_id: number;
-          user_id: number;
-          is_good: number;
-          user_answer: string | null;
-          is_correct: number | null;
-        }
-      | undefined;
+    const db = await getDb();
 
-    if (!row) {
+    const result = await db
+      .select({
+        quizId: schema.questionFeedback.quizId,
+        userId: schema.questionFeedback.userId,
+        isGood: schema.questionFeedback.isGood,
+        userAnswer: schema.questionFeedback.userAnswer,
+        isCorrect: schema.questionFeedback.isCorrect,
+      })
+      .from(schema.questionFeedback)
+      .where(
+        and(eq(schema.questionFeedback.userId, userId), eq(schema.questionFeedback.quizId, quizId))
+      )
+      .limit(1);
+
+    if (result.length === 0) {
       return null;
     }
 
+    const row = result[0];
     return {
-      quiz_id: row.quiz_id,
-      user_id: row.user_id,
-      is_good: Boolean(row.is_good),
-      user_answer: row.user_answer ?? undefined,
-      is_correct: row.is_correct === null ? undefined : Boolean(row.is_correct),
+      quiz_id: row.quizId,
+      user_id: row.userId,
+      is_good: Boolean(row.isGood),
+      user_answer: row.userAnswer ?? undefined,
+      is_correct: row.isCorrect === null ? undefined : Boolean(row.isCorrect),
     };
   } catch (error) {
     console.error(

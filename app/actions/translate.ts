@@ -10,6 +10,7 @@ import {
   createRateLimit,
 } from 'app/repo/rateLimitRepo';
 import { getCachedTranslation, saveTranslationToCache } from 'app/repo/translationCacheRepo';
+import { validateAndSanitizeInput } from 'app/lib/utils/sanitization';
 
 const GoogleTranslateResponseSchema = z.object({
   data: z.object({
@@ -27,28 +28,28 @@ const MAX_TRANSLATION_REQUESTS_PER_HOUR = parseInt(
 );
 const RATE_LIMIT_WINDOW = parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '3600000', 10);
 
-const checkTranslationRateLimit = (ip: string): boolean => {
+const checkTranslationRateLimit = async (ip: string): Promise<boolean> => {
   try {
     const now = Date.now();
-    const rateLimitRow = getRateLimit(ip);
+    const rateLimitRow = await getRateLimit(ip);
 
     if (!rateLimitRow) {
-      createRateLimit(ip, new Date(now).toISOString());
+      await createRateLimit(ip, new Date(now).toISOString());
       return true;
     }
 
-    const windowStartTime = new Date(rateLimitRow.window_start_time).getTime();
+    const windowStartTime = new Date(rateLimitRow.windowStartTime).getTime();
     const isWithinWindow = now - windowStartTime < RATE_LIMIT_WINDOW;
 
     if (isWithinWindow) {
-      if (rateLimitRow.request_count >= MAX_TRANSLATION_REQUESTS_PER_HOUR) {
+      if (rateLimitRow.requestCount >= MAX_TRANSLATION_REQUESTS_PER_HOUR) {
         return false;
       }
-      incrementRateLimit(ip);
+      await incrementRateLimit(ip);
       return true;
     }
 
-    resetRateLimit(ip, new Date(now).toISOString());
+    await resetRateLimit(ip, new Date(now).toISOString());
     return true;
   } catch (error) {
     console.error('[Translation RateLimiter] Error checking rate limit:', error);
@@ -61,25 +62,39 @@ export const translateWordWithGoogle = async (
   targetLang: string,
   sourceLang: string
 ) => {
+  // Sanitize input parameters
+  const sanitizedWord = validateAndSanitizeInput(word, 100);
+  const sanitizedTargetLang = validateAndSanitizeInput(targetLang, 10);
+  const sanitizedSourceLang = validateAndSanitizeInput(sourceLang, 10);
+
   const googleApiKey = process.env['GOOGLE_TRANSLATE_API_KEY'];
 
-  if (!word || !targetLang || !sourceLang || !googleApiKey) {
+  if (!sanitizedWord || !sanitizedTargetLang || !sanitizedSourceLang || !googleApiKey) {
     console.error('translateWordWithGoogle: Missing required parameters or API key.');
     return null;
   }
 
   // Check cache first
-  const cachedTranslation = getCachedTranslation(word, sourceLang, targetLang);
+  const cachedTranslation = await getCachedTranslation(
+    sanitizedWord,
+    sanitizedSourceLang,
+    sanitizedTargetLang
+  );
   if (cachedTranslation) {
-    console.log(`[Translation] Cache hit for "${word}" (${sourceLang} -> ${targetLang})`);
+    console.log(
+      `[Translation] Cache hit for "${sanitizedWord}" (${sanitizedSourceLang} -> ${sanitizedTargetLang})`
+    );
     return TranslationResultSchema.parse({ translation: cachedTranslation, romanization: '' });
   }
 
   // Check rate limit for translation requests
   const headersList = await headers();
-  const ip = headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown';
+  const ip = validateAndSanitizeInput(
+    headersList.get('fly-client-ip') || headersList.get('x-forwarded-for') || 'unknown',
+    45
+  );
 
-  if (!checkTranslationRateLimit(ip)) {
+  if (!(await checkTranslationRateLimit(ip))) {
     console.warn(`[Translation] Rate limit exceeded for IP: ${ip}`);
     return null;
   }
@@ -87,10 +102,10 @@ export const translateWordWithGoogle = async (
   const apiUrl = `https://translation.googleapis.com/language/translate/v2?key=${googleApiKey}`;
 
   const payload = {
-    q: word,
-    target: targetLang,
+    q: sanitizedWord,
+    target: sanitizedTargetLang,
     format: 'text',
-    source: sourceLang,
+    source: sanitizedSourceLang,
   };
 
   try {
@@ -121,8 +136,15 @@ export const translateWordWithGoogle = async (
     }
 
     // Save to cache for future use
-    saveTranslationToCache(word, sourceLang, targetLang, translatedText);
-    console.log(`[Translation] Cached translation for "${word}" (${sourceLang} -> ${targetLang})`);
+    await saveTranslationToCache(
+      sanitizedWord,
+      sanitizedSourceLang,
+      sanitizedTargetLang,
+      translatedText
+    );
+    console.log(
+      `[Translation] Cached translation for "${sanitizedWord}" (${sanitizedSourceLang} -> ${sanitizedTargetLang})`
+    );
 
     return TranslationResultSchema.parse({ translation: translatedText, romanization: '' });
   } catch (error) {

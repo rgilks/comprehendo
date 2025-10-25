@@ -8,24 +8,26 @@ export interface UserWithEmail extends User {
   email?: string | null;
 }
 
-export const signInCallback = ({
+export const signInCallback = async ({
   user,
   account,
 }: {
   user: User | AdapterUser;
   account: Account | null;
-}): boolean => {
+}): Promise<boolean> => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (account && user) {
     try {
-      upsertUserOnSignIn(user, account);
+      await upsertUserOnSignIn(user, account);
       return true;
     } catch (error) {
       console.error(
         '[AUTH SignIn Callback] Error during sign in process (upsertUserOnSignIn failed):',
         error
       );
-      return false;
+      // Don't fail authentication if database operations fail
+      // This allows users to still sign in even if there are database issues
+      return true;
     }
   } else {
     console.warn('[AUTH SignIn Callback] Missing account or user object. Skipping DB upsert.');
@@ -33,7 +35,7 @@ export const signInCallback = ({
   }
 };
 
-export const jwtCallback = ({
+export const jwtCallback = async ({
   token,
   user,
   account,
@@ -41,23 +43,24 @@ export const jwtCallback = ({
   token: JWT;
   user?: UserWithEmail;
   account?: Account | null;
-}): JWT => {
+}): Promise<JWT> => {
   if (account && user?.id && user.email) {
     token.provider = account.provider;
     token.email = user.email;
 
     try {
-      const userRecord = findUserByProvider(user.id, account.provider);
+      const userRecord = await findUserByProvider(user.id, account.provider);
 
       if (userRecord) {
         token.dbId = userRecord.id;
       } else {
-        console.error(
-          `[AUTH JWT Callback] CRITICAL: Could not find user in DB during JWT creation for provider_id=${user.id}, provider=${account.provider}. dbId will be missing!`
+        console.warn(
+          `[AUTH JWT Callback] Could not find user in DB during JWT creation for provider_id=${user.id}, provider=${account.provider}. dbId will be missing!`
         );
       }
     } catch (error) {
-      console.error('[AUTH JWT Callback] CRITICAL: Error resolving user DB ID for token:', error);
+      console.warn('[AUTH JWT Callback] Error resolving user DB ID for token:', error);
+      // Continue without dbId - authentication should still work
     }
 
     const adminEmails = validatedAuthEnv.ADMIN_EMAILS;

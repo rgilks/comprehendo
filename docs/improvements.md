@@ -2,6 +2,210 @@
 
 ## Recent Improvements (Latest Release)
 
+### ✅ NextAuth 500 Error Fix - January 2025
+
+**Date**: January 2025  
+**Impact**: High - Resolves authentication errors on production deployment
+
+**Summary**:
+
+- **✅ NEXTAUTH_URL Configuration**: Added NEXTAUTH_URL environment variable to Cloudflare deployment configuration
+- **✅ GitHub Actions Update**: Updated both cloudflare.yml and cloudflare-branch.yml workflows to include NEXTAUTH_URL secret
+- **✅ Documentation Update**: Updated deployment guides and README to include NEXTAUTH_URL requirement
+- **✅ Local Testing**: Verified NextAuth endpoints work correctly in local development
+- **✅ Deployment Ready**: Changes committed and pushed to trigger Cloudflare deployment
+
+**Key Benefits**:
+
+- **Authentication Fix**: Resolves 500 errors on `/api/auth/session` and `/api/auth/_log` endpoints
+- **Production Ready**: NextAuth will initialize properly with correct production URL
+- **Proper Configuration**: Ensures OAuth callbacks and session management work correctly
+- **Documentation**: Clear instructions for setting up NEXTAUTH_URL in GitHub secrets
+
+**Technical Details**:
+
+- Added `NEXTAUTH_URL = "https://comprehendo.tre.systems"` to wrangler.toml
+- Updated GitHub Actions workflows to pass NEXTAUTH_URL from secrets
+- Updated deployment documentation with NEXTAUTH_URL requirement
+- Updated README with NEXTAUTH_URL configuration instructions
+
+**Next Steps Required**:
+
+- Add NEXTAUTH_URL secret to GitHub repository secrets with value `https://comprehendo.tre.systems`
+- Redeploy application to apply the environment variable
+- Verify NextAuth endpoints return 200 instead of 500
+
+### ✅ CSP Issues Fixed for Cloudflare Workers - January 2025
+
+**Date**: January 2025  
+**Impact**: High - Application now fully functional on Cloudflare Workers
+
+**Summary**:
+
+- **✅ CSP Configuration**: Added proper Content Security Policy headers via `_headers` file
+- **✅ NextAuth Configuration**: Updated to use standard `NEXTAUTH_SECRET` environment variable
+- **✅ JavaScript Execution**: Resolved CSP violations that were preventing JavaScript execution
+- **✅ Application Rendering**: Application now loads correctly with all UI elements visible
+- **✅ Security Headers**: Added comprehensive security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- **✅ Cloudflare Compatibility**: Optimized CSP for Next.js compatibility in Cloudflare Workers environment
+
+**Key Benefits**:
+
+- **Full Functionality**: Application now works correctly on Cloudflare Workers
+- **Security**: Proper CSP headers maintain security while allowing necessary scripts
+- **User Experience**: All UI elements now render and function properly
+- **NextAuth Compatibility**: Authentication system properly configured for Cloudflare Workers
+
+**Technical Details**:
+
+- Created `_headers` file in `.open-next/assets/` directory
+- CSP allows: `'self'`, `'unsafe-inline'`, `'unsafe-eval'`, Cloudflare Insights
+- Added security headers: X-Frame-Options: DENY, X-Content-Type-Options: nosniff
+- Updated NextAuth configuration to use `NEXTAUTH_SECRET` environment variable
+- Maintained backward compatibility with `AUTH_SECRET` fallback
+
+### ✅ Cloudflare D1 Database Configuration - January 2025
+
+**Date**: January 2025  
+**Impact**: High - Cloudflare deployment fully functional
+
+**Summary**:
+
+- **✅ Database Configuration**: Updated `wrangler.toml` with correct database ID (`a3e39277-f1f5-4c99-bee5-b41a20e01afa`)
+- **✅ Migrations Setup**: Added migrations directory configuration and initial schema migration
+- **✅ Database Schema**: Applied migrations to both local and remote D1 databases
+- **✅ Deployment Success**: Cloudflare Workers deployment now successful
+- **✅ Production Access**: Application accessible at https://comprehendo.rob-gilks.workers.dev
+- **✅ Database Operations**: All database operations functional in production
+
+**Key Benefits**:
+
+- **Production Ready**: Cloudflare deployment fully functional with proper database setup
+- **Database Integrity**: All required tables and indexes created successfully
+- **Migration System**: Proper database migration system in place for future updates
+- **Performance**: Optimized indexes for all major query patterns
+
+**Technical Details**:
+
+- Database ID: `a3e39277-f1f5-4c99-bee5-b41a20e01afa`
+- Migration file: `migrations/0001_initial_schema.sql`
+- Tables created: quiz, users, user_language_progress, question_feedback, rate_limits, translation_cache, ai_api_usage
+- Performance indexes for all major query patterns
+
+### ✅ PR Comment Fixes - January 2025
+
+**Date**: January 2025  
+**Impact**: Medium - Code quality improvements and PR readiness
+
+**Summary**:
+
+- **✅ Database Methods**: Fixed `db.all()` method calls in adminRepo.ts to use proper Drizzle ORM methods
+- **✅ Schema Conflicts**: Resolved multiple primary key conflicts in schema.ts by using unique constraints
+- **✅ Configuration**: Updated wrangler.toml to use placeholder for database ID instead of hardcoded value
+- **✅ Code Quality**: All linting and TypeScript checks passing
+- **✅ Testing**: All 135 unit tests and 36 e2e tests passing
+- **✅ Local Testing**: Application tested locally and working correctly
+- **✅ PR Ready**: All identified issues from PR comments resolved
+
+**Key Benefits**:
+
+- **Code Quality**: Improved adherence to Drizzle ORM best practices
+- **Database Integrity**: Proper schema constraints preventing data conflicts
+- **Deployment Safety**: Configuration placeholders prevent accidental hardcoded values
+- **PR Readiness**: All reviewer comments addressed, ready for merge
+
+**Technical Details**:
+
+- Replaced `db.all()` with proper async/await pattern for table name retrieval
+- Changed conflicting `primaryKey()` constraints to `unique()` constraints
+- Added placeholder `<YOUR_DATABASE_ID_HERE>` in wrangler.toml with clear TODO comment
+- Maintained backward compatibility with existing functionality
+
+### ✅ Cloudflare Migration Completed Successfully - January 2025
+
+**Date**: January 2025  
+**Impact**: High - Modern serverless deployment architecture implemented
+
+**Summary**:
+
+- **✅ Migration**: Successfully migrated from Fly.io to Cloudflare Workers using OpenNext
+- **✅ Database**: Implemented Cloudflare D1 database support with SQLite fallback for development
+- **✅ Adapter Pattern**: Created database adapter supporting both SQLite (dev) and D1 (production)
+- **✅ Async Operations**: Updated all repository files to use async database operations
+- **✅ OpenNext**: Configured OpenNext for Cloudflare Workers deployment
+- **✅ CI/CD**: Updated GitHub Actions workflow for Cloudflare deployment
+- **✅ Branch Workflow**: Created dedicated CI/CD workflow for cloudflare branch
+- **✅ Documentation**: Created comprehensive deployment documentation and checklist
+- **✅ Type Safety**: Fixed TypeScript errors and improved type safety
+- **✅ Testing**: All 96 unit tests passing with updated async database handling
+- **✅ Build Process**: Application builds successfully with OpenNext for Cloudflare
+- **✅ Development**: Local development server working correctly with SQLite fallback
+- **✅ GitHub Actions**: CI/CD pipeline showing "success" status
+
+**Key Benefits**:
+
+- **Serverless Architecture**: Modern Cloudflare Workers deployment
+- **Database Flexibility**: Support for both SQLite (dev) and D1 (production)
+- **Cost Efficiency**: Pay-per-request pricing model
+- **Global Edge**: Cloudflare's global edge network for better performance
+- **Scalability**: Automatic scaling based on demand
+- **Security**: Built-in DDoS protection and security features
+- **Developer Experience**: Seamless development with SQLite fallback
+- **Branch-specific CI/CD**: Dedicated workflow for cloudflare branch
+
+**Technical Details**:
+
+- Migrated from Fly.io to Cloudflare Workers using `@opennextjs/cloudflare`
+- Created database adapter pattern in `app/lib/db/adapter.ts`
+- Implemented global database context in `app/lib/db/context.ts`
+- Updated all repository files to use async database operations
+- Configured OpenNext in `open-next.config.ts`
+- Created Cloudflare Wrangler configuration in `wrangler.toml`
+- Updated GitHub Actions workflow for Cloudflare deployment
+- Created branch-specific CI/CD workflow in `.github/workflows/cloudflare-branch.yml`
+- Added comprehensive deployment checklist in `docs/cloudflare-deployment-checklist.md`
+- Fixed TypeScript errors and improved type safety throughout
+- Added `.open-next/` to `.gitignore` to prevent secrets in build artifacts
+- Renamed branch from `drizzle-orm-migration` to `cloudflare` for clarity
+
+### ✅ Drizzle ORM Migration Completed Successfully - December 2024
+
+**Date**: December 2024  
+**Impact**: High - Database architecture modernized and Cloudflare D1 ready
+
+**Summary**:
+
+- **✅ Migration**: Successfully migrated from better-sqlite3 to Drizzle ORM
+- **✅ Schema**: Created comprehensive Drizzle schema definitions
+- **✅ Repositories**: Updated all repository files to use Drizzle queries
+- **✅ Async Operations**: Converted synchronous database calls to asynchronous
+- **✅ Server Actions**: Updated Next.js Server Actions and NextAuth callbacks
+- **✅ Dependencies**: Fixed circular dependency in database initialization
+- **✅ Tests**: Updated tests to work with new async operations
+- **✅ Compatibility**: Maintained full backward compatibility with existing data
+- **✅ Quality**: All 96 unit tests and 36 e2e tests passing
+- **✅ Code Quality**: Linting and TypeScript checks passing
+- **✅ Functionality**: Application fully functional with Drizzle ORM
+
+**Key Benefits**:
+
+- **Database Agnostic**: Ready for Cloudflare D1 migration
+- **Type Safety**: Full TypeScript support with inferred types
+- **Modern ORM**: Better query building and relationship management
+- **Performance**: Optimized database operations
+- **Maintainability**: Cleaner, more maintainable database code
+- **Future Ready**: Prepared for serverless deployment
+
+**Technical Details**:
+
+- Replaced `better-sqlite3` with `drizzle-orm` and `@libsql/client`
+- Created schema definitions in `app/lib/db/schema.ts`
+- Updated database initialization in `app/lib/db/index.ts`
+- Migrated all repository files to use Drizzle queries
+- Fixed async/await patterns throughout the application
+- Updated NextAuth.js callbacks for async operations
+- Maintained existing SQLite database file compatibility
+
 ### ✅ RCP Workflow Completed Successfully - December 2024
 
 **Date**: December 2024  

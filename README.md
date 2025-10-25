@@ -2,7 +2,7 @@
 
 A multi-language reading comprehension practice tool powered by Next.js and Google Gemini.
 
-[![CI/CD](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml/badge.svg)](https://github.com/rgilks/comprehendo/actions/workflows/fly.yml)
+[![CI/CD](https://github.com/rgilks/comprehendo/actions/workflows/cloudflare.yml/badge.svg)](https://github.com/rgilks/comprehendo/actions/workflows/cloudflare.yml)
 
 ![Comprehendo Screenshot](public/screenshot.png)
 
@@ -33,7 +33,7 @@ Comprehendo is an AI-powered language learning application designed to help user
 - **Cost-Control System**: IP-based rate limiting, translation caching, daily AI API budgets, and database caching to manage API costs.
 - **Robust Validation**: Uses Zod for request validation on API routes and environment variables.
 - **Smooth Loading Experience**: Enhanced loading indicators and transitions.
-- **Continuous Deployment**: Automatic deployment to Fly.io via GitHub Actions when code is pushed to the `main` branch.
+- **Continuous Deployment**: Automatic deployment to Cloudflare Workers via GitHub Actions when code is pushed to the `main` branch.
 - **Admin Panel**: A secure area for administrators to view application data (users, quizzes, feedback).
 - **Internationalization (i18n)**: Full i18n support for UI elements using `i18next` and locale files in `public/locales/`.
 - **PWA Support**: Progressive Web App features (e.g., installability) are enabled via `@serwist/next`, relying on browser/device native installation prompts.
@@ -140,7 +140,7 @@ Comprehendo implements strategies to manage AI API costs:
       - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
       - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (optional, if enabling Discord login)
       - `AUTH_SECRET`: Generate with `openssl rand -base64 32`
-      - `NEXTAUTH_URL`: The canonical URL of your deployment (e.g., `http://localhost:3000` for local development).
+      - `NEXTAUTH_URL`: The canonical URL of your deployment (e.g., `http://localhost:3000` for local development, `https://comprehendo.tre.systems` for production).
       - `ADMIN_EMAILS`: Comma-separated list of emails for admin access (e.g., `admin@example.com,test@test.com`).
       - `GOOGLE_TRANSLATE_API_KEY`: (Optional) Needed for hover translation feature.
       - `RATE_LIMIT_MAX_REQUESTS_PER_HOUR`: (Optional, default 100) Max exercise generation requests per IP per hour.
@@ -191,6 +191,49 @@ Continuous Deployment is set up via GitHub Actions (`.github/workflows/fly.yml`)
 fly deploy --app <your-app-name>
 ```
 
+### Deploying to Cloudflare Workers
+
+The application is configured to deploy to Cloudflare Workers using OpenNext and D1 database.
+
+**First-Time Cloudflare Setup:**
+
+1. **Install Wrangler CLI:** `npm install -g wrangler`
+2. **Login:** `wrangler login`
+3. **Create D1 Database:**
+   ```bash
+   wrangler d1 create comprehendo-db
+   ```
+4. **Update wrangler.toml:** Replace the database IDs in `wrangler.toml` with your actual database IDs
+5. **Set Production Secrets:**
+   ```bash
+   wrangler secret put NEXTAUTH_SECRET
+   wrangler secret put NEXTAUTH_URL
+   wrangler secret put GOOGLE_CLIENT_ID
+   wrangler secret put GOOGLE_CLIENT_SECRET
+   wrangler secret put GOOGLE_TRANSLATE_API_KEY
+   wrangler secret put ADMIN_EMAILS
+   ```
+6. **Add GitHub Secrets:**
+   - `CLOUDFLARE_API_TOKEN`: Get from Cloudflare dashboard > My Profile > API Tokens
+   - `CLOUDFLARE_ACCOUNT_ID`: Get from Cloudflare dashboard > Right sidebar
+
+**Deployment:**
+
+- Push to `main`: `git push origin main`
+- Monitor in GitHub Actions tab
+
+**Manual Deployment:**
+
+```bash
+npm run deploy
+```
+
+**Database Migration:**
+
+```bash
+wrangler d1 execute comprehendo-db --file=./scripts/migrate-d1.js
+```
+
 ## Development Workflow
 
 Key scripts defined in `package.json`:
@@ -238,8 +281,8 @@ npm run cleanup-db:dry-run
 - **Rate Limits**: Adjust `MAX_REQUESTS_PER_HOUR`, `MAX_TRANSLATION_REQUESTS_PER_HOUR`, and `MAX_DAILY_AI_REQUESTS` based on traffic and budget.
 - **Database Maintenance**: Run `npm run cleanup-db` periodically to clean up old rate limits, translations, and usage records.
 - **Security**: Review CORS, consider stricter input validation if needed.
-- **Scaling**: Adjust Fly.io machine specs/count in `fly.toml`.
-- **Database Backups**: Implement a backup strategy for the SQLite volume on Fly.io (e.g., using `litestream` or manual snapshots).
+- **Scaling**: Cloudflare Workers automatically scale based on demand.
+- **Database Backups**: Cloudflare D1 provides automatic backups and point-in-time recovery.
 
 ## Customization
 
@@ -375,7 +418,9 @@ Once both files are correctly populated, `npm run test:e2e` should now be able t
 
 ## Database
 
-Uses SQLite via `better-sqlite3`. The database file is `data/comprehendo.sqlite` locally, and stored on a persistent volume (`/data/comprehendo.sqlite`) in production (Fly.io).
+Uses SQLite via Drizzle ORM with `@libsql/client`. The database file is `data/comprehendo.sqlite` locally, and uses Cloudflare D1 in production.
+
+The migration to Drizzle ORM makes it easy to switch to Cloudflare D1 in the future by simply changing the database connection configuration.
 
 ### SQLite Command Line (Local)
 
@@ -389,7 +434,7 @@ Useful commands: `.tables`, `SELECT * FROM users LIMIT 5;`, `.schema quiz`, `.qu
 ### Database Schema
 
 ```sql
--- From app/repo/db.ts initialization logic
+-- From app/lib/db/migrations.ts initialization logic
 
 CREATE TABLE IF NOT EXISTS quiz (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

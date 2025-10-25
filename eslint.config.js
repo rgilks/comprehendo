@@ -20,6 +20,7 @@ export default tseslint.config(
   {
     ignores: [
       '.next/**',
+      '.open-next/**',
       'node_modules/**',
       'dist/**',
       'public/**',
@@ -130,6 +131,12 @@ export default tseslint.config(
     files: ['next-env.d.ts'],
     rules: {
       '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-deprecated': 'off',
     },
   },
   {

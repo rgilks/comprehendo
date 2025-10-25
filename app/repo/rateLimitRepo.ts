@@ -1,24 +1,33 @@
-import db from 'app/repo/db';
 import { z } from 'zod';
+import { eq, lt, sql } from 'drizzle-orm';
+import getDb from 'app/repo/db';
+import { schema } from 'app/lib/db/adapter';
 
 const RateLimitRowSchema = z.object({
-  request_count: z.number().int().positive(),
-  window_start_time: z.string(),
+  requestCount: z.number().int().positive(),
+  windowStartTime: z.string(),
 });
 
 export type RateLimit = z.infer<typeof RateLimitRowSchema>;
 
-export const getRateLimit = (ip: string): RateLimit | null => {
+export const getRateLimit = async (ip: string): Promise<RateLimit | null> => {
   try {
-    const row = db
-      .prepare('SELECT request_count, window_start_time FROM rate_limits WHERE ip_address = ?')
-      .get(ip);
+    const db = await getDb();
 
-    if (!row) {
+    const result = await db
+      .select({
+        requestCount: schema.rateLimits.requestCount,
+        windowStartTime: schema.rateLimits.windowStartTime,
+      })
+      .from(schema.rateLimits)
+      .where(eq(schema.rateLimits.ipAddress, ip))
+      .limit(1);
+
+    if (result.length === 0) {
       return null;
     }
 
-    const parseResult = RateLimitRowSchema.safeParse(row);
+    const parseResult = RateLimitRowSchema.safeParse(result[0]);
 
     if (parseResult.success) {
       return parseResult.data;
@@ -35,11 +44,14 @@ export const getRateLimit = (ip: string): RateLimit | null => {
   }
 };
 
-export const incrementRateLimit = (ip: string): void => {
+export const incrementRateLimit = async (ip: string): Promise<void> => {
   try {
-    const result = db
-      .prepare('UPDATE rate_limits SET request_count = request_count + 1 WHERE ip_address = ?')
-      .run(ip);
+    const db = await getDb();
+
+    const result = await db
+      .update(schema.rateLimits)
+      .set({ requestCount: sql`${schema.rateLimits.requestCount} + 1` })
+      .where(eq(schema.rateLimits.ipAddress, ip));
 
     if (result.changes === 0) {
       console.warn(
@@ -52,13 +64,17 @@ export const incrementRateLimit = (ip: string): void => {
   }
 };
 
-export const resetRateLimit = (ip: string, windowStartTimeISO: string): void => {
+export const resetRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    const result = db
-      .prepare(
-        'UPDATE rate_limits SET request_count = 1, window_start_time = ? WHERE ip_address = ?'
-      )
-      .run(windowStartTimeISO, ip);
+    const db = await getDb();
+
+    const result = await db
+      .update(schema.rateLimits)
+      .set({
+        requestCount: 1,
+        windowStartTime: windowStartTimeISO,
+      })
+      .where(eq(schema.rateLimits.ipAddress, ip));
 
     if (result.changes === 0) {
       console.warn(`[RateLimitRepository] Reset failed: No rate limit record found for IP ${ip}.`);
@@ -69,11 +85,15 @@ export const resetRateLimit = (ip: string, windowStartTimeISO: string): void => 
   }
 };
 
-export const createRateLimit = (ip: string, windowStartTimeISO: string): void => {
+export const createRateLimit = async (ip: string, windowStartTimeISO: string): Promise<void> => {
   try {
-    db.prepare(
-      'INSERT INTO rate_limits (ip_address, request_count, window_start_time) VALUES (?, 1, ?)'
-    ).run(ip, windowStartTimeISO);
+    const db = await getDb();
+
+    await db.insert(schema.rateLimits).values({
+      ipAddress: ip,
+      requestCount: 1,
+      windowStartTime: windowStartTimeISO,
+    });
   } catch (dbError) {
     if (
       dbError instanceof Error &&
@@ -89,14 +109,16 @@ export const createRateLimit = (ip: string, windowStartTimeISO: string): void =>
   }
 };
 
-export const cleanupOldRateLimits = (maxAgeHours: number = 24): void => {
+export const cleanupOldRateLimits = async (maxAgeHours: number = 24): Promise<void> => {
   try {
     const cutoffTime = new Date();
     cutoffTime.setHours(cutoffTime.getHours() - maxAgeHours);
 
-    const result = db
-      .prepare('DELETE FROM rate_limits WHERE window_start_time < ?')
-      .run(cutoffTime.toISOString());
+    const db = await getDb();
+
+    const result = await db
+      .delete(schema.rateLimits)
+      .where(lt(schema.rateLimits.windowStartTime, cutoffTime.toISOString()));
 
     console.log(`[RateLimitRepository] Cleaned up ${result.changes} old rate limit entries`);
   } catch (error) {
