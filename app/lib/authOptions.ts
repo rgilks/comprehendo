@@ -52,7 +52,7 @@ console.log(`[NextAuth] Configured ${providers.length} authentication providers`
 
 export const authOptions: NextAuthOptions = {
   providers,
-  secret: validatedAuthEnv.NEXTAUTH_SECRET || validatedAuthEnv.AUTH_SECRET,
+  secret: validatedAuthEnv.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt' as const,
   },
