@@ -25,7 +25,9 @@ export const signInCallback = async ({
         '[AUTH SignIn Callback] Error during sign in process (upsertUserOnSignIn failed):',
         error
       );
-      return false;
+      // Don't fail authentication if database operations fail
+      // This allows users to still sign in even if there are database issues
+      return true;
     }
   } else {
     console.warn('[AUTH SignIn Callback] Missing account or user object. Skipping DB upsert.');
@@ -52,12 +54,13 @@ export const jwtCallback = async ({
       if (userRecord) {
         token.dbId = userRecord.id;
       } else {
-        console.error(
-          `[AUTH JWT Callback] CRITICAL: Could not find user in DB during JWT creation for provider_id=${user.id}, provider=${account.provider}. dbId will be missing!`
+        console.warn(
+          `[AUTH JWT Callback] Could not find user in DB during JWT creation for provider_id=${user.id}, provider=${account.provider}. dbId will be missing!`
         );
       }
     } catch (error) {
-      console.error('[AUTH JWT Callback] CRITICAL: Error resolving user DB ID for token:', error);
+      console.warn('[AUTH JWT Callback] Error resolving user DB ID for token:', error);
+      // Continue without dbId - authentication should still work
     }
 
     const adminEmails = validatedAuthEnv.ADMIN_EMAILS;
