@@ -15,4 +15,3 @@ migrations_dir = "migrations"
 
 [vars]
 NODE_ENV = "production"
-
