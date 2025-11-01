@@ -19,6 +19,12 @@ import {
 } from '../app/domain/language-guidance';
 import { LANGUAGES, type Language } from '../app/domain/language';
 import { saveExercise } from '../app/repo/quizRepo';
+import { GoogleGenAI } from '@google/genai';
+import { getGoogleAIClient } from '../app/lib/ai/client';
+import { generateExercisePrompt } from '../app/lib/ai/prompts/exercise-prompt';
+import { ExerciseContent, ExerciseContentSchema } from '../app/domain/schemas';
+import { z } from 'zod';
+import { AIResponseProcessingError } from '../app/lib/ai/google-ai-api';
 
 interface GenerationConfig {
   totalQuestions: number;
@@ -42,6 +48,111 @@ const DB_PATH = path.join(DB_DIR, 'comprehendo.sqlite');
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+interface TokenUsage {
+  promptTokenCount: number;
+  candidatesTokenCount: number;
+  totalTokenCount: number;
+}
+
+interface GenerationResult {
+  success: boolean;
+  id?: number;
+  error?: string;
+  tokenUsage?: TokenUsage;
+}
+
+interface CostTracking {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCost: number;
+  requestCount: number;
+}
+
+const GEMINI_FLASH_PRICING = {
+  inputTokensPerMillion: 0.075,
+  outputTokensPerMillion: 0.30,
+};
+
+const calculateCost = (inputTokens: number, outputTokens: number): number => {
+  const inputCost = (inputTokens / 1_000_000) * GEMINI_FLASH_PRICING.inputTokensPerMillion;
+  const outputCost = (outputTokens / 1_000_000) * GEMINI_FLASH_PRICING.outputTokensPerMillion;
+  return inputCost + outputCost;
+};
+
+const callGoogleAIWithUsage = async (
+  prompt: string
+): Promise<{ content: unknown; usage: TokenUsage }> => {
+  const genAI: GoogleGenAI = getGoogleAIClient();
+
+  const generationConfig = {
+    maxOutputTokens: 500,
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,
+    frequencyPenalty: 0.3,
+    presencePenalty: 0.2,
+    candidateCount: 1,
+    responseMimeType: 'application/json',
+  };
+
+  const modelName = process.env['GOOGLE_AI_GENERATION_MODEL'] ?? 'gemini-2.5-flash';
+
+  const request = {
+    model: modelName,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: generationConfig,
+  };
+
+  const result = await genAI.models.generateContent(request);
+
+  const text: string | undefined = result.text;
+
+  if (text === undefined) {
+    throw new AIResponseProcessingError(
+      'No content received from Google AI or failed to extract text.'
+    );
+  }
+
+  const usage = (result as { usage?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } }).usage;
+  
+  const tokenUsage: TokenUsage = {
+    promptTokenCount: usage?.promptTokenCount ?? 0,
+    candidatesTokenCount: usage?.candidatesTokenCount ?? 0,
+    totalTokenCount: usage?.totalTokenCount ?? 0,
+  };
+  
+  if (tokenUsage.totalTokenCount === 0 && tokenUsage.promptTokenCount === 0) {
+    console.warn('[Cost Tracking] Warning: No token usage data in API response, cost tracking may be inaccurate');
+  }
+
+  const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+  const match = text.match(jsonRegex);
+  let potentialJsonString: string;
+
+  if (match && match[1]) {
+    potentialJsonString = match[1].trim();
+  } else {
+    const trimmedText = text.trim();
+    if (
+      (trimmedText.startsWith('{') && trimmedText.endsWith('}')) ||
+      (trimmedText.startsWith('[') && trimmedText.endsWith(']'))
+    ) {
+      potentialJsonString = trimmedText;
+    } else {
+      throw new AIResponseProcessingError(
+        'AI response received, but failed to extract valid JSON content.'
+      );
+    }
+  }
+
+  try {
+    const parsedJson = JSON.parse(potentialJsonString);
+    return { content: parsedJson, usage: tokenUsage };
+  } catch (parseError) {
+    throw new AIResponseProcessingError('Failed to parse JSON from AI response.', parseError);
+  }
+};
+
 const buildGenParams = (
   passageLanguage: Language,
   questionLanguage: Language,
@@ -63,14 +174,35 @@ const generateSingleQuestion = async (
   passageLanguage: Language,
   questionLanguage: Language,
   level: CEFRLevel
-): Promise<{ success: boolean; id?: number; error?: string }> => {
+): Promise<GenerationResult> => {
   try {
     const genParams = buildGenParams(passageLanguage, questionLanguage, level);
-    const options: ExerciseGenerationOptions = { ...genParams, language: passageLanguage };
 
     console.log(`  Generating: ${passageLanguage}/${level} (${genParams.topic})...`);
 
-    const generatedExercise = await generateAndValidateExercise(options);
+    const prompt = generateExercisePrompt(genParams);
+    const { content: aiResponse, usage: tokenUsage } = await callGoogleAIWithUsage(prompt);
+
+    if (typeof aiResponse !== 'object' || aiResponse === null) {
+      return {
+        success: false,
+        error: 'AI response was not a valid object',
+        tokenUsage,
+      };
+    }
+
+    const parsedAiContent = aiResponse as Record<string, unknown>;
+    const validationResult = ExerciseContentSchema.safeParse(parsedAiContent);
+
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: `Validation failed: ${validationResult.error.message}`,
+        tokenUsage,
+      };
+    }
+
+    const generatedExercise = validationResult.data;
 
     const exerciseId = await saveExercise(
       passageLanguage,
@@ -81,10 +213,14 @@ const generateSingleQuestion = async (
     );
 
     if (typeof exerciseId !== 'number') {
-      return { success: false, error: 'Failed to save exercise (no ID returned)' };
+      return {
+        success: false,
+        error: 'Failed to save exercise (no ID returned)',
+        tokenUsage,
+      };
     }
 
-    return { success: true, id: exerciseId };
+    return { success: true, id: exerciseId, tokenUsage };
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error(`  Error: ${errorMsg}`);
@@ -120,6 +256,13 @@ const bulkGenerate = async (config: GenerationConfig) => {
     byLevel: {} as Record<string, { success: number; failed: number }>,
   };
 
+  const costTracking: CostTracking = {
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCost: 0,
+    requestCount: 0,
+  };
+
   const languageLevelPairs: Array<{ language: Language; level: CEFRLevel }> = [];
 
   for (const language of config.languages) {
@@ -146,6 +289,11 @@ const bulkGenerate = async (config: GenerationConfig) => {
     }
   }
 
+  const modelName = process.env['GOOGLE_AI_GENERATION_MODEL'] ?? 'gemini-2.5-flash';
+  console.log(`Using model: ${modelName}`);
+  console.log(
+    `Pricing: $${GEMINI_FLASH_PRICING.inputTokensPerMillion}/M input tokens, $${GEMINI_FLASH_PRICING.outputTokensPerMillion}/M output tokens`
+  );
   console.log(
     `\nStarting generation for ${languageLevelPairs.length} language/level combinations...\n`
   );
@@ -190,6 +338,17 @@ const bulkGenerate = async (config: GenerationConfig) => {
               level
             );
             stats.total++;
+            costTracking.requestCount++;
+
+            if (result.tokenUsage) {
+              costTracking.totalInputTokens += result.tokenUsage.promptTokenCount;
+              costTracking.totalOutputTokens += result.tokenUsage.candidatesTokenCount;
+              const requestCost = calculateCost(
+                result.tokenUsage.promptTokenCount,
+                result.tokenUsage.candidatesTokenCount
+              );
+              costTracking.totalCost += requestCost;
+            }
 
             if (result.success) {
               stats.successful++;
@@ -212,8 +371,15 @@ const bulkGenerate = async (config: GenerationConfig) => {
       await Promise.all(batchPromises);
 
       if (stats.total < config.totalQuestions && generated < targetCount) {
+        const avgCostPerQuestion = costTracking.requestCount > 0
+          ? costTracking.totalCost / costTracking.requestCount
+          : 0;
+        const estimatedRemaining = (config.totalQuestions - stats.total) * avgCostPerQuestion;
         console.log(
           `  Progress: ${generated}/${targetCount} for this pair | Total: ${stats.total}/${config.totalQuestions}`
+        );
+        console.log(
+          `  Cost so far: $${costTracking.totalCost.toFixed(4)} | Est. remaining: $${estimatedRemaining.toFixed(4)}`
         );
         await sleep(config.delayBetweenRequests * 2);
       }
@@ -237,6 +403,30 @@ const bulkGenerate = async (config: GenerationConfig) => {
   for (const [level, counts] of Object.entries(stats.byLevel)) {
     console.log(`  ${level}: ${counts.success} success, ${counts.failed} failed`);
   }
+
+  console.log('\n' + '-'.repeat(60));
+  console.log('Cost Summary');
+  console.log('-'.repeat(60));
+  console.log(`Total API Requests: ${costTracking.requestCount}`);
+  console.log(`Total Input Tokens: ${costTracking.totalInputTokens.toLocaleString()}`);
+  console.log(`Total Output Tokens: ${costTracking.totalOutputTokens.toLocaleString()}`);
+  console.log(`Total Tokens: ${(costTracking.totalInputTokens + costTracking.totalOutputTokens).toLocaleString()}`);
+  console.log(`\nTotal Cost: $${costTracking.totalCost.toFixed(4)}`);
+  
+  if (stats.successful > 0) {
+    const costPerSuccess = costTracking.totalCost / stats.successful;
+    const tokensPerSuccess =
+      (costTracking.totalInputTokens + costTracking.totalOutputTokens) / stats.successful;
+    console.log(`Cost per successful question: $${costPerSuccess.toFixed(4)}`);
+    console.log(`Tokens per successful question: ${tokensPerSuccess.toFixed(0)}`);
+  }
+
+  const inputCost = (costTracking.totalInputTokens / 1_000_000) * GEMINI_FLASH_PRICING.inputTokensPerMillion;
+  const outputCost = (costTracking.totalOutputTokens / 1_000_000) * GEMINI_FLASH_PRICING.outputTokensPerMillion;
+  console.log(`\nCost Breakdown:`);
+  console.log(`  Input tokens: $${inputCost.toFixed(4)} (${costTracking.totalInputTokens.toLocaleString()} tokens)`);
+  console.log(`  Output tokens: $${outputCost.toFixed(4)} (${costTracking.totalOutputTokens.toLocaleString()} tokens)`);
+
   console.log('='.repeat(60));
 
   sqlite.close();

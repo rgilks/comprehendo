@@ -67,6 +67,43 @@ TOTAL_QUESTIONS=500 \
 - **BATCH_SIZE**: Number of parallel requests per batch (default: 5)
 - **MAX_DAILY_AI_REQUESTS**: Override daily limit for this run (default: uses env var)
 
+### Cost Tracking
+
+The script automatically tracks API costs in real-time:
+
+- **Token Usage**: Captures input and output token counts from each API call
+- **Real-time Cost Updates**: Shows running costs and estimated remaining costs during generation
+- **Final Summary**: Detailed cost breakdown including:
+  - Total API requests
+  - Total tokens consumed (input and output)
+  - Total cost
+  - Cost per successful question
+  - Cost breakdown by token type
+
+**Pricing Assumptions:**
+- Default pricing assumes Gemini 2.5 Flash model
+- Input: $0.075 per million tokens
+- Output: $0.30 per million tokens
+- Pricing may vary - check Google AI pricing for current rates
+
+Example output:
+```
+Cost Summary
+------------------------------------------------------------
+Total API Requests: 1000
+Total Input Tokens: 1,500,000
+Total Output Tokens: 300,000
+Total Tokens: 1,800,000
+
+Total Cost: $0.2625
+Cost per successful question: $0.0003
+Tokens per successful question: 1800
+
+Cost Breakdown:
+  Input tokens: $0.1125 (1,500,000 tokens)
+  Output tokens: $0.0900 (300,000 tokens)
+```
+
 ### Running Overnight
 
 To run the script overnight and handle interruptions:
