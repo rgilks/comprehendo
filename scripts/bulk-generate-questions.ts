@@ -69,8 +69,8 @@ interface CostTracking {
 }
 
 const GEMINI_FLASH_PRICING = {
-  inputTokensPerMillion: 0.075,
-  outputTokensPerMillion: 0.30,
+  inputTokensPerMillion: 0.30,
+  outputTokensPerMillion: 2.50,
 };
 
 const calculateCost = (inputTokens: number, outputTokens: number): number => {

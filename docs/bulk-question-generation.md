@@ -81,9 +81,9 @@ The script automatically tracks API costs in real-time:
   - Cost breakdown by token type
 
 **Pricing Assumptions:**
-- Default pricing assumes Gemini 2.5 Flash model
-- Input: $0.075 per million tokens
-- Output: $0.30 per million tokens
+- Default pricing assumes Gemini 2.5 Flash model (as of mid-2025)
+- Input: $0.30 per million tokens
+- Output: $2.50 per million tokens (including "thinking" tokens)
 - Pricing may vary - check Google AI pricing for current rates
 
 Example output:
@@ -95,13 +95,13 @@ Total Input Tokens: 1,500,000
 Total Output Tokens: 300,000
 Total Tokens: 1,800,000
 
-Total Cost: $0.2625
-Cost per successful question: $0.0003
+Total Cost: $0.8250
+Cost per successful question: $0.0008
 Tokens per successful question: 1800
 
 Cost Breakdown:
-  Input tokens: $0.1125 (1,500,000 tokens)
-  Output tokens: $0.0900 (300,000 tokens)
+  Input tokens: $0.4500 (1,500,000 tokens)
+  Output tokens: $0.3750 (300,000 tokens)
 ```
 
 ### Running Overnight
@@ -143,12 +143,15 @@ The script outputs:
 
 ### Cost Estimation
 
-Assuming Google AI Gemini pricing:
+Assuming Google AI Gemini 2.5 Flash pricing (mid-2025):
 
-- Each question generation: ~1-2 API calls
-- With 2s delay between requests: ~1800 questions/hour maximum
+- Input tokens: $0.30 per million tokens
+- Output tokens: $2.50 per million tokens
+- Estimated per question: ~1,500 input tokens + ~300 output tokens = ~$0.0008 per question
+- For 1,000 questions: ~$0.80 - $1.00 total
+- For 500 questions: ~$0.40 - $0.50 total
+- With 2s delay between requests: ~1,800 questions/hour maximum
 - For 500 questions: ~1-2 hours at conservative rate
-- Cost: Typically very low (check current Google AI pricing)
 
 ## Option 2: Cloud Script (Alternative)
 
