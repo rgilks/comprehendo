@@ -113,6 +113,7 @@ Comprehendo implements strategies to manage AI API costs:
 3.  **Git:** For cloning.
 4.  **API Keys & Credentials:**
     - **Google AI:** [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
+    - **Together AI:** [api.together.xyz](https://api.together.xyz) (Get API key from account settings)
     - **GitHub OAuth App:** [github.com/settings/developers](https://github.com/settings/developers)
     - **Google Cloud OAuth Credentials:** [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
     - **Discord OAuth App:** [discord.com/developers/applications](https://discord.com/developers/applications)
@@ -136,6 +137,9 @@ Comprehendo implements strategies to manage AI API costs:
     - Edit `.env.local` and fill in **all required** API keys and OAuth credentials:
       - `GOOGLE_AI_API_KEY` (optional, if using Google AI)
       - `GOOGLE_AI_GENERATION_MODEL`: (Optional) The specific Google AI model to use for exercise generation (e.g., `gemini-2.5-flash`). Defaults to `gemini-2.5-flash` if not set.
+      - `TOGETHER_AI_API_KEY` (optional, if using Together AI)
+      - `TOGETHER_AI_MODEL`: (Optional) The specific Together AI model to use for exercise generation (e.g., `Qwen/Qwen2.5-7B-Instruct-Turbo`). Defaults to `Qwen/Qwen2.5-7B-Instruct-Turbo` if not set.
+      - `AI_PROVIDER`: (Optional) AI provider to use. Set to `google` (default) or `together` to use Together AI with Qwen2.5.
       - `GITHUB_ID`, `GITHUB_SECRET` (optional, if enabling GitHub login)
       - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (optional, if enabling Google login)
       - `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` (optional, if enabling Discord login)

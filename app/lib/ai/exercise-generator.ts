@@ -2,9 +2,20 @@ import { generateExercisePrompt } from 'app/lib/ai/prompts/exercise-prompt';
 import { ExerciseContent, ExerciseContentSchema, type QuizData } from 'app/domain/schemas';
 import { type ExerciseGenerationParams } from 'app/domain/ai';
 import { callGoogleAI, AIResponseProcessingError } from 'app/lib/ai/google-ai-api';
+import { callTogetherAI } from 'app/lib/ai/together-ai-api';
 import { z } from 'zod';
 
 export { AIResponseProcessingError };
+
+type AIProvider = 'google' | 'together';
+
+const getAIProvider = (): AIProvider => {
+  const provider = process.env['AI_PROVIDER']?.toLowerCase();
+  if (provider === 'together' || provider === 'together-ai') {
+    return 'together';
+  }
+  return 'google';
+};
 
 export type ExerciseGenerationOptions = ExerciseGenerationParams & {
   language: string;
@@ -21,10 +32,16 @@ export const generateAndValidateExercise = async (
       const prompt = generateExercisePrompt(options);
 
       let aiResponse: unknown;
+      const provider = getAIProvider();
+
       try {
-        aiResponse = await callGoogleAI(prompt);
+        if (provider === 'together') {
+          aiResponse = await callTogetherAI(prompt);
+        } else {
+          aiResponse = await callGoogleAI(prompt);
+        }
       } catch (error) {
-        console.error('[AI:generateAndValidateExercise] Google AI call failed:', error);
+        console.error(`[AI:generateAndValidateExercise] ${provider === 'together' ? 'Together' : 'Google'} AI call failed:`, error);
         if (error instanceof AIResponseProcessingError) {
           throw error;
         } else {

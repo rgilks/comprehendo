@@ -20,6 +20,10 @@ vi.mock('app/lib/ai/google-ai-api', () => ({
   },
 }));
 
+vi.mock('app/lib/ai/together-ai-api', () => ({
+  callTogetherAI: vi.fn(),
+}));
+
 vi.mock('app/lib/ai/question-validator', () => ({
   validateQuestionQuality: vi.fn(),
 }));
@@ -45,9 +49,11 @@ describe('exercise generator', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env['AI_PROVIDER'];
   });
 
-  it('should generate and validate exercise successfully', async () => {
+  it('should generate and validate exercise successfully with Google AI', async () => {
+    process.env['AI_PROVIDER'] = 'google';
     const { callGoogleAI } = await import('app/lib/ai/google-ai-api');
     const { ExerciseContentSchema } = await import('app/domain/schemas');
     const { validateQuestionQuality } = await import('app/lib/ai/question-validator');
@@ -78,7 +84,40 @@ describe('exercise generator', () => {
     expect(vi.mocked(callGoogleAI)).toHaveBeenCalledWith('Mock prompt');
   });
 
+  it('should generate and validate exercise successfully with Together AI', async () => {
+    process.env['AI_PROVIDER'] = 'together';
+    const { callTogetherAI } = await import('app/lib/ai/together-ai-api');
+    const { ExerciseContentSchema } = await import('app/domain/schemas');
+    const { validateQuestionQuality } = await import('app/lib/ai/question-validator');
+
+    const mockAIResponse = {
+      question: 'What is the main topic?',
+      options: { A: 'Option A', B: 'Option B', C: 'Option C', D: 'Option D' },
+      correctAnswer: 'A',
+      allExplanations: { A: 'Correct', B: 'Wrong', C: 'Wrong', D: 'Wrong' },
+      relevantText: 'Main topic text',
+      paragraph: 'This is a paragraph about the main topic text.',
+    };
+
+    vi.mocked(callTogetherAI).mockResolvedValue(mockAIResponse);
+    vi.mocked(ExerciseContentSchema.safeParse).mockReturnValue({
+      success: true,
+      data: mockAIResponse,
+    });
+    vi.mocked(validateQuestionQuality).mockReturnValue({
+      isValid: true,
+      reason: 'Valid',
+      metrics: {} as never,
+    });
+
+    const result = await generateAndValidateExercise(mockOptions);
+
+    expect(result).toEqual(mockAIResponse);
+    expect(vi.mocked(callTogetherAI)).toHaveBeenCalledWith('Mock prompt');
+  });
+
   it('should throw error after max retries on AI call failure', async () => {
+    process.env['AI_PROVIDER'] = 'google';
     const { callGoogleAI } = await import('app/lib/ai/google-ai-api');
 
     vi.mocked(callGoogleAI).mockRejectedValue(new Error('AI call failed'));
@@ -89,6 +128,7 @@ describe('exercise generator', () => {
   });
 
   it('should handle AI call failure', async () => {
+    process.env['AI_PROVIDER'] = 'google';
     const { callGoogleAI } = await import('app/lib/ai/google-ai-api');
 
     vi.mocked(callGoogleAI).mockRejectedValue(new Error('AI call failed'));
@@ -99,6 +139,7 @@ describe('exercise generator', () => {
   });
 
   it('should handle invalid AI response format', async () => {
+    process.env['AI_PROVIDER'] = 'google';
     const { callGoogleAI } = await import('app/lib/ai/google-ai-api');
 
     vi.mocked(callGoogleAI).mockResolvedValue('Invalid response');
@@ -109,6 +150,7 @@ describe('exercise generator', () => {
   });
 
   it('should handle schema validation failure', async () => {
+    process.env['AI_PROVIDER'] = 'google';
     const { callGoogleAI } = await import('app/lib/ai/google-ai-api');
     const { ExerciseContentSchema } = await import('app/domain/schemas');
 
