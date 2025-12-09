@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const renderTableCellValue = (value: unknown): React.ReactNode => {
   if (value === null || value === undefined)
     return <span className="text-gray-500 italic">NULL</span>;

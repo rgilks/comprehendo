@@ -1,5 +1,4 @@
 import { PlayIcon, PauseIcon } from '@heroicons/react/24/solid';
-import React from 'react';
 
 type PlayPauseButtonProps = {
   isSpeakingPassage: boolean;

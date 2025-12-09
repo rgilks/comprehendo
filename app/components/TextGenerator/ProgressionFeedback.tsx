@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';

@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-
 const QuizSkeleton = () => (
   <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg" role="presentation">
     <div className="h-4 bg-gray-700 rounded w-3/4 mb-4 animate-pulse"></div>

@@ -94,10 +94,7 @@ const nextConfig = {
       },
     ],
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-    dirs: ['.', 'app', 'components', 'lib'],
-  },
+  turbopack: {},
 };
 
 export default withSerwist(nextConfig);

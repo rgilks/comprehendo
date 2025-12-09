@@ -1,4 +1,3 @@
-import React from 'react';
 import { FormattedValueDisplay } from './FormattedValueDisplay';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 

@@ -5,10 +5,6 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import path from 'path';
 import * as schema from '../app/lib/db/schema';
 import { initializeSchema } from '../app/lib/db/migrations';
-import {
-  generateAndValidateExercise,
-  type ExerciseGenerationOptions,
-} from '../app/lib/ai/exercise-generator';
 import { type ExerciseGenerationParams } from '../app/domain/ai';
 import { getRandomTopicForLevel } from '../app/domain/topics';
 import {
@@ -22,8 +18,7 @@ import { saveExercise } from '../app/repo/quizRepo';
 import { GoogleGenAI } from '@google/genai';
 import { getGoogleAIClient } from '../app/lib/ai/client';
 import { generateExercisePrompt } from '../app/lib/ai/prompts/exercise-prompt';
-import { ExerciseContent, ExerciseContentSchema } from '../app/domain/schemas';
-import { z } from 'zod';
+import { ExerciseContentSchema } from '../app/domain/schemas';
 import { AIResponseProcessingError } from '../app/lib/ai/google-ai-api';
 
 interface GenerationConfig {
@@ -69,8 +64,8 @@ interface CostTracking {
 }
 
 const GEMINI_FLASH_PRICING = {
-  inputTokensPerMillion: 0.30,
-  outputTokensPerMillion: 2.50,
+  inputTokensPerMillion: 0.3,
+  outputTokensPerMillion: 2.5,
 };
 
 const calculateCost = (inputTokens: number, outputTokens: number): number => {
@@ -113,16 +108,26 @@ const callGoogleAIWithUsage = async (
     );
   }
 
-  const usage = (result as { usage?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } }).usage;
-  
+  const usage = (
+    result as {
+      usage?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
+    }
+  ).usage;
+
   const tokenUsage: TokenUsage = {
     promptTokenCount: usage?.promptTokenCount ?? 0,
     candidatesTokenCount: usage?.candidatesTokenCount ?? 0,
     totalTokenCount: usage?.totalTokenCount ?? 0,
   };
-  
+
   if (tokenUsage.totalTokenCount === 0 && tokenUsage.promptTokenCount === 0) {
-    console.warn('[Cost Tracking] Warning: No token usage data in API response, cost tracking may be inaccurate');
+    console.warn(
+      '[Cost Tracking] Warning: No token usage data in API response, cost tracking may be inaccurate'
+    );
   }
 
   const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
@@ -371,9 +376,8 @@ const bulkGenerate = async (config: GenerationConfig) => {
       await Promise.all(batchPromises);
 
       if (stats.total < config.totalQuestions && generated < targetCount) {
-        const avgCostPerQuestion = costTracking.requestCount > 0
-          ? costTracking.totalCost / costTracking.requestCount
-          : 0;
+        const avgCostPerQuestion =
+          costTracking.requestCount > 0 ? costTracking.totalCost / costTracking.requestCount : 0;
         const estimatedRemaining = (config.totalQuestions - stats.total) * avgCostPerQuestion;
         console.log(
           `  Progress: ${generated}/${targetCount} for this pair | Total: ${stats.total}/${config.totalQuestions}`
@@ -410,9 +414,11 @@ const bulkGenerate = async (config: GenerationConfig) => {
   console.log(`Total API Requests: ${costTracking.requestCount}`);
   console.log(`Total Input Tokens: ${costTracking.totalInputTokens.toLocaleString()}`);
   console.log(`Total Output Tokens: ${costTracking.totalOutputTokens.toLocaleString()}`);
-  console.log(`Total Tokens: ${(costTracking.totalInputTokens + costTracking.totalOutputTokens).toLocaleString()}`);
+  console.log(
+    `Total Tokens: ${(costTracking.totalInputTokens + costTracking.totalOutputTokens).toLocaleString()}`
+  );
   console.log(`\nTotal Cost: $${costTracking.totalCost.toFixed(4)}`);
-  
+
   if (stats.successful > 0) {
     const costPerSuccess = costTracking.totalCost / stats.successful;
     const tokensPerSuccess =
@@ -421,11 +427,17 @@ const bulkGenerate = async (config: GenerationConfig) => {
     console.log(`Tokens per successful question: ${tokensPerSuccess.toFixed(0)}`);
   }
 
-  const inputCost = (costTracking.totalInputTokens / 1_000_000) * GEMINI_FLASH_PRICING.inputTokensPerMillion;
-  const outputCost = (costTracking.totalOutputTokens / 1_000_000) * GEMINI_FLASH_PRICING.outputTokensPerMillion;
+  const inputCost =
+    (costTracking.totalInputTokens / 1_000_000) * GEMINI_FLASH_PRICING.inputTokensPerMillion;
+  const outputCost =
+    (costTracking.totalOutputTokens / 1_000_000) * GEMINI_FLASH_PRICING.outputTokensPerMillion;
   console.log(`\nCost Breakdown:`);
-  console.log(`  Input tokens: $${inputCost.toFixed(4)} (${costTracking.totalInputTokens.toLocaleString()} tokens)`);
-  console.log(`  Output tokens: $${outputCost.toFixed(4)} (${costTracking.totalOutputTokens.toLocaleString()} tokens)`);
+  console.log(
+    `  Input tokens: $${inputCost.toFixed(4)} (${costTracking.totalInputTokens.toLocaleString()} tokens)`
+  );
+  console.log(
+    `  Output tokens: $${outputCost.toFixed(4)} (${costTracking.totalOutputTokens.toLocaleString()} tokens)`
+  );
 
   console.log('='.repeat(60));
 

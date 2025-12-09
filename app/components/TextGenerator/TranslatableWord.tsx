@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, memo, useEffect } from 'react';
+import { useState, useCallback, memo, useEffect } from 'react';
 import { type Language } from 'app/domain/language';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { analyzeTranslation, canTranslate } from 'app/lib/utils/translation';

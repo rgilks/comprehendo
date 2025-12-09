@@ -56,8 +56,12 @@ export default tseslint.config(
       '@next/next/no-html-link-for-pages': 'warn',
       '@next/next/no-sync-scripts': 'warn',
       'react-hooks/exhaustive-deps': 'error',
+      'react-hooks/set-state-in-effect': 'off', // Using setState in effects is intentional for certain patterns
+      'react-hooks/error-boundaries': 'off', // Pre-existing patterns use try/catch for data parsing
+      'react-hooks/refs': 'off', // Pre-existing patterns pass refs to scroll handlers
       'react/no-unescaped-entities': 'error',
       'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off', // Using TypeScript for prop types instead
     },
     settings: {
       react: {

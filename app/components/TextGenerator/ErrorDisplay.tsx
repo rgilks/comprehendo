@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { sanitizeText } from 'app/lib/utils/sanitization';
