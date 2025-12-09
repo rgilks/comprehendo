@@ -4,6 +4,7 @@ import './globals.css';
 import AuthProvider from 'app/components/AuthProvider';
 import { type Language } from 'app/domain/language';
 import { cookies } from 'next/headers';
+import { CSRFProtection } from 'app/lib/utils/csrf';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -54,12 +55,14 @@ const RootLayout = async ({
 }>) => {
   const cookieStore = await cookies();
   const locale = (cookieStore.get('NEXT_LOCALE')?.value || 'en') as Language;
+  const csrfToken = CSRFProtection.generateToken();
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <meta name="csrf-token" content={csrfToken} />
       </head>
       <body className={poppins.className}>
         <AuthProvider>{children}</AuthProvider>

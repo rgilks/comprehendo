@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { useTranslation } from 'react-i18next';
 import PlayPauseButton from './PlayPauseButton';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useLanguage } from 'app/hooks/useLanguage';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'motion/react';

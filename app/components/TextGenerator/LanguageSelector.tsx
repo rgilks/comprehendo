@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { GlobeAltIcon, BookOpenIcon } from '@heroicons/react/24/solid';
 import { LEARNING_LANGUAGES, type LearningLanguage } from 'app/domain/language';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';

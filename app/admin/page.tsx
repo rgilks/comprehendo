@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { RowDetailView } from './components/RowDetailView';

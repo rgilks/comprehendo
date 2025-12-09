@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   ArrowPathIcon as HeroRefreshIcon,
   ChevronLeftIcon as HeroChevronLeftIcon,

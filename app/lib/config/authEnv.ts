@@ -31,7 +31,8 @@ export const authEnvSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     DISCORD_CLIENT_ID: z.string().optional(),
     DISCORD_CLIENT_SECRET: z.string().optional(),
-    AUTH_SECRET: z.string({ message: '[NextAuth] ERROR: AUTH_SECRET is missing!' }),
+    AUTH_SECRET: z.string().optional(),
+    NEXTAUTH_SECRET: z.string({ message: '[NextAuth] ERROR: NEXTAUTH_SECRET is missing!' }),
     NEXTAUTH_URL: z.string().pipe(z.url()).optional(),
     ADMIN_EMAILS: z
       .string()

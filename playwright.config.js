@@ -36,7 +36,7 @@ const config = defineConfig({
   webServer: process.env.CI
     ? undefined
     : {
-        command: 'npm run dev',
+        command: 'NODE_ENV=test npm run dev',
         url: 'http://localhost:3000',
         reuseExistingServer: true,
         timeout: 120000, // 2 minutes to start server

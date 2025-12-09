@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSession } from 'next-auth/react';
 import { XMarkIcon } from '@heroicons/react/24/solid';

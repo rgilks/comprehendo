@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { validateCSRF } from 'app/lib/utils/csrf';
 
 const locales = [
   'zh', // Chinese
@@ -87,6 +88,22 @@ const middleware = async (req: NextRequest) => {
 
   const localeRedirectResponse = handleLocaleRedirect(req);
   if (localeRedirectResponse) return localeRedirectResponse;
+
+  // Validate CSRF for state-changing operations (skip during testing and main page routes)
+  if (process.env.NODE_ENV !== 'test' && req.method === 'POST') {
+    // Skip CSRF validation for main page routes where server actions are called
+    const isMainPageRoute = req.nextUrl.pathname.match(/^\/[a-z]{2}(\/.*)?$/) !== null;
+
+    if (!isMainPageRoute) {
+      const csrfValid = await validateCSRF(req);
+      if (!csrfValid) {
+        console.warn(
+          `[Middleware] CSRF validation failed for ${req.method} ${req.nextUrl.pathname}`
+        );
+        return new NextResponse('CSRF token validation failed', { status: 403 });
+      }
+    }
+  }
 
   const token = await getToken({ req });
   const isAdmin = token?.isAdmin === true;

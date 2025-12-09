@@ -1,5 +1,4 @@
 import { SpeakerWaveIcon } from '@heroicons/react/24/solid';
-import React from 'react';
 
 type VolumeSliderProps = {
   volume: number;

@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
+import { sanitizeText } from 'app/lib/utils/sanitization';
 
 const ErrorDisplay = () => {
   const { t } = useTranslation('common');
@@ -19,7 +19,7 @@ const ErrorDisplay = () => {
       data-testid="error-display"
     >
       <strong className="font-bold">{t('common.errorPrefix')}</strong>
-      <span className="block sm:inline ml-2">{error}</span>
+      <span className="block sm:inline ml-2">{sanitizeText(error)}</span>
     </div>
   );
 };

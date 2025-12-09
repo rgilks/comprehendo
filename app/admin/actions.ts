@@ -27,7 +27,7 @@ const ensureAdmin = async (): Promise<void> => {
 };
 
 const createAdminAction = <TArgs extends unknown[], TReturn>(
-  action: (...args: TArgs) => Promise<TReturn> | TReturn,
+  action: (...args: TArgs) => Promise<TReturn>,
   actionNameForLog: string,
   defaultFailureMessage: string
 ) => {

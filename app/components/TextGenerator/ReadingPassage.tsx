@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpenIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
