@@ -10,7 +10,7 @@
     "dev": "clear && next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "verify": "prettier --write . && next lint --no-cache && npx tsc --noEmit",
+    "verify": "prettier --write . && next lint && npx tsc --noEmit",
     "check": "clear && npm run verify && npm run test:run && npx playwright test --reporter=list",
     "nuke": "rm -rf node_modules package-lock.json .next && npm install",
     "deps": "npx npm-check-updates",
