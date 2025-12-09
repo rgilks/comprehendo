@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const renderTableCellValue = (value: unknown): React.ReactNode => {
   if (value === null || value === undefined)

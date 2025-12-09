@@ -1,4 +1,4 @@
-import React from 'react';
+import { useCallback } from 'react';
 import TranslatableWord from './TranslatableWord';
 import { type Language } from 'app/domain/language';
 
@@ -15,7 +15,7 @@ const useRenderParagraphWithWordHover = ({
   relevantTextRange,
   actualQuestionLanguage,
 }: Params) => {
-  return React.useCallback(
+  return useCallback(
     (paragraph: string, lang: Language) => {
       const words = paragraph.split(/(\s+)/);
       let currentPos = 0;

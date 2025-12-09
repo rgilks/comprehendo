@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { HandThumbUpIcon, HandThumbDownIcon } from '@heroicons/react/24/solid';

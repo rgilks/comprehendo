@@ -1,4 +1,3 @@
-import React from 'react';
 import { DataTableControls } from './DataTableControls';
 import { DataTableBody } from './DataTableBody';
 

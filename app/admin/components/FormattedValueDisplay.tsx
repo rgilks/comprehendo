@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface FormattedValueDisplayProps {
   valueKey: string;

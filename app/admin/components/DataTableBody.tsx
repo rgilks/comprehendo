@@ -1,4 +1,3 @@
-import React from 'react';
 import { renderTableCellValue } from 'app/lib/utils/rendering';
 
 interface DataTableBodyProps<T extends Record<string, unknown>> {

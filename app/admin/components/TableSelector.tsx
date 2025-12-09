@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const buttonBaseClass =
   'px-4 py-3 sm:px-4 sm:py-2 inline-flex items-center justify-center text-center gap-2 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors';

@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import useTextGeneratorStore from 'app/store/textGeneratorStore';
 import { useSession } from 'next-auth/react';
@@ -19,7 +18,7 @@ const ProgressBar = ({ cefrLevel, userStreak }: { cefrLevel: CEFRLevel; userStre
     <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-700/50 rounded-full transform -translate-y-1/2"></div>
     <div className="relative flex justify-between items-center">
       {CEFR_LEVELS.map((level: CEFRLevel, idx: number) => (
-        <React.Fragment key={level}>
+        <div key={level} className="contents">
           <div className="relative z-20">
             <div
               className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300
@@ -72,7 +71,7 @@ const ProgressBar = ({ cefrLevel, userStreak }: { cefrLevel: CEFRLevel; userStre
               })}
             </div>
           )}
-        </React.Fragment>
+        </div>
       ))}
     </div>
   </div>

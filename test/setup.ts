@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 
 // Set up environment variables for tests
 process.env.AUTH_SECRET = 'test-secret';
+process.env.NEXTAUTH_SECRET = 'test-secret';
 process.env.NEXTAUTH_URL = 'http://localhost:3000';
 process.env['GOOGLE_CLIENT_ID'] = 'test-client-id';
 process.env['GOOGLE_CLIENT_SECRET'] = 'test-client-secret';
@@ -24,17 +25,18 @@ global.document = {
   removeEventListener: vi.fn(),
 } as never;
 
-// Mock better-sqlite3 for tests
-vi.mock('better-sqlite3', () => ({
-  default: vi.fn(() => ({
-    prepare: vi.fn(() => ({
+// Mock better-sqlite3 for tests - Vitest 4.x requires class-based constructor mocks
+vi.mock('better-sqlite3', () => {
+  const MockDatabase = vi.fn(function (this: Record<string, unknown>) {
+    this['prepare'] = vi.fn(() => ({
       get: vi.fn(),
       run: vi.fn(),
-    })),
-    exec: vi.fn(),
-    pragma: vi.fn(),
-  })),
-}));
+    }));
+    this['exec'] = vi.fn();
+    this['pragma'] = vi.fn();
+  });
+  return { default: MockDatabase };
+});
 
 // Mock next-auth for tests
 vi.mock('next-auth', () => ({
